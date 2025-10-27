@@ -1,0 +1,824 @@
+#+title:      PKM Design Philosophy: URI Permanence and Structural Simplicity
+#+date:       [2025-10-27 Mon 09:35]
+#+filetags:   :philosophy:design:uri:denote:pkm:
+#+identifier: 20251027T093500
+
+* 설계 철학 (Design Philosophy)
+
+** 핵심 원칙 (Core Principles)
+
+1. *No Database* - 파일 시스템만으로 충분
+2. *ID-based Linking* - Unique ID가 모든 것의 기반
+3. *Text-only* - 순수 텍스트 기반 지속성
+4. *Simple URI* - 단순한 URI 구조가 오래 지속
+5. *Separation of Concerns* - 편집 구조 ≠ 퍼블리싱 구조
+
+** 왜 No Database?
+
+#+begin_quote
+"데이터베이스는 관계를 관리하지만, 그 관계를 업데이트하는 비용이 유연성을 제한한다.
+파일명과 ID만으로 충분하다면, 가장 단순한 것이 가장 영속적이다."
+#+end_quote
+
+- Org-mode: 파일명 = 메타데이터
+- Denote: 자동 파일명 관리
+- Git: 변화 추적
+- File system: 영속적 저장소
+
+* ID 기반 아키텍처 (ID-based Architecture)
+
+** Unique ID의 의미
+
+#+begin_src
+ID = YYYYMMDDTHHMMSS
+   = 20251027T093500
+   = Permanent identifier
+   = Timestamp as identity
+#+end_src
+
+*** ID의 특성
+- *Unique*: 시공간적 유일성
+- *Permanent*: 절대 변하지 않음
+- *Self-describing*: 생성 시점 포함
+- *Sortable*: 자연스러운 시간순 정렬
+
+** 가변적 메타데이터
+
+| 요소      | 가변성 | 예시                        |
+|-----------+--------+-----------------------------|
+| ID        | 불변   | 20251027T093500             |
+| Title     | 가변   | "A주제" → "B주제"           |
+| Tags      | 가변   | "draft" → "evergreen"       |
+| Directory | 가변   | /notes → /archive           |
+| Content   | 가변   | 지속적 업데이트             |
+
+** Denote 파일명 구조
+
+#+begin_example
+20251027T093500--pkm-design-philosophy__philosophy_design.org
+│              │                        │
+│              │                        └─ Tags (가변)
+│              └─────────────────────────── Title (가변)
+└────────────────────────────────────────── ID (불변)
+#+end_example
+
+*** 파일명 변경의 의미
+- Title 변경: 개념의 재정의
+- Tags 변경: 맥락의 재구성
+- ID 불변: 정체성 유지
+
+* 구조 분리 전략 (Separation of Concerns)
+
+** 편집 계층 vs 퍼블리싱 계층
+
+#+begin_src mermaid
+graph TD
+    A[Org Editing Layer<br/>실험적/유연적] --> B[Markdown Output Layer<br/>단순/안정적]
+
+    A1[~/org/journal/] -.->|section=notes| B1[~/repos/notes/content/notes/]
+    A2[~/org/llmlog/] -.->|section=notes| B1
+    A3[~/org/talks/] -.->|section=notes| B1
+    A4[~/org/meta/] -.->|section=meta| B2[~/repos/notes/content/meta/]
+    A5[~/org/bib/] -.->|section=bib| B3[~/repos/notes/content/bib/]
+
+    style B1 fill:#90EE90
+    style B2 fill:#FFB6C1
+    style B3 fill:#87CEEB
+#+end_src
+
+** .dir-locals.el의 역할
+
+#+begin_src elisp
+;;; ~/org/journal/.dir-locals.el
+((org-mode . ((org-hugo-section . "notes")      ; ← 명시적 매핑!
+              (org-hugo-base-dir . "~/repos/gh/notes/"))))
+#+end_src
+
+*** 핵심: 경로 추론 제거
+
+#+begin_src elisp
+;; ❌ 잘못된 접근: 경로에서 section 추론
+(defun my/get-hugo-section-directory-from-path (path)
+  (cond
+   ((string-match "/journal" path) "journal")
+   ((string-match "/notes" path) "notes")
+   ...))
+
+;; ✅ 올바른 접근: .dir-locals.el 값 사용
+(defun my/denote-markdown-export (link desc)
+  (let* ((section (or org-hugo-section "notes"))  ; 이미 설정된 값!
+         ...))
+#+end_src
+
+** 구조 독립성의 이점
+
+| Org Directory | .dir-locals section | Markdown Output     | 의미                  |
+|---------------+---------------------+---------------------+-----------------------|
+| ~/org/journal | "notes"             | content/notes/      | 단순화               |
+| ~/org/llmlog  | "notes"             | content/notes/      | 통합                 |
+| ~/org/talks   | "notes"             | content/notes/      | 일원화               |
+| ~/org/meta    | "meta"              | content/meta/       | 차별화 (선택적)      |
+| ~/org/bib     | "bib"               | content/bib/        | 차별화 (선택적)      |
+| ~/org/experimental | "notes"        | content/notes/      | 자유로운 실험 가능! |
+
+* URI 영속성 (URI Permanence)
+
+** 시나리오 분석
+
+*** 시나리오 1: 파일 이동
+
+#+begin_example
+이동 전: ~/org/journal/20250101T120000--daily.org
+        .dir-locals.el: section="notes"
+        URI: /notes/20250101T120000.md
+
+이동 후: ~/org/archive/journal/20250101T120000--daily.org
+        .dir-locals.el: section="notes"
+        URI: /notes/20250101T120000.md (변화 없음! ✅)
+#+end_example
+
+*** 시나리오 2: 제목 변경
+
+#+begin_example
+변경 전: 20250101T120000--A주제__draft.org
+        URI: /notes/20250101T120000.md
+
+변경 후: 20250101T120000--B주제__evergreen.org
+        URI: /notes/20250101T120000.md (변화 없음! ✅)
+#+end_example
+
+*** 시나리오 3: Section 재구성
+
+#+begin_example
+재구성 전: ~/org/llmlog/20250101T120000.org
+           .dir-locals.el: section="llmlog"
+           URI: /llmlog/20250101T120000.md
+
+재구성 후: ~/org/llmlog/20250101T120000.org
+           .dir-locals.el: section="notes" (수정)
+           URI: /notes/20250101T120000.md
+
+→ 이것은 의도적 변경!
+→ Redirect 설정으로 기존 링크 유지 가능
+#+end_example
+
+** URI 설계 원칙
+
+#+begin_quote
+*"The simpler the URI, the longer it lasts."*
+
+단순한 URI가 오래 지속된다.
+#+end_quote
+
+*** 좋은 URI (권장)
+#+begin_example
+/notes/20250101T120000.md
+/notes/20250102T130000.md
+/meta/20250103T140000.md
+#+end_example
+
+*** 나쁜 URI (비권장)
+#+begin_example
+/journal/2025/week01/daily/20250101T120000.md
+/experimental/ai/rag/llm/20250102T130000.md
+#+end_example
+
+*Why?*
+- 계층이 많을수록 깨지기 쉬움
+- 재구성 시 모든 링크 업데이트 필요
+- SEO 불리
+
+* 지식의 형성 과정 (Knowledge Formation)
+
+** 노트의 생애주기
+
+#+begin_src mermaid
+graph LR
+    A[Initial Thought<br/>A주제] -->|시간| B[Refinement<br/>A'주제]
+    B -->|통찰| C[Transformation<br/>B주제]
+    C -->|통합| D[Synthesis<br/>C주제]
+
+    A -.->|ID: 20250101T120000| E[Permanent Link]
+    B -.->|ID: 20250101T120000| E
+    C -.->|ID: 20250101T120000| E
+    D -.->|ID: 20250101T120000| E
+
+    style E fill:#FFD700
+#+end_src
+
+** Git으로 본 지식의 역사
+
+#+begin_example
+commit abc123 (2025-01-01)
+  + 20250101T120000--A주제__draft.org
+  "A에 대한 초기 생각"
+
+commit def456 (2025-02-15)
+  M 20250101T120000--A주제-확장__budding.org
+  "A에 대한 이해 심화"
+
+commit ghi789 (2025-03-20)
+  M 20250101T120000--B주제__evergreen.org
+  "A는 사실 B였다는 깨달음"
+#+end_example
+
+*** 질문: "왜 A노트를 B라고 바꿨을까?"
+
+이것이 곧 *지식의 형성(Knowledge Formation)* 과정입니다:
+- 초기 개념화 (A)
+- 이해의 심화 (A')
+- 개념의 전환 (B)
+- 통합과 재구성 (C)
+
+Git history = 사고의 궤적
+
+** 스냅샷으로서의 퍼블리싱
+
+#+begin_quote
+"Each publish is a snapshot of current understanding."
+
+매 퍼블리시는 현재 이해의 스냅샷이다.
+#+end_quote
+
+#+begin_src
+Time: ────[t1]────────[t2]────────[t3]────────>
+
+Org:   A주제.org → A'주제.org → B주제.org (동일 ID)
+
+Pub:   Snapshot1 → Snapshot2  → Snapshot3
+       (2025-01)   (2025-02)    (2025-03)
+
+URI:   /notes/20250101T120000.md (불변!)
+#+end_src
+
+* 에이전트 협업의 기반 (Foundation for AI Collaboration)
+
+** 단편화된 노트 = 협업의 씨앗
+
+#+begin_quote
+"Fragmented notes are seeds of collaboration with AI agents."
+
+단편화된 노트는 AI 에이전트와 협업의 씨앗이다.
+#+end_quote
+
+*** 왜 단편화인가?
+
+- *Atomic*: 각 노트는 하나의 개념
+- *Linkable*: ID로 연결 가능
+- *Queryable*: 검색/필터 가능
+- *Composable*: 조합하여 새로운 지식 생성
+
+*** AI 에이전트의 역할
+
+#+begin_src mermaid
+graph TD
+    A[Human: 단편 노트 작성] --> B[File System: ID 기반 저장]
+    B --> C[AI Agent: 패턴 발견]
+    C --> D[AI Agent: 연결 제안]
+    D --> E[Human: 통합 및 재구성]
+    E --> A
+
+    B --> F[Git: 변화 추적]
+    F --> C
+
+    style A fill:#87CEEB
+    style E fill:#90EE90
+    style C fill:#FFB6C1
+    style D fill:#FFB6C1
+#+end_src
+
+*** 협업 시나리오
+
+1. *Human*: "AI에 대한 단편 노트 10개 작성"
+2. *AI Agent*: "이 10개는 '인공지능 윤리'라는 메타 주제로 연결 가능"
+3. *Human*: 메타노트 생성, 10개 노트 링크
+4. *AI Agent*: "이제 20개 관련 노트가 더 발견됨"
+5. *Knowledge Graph* 형성
+
+** 단순함의 중요성
+
+#+begin_quote
+"Complexity is the enemy of collaboration."
+
+복잡성은 협업의 적이다.
+#+end_quote
+
+*** 단순함 = 예측가능성
+
+- DB 없음 → AI가 파일 시스템만 이해하면 됨
+- ID 기반 → AI가 링크 구조 즉시 파악
+- Text-only → AI가 파싱 오류 없음
+- Simple URI → AI가 링크 생성 정확
+
+*** 복잡함 = 오버헤드
+
+- DB 스키마 변경 → 마이그레이션 필요
+- 복잡한 URI → 링크 깨짐 가능성
+- 이진 파일 → AI 접근 제한
+- 의존성 → 도구 종속
+
+* 구조 분리의 실제 (Practical Separation)
+
+** Org 편집 계층 (실험적/유연적)
+
+#+begin_example
+~/org/
+├── meta/              .dir-locals.el: section="meta"
+├── bib/               .dir-locals.el: section="bib"
+├── notes/             .dir-locals.el: section="notes"
+├── journal/           .dir-locals.el: section="notes"  ← 단순화!
+├── talks/             .dir-locals.el: section="notes"  ← 단순화!
+├── llmlog/            .dir-locals.el: section="notes"  ← 단순화!
+├── experiments/       .dir-locals.el: section="notes"  ← 자유롭게!
+└── anything-new/      .dir-locals.el: section="notes"  ← 추가 가능!
+#+end_example
+
+** Markdown 퍼블리싱 계층 (단순/안정적)
+
+#+begin_example
+~/repos/gh/notes/content/
+├── meta/      # 핵심 메타노트 (소수)
+├── bib/       # 서지 정보 (구분 필요시)
+└── notes/     # 나머지 전부! (대다수)
+#+end_example
+
+*** 극단적 단순화도 가능
+
+#+begin_example
+~/repos/gh/notes/content/
+└── notes/     # 모든 노트 여기에!
+               # Quartz는 파일명으로 판단하므로 OK
+#+end_example
+
+** 왜 이것이 작동하는가?
+
+*** Org-mode 편집 환경
+- =denote-find=: 파일 위치 무관하게 검색
+- =denote-link=: ID로 연결
+- =consult-notes=: 전체 노트 검색
+- =denote-backlinks=: 역링크 추적
+
+→ *디렉토리 구조는 중요하지 않음!*
+
+*** Quartz 퍼블리싱
+- ID 기반 파일명: =20250101T120000.md=
+- 파일명으로 링크: =[Title](20250101T120000.md)=
+- Graph view: 파일명으로 연결
+- Search: 파일명으로 인덱싱
+
+→ *Section 구조는 최소화 가능!*
+
+* URI 설계 상세 (URI Design Details)
+
+** Markdown 링크 생성
+
+#+begin_src elisp
+;; 기존 방식 (경로 추론)
+(let* ((section (my/get-hugo-section-directory-from-path path)))
+  ;; path가 /journal이면 section="journal"
+  ;; path가 /notes이면 section="notes"
+  ;; → 파일 이동하면 section 변경! ❌
+  ...)
+
+;; 개선 방식 (.dir-locals 기반)
+(let* ((section (or org-hugo-section "notes")))
+  ;; .dir-locals.el에서 설정된 값 사용
+  ;; 파일 이동해도 section 동일! ✅
+  ...)
+#+end_src
+
+** URI 구성 요소
+
+#+begin_example
+/notes/20250101T120000.md#h:5bde73df
+│     │               │  │
+│     │               │  └─ Custom header (optional)
+│     │               └──── ID.md (const!)
+│     └──────────────────── Section (simple!)
+└────────────────────────── Content root
+#+end_example
+
+*** 불변 요소
+- ID: =20250101T120000= (영원)
+- Extension: =.md= (고정)
+
+*** 가변 요소 (의도적 변경만)
+- Section: =notes= (안정적, .dir-locals로 제어)
+- Header: =#h:xxx= (링크 세부화)
+
+** Quartz에서의 URI 해석
+
+#+begin_src typescript
+// quartz.config.ts
+// 파일명 기반 라우팅
+/notes/20250101T120000.md → https://notes.junghanacs.com/notes/20250101T120000
+#+end_src
+
+*** Section의 의미
+- Quartz에게는 단순 네임스페이스
+- 사용자에게는 맥락 구분 (선택적)
+- SEO에는 최소한의 구조
+
+* 지식 형성의 역동성 (Dynamics of Knowledge Formation)
+
+** A → B 전환의 의미
+
+#+begin_quote
+"Knowledge is not static. It evolves."
+
+지식은 정적이지 않다. 진화한다.
+#+end_quote
+
+*** Case Study
+
+#+begin_example
+[2025-01-01] 20250101T120000--zettelkasten-method__pkm_draft.org
+"Zettelkasten은 카드 기반 노트 시스템이다."
+
+[2025-02-15] 20250101T120000--zettelkasten-evolution__pkm_budding.org
+"Zettelkasten은 사고의 대화 시스템이다."
+
+[2025-03-20] 20250101T120000--conversation-with-yourself__thinking_evergreen.org
+"진정한 Zettelkasten은 자신과의 대화 과정이다."
+#+end_example
+
+*** Git Blame으로 본 사고의 궤적
+
+#+begin_src bash
+git log --follow --oneline 20250101T120000*.org
+
+abc123 (2025-03-20) rename: A→B 개념의 전환
+def456 (2025-02-15) update: 이해의 심화
+ghi789 (2025-01-01) init: 초기 개념화
+#+end_src
+
+** 변화의 패턴
+
+| 변화 유형        | 파일명 변경 | 내용 변경 | 의미                    |
+|------------------+-------------+-----------+-------------------------|
+| 표면적 수정      | ✗           | ✓         | 오타 수정, 문장 다듬기  |
+| 개념 심화        | ✓ (tags)    | ✓         | draft → budding         |
+| 개념 전환        | ✓ (title)   | ✓         | A주제 → B주제           |
+| 근본적 재구성    | ✓ (all)     | ✓         | 완전히 다른 관점        |
+
+* memex-kb의 철학 (memex-kb Philosophy)
+
+** 도구 중립적 PKM
+
+#+begin_quote
+"Tools change. Principles endure."
+
+도구는 바뀐다. 원칙은 남는다.
+#+end_quote
+
+*** memex-kb의 역할
+
+#+begin_src mermaid
+graph TD
+    A[Notion] --> M[memex-kb]
+    B[Evernote] --> M
+    C[Obsidian] --> M
+    D[Roam Research] --> M
+    E[Any PKM Tool] --> M
+
+    M --> O[Denote-compatible Format]
+    O --> P[ID-based Files]
+    P --> Q[Text-only Storage]
+
+    style M fill:#FFD700
+    style O fill:#90EE90
+#+end_src
+
+*** 마이그레이션 원칙
+
+1. *Extract ID*: 각 노트에서 고유 ID 생성/추출
+2. *Preserve Links*: 링크를 ID 기반으로 변환
+3. *Flatten Structure*: 복잡한 계층 → 단순 파일
+4. *Text-only*: 모든 것을 텍스트로
+
+*** 설계 최적화
+
+memex-kb는 다음을 최적화:
+- ID 기반 아키텍처
+- No Database 원칙
+- Simple URI 구조
+- Git-trackable 변화
+
+** 왜 Org-mode인가?
+
+#+begin_quote
+"Org-mode is not the answer. It's just a very good implementation of the principles."
+
+Org-mode가 답은 아니다. 다만 원칙의 매우 좋은 구현체일 뿐이다.
+#+end_quote
+
+*** Org-mode의 강점
+
+- *Plain text*: 영속성
+- *Denote*: ID 기반 자동화
+- *Export*: 다양한 포맷 변환
+- *Babel*: 코드 실행 가능
+- *Flexible*: 무한한 확장성
+
+*** 그러나...
+
+- Markdown도 OK
+- AsciiDoc도 OK
+- 심지어 JSON도 OK (ID만 있다면)
+
+*핵심은 도구가 아니라 원칙!*
+
+* 설계 원칙 체크리스트 (Design Checklist)
+
+** ✅ 지켜야 할 것
+
+- [ ] Unique ID per note
+- [ ] ID = Timestamp format (YYYYMMDDTHHMMSS)
+- [ ] File-based storage (no DB)
+- [ ] Plain text format
+- [ ] Git version control
+- [ ] Simple URI structure
+- [ ] .dir-locals.el for explicit mapping
+- [ ] ID-based linking
+
+** ❌ 피해야 할 것
+
+- [ ] Path-based section inference
+- [ ] Complex directory hierarchies in output
+- [ ] Binary file formats
+- [ ] Database dependencies
+- [ ] Tool lock-in
+- [ ] Implicit assumptions
+
+* 구현 체크리스트 (Implementation Checklist)
+
+** Denote Export System
+
+- [X] ~+denote-export.el~ 통합 파일 생성
+- [ ] ~my/get-hugo-section-directory-from-path~ 제거
+- [ ] ~my/denote-markdown-export~ 수정: ~org-hugo-section~ 직접 사용
+- [ ] ~.dir-locals.el~ 각 폴더에 생성
+- [ ] Batch script: .dir-locals 자동 로드 확인
+- [ ] 테스트 및 검증
+- [ ] 문서화
+
+** .dir-locals.el 생성
+
+#+begin_src bash
+# ~/org/notes/.dir-locals.el
+cat > ~/org/notes/.dir-locals.el <<'EOF'
+((org-mode . ((org-hugo-section . "notes")
+              (org-hugo-base-dir . "~/repos/gh/notes/"))))
+EOF
+
+# ~/org/journal/.dir-locals.el
+cat > ~/org/journal/.dir-locals.el <<'EOF'
+((org-mode . ((org-hugo-section . "notes")
+              (org-hugo-base-dir . "~/repos/gh/notes/"))))
+EOF
+#+end_src
+
+* 참고 자료 (References)
+
+** 관련 개념
+
+- *Zettelkasten*: ID-based note-taking system
+- *Evergreen notes*: Notes that grow and evolve
+- *Digital Garden*: Public knowledge evolution
+- *PARA*: Projects, Areas, Resources, Archives
+- *Memex*: Vannevar Bush's vision (1945)
+
+** 영향받은 사상
+
+- Niklas Luhmann: Zettelkasten 발명가
+- Vannevar Bush: Memex 개념
+- Andy Matuschak: Evergreen notes
+- Tiago Forte: Building a Second Brain
+- Protesilaos Stavrou: Denote 설계
+
+** 관련 문서
+
+- [[denote:20251027T092900][Denote Export System]]
+- [[https://protesilaos.com/emacs/denote][Denote Manual]]
+- [[https://notes.andymatuschak.org/Evergreen_notes][Evergreen Notes - Andy Matuschak]]
+
+* 메타: 이 문서에 대하여
+
+이 문서는 단순한 기술 문서가 아닙니다.
+
+이것은 *설계 철학(Design Philosophy)* 입니다:
+- 어떻게(How) 구현하는가?
+- 왜(Why) 이렇게 설계하는가?
+- 무엇을(What) 지향하는가?
+
+#+begin_quote
+"Good design is not about tools.
+It's about principles that outlive the tools."
+
+좋은 설계는 도구에 관한 것이 아니다.
+도구보다 오래 살아남는 원칙에 관한 것이다.
+#+end_quote
+
+** 이 문서의 생애주기
+
+- [2025-10-27] 초기 작성: Claude와의 대화에서 추출된 통찰
+- [Future] 실제 사용 경험 반영
+- [Future] 커뮤니티 피드백 통합
+- [Future] 새로운 도구 출현 시 원칙 재검증
+
+*ID: 20251027T093500* - 이 링크는 영원히 유효할 것입니다.
+
+* Implementation: Debugging Journey
+
+** 핵심 문제들과 해결책
+
+*** 1. 경로 문제 (Path Resolution)
+
+*문제*:
+- DOOMDIR 환경변수가 fulllab-config를 가리킴
+- 틸드(~) 확장 안됨
+
+*에러 메시지*:
+#+begin_example
+Export config not found: ~/repos/gh/emacs-fulllab-config/dotdoomemacs/+denote-export.el
+#+end_example
+
+*해결책*:
+#+begin_src elisp
+;; 환경변수 대신 스크립트 위치에서 계산
+(defvar doom-user-dir
+  (let ((script-dir (file-name-directory (or load-file-name buffer-file-name))))
+    (if script-dir
+        (expand-file-name ".." script-dir)  ; bin/ → doomdir/
+      (expand-file-name "~/repos/gh/doomemacs-config"))))
+#+end_src
+
+*** 2. with-eval-after-load 문제 (Lazy Loading)
+
+*문제*:
+- =with-eval-after-load 'org= 블록이 batch mode에서 실행 안됨
+- ox-hugo 설정이 로드되지 않음
+
+*해결책*:
+#+begin_src elisp
+;; Before (작동 안함 in batch mode)
+(with-eval-after-load 'org
+  (require 'ox-hugo)
+  (setq org-hugo-section "notes")
+  ...)
+
+;; After (즉시 실행)
+(require 'org)
+(require 'ox)
+(require 'ox-hugo)
+(setq org-hugo-section "notes")
+...
+#+end_src
+
+*교훈*: Batch mode에서는 lazy loading이 예상대로 작동하지 않음
+
+*** 3. .dir-locals.el 로딩 문제 (Local Variables)
+
+*문제*:
+- batch mode에서 .dir-locals.el 자동 로딩 안됨
+- =org-hugo-section= 이 기본값("notes") 사용됨
+
+*해결책*:
+#+begin_src elisp
+;; .dir-locals.el 명시적 파싱
+(when (file-exists-p dir-locals-file)
+  (with-temp-buffer
+    (insert-file-contents dir-locals-file)
+    (let ((locals (read (current-buffer))))
+      (setq dir-locals-settings (cdr (assoc 'org-mode locals))))))
+
+;; Buffer 컨텍스트에서 적용
+(with-current-buffer (find-file-noselect file)
+  (dolist (setting dir-locals-settings)
+    (when (and (consp setting) (not (eq (car setting) 'eval)))
+      ;; 틸드 확장 처리
+      (let ((value (cdr setting)))
+        (when (and (stringp value) (string-prefix-p "~" value))
+          (setq value (expand-file-name value)))
+        (set (make-local-variable (car setting)) value)))))
+#+end_src
+
+*교훈*: Batch mode는 별도의 Emacs 프로세스 → 설정을 수동으로 로드해야 함
+
+*** 4. Denote 링크 해석 실패 (Link Resolution)
+
+*문제*:
+- =denote-link--ol-resolve-link-to-target= 가 nil 반환
+- 링크된 파일이 없거나 접근 불가능
+
+*에러 메시지*:
+#+begin_example
+Wrong type argument: stringp, nil
+#+end_example
+
+*해결책*:
+#+begin_src elisp
+;; Before (에러 발생)
+(defun my/denote-markdown-export (link desc)
+  (let* ((path-id (denote-link--ol-resolve-link-to-target link :full-data))
+         (path (nth 0 path-id))  ; nil일 수 있음!
+         (id (nth 1 path-id))    ; nil!
+         ...)))
+
+;; After (에러 핸들링)
+(defun my/denote-markdown-export (link desc)
+  (condition-case err
+      (let* ((path-id ...)
+             ...)
+        ...)
+    (error
+     ;; 실패 시 텍스트만 반환
+     (format "[%s]" desc))))
+#+end_src
+
+*교훈*: Export 중 일부 링크 실패해도 전체 export는 계속되어야 함
+
+*** 5. 파일명 생성 문제 (Filename Strategy)
+
+*문제*:
+- ox-hugo가 org 파일명 그대로 사용
+- =#+export_file_name= 이 무시됨
+
+*잘못된 결과*:
+#+begin_example
+20250628T100005--† 역설 페러독스__paradox_meta.md
+#+end_example
+
+*원인*:
+- =with-eval-after-load= 때문에 ox-hugo 설정 미적용
+- .dir-locals.el 로딩 실패로 =org-hugo-base-dir= 없음
+
+*최종 해결*:
+1. =with-eval-after-load= 제거 → 즉시 로드
+2. .dir-locals.el 수동 파싱 → 설정 적용
+3. 틸드 확장 처리
+
+*성공 결과*:
+#+begin_example
+20250628T100005.md  ✓ ID만!
+20250604T190703.md  ✓ 단순!
+#+end_example
+
+** Interactive vs Batch Mode 차이
+
+| 측면           | Interactive Mode (fulllab) | Batch Mode (병렬)           |
+|----------------|----------------------------|-----------------------------|
+| 설정 로딩      | 자동 (init.el)             | 수동 필요                   |
+| .dir-locals    | 자동 적용                  | 명시적 파싱 필요            |
+| lazy loading   | 작동                       | 작동 안함                   |
+| 환경변수       | 신뢰 가능                  | 검증 필요                   |
+| 에러 핸들링    | 선택적                     | 필수!                       |
+
+*핵심 교훈*:
+#+begin_quote
+"Batch mode is a different world. Don't assume interactive behavior."
+
+Batch mode는 다른 세계다. Interactive 동작을 가정하지 마라.
+#+end_quote
+
+** 최종 작동 구조
+
+#+begin_src mermaid
+sequenceDiagram
+    participant Script as denote-export-parallel.sh
+    participant Batch as denote-export-batch.el
+    participant File as .dir-locals.el
+    participant OxHugo as ox-hugo
+
+    Script->>Batch: Load script (경로 자동 탐지)
+    Batch->>Batch: Determine doom-user-dir (스크립트 위치 기반)
+    Batch->>Batch: Load +user-info.el
+    Batch->>Batch: Load +denote-export.el (즉시!)
+
+    loop Each File
+        Batch->>File: Parse .dir-locals.el
+        Batch->>Batch: Apply settings to buffer
+        Batch->>Batch: set org-hugo-section = "test"
+        Batch->>Batch: set org-hugo-base-dir (expand ~)
+        Batch->>OxHugo: org-hugo-export-to-md
+        OxHugo->>OxHugo: Use #+export_file_name
+        OxHugo-->>Batch: ID.md (20250604T190703.md)
+    end
+#+end_src
+
+** 검증 결과
+
+#+begin_example
+# 실행
+~/repos/gh/doomemacs-config/bin/denote-export-parallel.sh 4
+
+# 결과
+✓ Total files: 14
+✓ Cores used: 4
+✓ Duration: 3s
+✓ Files: content/test/20250604T190703.md (ID 기반!)
+#+end_example
+
+* License
+
+CC BY-SA 4.0 - 철학은 공유되어야 합니다.

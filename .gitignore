@@ -16,3 +16,6 @@ inbox__human.org
 
 *.dat
 fortune
+
+# Security - DO NOT COMMIT
+var/sensitive-strings.txt

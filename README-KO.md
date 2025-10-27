@@ -154,6 +154,27 @@ Python, Nix, JavaScript/TypeScript, Web (HTML/CSS), YAML, Zig, Janet, Emacs Lisp
 - **Org-contacts**: 연락처 관리
 - **내보내기**: Hugo, Pandoc
 
+### 퍼블리싱: Denote Export System
+
+**통합 export 시스템** - Denote 노트를 Hugo markdown으로 병렬 변환
+
+주요 기능:
+- **Denote 링크 → Hugo relref** 자동 변환
+- **보안 필터링**: ROT13, sensitive strings
+- **병렬 처리**: 8 코어로 1,400+ 파일을 2-3분에 처리
+- **순차/병렬 모드** 지원
+
+사용법:
+```elisp
+;; 순차 방식
+(my/update-dblock-export-garden-all)
+
+;; 병렬 방식 (권장)
+(my/update-dblock-export-garden-all-parallel)
+```
+
+상세 문서: `docs/20251027T092900--denote-export-system__denote_export_hugo_guide.org`
+
 ### 비활성화된 패키지
 
 다음 패키지들은 의도적으로 비활성화되었습니다:

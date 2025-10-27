@@ -171,6 +171,9 @@
 (setq coding-system-for-read 'utf-8)
 (setq coding-system-for-write 'utf-8)
 
+;; 멀티바이트 모드 활성화 (필요시)
+(set-buffer-multibyte t)
+
 ;; Treat clipboard input as UTF-8 string first; compound text next, etc.
 (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
 
@@ -248,8 +251,7 @@
                            #x2764 #x1F9E1 #x1F49B #x1F49A #x1F499 #x1F49C #x1F5A4 #x1F90D #x1F90E #x1F494
                            #x2705 #x274C #x2B55 #x1F534 #x1F7E0 #x1F7E1 #x1F7E2 #x1F535 #x1F7E3 #x26AB
                            #x26AA #x1F7E4 #x1F536 #x1F537 #x1F538 #x1F539 #x1F53A #x1F53B #x1F4A0 #x1F532))
-        (set-char-table-range char-width-table codepoint 2))
-      )
+        (set-char-table-range char-width-table codepoint 2)))
 
     (set-fontset-font t 'symbol (font-spec :family "Symbola") nil 'prepend)
     (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
@@ -937,79 +939,6 @@ only those in the selected frame."
      "* TODO [#C] %?\n%T\n%a\n" :clock-in t :clock-resume t))
   )
 
-(with-eval-after-load 'org
-  (require 'ox-hugo)
-
-  ;; (setq org-hugo-base-dir (file-truename "~/git/blog/"))
-  (setq org-hugo-base-dir user-hugo-blog-dir) ;; 2024-10-07 fix quartz
-
-  (setq org-hugo-auto-set-lastmod t
-        org-hugo-suppress-lastmod-period 3600.0) ; 3600.0 1h, (86400.0) 24h, (172800.0) 48h
-  (setq org-hugo-front-matter-format 'yaml)
-
-  ;; My blog is created using Hugo and ox-hugo. It generates better markdown than what you would get using org-md-export!
-  ;; It works well out-of-the-box. However, extra configuration is required to embed video.
-  ;; In ox-hugo, uses #+begin_video to generate the <video> HTML5 tag (details in ox-hugo/issues/274).
-  ;; In Hugo config, set markup.goldmark.renderer.unsafe to true (details in discourse.gohugo.io).
-  (add-to-list 'org-hugo-external-file-extensions-allowed-for-copying "webm")
-
-  (setq org-hugo-section "notes") ; 2024-04-26 change
-  (setq org-hugo-paired-shortcodes "mermaid callout cards details tabs") ; hint sidenote
-
-  ;; https://ox-hugo.scripter.co/doc/formatting/
-  ;; if org-hugo-use-code-for-kbd is non-nil
-  ;; Requires CSS to render the <kbd> tag as something special.
-  ;; eg: ~kbd~
-  ;; (setq org-hugo-use-code-for-kbd t)
-
-  ;; https://ox-hugo.scripter.co/doc/linking-numbered-elements/
-
-  ;; org-export-dictionary 에 Figure, Table 에 한글 번역을 넣으면
-  ;; 한글로 바뀌어 export 될 것이다.
-  (setq org-hugo-link-desc-insert-type t)
-
-  ;; 내보낼 때는 fill-column 끈다.
-  (setq org-hugo-preserve-filling nil) ; important
-
-  (setq org-hugo-allow-spaces-in-tags t) ; default t
-  (setq org-hugo-prefer-hyphen-in-tags t) ; default t
-
-  ;; Assume all static files are images for now otherwise this
-  ;; defaults to /ox-hugo/mypicture.png which is ugly
-  (setq org-hugo-default-static-subdirectory-for-externals "images") ; imgs
-  ;; (setq org-hugo-default-static-subdirectory-for-externals "~/git/temp/notes.junghanacs.com/quartz/static/images") ; imgs
-
-  ;; Override the default `org-hugo-export-creator-string' so that this
-  ;; string is consistent in all ox-hugo tests.
-  (setq org-hugo-export-creator-string "Emacs + Org-mode + ox-hugo")
-
-  ;; In that normal example of the sidenote, ox-hugo trims the whitespace around
-  ;; the sidenote block. That is configured by customizing the
-  ;; org-hugo-special-block-type-properties variable:
-  (progn
-    (add-to-list 'org-hugo-special-block-type-properties '("mermaid" :raw t))
-    (add-to-list 'org-hugo-special-block-type-properties '("callout" :raw t))
-    (add-to-list 'org-hugo-special-block-type-properties '("cards" :raw t))
-    (add-to-list 'org-hugo-special-block-type-properties '("details" :raw t)))
-  ;; (add-to-list 'org-hugo-special-block-type-properties '("sidenote" . (:trim-pre t :trim-post t)))
-
-  ;; If this property is set to an empty string, this heading will not be auto-inserted.
-  ;; default value is 'References'
-  ;; https://ox-hugo.scripter.co/doc/org-cite-citations/
-  (plist-put org-hugo-citations-plist :bibliography-section-heading "References")
-
-  (defun my/insert-white-space ()
-    (interactive)
-    (insert " "))
-
-  (defun +org-export-remove-white-space (text _backend _info)
-    "Remove zero width spaces from TEXT."
-    (unless (org-export-derived-backend-p 'org)
-      (replace-regexp-in-string " " "" text)))
-  (add-to-list 'org-export-filter-final-output-functions #'+org-export-remove-white-space t)
-  (evil-define-key '(insert normal) text-mode-map (kbd "M-m") #'my/insert-white-space)
-  )
-
 ;;;; org-journal
 
 (progn
@@ -1477,6 +1406,10 @@ only those in the selected frame."
 
 (after! denote
   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
+
+;;; denote-export system
+
+(load! "+denote-export")
 
 ;;; TODO Custom Integration
 

@@ -155,6 +155,27 @@ Python, Nix, JavaScript/TypeScript, Web (HTML/CSS), YAML, Zig, Janet, Emacs Lisp
 - **Org-contacts**: Contact management
 - **Export**: Hugo, Pandoc
 
+### Publishing: Denote Export System
+
+**Integrated export system** - Convert Denote notes to Hugo markdown with parallel processing
+
+Key features:
+- **Denote links → Hugo relref** automatic conversion
+- **Security filtering**: ROT13, sensitive strings
+- **Parallel processing**: Process 1,400+ files in 2-3 minutes with 8 cores
+- **Sequential/parallel modes** supported
+
+Usage:
+```elisp
+;; Sequential mode
+(my/update-dblock-export-garden-all)
+
+;; Parallel mode (recommended)
+(my/update-dblock-export-garden-all-parallel)
+```
+
+Documentation: `docs/20251027T092900--denote-export-system__denote_export_hugo_guide.org`
+
 ### Disabled Packages
 
 These packages are intentionally disabled:

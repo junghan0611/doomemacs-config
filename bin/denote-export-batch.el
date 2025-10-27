@@ -1,0 +1,192 @@
+#!/usr/bin/env -S emacs --script
+;;; denote-export-batch.el --- Batch mode export for Denote notes -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2025 Junghan Kim
+;; Author: Junghan Kim <junghanacs@gmail.com>
+
+;; This file is NOT part of GNU Emacs.
+
+;;; Commentary:
+
+;; Batch mode script for exporting Denote notes to Hugo markdown.
+;; Used by parallel export script (denote-export-parallel.sh).
+;;
+;; Usage:
+;;   emacs --batch --load denote-export-batch.el FILE1.org FILE2.org ...
+;;
+;; Or via shebang:
+;;   ./denote-export-batch.el FILE1.org FILE2.org ...
+
+;;; Code:
+
+;; Minimize startup time
+(setq gc-cons-threshold most-positive-fixnum)
+(setq load-prefer-newer t)
+
+;; Enable debug on error
+(setq debug-on-error t)
+
+;; Determine DOOMDIR - use script location instead of env var
+;; This script is in: <doomdir>/bin/denote-export-batch.el
+(defvar doom-user-dir
+  (let ((script-dir (file-name-directory (or load-file-name buffer-file-name))))
+    (if script-dir
+        ;; Go up one level from bin/ to get doomdir
+        (expand-file-name ".." script-dir)
+      ;; Fallback
+      (expand-file-name "~/repos/gh/doomemacs-config"))))
+
+(message "DEBUG: doom-user-dir = %s" doom-user-dir)
+
+;; Find Doom Emacs installation
+(defvar doom-emacs-dir
+  (or (getenv "EMACSDIR")
+      (expand-file-name "~/doomemacs-starter")
+      (expand-file-name "~/.config/emacs")))
+
+;; Load Doom core (minimal)
+(when (file-directory-p doom-emacs-dir)
+  (setq user-emacs-directory doom-emacs-dir)
+  (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
+  (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
+
+;; Initialize package system
+(require 'package)
+(setq package-enable-at-startup nil)
+(package-initialize)
+
+;; Add ELPA archives if needed
+(unless (assoc "melpa" package-archives)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t))
+
+;; Essential requires - with error handling
+(require 'org)
+(require 'ox)
+
+;; Try to require ox-hugo
+(unless (require 'ox-hugo nil t)
+  (message "ox-hugo not found, attempting to install...")
+  (package-refresh-contents)
+  (package-install 'ox-hugo)
+  (require 'ox-hugo))
+
+;; Try to require denote
+(unless (require 'denote nil t)
+  (message "denote not found, attempting to install...")
+  (package-install 'denote)
+  (require 'denote))
+
+;; Save original doom-user-dir before loading +user-info
+(defvar original-doom-user-dir doom-user-dir)
+(message "DEBUG: original-doom-user-dir = %s" original-doom-user-dir)
+
+;; Load user info (required for user-hugo-blog-dir)
+(let ((user-info (expand-file-name "+user-info.el" original-doom-user-dir)))
+  (if (file-exists-p user-info)
+      (progn
+        (load user-info)
+        (message "Loaded +user-info.el"))
+    (message "Warning: +user-info.el not found, using default paths")))
+
+;; Set defaults if not defined
+(unless (boundp 'user-hugo-blog-dir)
+  (defvar user-hugo-blog-dir (expand-file-name "~/repos/gh/notes/"))
+  (message "Using default user-hugo-blog-dir: %s" user-hugo-blog-dir))
+
+(unless (boundp 'user-org-directory)
+  (defvar user-org-directory (expand-file-name "~/org/"))
+  (message "Using default user-org-directory: %s" user-org-directory))
+
+;; Ensure org-hugo-base-dir and section are set
+(unless (boundp 'org-hugo-base-dir)
+  (setq org-hugo-base-dir user-hugo-blog-dir)
+  (message "Set org-hugo-base-dir: %s" org-hugo-base-dir))
+
+(unless (boundp 'org-hugo-section)
+  (setq org-hugo-section "test")
+  (message "Set org-hugo-section: %s" org-hugo-section))
+
+;; Load export configuration (use original-doom-user-dir)
+(let ((export-config (expand-file-name "+denote-export.el" original-doom-user-dir)))
+  (if (file-exists-p export-config)
+      (progn
+        (load export-config)
+        (message "Loaded export configuration"))
+    (error "Export config not found: %s" export-config)))
+
+;; Export function
+(defun batch-export-file (file)
+  "Export single org FILE to Hugo markdown in batch mode."
+  (condition-case err
+      (let* ((dir (file-name-directory file))
+             (dir-locals-file (expand-file-name ".dir-locals.el" dir))
+             (dir-locals-settings nil))
+
+        (message "Exporting: %s" file)
+
+        ;; Parse .dir-locals.el if exists
+        (when (file-exists-p dir-locals-file)
+          (message "  Loading dir-locals: %s" dir-locals-file)
+          (with-temp-buffer
+            (insert-file-contents dir-locals-file)
+            (let ((locals (read (current-buffer))))
+              (setq dir-locals-settings (cdr (assoc 'org-mode locals))))))
+
+        ;; Open file and apply settings in buffer context
+        (with-current-buffer (find-file-noselect file)
+          ;; Apply dir-locals settings to THIS buffer
+          (when dir-locals-settings
+            (dolist (setting dir-locals-settings)
+              (when (and (consp setting)
+                         (not (eq (car setting) 'eval)))
+                ;; Expand tilde in paths
+                (let ((value (cdr setting)))
+                  (when (and (stringp value) (string-prefix-p "~" value))
+                    (setq value (expand-file-name value)))
+                  (set (make-local-variable (car setting)) value)
+                  (message "    Set %s = %s" (car setting) value)))))
+
+          ;; Debug: show final values
+          (message "  Final Section: %s" (or org-hugo-section "NOT SET"))
+          (message "  Final Base: %s" (or org-hugo-base-dir "NOT SET"))
+          (message "  Final Base (expanded): %s"
+                   (when org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
+
+          ;; Verify all required variables are set
+          (unless org-hugo-base-dir
+            (error "org-hugo-base-dir is nil!"))
+          (unless org-hugo-section
+            (error "org-hugo-section is nil!"))
+
+          ;; Export with detailed error tracking
+          (let ((result (condition-case export-err
+                            (org-hugo-export-to-md)
+                          (error
+                           (message "✗ Error during export: %s" (error-message-string export-err))
+                           (message "   Backtrace: %S" export-err)
+                           (message "   buffer-file-name: %s" (buffer-file-name))
+                           (message "   org-hugo-base-dir: %s" org-hugo-base-dir)
+                           (message "   org-hugo-section: %s" org-hugo-section)
+                           nil))))
+            (if result
+                (message "✓ Exported: %s → %s" file result)
+              (message "✗ Export failed: %s" file)))
+          (kill-buffer)))
+    (error
+     (message "✗ Error exporting %s: %s" file (error-message-string err))
+     nil)))
+
+;; Main execution
+(let ((files command-line-args-left))
+  (if files
+      (progn
+        (message "Starting batch export of %d files..." (length files))
+        (mapc #'batch-export-file files)
+        (message "Batch export completed."))
+    (message "No files specified for export.")))
+
+;; Cleanup
+(setq command-line-args-left nil)
+
+;;; denote-export-batch.el ends here

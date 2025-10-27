@@ -81,8 +81,8 @@
   (setq org-directory "~/org/"))
 
 ;; org-hugo-base-dir
-(defconst user-hugo-blog-dir (concat user-project-directory "gh/blog/"))
-(defconst user-hugo-notes-dir (concat user-project-directory "gh/notes/"))
+(defconst user-hugo-blog-dir (concat user-project-directory "gh/notes/"))
+;; (defconst user-hugo-notes-dir (concat user-project-directory "gh/notes/"))
 
 ;;;; [2025-09-07 Sun 08:39]
 

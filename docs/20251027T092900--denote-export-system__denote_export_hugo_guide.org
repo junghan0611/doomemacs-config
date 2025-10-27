@@ -1,0 +1,235 @@
+#+title:      Denote Export System
+#+date:       [2025-10-27 Mon 09:29]
+#+filetags:   :denote:export:hugo:guide:
+#+identifier: 20251027T092900
+
+* Overview
+
+통합된 Denote → Hugo 내보내기 시스템
+
+** 주요 기능
+- Denote 링크를 Hugo relref로 자동 변환
+- 보안 필터링 (ROT13, sensitive strings)
+- 순차/병렬 내보내기 지원
+- 최적화된 org-export 설정
+
+** 마이그레이션
+=emacs-fulllab-config= 에서 통합 이식:
+- =denote-hugo.el= : 링크 변환 및 export 함수
+- =org-config.el= : org-export 설정
+- =uniconfig.el= : 보안 필터
+
+* Architecture
+
+** 파일 구조
+#+begin_example
+doomemacs-config/
+├── +denote-export.el              # 핵심 로직 (all-in-one)
+├── config.el                      # load! 추가됨
+├── bin/
+│   ├── denote-export-batch.el    # Batch mode export
+│   └── denote-export-parallel.sh # 병렬 실행 스크립트
+├── var/
+│   └── sensitive-strings.txt     # 보안 문자열 (gitignore)
+└── docs/
+    └── this-file.org
+#+end_example
+
+** 처리 흐름
+
+#+begin_src mermaid
+graph TD
+    A[Emacs 호출] --> B{모드 선택}
+    B -->|순차| C[my/update-dblock-export-garden-all]
+    B -->|병렬| D[my/update-dblock-export-garden-all-parallel]
+
+    C --> E[dblock 업데이트 ~/org/meta]
+    C --> F[순차 export dolist]
+
+    D --> E
+    D --> G[병렬 export GNU Parallel]
+
+    E --> H[org-save-all-org-buffers]
+    F --> I[ox-hugo markdown 생성]
+    G --> I
+
+    I --> J[~/repos/gh/notes/content/]
+    J --> K[clean-run.sh]
+    K --> L[secretlint]
+    K --> M[sed 문자열 치환]
+    K --> N[quartz build]
+#+end_src
+
+* Usage
+
+** 기본 사용법 (순차)
+
+#+begin_src elisp
+;; 전체 디렉토리 export
+(my/update-dblock-export-garden-all)
+
+;; 특정 디렉토리만
+(my/update-dblock-garden "~/org/meta")
+(my/update-export-garden "~/org/notes")
+#+end_src
+
+** 병렬 export (권장)
+
+#+begin_src elisp
+;; Emacs에서 실행
+(my/update-dblock-export-garden-all-parallel)
+
+;; 또는 터미널에서 직접
+;; ~/repos/gh/doomemacs-config/bin/denote-export-parallel.sh 8
+#+end_src
+
+** 후처리
+
+#+begin_src bash
+cd ~/repos/gh/notes/
+./clean-run.sh
+#+end_src
+
+* Configuration
+
+** 디렉토리 설정
+
+#+begin_src elisp
+;; per-machine.el에서 override 가능
+(setq garden-directory-lists
+      '("~/org/meta" "~/org/bib" "~/org/notes"))
+#+end_src
+
+** 보안 문자열 관리
+
+#+begin_src elisp
+;; 민감한 문자열 추가
+(my-add-sensitive-string "SecretString")
+
+;; 파일 위치
+;; ~/.config/doom/var/sensitive-strings.txt
+#+end_src
+
+** Hugo Section 매핑
+
+현재 지원되는 섹션:
+- =/notes= → =content/notes/=
+- =/journal= → =content/journal/=
+- =/talks= → =content/talks/=
+- =/meta= → =content/meta/=
+- =/bib= → =content/bib/=
+
+* Performance
+
+** 성능 비교 (예상)
+
+| 방식 | 파일 수 | 시간 | 코어 활용 |
+|------+---------+------+-----------|
+| 순차 | 1,400   | ~15분 | 1 core    |
+| 병렬 | 1,400   | ~2-3분 | 8 cores   |
+
+병렬 처리 시 약 *6-8배 속도 향상* 예상
+
+** 최적화 팁
+
+1. =org-export-use-babel nil= : Babel 블록 평가 비활성화
+2. =org-hugo-preserve-filling nil= : fill-column 무시
+3. =my/kill-all-buffers-except-toolbox= : 메모리 정리
+4. GNU Parallel의 =--bar --eta= : 진행 상황 표시
+
+* Security
+
+** .gitignore 설정
+
+#+begin_src gitignore
+# Security - DO NOT COMMIT
+var/sensitive-strings.txt
+#+end_src
+
+** 필터 체인
+
+1. *Emacs 내보내기 필터* :
+   - =my-org-hugo-rot13-company-name= : 회사명 ROT13
+   - =my-org-hugo-filter-sensitive-strings= : 민감 문자열 교체
+
+2. *Bash 후처리* :
+   - =lint.sh= : secretlint 검증
+   - =change-text.sh= : sed 추가 치환
+
+** TODO: pass CLI 통합
+
+향후 password-store 검증 로직 추가 예정:
+#+begin_src elisp
+(defun my/validate-secrets-before-export ()
+  "pass CLI로 등록된 보안키 검증"
+  ;; TODO: 구현
+  )
+#+end_src
+
+* Troubleshooting
+
+** GNU Parallel 미설치
+
+#+begin_src bash
+sudo apt install parallel
+#+end_src
+
+** Batch 스크립트 오류
+
+#+begin_src bash
+# 권한 확인
+ls -la ~/.config/doom/bin/
+
+# 실행 권한 부여
+chmod +x ~/.config/doom/bin/denote-export-*.{el,sh}
+#+end_src
+
+** Export 실패
+
+#+begin_src elisp
+;; 개별 파일 테스트
+(find-file "~/org/notes/test.org")
+(org-hugo-export-to-md)
+
+;; 로그 확인
+(switch-to-buffer "*Messages*")
+#+end_src
+
+* Integration with memex-kb
+
+이 시스템은 =memex-kb= 프로젝트에도 재사용 가능:
+
+#+begin_src bash
+# memex-kb/scripts/export.sh
+source ~/.config/doom/bin/denote-export-parallel.sh
+
+# 프로젝트별 후처리
+# ...
+#+end_src
+
+* References
+
+- [[https://ox-hugo.scripter.co/][ox-hugo Documentation]]
+- [[https://protesilaos.com/emacs/denote][Denote Manual]]
+- [[https://www.gnu.org/software/parallel/][GNU Parallel]]
+- [[https://github.com/junghanacs/doomemacs-config][doomemacs-config Repository]]
+
+* Changelog
+
+** [2025-10-27] v1.0.0 - Initial Release
+- 통합 export 시스템 구축
+- fulllab-config에서 로직 이식
+- 병렬 처리 지원 추가
+- 보안 필터링 통합
+
+* License
+
+GPLv3
+
+#+BEGIN_QUOTE
+메타문서화 및 퍼블리싱 도구로서의 가치 제시
+- Org-mode: 편집 도구
+- Denote: PKM 시스템
+- ox-hugo: 변환 엔진
+- Quartz: 퍼블리싱 플랫폼
+#+END_QUOTE
