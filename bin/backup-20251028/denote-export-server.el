@@ -229,7 +229,7 @@ Returns nil if no ID found."
 
 (defun get-org-hugo-section-from-path (filepath)
   "Determine org-hugo-section from FILEPATH directory.
-Returns meta, bib, notes, or test based on parent directory name."
+Returns meta, bib, or notes based on parent directory name."
   (let ((parent-dir (file-name-nondirectory
                      (directory-file-name
                       (file-name-directory filepath)))))
@@ -237,7 +237,6 @@ Returns meta, bib, notes, or test based on parent directory name."
      ((string= parent-dir "meta") "meta")
      ((string= parent-dir "bib") "bib")
      ((string= parent-dir "notes") "notes")
-     ((string= parent-dir "test") "test")
      (t "notes")))) ; default to notes
 
 ;; ========== Export Function ==========
@@ -245,10 +244,19 @@ Returns meta, bib, notes, or test based on parent directory name."
   "Export single org FILE to Hugo markdown.
 This function is called via emacsclient."
   (condition-case err
-      (let* ((dir (file-name-directory file))
+      (let* ((file (expand-file-name file)) ; Expand and normalize path
+             (dir (file-name-directory file))
              (dir-locals-file (expand-file-name ".dir-locals.el" dir))
              (dir-locals-settings nil)
              (denote-id (extract-denote-id-from-filename file)))
+
+        ;; Debug logging
+        (message "[Server] Processing file: %s" file)
+        (message "[Server] File exists: %s" (file-exists-p file))
+
+        ;; Verify file exists
+        (unless (file-exists-p file)
+          (error "File not found: %s" file))
 
         ;; Verify Denote ID exists
         (unless denote-id
@@ -262,9 +270,18 @@ This function is called via emacsclient."
               (setq dir-locals-settings (cdr (assoc 'org-mode locals))))))
 
         ;; Open file and apply settings
-        (with-current-buffer (find-file-noselect file)
-          ;; CRITICAL: Ensure org-mode is active (always call to reinitialize)
-          (org-mode)
+        ;; Use find-file-literally first to avoid encoding issues, then switch to org-mode
+        (with-current-buffer (find-file-noselect file nil nil nil)
+          ;; CRITICAL: Force org-mode activation
+          (message "[Server] Buffer mode before: %s" major-mode)
+          (when (not (eq major-mode 'org-mode))
+            (message "[Server] WARNING: Buffer not in org-mode, forcing activation")
+            (org-mode))
+          ;; Double-check and force if needed
+          (unless (eq major-mode 'org-mode)
+            (message "[Server] ERROR: Failed to activate org-mode, forcing again")
+            (funcall 'org-mode))
+          (message "[Server] Buffer mode after: %s" major-mode)
 
           ;; Apply dir-locals settings
           (when dir-locals-settings
@@ -304,8 +321,11 @@ This function is called via emacsclient."
 
           ;; Export
           (let* ((result (condition-case export-err
-                             (org-hugo-export-to-md)
+                             (progn
+                               (message "[Server] Starting org-hugo-export-to-md for: %s" file)
+                               (org-hugo-export-to-md))
                            (error
+                            (message "[Server] Export error: %s" (error-message-string export-err))
                             (format "ERROR:%s:%s" file (error-message-string export-err)))))
                  (final-result result))
 
@@ -333,17 +353,15 @@ This function is called via emacsclient."
      (message "[Server] ✗ Error: %s" (error-message-string err))
      nil)))
 
-;; Set ready flag AFTER all initialization
-(setq denote-export-server-ready t)
-
 (message "[Server] ========================================")
-(message "[Server] Denote Export Server FULLY READY!")
+(message "[Server] Denote Export Server Ready!")
 (message "[Server] Server name: %s" denote-export-server-name)
 (message "[Server] Export function: denote-export-file")
-(message "[Server] Ready flag: %s" denote-export-server-ready)
 (message "[Server] ========================================")
 
 ;; Keep server running
-(setq server-name denote-export-server-name)
+;; Use the actual daemon name passed via --daemon parameter
+;; (setq server-name denote-export-server-name)
+;; Note: server-name is automatically set by --daemon parameter
 
 ;;; denote-export-server.el ends here

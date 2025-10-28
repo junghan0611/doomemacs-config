@@ -73,15 +73,15 @@ graph TD
 (my/update-export-garden "~/org/notes")
 #+end_src
 
-** 병렬 export (권장)
+*** 병렬 export (권장)
 
-#+begin_src elisp
+ #+begin_src elisp
 ;; Emacs에서 실행
 (my/update-dblock-export-garden-all-parallel)
 
 ;; 또는 터미널에서 직접
 ;; ~/repos/gh/doomemacs-config/bin/denote-export-parallel.sh 8
-#+end_src
+ #+end_src
 
 ** 후처리
 

@@ -37,10 +37,10 @@ SERVER_SCRIPT="$DOOM_DIR/bin/denote-export-server.el"
 
 # Directories to export
 DIRS=(
-  "$ORG_DIR/meta"
-  "$ORG_DIR/bib"
-  "$ORG_DIR/notes"
-  # "$ORG_DIR/test"
+  # "$ORG_DIR/meta"
+  # "$ORG_DIR/bib"
+  # "$ORG_DIR/notes"
+  "$ORG_DIR/test"
 )
 
 # Colors for output
@@ -117,9 +117,26 @@ start_servers() {
       sleep 0.5
       elapsed=$((elapsed + 1))
     done
+
+    # Wait for server to be FULLY initialized (packages loaded)
+    log_info "Server $i started, waiting for full initialization..."
+    elapsed=0
+    timeout=30  # 패키지 로딩은 더 오래 걸릴 수 있음
+    while ! emacsclient -s "$server_name" --eval '(boundp '"'"'denote-export-server-ready)' 2>/dev/null | grep -q 't'; do
+      if [[ $elapsed -ge $timeout ]]; then
+        log_error "Server $i initialization timeout (${timeout}s)"
+        log_warn "Server may still be loading packages..."
+        exit 1
+      fi
+      sleep 1
+      elapsed=$((elapsed + 1))
+    done
+
+    log_info "✓ Server $i fully initialized"
   done
 
-  log_info "✓ Started $CORES servers"
+  log_info ""
+  log_info "✓ All $CORES servers ready!"
 }
 
 # Stop all Emacs servers
