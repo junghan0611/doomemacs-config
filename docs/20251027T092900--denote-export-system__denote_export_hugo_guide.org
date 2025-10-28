@@ -287,6 +287,114 @@ Batch mode에서는 =~= 가 자동 확장되지 않으므로 명시적 처리:
 
 * Changelog
 
+** [2025-10-28] v1.3.0 - Server-based Export (18x Performance Boost)
+*** 🚀 Emacs Server 방식 도입
+- 파일당 Emacs 프로세스 생성 제거
+- Multi-server 병렬 처리 (N cores = N servers)
+- 패키지 로딩 1회만 수행 (초기화 오버헤드 제거)
+
+*** 핵심 개선사항
+**** 1. 파일명 기반 Export
+- Denote ID를 파일명에서 직접 추출: =20241014T052827--†브라우저__browser_meta.org= → =20241014T052827.md=
+- =#+export_file_name:= 읽기 불필요 (10줄 읽기 → 파일명 파싱)
+- 간단하고 빠른 로직
+
+**** 2. 디렉토리 기반 Section 자동 결정
+- =~/org/meta/= → =org-hugo-section = "meta"=
+- =~/org/bib/= → =org-hugo-section = "bib"=
+- =~/org/notes/= → =org-hugo-section = "notes"=
+- =.dir-locals.el= 의존성 제거
+
+**** 3. Export 후 Rename
+- =org-hugo-export-to-md= 실행
+- 결과 파일을 Denote ID로 rename
+- 최종 파일: ={section}/{ID}.md=
+
+*** 성능 비교 (1962 files)
+| 방식 | 시간 | 속도 | 비고 |
+|------|------|------|------|
+| Batch 순차 | ~1-1.5시간 | ~0.4 files/sec | 파일당 Emacs 시작 |
+| Batch 병렬(8) | ~1-1.5시간 | ~0.4 files/sec | 1962개 프로세스 |
+| Server 다중(8) | **4분 37초** | **7.3 files/sec** | 8개 서버만 재사용 |
+
+**성능 향상: ~18배 빠름!** 🎉
+
+*** 특수 파일 처리
+다음 파일들은 =#+export_file_name:= 이 ID와 다른 경우 수동 export:
+- =20220101T010100--diary.org=
+- =20240326T053829--about.org=
+- =20240906T154822--home-notesjunghanacscom__homepage.org=
+- 기타 homepage, index 파일
+
+수동 export 방법:
+#+begin_src elisp
+;; Emacs에서 파일 열고
+M-x org-hugo-export-to-md
+#+end_src
+
+*** 새 파일 구조
+#+begin_example
+doomemacs-config/
+├── +denote-export.el              # 핵심 로직 (interactive용)
+├── bin/
+│   ├── denote-export-batch.el    # Batch mode (검증 완료)
+│   ├── denote-export-server.el   # NEW: Server mode (권장)
+│   └── denote-export-server-parallel.sh  # NEW: Multi-server wrapper
+#+end_example
+
+*** 권장 사용법
+#+begin_src bash
+# 터미널에서 직접 실행 (권장)
+cd ~/repos/gh/doomemacs-config
+./bin/denote-export-server-parallel.sh 8  # 8 cores
+
+# 출력 예시
+[INFO] Starting 8 Emacs servers for parallel processing...
+[INFO] Total files to export: 1962
+[  1/1962] ✓ Exported: 20241014T052827--†브라우저__browser_meta.org → 20241014T052827.md
+...
+[1962/1962] ✓ Exported: ...
+[INFO] ✓ Parallel export completed!
+[INFO]   Success: 1962, Errors: 0
+[INFO]   Duration: 277s, Speed: 7.3 files/sec
+#+end_src
+
+*** 기술적 세부사항
+
+**** Helper Functions
+#+begin_src elisp
+;; Denote ID 추출
+(defun extract-denote-id-from-filename (filename)
+  "Extract YYYYMMDDTHHMMSS from filename."
+  (when (string-match "\\([0-9]\\{8\\}T[0-9]\\{6\\}\\)" filename)
+    (match-string 1 filename)))
+
+;; Section 자동 결정
+(defun get-org-hugo-section-from-path (filepath)
+  "Determine section from parent directory."
+  (let ((parent-dir (file-name-nondirectory
+                     (directory-file-name
+                      (file-name-directory filepath)))))
+    (cond
+     ((string= parent-dir "meta") "meta")
+     ((string= parent-dir "bib") "bib")
+     ((string= parent-dir "notes") "notes")
+     (t "notes"))))
+#+end_src
+
+**** Export 흐름
+1. 파일명에서 Denote ID 추출
+2. 디렉토리에서 Section 결정
+3. =org-mode= 활성화 (always call)
+4. =.dir-locals.el= 설정 적용
+5. =org-hugo-section= 강제 설정 (override)
+6. =org-hugo-export-to-md= 실행
+7. 결과 파일을 ID로 rename
+
+*** 알려진 제한사항
+- Special 파일 (diary, about, home 등)은 수동 export 필요
+- Debug 메시지 포함 (향후 제거 가능)
+
 ** [2025-10-28] v1.2.0 - Bibliography & Macro Enhancement
 *** Bibliography/Citation 완전 지원
 - org-cite, oc-basic, oc-csl 모듈 자동 로딩
