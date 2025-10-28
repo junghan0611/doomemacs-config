@@ -36,7 +36,7 @@
       ;; Fallback
       (expand-file-name "~/repos/gh/doomemacs-config"))))
 
-(message "DEBUG: doom-user-dir = %s" doom-user-dir)
+;; (message "DEBUG: doom-user-dir = %s" doom-user-dir)
 
 ;; Find Doom Emacs installation
 (defvar doom-emacs-dir
@@ -78,7 +78,7 @@
 (ensure-package 'ox-hugo)
 
 ;; Install denote-explore dependencies in order
-(message "Installing denote-explore dependencies...")
+;; (message "Installing denote-explore dependencies...")
 
 ;; Built-in packages (should always be available)
 (require 'cl-lib)
@@ -88,6 +88,7 @@
 ;; External packages that need installation
 (ensure-package 'dash)
 (ensure-package 'denote)
+(ensure-package 'citar)  ;; Bibliography support
 
 ;; Chart package (may need separate installation)
 (condition-case err
@@ -106,23 +107,22 @@
 
 ;; denote-regexp (separate package in straight)
 (unless (require 'denote-regexp nil t)
-  (message "denote-regexp not found, searching...")
+  ;; (message "denote-regexp not found, searching...")
   (let ((denote-regexp-paths (list
                               (expand-file-name ".local/straight/build-30.1.90/denote-regexp" doom-emacs-dir)
                               (expand-file-name ".local/straight/repos/denote-regexp" doom-emacs-dir))))
     (dolist (path denote-regexp-paths)
       (when (file-directory-p path)
-        (message "Found denote-regexp in: %s" path)
+        ;; (message "Found denote-regexp in: %s" path)
         (add-to-list 'load-path path)))
     (condition-case err
         (require 'denote-regexp)
       (error
-       (message "WARNING: Could not load denote-regexp: %S" err)
-       (message "  denote-explore may not work")))))
+       (message "WARNING: Could not load denote-regexp: %S" err)))))
 
 ;; Try to require denote-explore (for macros like denote-explore-count-notes)
 (unless (require 'denote-explore nil t)
-  (message "denote-explore not found, searching in package directories...")
+  ;; (message "denote-explore not found, searching in package directories...")
 
   ;; Search in multiple possible locations
   (let ((search-paths (list
@@ -138,7 +138,7 @@
     ;; Try to find existing installation
     (dolist (path search-paths)
       (when (and (not found) (file-directory-p path))
-        (message "Found denote-explore in: %s" path)
+        ;; (message "Found denote-explore in: %s" path)
         (add-to-list 'load-path path)
         (setq found t)))
 
@@ -147,64 +147,109 @@
         (condition-case err
             (progn
               (require 'denote-explore)
-              (message "Successfully loaded denote-explore"))
+              ;; (message "Successfully loaded denote-explore")
+              )
           (error
-           (message "Failed to load denote-explore: %S" err)
-           (message "Using stub functions instead")
+           (message "WARNING: Failed to load denote-explore: %S" err)
            (defun denote-explore-count-notes () "0")
            (defun denote-explore-count-keywords () "0")))
       ;; Not found in any path - use stub
-      (message "WARNING: denote-explore not found in any location")
-      (message "  Using stub functions (macros will show '0')")
+      (message "WARNING: denote-explore not found")
       (defun denote-explore-count-notes () "0")
       (defun denote-explore-count-keywords () "0"))))
 
 ;; Set denote-directory immediately after loading denote (critical for link resolution!)
 (setq denote-directory (expand-file-name "~/org/"))
-(message "Set denote-directory: %s" denote-directory)
+;; (message "Set denote-directory: %s" denote-directory)
 
 ;; Save original doom-user-dir before loading +user-info
 (defvar original-doom-user-dir doom-user-dir)
-(message "DEBUG: original-doom-user-dir = %s" original-doom-user-dir)
+;; (message "DEBUG: original-doom-user-dir = %s" original-doom-user-dir)
 
 ;; Load user info (required for user-hugo-blog-dir)
 (let ((user-info (expand-file-name "+user-info.el" original-doom-user-dir)))
   (if (file-exists-p user-info)
-      (progn
-        (load user-info)
-        (message "Loaded +user-info.el"))
-    (message "Warning: +user-info.el not found, using default paths")))
+      (load user-info)
+    (message "Warning: +user-info.el not found")))
 
 ;; Set defaults if not defined
 (unless (boundp 'user-hugo-blog-dir)
-  (defvar user-hugo-blog-dir (expand-file-name "~/repos/gh/notes/"))
-  (message "Using default user-hugo-blog-dir: %s" user-hugo-blog-dir))
+  (defvar user-hugo-blog-dir (expand-file-name "~/repos/gh/notes/")))
 
 (unless (boundp 'user-org-directory)
-  (defvar user-org-directory (expand-file-name "~/org/"))
-  (message "Using default user-org-directory: %s" user-org-directory))
+  (defvar user-org-directory (expand-file-name "~/org/")))
 
 ;; Ensure org-hugo-base-dir and section are set
 (unless (boundp 'org-hugo-base-dir)
-  (setq org-hugo-base-dir user-hugo-blog-dir)
-  (message "Set org-hugo-base-dir: %s" org-hugo-base-dir))
+  (setq org-hugo-base-dir user-hugo-blog-dir))
 
 (unless (boundp 'org-hugo-section)
-  (setq org-hugo-section "test")
-  (message "Set org-hugo-section: %s" org-hugo-section))
+  (setq org-hugo-section "test"))
 
 ;; Force expand tilde in org-hugo-base-dir (critical!)
 (when (and org-hugo-base-dir (string-prefix-p "~" org-hugo-base-dir))
-  (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir))
-  (message "  Expanded org-hugo-base-dir: %s" org-hugo-base-dir))
+  (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
 
 ;; Load export configuration (use original-doom-user-dir)
 (let ((export-config (expand-file-name "+denote-export.el" original-doom-user-dir)))
   (if (file-exists-p export-config)
-      (progn
-        (load export-config)
-        (message "Loaded export configuration"))
+      (load export-config)
     (error "Export config not found: %s" export-config)))
+
+;; ========== Bibliography/Citation 초기화 ==========
+;; Require org-cite and citeproc for citation processing
+(require 'oc)  ;; org-cite
+(require 'oc-basic)  ;; basic citation processor
+(require 'oc-csl)  ;; CSL citation processor (if available)
+
+;; Configure org-cite export processors
+(setq org-cite-export-processors
+      '((html . (csl "apa.csl"))
+        (latex . biblatex)
+        (t . (basic))))
+
+;; Initialize citar if available
+(when (and (featurep 'citar) (boundp 'config-bibfiles))
+  ;; Force bibliography hash table initialization
+  (setq citar-bibliography config-bibfiles)
+  (setq org-cite-global-bibliography config-bibfiles)
+
+  ;; Initialize citar cache (this creates the hash tables)
+  (when (fboundp 'citar-refresh)
+    (condition-case err
+        (citar-refresh)
+      (error
+       (message "WARNING: citar-refresh failed: %S" err)))))
+
+;; ========== 매크로 확장 설정 ==========
+(require 'org-macro)
+
+;; Hook: export 전 매크로 확장
+(defun batch-expand-macros-before-export (backend)
+  "Expand all org macros before export in batch mode."
+  (condition-case err
+      (progn
+        ;; (message "  [Hook] Expanding macros...")
+        (org-macro-initialize-templates)
+        (org-macro-replace-all org-macro-templates)
+        ;; (message "  [Hook] Macros expanded")
+        )
+    (error
+     (message "WARNING: Macro expansion failed: %S" err))))
+
+(add-hook 'org-export-before-processing-hook
+          #'batch-expand-macros-before-export)
+
+;; denote-explore 매크로가 로드되었다면 명시적 등록
+(when (featurep 'denote-explore)
+  ;; 매크로 템플릿에 denote-explore 함수들 추가
+  (add-to-list 'org-macro-templates
+               '("denote-explore-count-notes" . "(eval (denote-explore-count-notes))") t)
+  (add-to-list 'org-macro-templates
+               '("denote-explore-count-keywords" . "(eval (denote-explore-count-keywords))") t))
+
+;; (message "Macro expansion configured for batch export")
+;; ========== 매크로 확장 설정 끝 ==========
 
 ;; Export function
 (defun batch-export-file (file)
@@ -214,11 +259,11 @@
              (dir-locals-file (expand-file-name ".dir-locals.el" dir))
              (dir-locals-settings nil))
 
-        (message "Exporting: %s" file)
+        ;; (message "Exporting: %s" file)
 
         ;; Parse .dir-locals.el if exists
         (when (file-exists-p dir-locals-file)
-          (message "  Loading dir-locals: %s" dir-locals-file)
+          ;; (message "  Loading dir-locals: %s" dir-locals-file)
           (with-temp-buffer
             (insert-file-contents dir-locals-file)
             (let ((locals (read (current-buffer))))
@@ -232,23 +277,33 @@
               (when (and (consp setting)
                          (not (eq (car setting) 'eval)))
                 ;; Expand tilde in paths
-                (let ((value (cdr setting)))
-                  (when (and (stringp value) (string-prefix-p "~" value))
-                    (setq value (expand-file-name value)))
-                  (set (make-local-variable (car setting)) value)
-                  (message "    Set %s = %s" (car setting) value)))))
+                (let* ((var-name (car setting))
+                       (original-value (cdr setting))
+                       (expanded-value (if (and (stringp original-value)
+                                                (string-prefix-p "~" original-value))
+                                           (expand-file-name original-value)
+                                         original-value)))
+                  ;; (message "    Setting %s: %s -> %s" var-name original-value expanded-value)
+                  (set (make-local-variable var-name) expanded-value)
+                  ;; (message "    Verified %s = %s" var-name (symbol-value var-name))
+                  ))))
 
-          ;; Debug: show final values
-          (message "  Final Section: %s" (or org-hugo-section "NOT SET"))
-          (message "  Final Base: %s" (or org-hugo-base-dir "NOT SET"))
-          (message "  Final Base (expanded): %s"
-                   (when org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
+          ;; Debug: show final values (only if needed)
+          ;; (message "  Final Section: %s" (or org-hugo-section "NOT SET"))
+          ;; (message "  Final Base: %s" (or org-hugo-base-dir "NOT SET"))
+          ;; (message "  Final Base (expanded): %s"
+          ;;          (when org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
+
 
           ;; Verify all required variables are set
           (unless org-hugo-base-dir
             (error "org-hugo-base-dir is nil!"))
           (unless org-hugo-section
             (error "org-hugo-section is nil!"))
+
+          ;; CRITICAL: Force expand tilde before export
+          (when (and org-hugo-base-dir (string-prefix-p "~" org-hugo-base-dir))
+            (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
 
           ;; Export with detailed error tracking
           (let ((result (condition-case export-err
@@ -272,9 +327,8 @@
 (let ((files command-line-args-left))
   (if files
       (progn
-        (message "Starting batch export of %d files..." (length files))
-        (mapc #'batch-export-file files)
-        (message "Batch export completed."))
+        ;; Silently process files (progress tracked by parallel script)
+        (mapc #'batch-export-file files))
     (message "No files specified for export.")))
 
 ;; Cleanup

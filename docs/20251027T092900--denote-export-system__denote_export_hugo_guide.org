@@ -287,11 +287,45 @@ Batch mode에서는 =~= 가 자동 확장되지 않으므로 명시적 처리:
 
 * Changelog
 
+** [2025-10-28] v1.2.0 - Bibliography & Macro Enhancement
+*** Bibliography/Citation 완전 지원
+- org-cite, oc-basic, oc-csl 모듈 자동 로딩
+- Citar bibliography hash table 초기화
+- Citation → Bibliography 앵커 링크 생성
+  - 본문: =<a href="#citeproc_bib_item_N">=
+  - 참고문헌: =<a id="citeproc_bib_item_N"></a>=
+- Quartz 완전 호환 (클릭 가능한 citation 링크)
+
+*** Macro 확장 지원
+- =org-macro-initialize-templates= 자동 실행
+- =org-export-before-processing-hook= 에 매크로 확장 추가
+- denote-explore 매크로 명시적 등록
+  - ={{{denote-explore-count-notes()}}}=
+  - ={{{denote-explore-count-keywords()}}}=
+
+*** 로그 출력 개선
+- 불필요한 디버그 메시지 제거 (주석 처리)
+- 파일당 1줄 출력: =[N/TOTAL] ✓ Exported: file.org → file.md=
+- 실시간 진행 카운터: =[544/1962]=
+- 디렉토리별 성공/실패 카운트
+
+*** 검증 완료
+- 1974개 파일 성공적으로 export
+  - meta: 530개
+  - bib: 653개
+  - notes: 791개
+- Citation 링크 정상 작동 확인
+- Denote 링크 → Hugo relref 변환 확인
+
+*** 알려진 제한사항
+- 매 파일마다 Emacs 프로세스 시작 (느림)
+- 1962개 파일 처리 시 예상 시간: 1-1.5시간
+- 향후 Emacs Server 방식으로 최적화 필요
+
 ** [2025-10-28] v1.1.0 - Dependency & Performance Improvements
 - denote-explore 완전 통합 (모든 의존성 자동 로드)
 - denote-directory 설정으로 링크 해석 문제 해결
 - .dir-locals.el 틸드 확장 개선
-- Citar/CSL bibliography 지원 추가
 - 진행 상황 모니터링 개선 (2초마다 업데이트)
 - 실제 성능 검증: 783 파일 108초 (4 cores)
 

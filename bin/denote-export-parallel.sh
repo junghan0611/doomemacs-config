@@ -43,10 +43,10 @@ BATCH_SCRIPT="$DOOM_DIR/bin/denote-export-batch.el"
 
 # Directories to export
 DIRS=(
-  # "$ORG_DIR/meta"
+  "$ORG_DIR/meta"
   # "$ORG_DIR/bib"
   # "$ORG_DIR/notes"
-  "$ORG_DIR/test"
+  # "$ORG_DIR/test"
 )
 
 # Colors for output
@@ -123,6 +123,11 @@ export_parallel() {
   log_info "Total files to export: $total_files"
   log_info ""
 
+  # Global counter across all directories
+  local global_counter=0
+  local global_success=0
+  local global_errors=0
+
   # Export each directory
   for dir in "${DIRS[@]}"; do
     if [[ ! -d "$dir" ]]; then
@@ -130,24 +135,50 @@ export_parallel() {
       continue
     fi
 
-    log_info "Exporting: $dir"
+    # Count files in this directory
+    local dir_files=$(find "$dir" -name "*.org" -type f 2>/dev/null | wc -l)
+    local dir_name=$(basename "$dir")
 
-    # Use parallel processing
+    log_info "Exporting: $dir ($dir_files files)"
+
+    # Use parallel processing with line buffering and counter
     # Check if GNU Parallel is available (has --version option)
     if command -v parallel &>/dev/null && parallel --version &>/dev/null 2>&1; then
-      # GNU Parallel available
+      # GNU Parallel available with line-buffer for real-time output
       find "$dir" -name "*.org" -type f -print0 | \
-        parallel --null --jobs "$CORES" --bar --eta \
-          'emacs --batch --load '"$BATCH_SCRIPT"' {} 2>&1 | grep -v "^Loading"' || true
+        parallel --null --jobs "$CORES" --no-notice --line-buffer \
+          'emacs --batch --load '"$BATCH_SCRIPT"' {} 2>&1 | grep -E "^✓ Exported|^✗ Export failed|^WARNING"' | \
+        while IFS= read -r line; do
+          global_counter=$((global_counter + 1))
+          if [[ "$line" =~ ^✓ ]]; then
+            global_success=$((global_success + 1))
+            printf "[%3d/%d] %s\n" "$global_counter" "$total_files" "$line"
+          elif [[ "$line" =~ ^✗ ]]; then
+            global_errors=$((global_errors + 1))
+            printf "[%3d/%d] %s\n" "$global_counter" "$total_files" "$line"
+          else
+            printf "[%3d/%d] %s\n" "$global_counter" "$total_files" "$line"
+          fi
+        done || true
     else
       # Fallback to xargs
-      log_warn "GNU Parallel not found, using xargs -P (no progress bar)"
+      log_warn "GNU Parallel not found, using xargs -P"
       find "$dir" -name "*.org" -type f -print0 | \
         xargs -0 -P "$CORES" -I {} \
-          emacs --batch --load "$BATCH_SCRIPT" {} 2>&1 | grep -v "^Loading" || true
+          emacs --batch --load "$BATCH_SCRIPT" {} 2>&1 | \
+        grep -E "^✓ Exported|^✗ Export failed|^WARNING" | \
+        while IFS= read -r line; do
+          global_counter=$((global_counter + 1))
+          if [[ "$line" =~ ^✓ ]]; then
+            global_success=$((global_success + 1))
+          elif [[ "$line" =~ ^✗ ]]; then
+            global_errors=$((global_errors + 1))
+          fi
+          printf "[%3d/%d] %s\n" "$global_counter" "$total_files" "$line"
+        done || true
     fi
 
-    log_info "✓ Completed: $dir"
+    log_info "✓ Completed: $dir ($global_success success, $global_errors errors)"
     log_info ""
   done
 
@@ -157,6 +188,8 @@ export_parallel() {
   log_info "=================================="
   log_info "✓ Parallel export completed!"
   log_info "  Total files: $total_files"
+  log_info "  Success: $global_success"
+  log_info "  Errors: $global_errors"
   log_info "  Cores used: $CORES"
   log_info "  Duration: ${duration}s"
   log_info "=================================="
