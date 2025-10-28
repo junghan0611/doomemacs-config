@@ -60,22 +60,108 @@
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
   (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t))
 
-;; Essential requires - with error handling
+;; Helper function to require/install packages
+(defun ensure-package (package)
+  "Ensure PACKAGE is installed and loaded."
+  (unless (require package nil t)
+    (message "%s not found, attempting to install..." package)
+    (unless package-archive-contents
+      (package-refresh-contents))
+    (package-install package)
+    (require package)))
+
+;; Essential requires
 (require 'org)
 (require 'ox)
 
-;; Try to require ox-hugo
-(unless (require 'ox-hugo nil t)
-  (message "ox-hugo not found, attempting to install...")
-  (package-refresh-contents)
-  (package-install 'ox-hugo)
-  (require 'ox-hugo))
+;; Install required packages
+(ensure-package 'ox-hugo)
 
-;; Try to require denote
-(unless (require 'denote nil t)
-  (message "denote not found, attempting to install...")
-  (package-install 'denote)
-  (require 'denote))
+;; Install denote-explore dependencies in order
+(message "Installing denote-explore dependencies...")
+
+;; Built-in packages (should always be available)
+(require 'cl-lib)
+(require 'json)
+(require 'browse-url)
+
+;; External packages that need installation
+(ensure-package 'dash)
+(ensure-package 'denote)
+
+;; Chart package (may need separate installation)
+(condition-case err
+    (require 'chart)
+  (error
+   (message "chart not available, attempting to install...")
+   (condition-case install-err
+       (progn
+         (unless package-archive-contents
+           (package-refresh-contents))
+         (package-install 'chart)
+         (require 'chart))
+     (error
+      (message "WARNING: Could not install chart package: %S" install-err)
+      (message "  denote-explore may have limited functionality")))))
+
+;; denote-regexp (separate package in straight)
+(unless (require 'denote-regexp nil t)
+  (message "denote-regexp not found, searching...")
+  (let ((denote-regexp-paths (list
+                              (expand-file-name ".local/straight/build-30.1.90/denote-regexp" doom-emacs-dir)
+                              (expand-file-name ".local/straight/repos/denote-regexp" doom-emacs-dir))))
+    (dolist (path denote-regexp-paths)
+      (when (file-directory-p path)
+        (message "Found denote-regexp in: %s" path)
+        (add-to-list 'load-path path)))
+    (condition-case err
+        (require 'denote-regexp)
+      (error
+       (message "WARNING: Could not load denote-regexp: %S" err)
+       (message "  denote-explore may not work")))))
+
+;; Try to require denote-explore (for macros like denote-explore-count-notes)
+(unless (require 'denote-explore nil t)
+  (message "denote-explore not found, searching in package directories...")
+
+  ;; Search in multiple possible locations
+  (let ((search-paths (list
+                       ;; Check doom-emacs-dir first
+                       (expand-file-name ".local/elpa/denote-explore" doom-emacs-dir)
+                       (expand-file-name ".local/straight/repos/denote-explore" doom-emacs-dir)
+                       (expand-file-name ".local/straight/build-30.1.90/denote-explore" doom-emacs-dir)
+                       ;; Fallback to user-emacs-directory
+                       (expand-file-name "denote-explore" (concat user-emacs-directory ".local/elpa/"))
+                       (expand-file-name "denote-explore" (concat user-emacs-directory "elpa/"))))
+        (found nil))
+
+    ;; Try to find existing installation
+    (dolist (path search-paths)
+      (when (and (not found) (file-directory-p path))
+        (message "Found denote-explore in: %s" path)
+        (add-to-list 'load-path path)
+        (setq found t)))
+
+    ;; Try to load (denote must be already loaded)
+    (if found
+        (condition-case err
+            (progn
+              (require 'denote-explore)
+              (message "Successfully loaded denote-explore"))
+          (error
+           (message "Failed to load denote-explore: %S" err)
+           (message "Using stub functions instead")
+           (defun denote-explore-count-notes () "0")
+           (defun denote-explore-count-keywords () "0")))
+      ;; Not found in any path - use stub
+      (message "WARNING: denote-explore not found in any location")
+      (message "  Using stub functions (macros will show '0')")
+      (defun denote-explore-count-notes () "0")
+      (defun denote-explore-count-keywords () "0"))))
+
+;; Set denote-directory immediately after loading denote (critical for link resolution!)
+(setq denote-directory (expand-file-name "~/org/"))
+(message "Set denote-directory: %s" denote-directory)
 
 ;; Save original doom-user-dir before loading +user-info
 (defvar original-doom-user-dir doom-user-dir)
@@ -106,6 +192,11 @@
 (unless (boundp 'org-hugo-section)
   (setq org-hugo-section "test")
   (message "Set org-hugo-section: %s" org-hugo-section))
+
+;; Force expand tilde in org-hugo-base-dir (critical!)
+(when (and org-hugo-base-dir (string-prefix-p "~" org-hugo-base-dir))
+  (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir))
+  (message "  Expanded org-hugo-base-dir: %s" org-hugo-base-dir))
 
 ;; Load export configuration (use original-doom-user-dir)
 (let ((export-config (expand-file-name "+denote-export.el" original-doom-user-dir)))

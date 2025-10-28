@@ -38,9 +38,24 @@
 (when (boundp 'user-hugo-blog-dir)
   (setq org-hugo-base-dir user-hugo-blog-dir))
 
+(setq org-hugo-export-with-toc nil) ; default nil
+
 ;; Lastmod settings
 (setq org-hugo-auto-set-lastmod t
       org-hugo-suppress-lastmod-period 3600.0) ; 1h (86400.0=24h, 172800.0=48h)
+
+;; Append and update time-stamps for
+;; #+hugo_lastmod: Time-stamp: <>
+;; org-hugo-auto-set-lastmod should be nil
+(require 'time-stamp)
+;; (add-hook 'write-file-functions 'time-stamp)
+;; M-x time-stamp
+;; Update last modified date for ox-hugo export
+;; (add-hook 'before-save-hook 'time-stamp)
+(setq time-stamp-active t
+      time-stamp-start "#\\+hugo_lastmod:[ \t]*"
+      time-stamp-end "$"
+      time-stamp-format "\[%Y-%m-%d\]")
 
 ;; Front matter format
 (setq org-hugo-front-matter-format 'yaml)
@@ -51,13 +66,19 @@
 
 ;; Default section and shortcodes
 (setq org-hugo-section "notes")
-(setq org-hugo-paired-shortcodes "mermaid callout cards details tabs")
+(setq org-hugo-paired-shortcodes "mermaid callout cards details tabs sidenote")
+
+;; https://ox-hugo.scripter.co/doc/formatting/
+;; if org-hugo-use-code-for-kbd is non-nil
+;; Requires CSS to render the <kbd> tag as something special. eg: ~kbd~
+;; (setq org-hugo-use-code-for-kbd t) ; default nil
 
 ;; Link formatting
-(setq org-hugo-link-desc-insert-type t)
+;; (setq org-hugo-link-desc-insert-type t)
 
 ;; Preserve filling - important for export
 (setq org-hugo-preserve-filling nil)
+(setq org-hugo-delete-trailing-ws nil) ;; for quartz
 
 ;; Tag formatting
 (setq org-hugo-allow-spaces-in-tags t)
@@ -70,25 +91,41 @@
 (setq org-hugo-export-creator-string "Emacs + Org-mode + ox-hugo")
 
 ;; Special blocks - raw content
-(add-to-list 'org-hugo-special-block-type-properties '("mermaid" :raw t))
+;; (add-to-list 'org-hugo-special-block-type-properties '("mermaid" :raw t))
 (add-to-list 'org-hugo-special-block-type-properties '("callout" :raw t))
 (add-to-list 'org-hugo-special-block-type-properties '("cards" :raw t))
 (add-to-list 'org-hugo-special-block-type-properties '("details" :raw t))
+(add-to-list 'org-hugo-special-block-type-properties '("sidenote" . (:trim-pre t :trim-post t)))
 
 ;; Bibliography heading
-(plist-put org-hugo-citations-plist :bibliography-section-heading "References")
+;; If this property is set to an empty string, this heading will not be auto-inserted. default value is 'References'
+(plist-put org-hugo-citations-plist :bibliography-section-heading "BIBLIOGRAPHY")
+
+;; Citar and CSL configuration (for bibliography export)
+(when (require 'citar nil t)
+  (when (boundp 'config-bibfiles)
+    (setq citar-bibliography config-bibfiles)
+    (setq org-cite-global-bibliography config-bibfiles))
+
+  ;; CSL styles directory
+  (when (boundp 'org-directory)
+    (setq org-cite-csl-styles-dir (concat org-directory ".csl"))
+    (setq citar-citeproc-csl-styles-dir (concat org-directory ".csl")))
+
+  ;; Default CSL style
+  (setq citar-citeproc-csl-style "apa.csl"))
 
 ;; Zero-width space handling
+;; charset: unicode (Unicode (ISO10646)) code point in charset: 0xA0
 (defun my/insert-white-space ()
   "Insert zero-width space character."
   (interactive)
-  (insert " "))
+  (insert " "))
 
 (defun +org-export-remove-white-space (text _backend _info)
   "Remove zero width spaces from TEXT."
   (unless (org-export-derived-backend-p 'org)
-    (replace-regexp-in-string " " "" text)))
-
+    (replace-regexp-in-string " " "" text)))
 (add-to-list 'org-export-filter-final-output-functions
              #'+org-export-remove-white-space t)
 
@@ -143,69 +180,85 @@ Checks for /notes, /journal, /talks, /meta, /bib directories."
   "Format the way Denote links are exported to markdown.
 If LINK is considered private or a draft, return DESC.
 If LINK is considered a public note, format it as a Hugo relative link.
+If USE-RELREF is non-nil, format it as a Hugo relref link."
+  (let* (
+         ;; (path (denote-get-path-by-id link)) ; only i
+         ;; (pathr (file-relative-name (nth 0 path-id)))
+         ;; (final-filename (concat (denote-retrieve-filename-identifier path) ".md"))
+         (path-id (denote-link--ol-resolve-link-to-target link :full-data))
+         (path (nth 0 path-id))
+         (section (my/get-hugo-section-directory-from-path path))
+         (id (nth 1 path-id))
+         (query (nth 2 path-id))
+         ;; (exportfilename (my/get-export-file-name-from-file path))
+         (exportfilename (format "%s.md" id))
+         (content-dir (concat (file-name-as-directory org-hugo-base-dir)
+                              (format "content/%s/" section)))
+         (exportfilepath (when (and exportfilename org-hugo-base-dir)
+                           (expand-file-name exportfilename content-dir)))
+         (uri (cond
+               (query (format "%s/%s" exportfilename query)) ; custom header
+               (t (format "%s" exportfilename)))))
 
-IMPORTANT: Section is determined by org-hugo-section variable,
-NOT by file path. This ensures URI permanence when files are moved."
-  (condition-case err
-      (let* ((path-id (denote-link--ol-resolve-link-to-target link :full-data))
-             (path (nth 0 path-id))
-             ;; Use org-hugo-section from .dir-locals.el (not path inference!)
-             (section (or org-hugo-section "notes"))
-             (id (nth 1 path-id))
-             (query (nth 2 path-id))
-             (exportfilename (format "%s.md" id))
-             (content-dir (when org-hugo-base-dir
-                            (concat (file-name-as-directory org-hugo-base-dir)
-                                    (format "content/%s/" section))))
-             (exportfilepath (when (and exportfilename content-dir)
-                               (expand-file-name exportfilename content-dir)))
-             (uri (cond
-                   (query (format "%s/%s" exportfilename query))
-                   (t (format "%s" exportfilename)))))
-        ;; Return the formatted link
-        (cond
-         ;; For Digital Garden (Quartz)
-         ((string-match "notes" org-hugo-base-dir)
-          (if (or (my/is-draft-file path) (my/is-md-file path))
-              (format "[%s]" desc)
-            (if exportfilename
-                (format "[%s]({{< relref \"%s/%s\" >}})" desc section exportfilename)
-              (format "[%s]" desc))))
+    (format "[%s]" section)
+    ;; (message "%s" (format "[%s]({{< relref \"%s/%s\" >}})" desc section uri))
 
-         ;; Fallback
-         (t (format "[%s]" desc))))
-    (error
-     ;; If denote link resolution fails, return plain description
-     (format "[%s]" desc))))
+    ;; 내보낸 파일이 없는 경우 링크 만들지 않도록
+    ;; (if  (not (file-exists-p exportfilepath))
+    ;;     (format "[%s]" desc) ;; 내보낸 파일이 없다면 링크 만들지 마라
+
+    (cond
+     ;; 1) For files in Digital Garden for ALL
+     ;; ((and (string-match "blog" org-hugo-base-dir) (or (my/is-docs-file path) (my/is-blog-file path))) ;;
+     ((string-match "notes" org-hugo-base-dir) ;; for quartz
+      (if (or (my/is-draft-file path) (my/is-md-file path)) ; (my/is-llm-file path) (my/is-docs-file path) (my/is-blog-file path)
+          (format "[%s]" desc)
+        (if exportfilename
+            ;; quartz doesn't support custom header
+            (format "[%s]({{< relref \"%s/%s\" >}})" desc section exportfilename) ; uri
+          (format "[%s]" desc))))
+
+     ;; 2) For files in other directories based on org-hugo-base-dir
+     ;; ((and (string-match "notes" org-hugo-base-dir))
+     ;; ((string-match "notes" org-hugo-base-dir)
+     ;;  (if (my/is-draft-file path)
+     ;;      (format "[%s]" desc)
+     ;;    (if (or (my/is-docs-file path) (my/is-blog-file path))
+     ;;        (format "[%s]" desc)
+     ;;      (if exportfilename
+     ;;          (format "[%s]({{< relref \"%s/%s\" >}})" desc section uri)
+     ;;        (format "[%s]" desc)))
+     ;;    ))
+     ;; Fallback
+     (t (format "[%s]" desc)))
+    ;; ) ; end-of if
+    ))
 
 (defun my/denote-link-ol-export (link description format)
   "Export a `denote:' link from Org files.
-The LINK, DESCRIPTION, and FORMAT are handled by the export backend."
-  (condition-case err
-      (let* ((path-id (denote-link--ol-resolve-link-to-target link :full-data))
-             (path (file-relative-name (nth 0 path-id)))
-             (id (nth 1 path-id))
-             (query (nth 2 path-id))
-             (anchor (file-name-sans-extension path))
-             (desc (cond
-                    (description)
-                    (query (format "denote:%s::%s" id query))
-                    (t (concat "denote:" id)))))
-        (cond
-         ((eq format 'html)
-          (if query
-              (format "<a href=\"%s.html%s\">%s</a>" anchor query desc)
-            (format "<a href=\"%s.html\">%s</a>" anchor desc)))
-         ((eq format 'latex)
-          (format "\\href{%s}{%s}"
-                  (replace-regexp-in-string "[\\{}$%&_#~^]" "\\\\\\&" path) desc))
-         ((eq format 'texinfo) (format "@uref{%s,%s}" path desc))
-         ((eq format 'ascii) (format "[%s] <denote:%s>" desc path))
-         ((eq format 'md) (my/denote-markdown-export link desc))
-         (t path)))
-    (error
-     ;; If link resolution fails, return description as plain text
-     (or description link))))
+The LINK, DESCRIPTION, and FORMAT are handled by the export
+backend."
+  (let* (
+         (path-id (denote-link--ol-resolve-link-to-target link :full-data))
+         (path (file-relative-name (nth 0 path-id)))
+         (id (nth 1 path-id))
+         (query (nth 2 path-id))
+         (anchor (file-name-sans-extension path))
+         (desc (cond
+                (description)
+                (query (format "denote:%s::%s" id query))
+                (t (concat "denote:" id)))))
+    (cond
+     ((eq format 'html)
+      (if query
+          (format "<a href=\"%s.html%s\">%s</a>" anchor query desc)
+        (format "<a href=\"%s.html\">%s</a>" anchor desc)))
+     ((eq format 'latex) (format "\\href{%s}{%s}" (replace-regexp-in-string "[\\{}$%&_#~^]" "\\\\\\&" path) desc))
+     ((eq format 'texinfo) (format "@uref{%s,%s}" path desc))
+     ((eq format 'ascii) (format "[%s] <denote:%s>" desc path))
+     ((eq format 'md)  (my/denote-markdown-export link desc))
+     ;; ((eq format 'md) (format "[%s](%s)" desc path))
+     (t path))))
 
 ;; Register denote link export handler
 (org-link-set-parameters "denote" :export #'my/denote-link-ol-export)

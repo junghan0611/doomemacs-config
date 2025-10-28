@@ -141,9 +141,9 @@
 (setq citar-notes-paths (list (concat user-org-directory "bib/")))
 ;; (defvar config-bibfiles (list (concat user-org-directory "bib/zotero-biblatex.bib")))
 (defvar config-bibfiles (list
-                         ;; (concat user-org-directory "resources/Slipbox.bib")
+                         (concat user-org-directory "resources/Slipbox.bib")
                          (concat user-org-directory "resources/Book.bib")
-                         ;; (concat user-org-directory "resources/Category.bib")
+                         (concat user-org-directory "resources/Category.bib")
                          ))
 
 ;; elisp-demos
