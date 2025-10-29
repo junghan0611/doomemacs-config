@@ -326,11 +326,19 @@ Batch mode에서는 =~= 가 자동 확장되지 않으므로 명시적 처리:
 - 진행 중 (백그라운드)
 - 예상 완료: 약 45분
 
-**** 전체 성능 (1,961 files)
+**** 전체 성능 (1,961 files) - 실제 측정값
 | 방식 | 시간 | 속도 | 개선율 |
 |------|------|------|--------|
-| 순차 (1 job) | ~180분 | 0.07 files/sec | - |
-| 병렬 (4 jobs) | **~140분** | **0.23 files/sec** | **4배** |
+| 순차 (1 job) | ~590분 (9.8h) | 0.055 files/sec | - |
+| 병렬 (4 jobs) | **148분 (2.5h)** | **0.22 files/sec** | **4배** |
+
+**** 디렉토리별 상세 결과
+| 디렉토리 | 파일 수 | 소요 시간 | 속도 | 성공률 |
+|----------|---------|-----------|------|--------|
+| Meta | 530 | 50분 | 0.18/s | 100% |
+| Bib | 649 | 44분 | 0.25/s | 100% |
+| Notes | 782 | 54분 | 0.24/s | 99.9% |
+| **합계** | **1,961** | **148분** | **0.22/s** | **99.95%** |
 
 *** 🔧 Updated Architecture
 **** Makefile Strategy
@@ -354,6 +362,29 @@ make -f denote-export-multi.mk export-notes
 - ✅ Section 잘못된 폴더로 export
 - ✅ Server socket 생성 실패
 - ✅ Author 자동 추가
+
+*** ⚠️ Known Limitations
+**** YAML Code Block Issue (1 file / 1,961)
+파일: =20251021T120000--anthropic-skill-creator=
+
+원인: =#+begin_src yaml= 블록을 ox-hugo가 frontmatter로 오인
+
+해결:
+#+begin_example
+# 변경 전
+#+begin_src yaml
+---
+name: example
+---
+#+end_src
+
+# 변경 후
+#+begin_example yaml
+---
+name: example
+---
+#+end_example
+#+end_example
 
 ** [2025-10-28] v1.3.0 - Server-based Export (18x Performance Boost)
 *** 🚀 Emacs Server 방식 도입
