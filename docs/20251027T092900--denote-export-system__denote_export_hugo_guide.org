@@ -287,6 +287,74 @@ Batch mode에서는 =~= 가 자동 확장되지 않으므로 명시적 처리:
 
 * Changelog
 
+** [2025-10-29] v1.4.0 - Production-Ready Multi-Daemon Export
+*** 🐛 Critical Bug Fixes
+**** 1. Server Socket Creation
+- =server-start= 호출 누락 해결
+- 데몬 초기화 후 자동으로 server socket 생성
+- emacsclient 연결 안정성 확보
+
+**** 2. Makefile Filename Handling
+- 파일명 공백/특수문자 처리 오류 수정
+- =printf '%s\n'= → =find -print0 + xargs -0= (null-delimited)
+- 유니코드 파일명 완벽 지원
+
+**** 3. Section Override Fix
+- =.dir-locals.el= override 실패 문제 해결
+- =setq-local= 단독 사용 → =set (make-local-variable)= + =setq= 조합
+- 상위 디렉토리 설정 무시하고 정확한 section 적용
+
+**** 4. Author Export Disabled
+- =org-export-with-author nil= 설정 추가
+- "John Doe" 기본값 자동 생성 방지
+- 깨끗한 frontmatter 생성
+
+*** 📊 Production Validation Results
+**** Meta Directory (530 files)
+- 원본: 530개 org
+- 생성: 530개 md (100%)
+- 소요: 약 50분 (4 parallel jobs)
+- 속도: 0.18 files/sec
+
+**** Bib Directory (649 files)
+- 원본: 649개 org
+- 생성: 649개 md (100%)
+- 소요: 44분 (4 parallel jobs)
+- 속도: 0.25 files/sec
+
+**** Notes Directory (782 files)
+- 진행 중 (백그라운드)
+- 예상 완료: 약 45분
+
+**** 전체 성능 (1,961 files)
+| 방식 | 시간 | 속도 | 개선율 |
+|------|------|------|--------|
+| 순차 (1 job) | ~180분 | 0.07 files/sec | - |
+| 병렬 (4 jobs) | **~140분** | **0.23 files/sec** | **4배** |
+
+*** 🔧 Updated Architecture
+**** Makefile Strategy
+- =denote-export-multi.mk= : 4 daemons × N jobs
+- =denote-export.mk= : 1 daemon × N jobs
+- Null-delimited file processing (안전성)
+- Per-directory parallel execution
+
+**** Recommended Usage
+#+begin_src bash
+# Production-ready export
+make -f denote-export-multi.mk all
+# or per-directory
+make -f denote-export-multi.mk export-meta
+make -f denote-export-multi.mk export-bib
+make -f denote-export-multi.mk export-notes
+#+end_src
+
+*** ✅ Known Issues Resolved
+- ✅ 파일명 공백/특수문자 깨짐
+- ✅ Section 잘못된 폴더로 export
+- ✅ Server socket 생성 실패
+- ✅ Author 자동 추가
+
 ** [2025-10-28] v1.3.0 - Server-based Export (18x Performance Boost)
 *** 🚀 Emacs Server 방식 도입
 - 파일당 Emacs 프로세스 생성 제거

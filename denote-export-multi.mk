@@ -22,7 +22,7 @@ DAEMON_NAME := denote-export-daemon
 
 # Parallel configuration
 NUM_DAEMONS := 4        # Number of Emacs daemons
-JOBS_PER_DAEMON := 2    # Concurrent jobs per daemon
+JOBS_PER_DAEMON := 1    # Concurrent jobs per daemon
 TOTAL_JOBS := $(shell echo $$(($(NUM_DAEMONS) * $(JOBS_PER_DAEMON))))
 
 # Find all org files
@@ -145,11 +145,12 @@ export-meta: daemon-start
 	@echo "$(GREEN)[INFO]$(NC) Files: $(words $(META_FILES)), Daemons: $(NUM_DAEMONS), Total jobs: $(TOTAL_JOBS)"
 	@START=$$(date +%s); \
 	i=1; \
-	printf '%s\n' $(META_FILES) | while read file; do \
+	find $(ORG_DIR)/meta -name "*.org" -type f -print0 | \
+	while IFS= read -r -d '' file; do \
 		DAEMON_ID=$$((i % $(NUM_DAEMONS) + 1)); \
-		echo "$$DAEMON_ID $$file"; \
+		printf "%d\0%s\0" "$$DAEMON_ID" "$$file"; \
 		i=$$((i + 1)); \
-	done | xargs -P $(TOTAL_JOBS) -n 2 sh -c 'DAEMON_ID=$$1; FILE=$$2; RESULT=$$(emacsclient -s $(DAEMON_NAME)-$$DAEMON_ID --eval "(denote-export-file \"$$FILE\")" 2>&1); if echo "$$RESULT" | grep -q "^\"SUCCESS:"; then echo "✓ [D$$DAEMON_ID] $$(basename $$FILE)"; else echo "✗ [D$$DAEMON_ID] $$(basename $$FILE)"; fi' sh; \
+	done | xargs -0 -P $(TOTAL_JOBS) -n 2 sh -c 'DAEMON_ID="$$1"; FILE="$$2"; RESULT=$$(emacsclient -s $(DAEMON_NAME)-$$DAEMON_ID --eval "(denote-export-file \"$$FILE\")" 2>&1); if echo "$$RESULT" | grep -q "^\"SUCCESS:"; then echo "✓ [D$$DAEMON_ID] $$(basename \"$$FILE\")"; else echo "✗ [D$$DAEMON_ID] $$(basename \"$$FILE\")"; fi' sh; \
 	END=$$(date +%s); \
 	DURATION=$$((END - START)); \
 	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"

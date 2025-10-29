@@ -40,6 +40,9 @@
 ;; Enable debug on error
 (setq debug-on-error t)
 
+;; Disable author export (prevents "John Doe" default)
+(setq org-export-with-author nil)
+
 (message "[Server] Starting Denote Export Server: %s" denote-export-server-name)
 
 ;; Determine DOOMDIR
@@ -284,7 +287,9 @@ This function is called via emacsclient."
           ;; CRITICAL: Force set org-hugo-section from directory path
           ;; This overrides .dir-locals.el to ensure correct section
           (let ((computed-section (get-org-hugo-section-from-path file)))
-            (setq-local org-hugo-section computed-section)
+            ;; Set both local and global to ensure ox-hugo picks it up
+            (set (make-local-variable 'org-hugo-section) computed-section)
+            (setq org-hugo-section computed-section)
             (message "[Server] File: %s" (file-name-nondirectory file))
             (message "[Server] Computed section: %s" computed-section)
             (message "[Server] Actual org-hugo-section: %s" org-hugo-section))
@@ -392,5 +397,8 @@ Each server processes its own list independently."
 
 ;; Keep server running
 (setq server-name denote-export-server-name)
+(server-start)
+
+(message "[Server] Server socket created at: %s" server-name)
 
 ;;; denote-export-server.el ends here
