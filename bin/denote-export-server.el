@@ -333,6 +333,53 @@ This function is called via emacsclient."
      (message "[Server] ✗ Error: %s" (error-message-string err))
      nil)))
 
+;; Batch export function - process list of files independently
+(defun denote-export-batch-files (files &optional log-file)
+  "Export list of FILES in sequence, logging to LOG-FILE.
+Each server processes its own list independently."
+  (let ((total (length files))
+        (success 0)
+        (errors 0)
+        (counter 0)
+        (start-time (current-time))
+        (log-buffer (when log-file (find-file-noselect log-file))))
+
+    (message "[Batch] Starting batch export of %d files" total)
+
+    (dolist (file files)
+      (setq counter (1+ counter))
+      (let* ((basename (file-name-nondirectory file))
+             (progress-msg (format "[%3d/%d] Processing: %s" counter total basename))
+             (result (denote-export-file file)))
+
+        ;; Log progress
+        (message "%s" progress-msg)
+        (when log-buffer
+          (with-current-buffer log-buffer
+            (goto-char (point-max))
+            (insert progress-msg "\n")
+            (insert (format "  Result: %s\n" result))))
+
+        ;; Count success/error
+        (if (and result (string-prefix-p "SUCCESS:" result))
+            (setq success (1+ success))
+          (setq errors (1+ errors)))))
+
+    (let* ((end-time (current-time))
+           (duration (float-time (time-subtract end-time start-time)))
+           (speed (if (> duration 0) (/ total duration) 0))
+           (summary (format "Batch completed: %d success, %d errors, %.1fs (%.3f files/sec)"
+                           success errors duration speed)))
+
+      (message "[Batch] %s" summary)
+      (when log-buffer
+        (with-current-buffer log-buffer
+          (goto-char (point-max))
+          (insert "\n" summary "\n")
+          (save-buffer)))
+
+      summary)))
+
 ;; Set ready flag AFTER all initialization
 (setq denote-export-server-ready t)
 

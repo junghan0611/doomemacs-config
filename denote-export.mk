@@ -9,7 +9,8 @@
 #   make -f denote-export.mk all      # Export all folders
 #   make -f denote-export.mk clean    # Stop daemon and cleanup
 
-SHELL := /run/current-system/sw/bin/bash
+# Support both Ubuntu and NixOS
+SHELL := $(shell if [ -f /run/current-system/sw/bin/bash ]; then echo /run/current-system/sw/bin/bash; else echo /usr/bin/bash; fi)
 .SHELLFLAGS := -euo pipefail -c
 
 # Configuration

@@ -9,7 +9,8 @@
 #   make -f denote-export-multi.mk all      # Export all folders
 #   make -f denote-export-multi.mk clean    # Stop all daemons
 
-SHELL := /run/current-system/sw/bin/bash
+# Support both Ubuntu and NixOS
+SHELL := $(shell if [ -f /run/current-system/sw/bin/bash ]; then echo /run/current-system/sw/bin/bash; else echo /usr/bin/bash; fi)
 .SHELLFLAGS := -euo pipefail -c
 
 # Configuration
@@ -138,7 +139,73 @@ export-test: daemon-start
 	DURATION=$$((END - START)); \
 	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"
 
-# Export all
+# Export meta folder
+export-meta: daemon-start
+	@echo "$(GREEN)[INFO]$(NC) Exporting meta folder"
+	@echo "$(GREEN)[INFO]$(NC) Files: $(words $(META_FILES)), Daemons: $(NUM_DAEMONS), Total jobs: $(TOTAL_JOBS)"
+	@START=$$(date +%s); \
+	i=1; \
+	printf '%s\n' $(META_FILES) | while read file; do \
+		DAEMON_ID=$$((i % $(NUM_DAEMONS) + 1)); \
+		echo "$$DAEMON_ID $$file"; \
+		i=$$((i + 1)); \
+	done | xargs -P $(TOTAL_JOBS) -n 2 sh -c 'DAEMON_ID=$$1; FILE=$$2; RESULT=$$(emacsclient -s $(DAEMON_NAME)-$$DAEMON_ID --eval "(denote-export-file \"$$FILE\")" 2>&1); if echo "$$RESULT" | grep -q "^\"SUCCESS:"; then echo "✓ [D$$DAEMON_ID] $$(basename $$FILE)"; else echo "✗ [D$$DAEMON_ID] $$(basename $$FILE)"; fi' sh; \
+	END=$$(date +%s); \
+	DURATION=$$((END - START)); \
+	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"
+
+# Export bib folder
+export-bib: daemon-start
+	@echo "$(GREEN)[INFO]$(NC) Exporting bib folder"
+	@echo "$(GREEN)[INFO]$(NC) Files: $(words $(BIB_FILES)), Daemons: $(NUM_DAEMONS), Total jobs: $(TOTAL_JOBS)"
+	@START=$$(date +%s); \
+	i=1; \
+	printf '%s\n' $(BIB_FILES) | while read file; do \
+		DAEMON_ID=$$((i % $(NUM_DAEMONS) + 1)); \
+		echo "$$DAEMON_ID $$file"; \
+		i=$$((i + 1)); \
+	done | xargs -P $(TOTAL_JOBS) -n 2 sh -c 'DAEMON_ID=$$1; FILE=$$2; RESULT=$$(emacsclient -s $(DAEMON_NAME)-$$DAEMON_ID --eval "(denote-export-file \"$$FILE\")" 2>&1); if echo "$$RESULT" | grep -q "^\"SUCCESS:"; then echo "✓ [D$$DAEMON_ID] $$(basename $$FILE)"; else echo "✗ [D$$DAEMON_ID] $$(basename $$FILE)"; fi' sh; \
+	END=$$(date +%s); \
+	DURATION=$$((END - START)); \
+	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"
+
+# Export notes folder
+export-notes: daemon-start
+	@echo "$(GREEN)[INFO]$(NC) Exporting notes folder"
+	@echo "$(GREEN)[INFO]$(NC) Files: $(words $(NOTES_FILES)), Daemons: $(NUM_DAEMONS), Total jobs: $(TOTAL_JOBS)"
+	@START=$$(date +%s); \
+	i=1; \
+	printf '%s\n' $(NOTES_FILES) | while read file; do \
+		DAEMON_ID=$$((i % $(NUM_DAEMONS) + 1)); \
+		echo "$$DAEMON_ID $$file"; \
+		i=$$((i + 1)); \
+	done | xargs -P $(TOTAL_JOBS) -n 2 sh -c 'DAEMON_ID=$$1; FILE=$$2; RESULT=$$(emacsclient -s $(DAEMON_NAME)-$$DAEMON_ID --eval "(denote-export-file \"$$FILE\")" 2>&1); if echo "$$RESULT" | grep -q "^\"SUCCESS:"; then echo "✓ [D$$DAEMON_ID] $$(basename $$FILE)"; else echo "✗ [D$$DAEMON_ID] $$(basename $$FILE)"; fi' sh; \
+	END=$$(date +%s); \
+	DURATION=$$((END - START)); \
+	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"
+
+# Export all folders sequentially
+all: daemon-start
+	@echo "$(GREEN)[INFO]$(NC) ======================================"
+	@echo "$(GREEN)[INFO]$(NC) Starting full export"
+	@echo "$(GREEN)[INFO]$(NC) Total files: $(words $(ALL_FILES))"
+	@echo "$(GREEN)[INFO]$(NC) Daemons: $(NUM_DAEMONS), Jobs: $(TOTAL_JOBS)"
+	@echo "$(GREEN)[INFO]$(NC) ======================================"
+	@TOTAL_START=$$(date +%s); \
+	$(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) export-meta; \
+	$(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) export-bib; \
+	$(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) export-notes; \
+	TOTAL_END=$$(date +%s); \
+	TOTAL_DURATION=$$((TOTAL_END - TOTAL_START)); \
+	SPEED=$$(echo "scale=2; $(words $(ALL_FILES)) / $$TOTAL_DURATION" | bc); \
+	echo "$(GREEN)[INFO]$(NC) ======================================"; \
+	echo "$(GREEN)[INFO]$(NC) Full export completed!"; \
+	echo "$(GREEN)[INFO]$(NC) Total files: $(words $(ALL_FILES))"; \
+	echo "$(GREEN)[INFO]$(NC) Total time: $${TOTAL_DURATION}s"; \
+	echo "$(GREEN)[INFO]$(NC) Speed: $${SPEED} files/sec"; \
+	echo "$(GREEN)[INFO]$(NC) ======================================"
+
+# Test target
 test: export-test
 
 # Cleanup
