@@ -320,7 +320,7 @@ This function is called via emacsclient."
                             (format "ERROR:%s:%s" file (error-message-string export-err)))))
                  (final-result result))
 
-            ;; If export succeeded, rename to Denote ID
+            ;; If export succeeded, rename to Denote ID and add date to frontmatter
             (when (and (stringp result)
                        (not (string-prefix-p "ERROR:" result))
                        (file-exists-p result))
@@ -328,6 +328,24 @@ This function is called via emacsclient."
                      (target-file (expand-file-name (concat denote-id ".md") result-dir)))
                 ;; Rename exported file to Denote ID
                 (rename-file result target-file t)
+
+                ;; Add date to frontmatter from Denote ID
+                ;; Format: 20230521T215600 -> 2023-05-21
+                (when (string-match "\\([0-9]\\{4\\}\\)\\([0-9]\\{2\\}\\)\\([0-9]\\{2\\}\\)" denote-id)
+                  (let ((date-str (format "%s-%s-%s"
+                                        (match-string 1 denote-id)
+                                        (match-string 2 denote-id)
+                                        (match-string 3 denote-id))))
+                    (with-temp-file target-file
+                      (insert-file-contents target-file)
+                      (goto-char (point-min))
+                      ;; Find end of frontmatter (second ---)
+                      (when (re-search-forward "^---\n" nil t)
+                        (when (re-search-forward "^---\n" nil t)
+                          (forward-line -1)
+                          ;; Insert date before closing ---
+                          (insert (format "date: %s\n" date-str)))))))
+
                 (setq final-result target-file)))
 
             (kill-buffer)

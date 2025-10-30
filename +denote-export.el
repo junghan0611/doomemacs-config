@@ -149,6 +149,7 @@
 (setq org-export-with-timestamps t)               ; default t
 (setq org-export-with-todo-keywords t)            ; default t
 (setq org-export-with-broken-links 'mark)         ; Mark broken links instead of error
+(setq org-export-with-date t)                     ; CRITICAL: Export #+date field to frontmatter
 (setq org-export-date-timestamp-format "%e %B %Y")
 (setq org-export-use-babel nil)                   ; Faster export
 (setq org-export-with-tags 'not-in-toc)
