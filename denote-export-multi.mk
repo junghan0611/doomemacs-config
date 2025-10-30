@@ -21,7 +21,7 @@ SERVER_SCRIPT := $(DOOM_DIR)/bin/denote-export-server.el
 DAEMON_NAME := denote-export-daemon
 
 # Parallel configuration
-NUM_DAEMONS := 4        # Number of Emacs daemons
+NUM_DAEMONS := 2        # Number of Emacs daemons
 JOBS_PER_DAEMON := 1    # Concurrent jobs per daemon
 TOTAL_JOBS := $(shell echo $$(($(NUM_DAEMONS) * $(JOBS_PER_DAEMON))))
 
@@ -139,21 +139,24 @@ export-test: daemon-start
 	DURATION=$$((END - START)); \
 	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"
 
-# Export meta folder
+# Export meta folder (NBSP-safe: Elisp handles filenames + sharding)
 export-meta: daemon-start
-	@echo "$(GREEN)[INFO]$(NC) Exporting meta folder"
-	@echo "$(GREEN)[INFO]$(NC) Files: $(words $(META_FILES)), Daemons: $(NUM_DAEMONS), Total jobs: $(TOTAL_JOBS)"
+	@echo "$(GREEN)[INFO]$(NC) Exporting meta folder (NBSP-safe parallel mode)"
+	@echo "$(GREEN)[INFO]$(NC) Sharding across $(NUM_DAEMONS) daemons"
 	@START=$$(date +%s); \
-	i=1; \
-	find $(ORG_DIR)/meta -name "*.org" -type f -print0 | \
-	while IFS= read -r -d '' file; do \
-		DAEMON_ID=$$((i % $(NUM_DAEMONS) + 1)); \
-		printf "%d\0%s\0" "$$DAEMON_ID" "$$file"; \
-		i=$$((i + 1)); \
-	done | xargs -0 -P $(TOTAL_JOBS) -n 2 sh -c 'DAEMON_ID="$$1"; FILE="$$2"; RESULT=$$(emacsclient -s $(DAEMON_NAME)-$$DAEMON_ID --eval "(denote-export-file \"$$FILE\")" 2>&1); if echo "$$RESULT" | grep -q "^\"SUCCESS:"; then echo "✓ [D$$DAEMON_ID] $$(basename \"$$FILE\")"; else echo "✗ [D$$DAEMON_ID] $$(basename \"$$FILE\")"; fi' sh; \
+	PIDS=""; \
+	for i in $$(seq 1 $(NUM_DAEMONS)); do \
+		echo "$(YELLOW)[INFO]$(NC) Starting daemon $$i..."; \
+		emacsclient -s $(DAEMON_NAME)-$$i --eval "(denote-export-directory \"$(ORG_DIR)/meta\" $$i $(NUM_DAEMONS))" 2>&1 & \
+		PIDS="$$PIDS $$!"; \
+	done; \
+	echo "$(YELLOW)[INFO]$(NC) Waiting for all daemons to complete..."; \
+	for PID in $$PIDS; do \
+		wait $$PID && echo "$(GREEN)[INFO]$(NC) Daemon PID $$PID completed"; \
+	done; \
 	END=$$(date +%s); \
 	DURATION=$$((END - START)); \
-	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(TOTAL_JOBS) parallel jobs)"
+	echo "$(GREEN)[INFO]$(NC) Completed in $${DURATION}s ($(NUM_DAEMONS) parallel daemons)"
 
 # Export bib folder
 export-bib: daemon-start

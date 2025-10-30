@@ -21,7 +21,7 @@ set -euo pipefail
 ORG_DIR="${HOME}/org"
 DOOM_DIR="${HOME}/repos/gh/doomemacs-config"
 SERVER_SCRIPT="${DOOM_DIR}/bin/denote-export-server.el"
-NUM_DAEMONS=2
+NUM_DAEMONS=1
 
 # Colors
 GREEN='\033[0;32m'

@@ -37,6 +37,11 @@
 (setq inhibit-startup-screen t)
 (setq inhibit-startup-echo-area-message user-login-name)
 
+;; Disable file-local variables interactive prompts
+(setq enable-local-variables :safe)  ; Only allow safe local variables
+(setq enable-local-eval nil)         ; Never eval file-local code
+(setq enable-dir-local-variables t)  ; Keep dir-locals support
+
 ;; Enable debug on error
 (setq debug-on-error t)
 
@@ -102,6 +107,7 @@
 
 ;; Built-in packages
 (require 'cl-lib)
+(require 'seq)
 (require 'json)
 (require 'browse-url)
 
@@ -385,6 +391,47 @@ Each server processes its own list independently."
 
       summary)))
 
+;; Directory export function - finds and exports all .org files in directory
+(defun denote-export-directory (directory &optional shard-id total-shards)
+  "Export all .org files in DIRECTORY.
+If SHARD-ID and TOTAL-SHARDS are provided, only process SHARD-ID's portion
+(for parallel processing across multiple daemons).
+This function handles filenames internally, avoiding shell quoting issues with NBSP."
+  (let* ((all-files (directory-files directory t "\\.org$" t))
+         (total-count (length all-files))
+         (org-files (if (and shard-id total-shards)
+                        ;; Shard files for parallel processing
+                        (let* ((shard-size (ceiling (/ (float total-count) total-shards)))
+                               (start-idx (truncate (* (1- shard-id) shard-size)))
+                               (end-idx (min (+ start-idx shard-size) total-count)))
+                          (cl-subseq all-files start-idx end-idx))
+                      ;; Process all files
+                      all-files))
+         (file-count (length org-files))
+         (success 0)
+         (errors 0))
+
+    (if (and shard-id total-shards)
+        (message "[Directory] Shard %d/%d: processing %d/%d files from: %s"
+                 shard-id total-shards file-count total-count directory)
+      (message "[Directory] Starting export of %d files from: %s" file-count directory))
+    (message "[Directory] NBSP(U+00A0) safe: processing filenames in Elisp only")
+
+    (dolist (file org-files)
+      (let* ((basename (file-name-nondirectory file))
+             (result (denote-export-file file)))
+
+        (if (and result (string-prefix-p "SUCCESS:" result))
+            (progn
+              (message "✓ %s" basename)
+              (setq success (1+ success)))
+          (message "✗ %s" basename)
+          (setq errors (1+ errors)))))
+
+    (let ((summary (format "SUCCESS:%d,ERRORS:%d,TOTAL:%d" success errors file-count)))
+      (message "[Directory] Export completed: %s" summary)
+      summary)))
+
 ;; Set ready flag AFTER all initialization
 (setq denote-export-server-ready t)
 
@@ -396,9 +443,10 @@ Each server processes its own list independently."
 (message "[Server] ========================================")
 
 ;; Keep server running
-(setq server-name denote-export-server-name)
+;; NOTE: server-name is automatically set to daemon-name when started with --daemon=name
+;; We don't need to set it explicitly here
 (server-start)
 
-(message "[Server] Server socket created at: %s" server-name)
+(message "[Server] Server socket created")
 
 ;;; denote-export-server.el ends here
