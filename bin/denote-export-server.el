@@ -340,7 +340,7 @@ This function is called via emacsclient."
                 ;; Rename exported file to Denote ID
                 (rename-file result target-file t)
 
-                ;; Add date to frontmatter from Denote ID
+                ;; Add date to frontmatter from Denote ID (only if not present)
                 ;; Format: 20230521T215600 -> 2023-05-21
                 (when (string-match "\\([0-9]\\{4\\}\\)\\([0-9]\\{2\\}\\)\\([0-9]\\{2\\}\\)" denote-id)
                   (let ((date-str (format "%s-%s-%s"
@@ -350,12 +350,16 @@ This function is called via emacsclient."
                     (with-temp-file target-file
                       (insert-file-contents target-file)
                       (goto-char (point-min))
-                      ;; Find end of frontmatter (second ---)
+                      ;; Find frontmatter boundaries
                       (when (re-search-forward "^---\n" nil t)
-                        (when (re-search-forward "^---\n" nil t)
-                          (forward-line -1)
-                          ;; Insert date before closing ---
-                          (insert (format "date: %s\n" date-str)))))))
+                        (let ((frontmatter-start (point)))
+                          (when (re-search-forward "^---\n" nil t)
+                            ;; Check if date: already exists in frontmatter
+                            (goto-char frontmatter-start)
+                            (unless (re-search-forward "^date:" (match-end 0) t)
+                              ;; No date field found, add it
+                              (goto-char (match-beginning 0))
+                              (insert (format "date: %s\n" date-str)))))))))
 
                 (setq final-result target-file)))
 
