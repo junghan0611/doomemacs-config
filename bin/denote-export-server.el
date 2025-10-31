@@ -103,6 +103,11 @@
 (ensure-package 'denote)
 (ensure-package 'citar)
 
+;; CRITICAL: Load org-cite and citar for bibliography support
+(require 'oc)           ;; org-cite
+(require 'oc-csl)       ;; CSL citation processor
+(require 'citar)        ;; citar frontend
+
 (message "[Server] Loading denote-explore dependencies...")
 
 ;; Built-in packages
@@ -194,14 +199,20 @@
         (latex . biblatex)
         (t . (basic))))
 
-(when (and (featurep 'citar) (boundp 'config-bibfiles))
+;; Configure bibliography paths (config-bibfiles defined in +user-info.el)
+(when (boundp 'config-bibfiles)
   (setq citar-bibliography config-bibfiles)
   (setq org-cite-global-bibliography config-bibfiles)
+  (message "[Server] Bibliography files: %S" config-bibfiles)
   (when (fboundp 'citar-refresh)
     (condition-case err
         (citar-refresh)
       (error
        (message "[Server] WARNING: citar-refresh failed: %S" err)))))
+
+;; Verify citar is loaded
+(unless (featurep 'citar)
+  (message "[Server] WARNING: citar not loaded!"))
 
 (message "[Server] Bibliography initialized")
 
