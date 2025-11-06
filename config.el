@@ -185,11 +185,26 @@
   (setenv "LANG" "C.UTF-8")
   (setenv "LC_ALL" "C.UTF-8"))
 
+;; 2. 입력 메서드 시각적 피드백 최소화 (모바일 최적화)
 (setq input-method-verbose-flag nil
       input-method-highlight-flag nil)
 
-(global-set-key (kbd "<S-SPC>") 'toggle-input-method)
-(global-set-key (kbd "<Hangul>") 'toggle-input-method)
+;; 3. 한영 전환 키 바인딩 (Emacs 입력 메서드 전용)
+;; 안드로이드 IME 한영 전환 사용 안 함!
+(global-set-key (kbd "C-\\") 'toggle-input-method)  ; Emacs 기본 (가장 중요!)
+(global-set-key (kbd "<S-SPC>") 'toggle-input-method) ; Shift+Space (보조)
+(global-set-key (kbd "<Hangul>") 'toggle-input-method) ; 한글 키 (물리 키보드)
+
+;; Termux/모바일 전용: 추가 토글 키
+(when IS-TERMUX
+  (global-set-key (kbd "M-SPC") 'toggle-input-method) ; Alt+Space (긴급용)
+  (global-set-key (kbd "C-c \\") 'toggle-input-method) ; 최후 수단
+
+  ;; 선택적: 특정 입력 메서드로 즉시 전환
+  (global-set-key (kbd "C-c k")
+    (lambda () (interactive) (set-input-method "korean-hangul")))
+  (global-set-key (kbd "C-c e")
+    (lambda () (interactive) (deactivate-input-method))))
 
 ;; +------------+------------+
 ;; | 일이삼사오 | 일이삼사오 |
@@ -539,7 +554,11 @@
   (setq evil-escape-key-sequence ",.") ;; "jk"
   (setq evil-escape-unordered-key-sequence nil)
   (setq evil-escape-delay 1.0) ;; 0.5, default 0.1
-  (evil-escape-mode 1))
+  (evil-escape-mode 1)
+
+  ;; 모바일 타이핑 최적화
+  (when IS-TERMUX
+    (setq evil-escape-delay 0.8)))
 
 (after! smartparens
   ;; 2023-09-14 global 로 사용하다보니 거슬린다. 잠시만. 글로벌을 빼면 어떤가?
@@ -1534,14 +1553,32 @@ only those in the selected frame."
 
 ;;;;; evil + hangul
 
-(progn
-  ;; 노멀로 빠지면 무조건 영어로 변경
-  (defun my/turn-off-input-method (&rest _)
-    (if current-input-method
-        (when (derived-mode-p 'prog-mode) ;; only prog-mode
-          (deactivate-input-method))))
+;; 4. Evil 모드 연동: 자동 한영 전환
+(after! evil
+  ;; 버퍼별 입력 메서드 상태 저장
+  (defvar-local my/saved-input-method nil
+    "Normal 모드 진입 전 입력 메서드 상태")
 
-  (advice-add 'evil-normal-state :before #'my/turn-off-input-method)
+  (defun my/evil-normal-state-korean-off ()
+    "Normal 모드 진입: 한글 OFF, 상태 저장"
+    (when (and (boundp 'current-input-method) current-input-method)
+      (setq my/saved-input-method current-input-method)
+      (deactivate-input-method)))
+
+  (defun my/evil-insert-state-korean-restore ()
+    "Insert 모드 진입: 이전 한글 상태 복원"
+    (when (and my/saved-input-method
+               (not current-input-method))
+      (activate-input-method my/saved-input-method)))
+
+  ;; Hook 등록
+  (add-hook 'evil-normal-state-entry-hook #'my/evil-normal-state-korean-off)
+  (add-hook 'evil-insert-state-entry-hook #'my/evil-insert-state-korean-restore)
+
+  ;; Evil escape 후에도 확실히 끄기
+  (advice-add 'evil-normal-state :after #'my/evil-normal-state-korean-off)
+
+  ;; Shift+Space 메시지 (motion/normal/visual 모드에서)
   (mapc (lambda (mode)
           (let ((keymap (intern (format "evil-%s-state-map" mode))))
             (define-key (symbol-value keymap) [?\S- ]
@@ -1550,5 +1587,26 @@ only those in the selected frame."
                              (format "Input method is disabled in %s state." evil-state))))))
         '(motion normal visual))
   )
+
+;; 5. Emacs 입력 메서드 추가 최적화
+(with-eval-after-load 'quail
+  ;; 한글 입력 모드 표시 (모드라인)
+  (setq-default mode-line-mule-info
+    '((:eval (if current-input-method
+                 (propertize " [한] " 'face '(:foreground "green"))
+               " [En] "))))
+
+  ;; 2벌식 기본 사용 (3벌식 원하면 변경)
+  ;; (setq default-korean-keyboard "390") ; 3벌식 최종
+  )
+
+;; 6. 안드로이드 Emacs 특화 설정 (해당시)
+(when (string-equal system-type "android")
+  ;; Android Emacs의 IME 간섭 차단
+  (setq overriding-text-conversion-style nil)
+  (setq-default text-conversion-style nil)
+
+  ;; 안드로이드 IME 완전 우회
+  (setq android-pass-multimedia-buttons-to-system nil))
 
 ;;; END
