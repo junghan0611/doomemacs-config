@@ -1,21 +1,32 @@
+# System files
 .DS_Store
 .idea
 *.log
 tmp/
+
+# Personal configuration (machine-specific, not shared via git)
 custom.el
 flycheck_config.el
 local/*
 per-machine.el
 user-keys.el
-ccmenu
-tempel-templates.eld
-.claude
 +office.el
-CLAUDE.md
-inbox__human.org
 
+# Private files (synced via Syncthing, not committed to git)
+# These files contain personal data, templates, and local content
+# Anyone can manage similar private local files alongside their public config
+.claude/
+inbox__human.org
+templates/
+fortune/
 *.dat
-fortune
+ccmenu
+CLAUDE.md
+
+# Generated/cache files
+tempel-templates.eld
+var/tempel-templates.eld
 
 # Security - DO NOT COMMIT
+# Sensitive information that should never be in version control
 var/sensitive-strings.txt
