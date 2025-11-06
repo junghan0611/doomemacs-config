@@ -1076,6 +1076,23 @@ only those in the selected frame."
     (citar-denote-title-format-authors 1)
     (citar-denote-title-format-andstr "and")
     :config
+    ;; FIXME for denote-obsidian
+    (setq citar-denote-file-types
+          `((org
+             :reference-format "#+reference:  %s\n"
+             :reference-regex "^#\\+reference\\s-*:")
+            (markdown-obsidian ;; 2025-02-03
+             :reference-format "reference:  %s\n"
+             :reference-regex "^reference\\s-*:")
+            (markdown-yaml
+             :reference-format "reference:  %s\n"
+             :reference-regex "^reference\\s-*:")
+            (markdown-toml
+             :reference-format "reference  = %s\n"
+             :reference-regex "^reference\\s-*=")
+            (text
+             :reference-format "reference:  %s\n"
+             :reference-regex "^reference\\s-*:")))
     (citar-denote-mode))
   )
 
@@ -1133,6 +1150,10 @@ only those in the selected frame."
 ;;;; claude-code
 
 (use-package! claude-code
+  :init
+  ;; Ensure claude-code-acp is in exec-path for Termux
+  (when IS-TERMUX
+    (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
   :config
   (setq claude-code-terminal-backend 'vterm)
   (defun my-claude-notify-with-sound (title message)
@@ -1510,5 +1531,24 @@ only those in the selected frame."
   :config
   (add-to-list 'treesit-language-source-alist '(markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown/src"))
   (add-to-list 'treesit-language-source-alist '(markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown-inline/src")))
+
+;;;;; evil + hangul
+
+(progn
+  ;; 노멀로 빠지면 무조건 영어로 변경
+  (defun my/turn-off-input-method (&rest _)
+    (if current-input-method
+        (when (derived-mode-p 'prog-mode) ;; only prog-mode
+          (deactivate-input-method))))
+
+  (advice-add 'evil-normal-state :before #'my/turn-off-input-method)
+  (mapc (lambda (mode)
+          (let ((keymap (intern (format "evil-%s-state-map" mode))))
+            (define-key (symbol-value keymap) [?\S- ]
+                        #'(lambda () (interactive)
+                            (message
+                             (format "Input method is disabled in %s state." evil-state))))))
+        '(motion normal visual))
+  )
 
 ;;; END

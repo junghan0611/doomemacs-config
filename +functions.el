@@ -225,6 +225,70 @@ These annotations are skipped for remote paths."
     (with-temp-file task-file
       (insert current-task))))
 
+;;;; nbsp-ascii
+
+(progn
+  ;; ;;;###autoload
+  (defun +replace-in-buffer (old new)
+    "Replace OLD with NEW in the current buffer."
+    (save-excursion
+      (goto-char (point-min))
+      (let ((case-fold-search nil)
+            (matches 0))
+        (while (re-search-forward old nil t)
+          (replace-match new)
+          (cl-incf matches))
+        matches)))
+
+  ;; ;;;###autoload
+  (defun my/clear-nbsp-and-ascii-punctuations ()
+    "Replace french ponctuations (like unsectable space) by regular ones."
+    (interactive)
+    (let ((chars
+           '(("[\u00a0\u200b]" . "") ;; Non-breaking and zero-width spaces - nbsp
+             ;; Special spaces and quads
+             ("[\u2000-\u200A\u202F\u205F\u3000]" . " ")
+             ("[\{\$]" . "")
+             ("[\$\}]" . "")
+             ;; ("[‘’‚’]" . "'")
+             ;; ("[“”„”«»]" . "\"")
+             ("[‘’]" . "'")
+             ("[“”]" . "\"")
+             ))
+          (matches 0))
+      (dolist (pair chars)
+        (cl-incf matches (+replace-in-buffer (car pair) (cdr pair))))
+      (message "Replaced %d match%s." matches (if (> matches 1) "es" "")))
+    )
+
+  (defun my/insert-nbsp-simple-all ()
+    "한글 조사, 라틴-한글, 기호-텍스트 사이에 NBSP 삽입 (3가지 패턴 통합)"
+    (interactive)
+    (let ((word-list '()))
+      (save-excursion
+        (goto-line 10)
+        ;; 1. 라틴 문자와 한글 사이 NBSP 삽입
+        ;; 2. 조직모드 기호(=,*,_,+) 뒤 한글 또는 라틴 문자에 NBSP 삽입
+        (while (re-search-forward "\\([A-Za-z*+=_]\\)\\([가-힣]\\)" nil t)
+          (unless (save-excursion
+                    (goto-char (match-beginning 1))
+                    (looking-back "\\s-" 1))
+            (goto-char (match-beginning 2))
+            (insert " ")
+            (goto-char (match-end 2))))
+
+        ;; 4. 한글 조사 NBSP 삽입 - '1단어'
+        ;; (goto-line 10)
+        ;; (while (re-search-forward
+        ;;         "\\([가-힣]\\{2,\\}\\)\\(이\\|가\\|은\\|는\\|을\\|의\\|를\\|와\\|과\\|란\\)\\(\x20\\)" ; [[:space:]]
+        ;;         nil t)
+        ;;   (when (>= (length (match-string 1)) 2)
+        ;;     (push (match-string 1) word-list))
+        ;;   (replace-match "\\1 \\2 \\3"))
+        ) ; end save-excursion
+      ))
+  )
+
 ;;; provide
 
 (provide '+functions)

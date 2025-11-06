@@ -1,0 +1,439 @@
+#+title:      Android SSH 환경 Emacs 한글 입력 완벽 가이드
+#+date:       [2025-11-06 Wed 20:04]
+#+filetags:   :android:ssh:emacs:korean:input:mobile:
+#+identifier: 20251106T200404
+#+description: 안드로이드 SSH 환경에서 Emacs 한글 입력과 Evil 모드 자동 전환 설정
+#+export_file_name: 20251106T200404.md
+
+* 개요
+
+안드로이드 SSH 환경에서 Emacs를 사용할 때 한글 입력과 Evil 모드 전환 문제를 해결하는 완벽한 가이드입니다.
+
+** 핵심 문제
+
+- 안드로이드 IME(삼성 키보드 등)는 SSH 터미널과 직접 통신 불가
+- 한글 조합이 IME 레벨에서 처리되어 Emacs가 제어 불가
+- Evil Normal 모드 전환 시 자동 한영 전환이 작동하지 않음
+
+** 해결 전략
+
+#+begin_quote
+안드로이드 IME를 완전히 우회하고, Emacs 내장 입력 메서드만 사용
+#+end_quote
+
+* 1단계: 안드로이드 키보드 설정
+
+** 최적 키보드 선택
+
+*** 1순위: Unexpected Keyboard ⭐⭐⭐⭐⭐
+
+#+begin_src text
+특징:
+- Hacker's Keyboard 정신적 계승자
+- 활발한 개발 (2024년 최신 업데이트)
+- Direct Input Mode 지원
+- 경량, 커스터마이징 가능
+- Swipe로 특수키 입력
+
+설치:
+F-Droid: https://f-droid.org/en/packages/juloo.keyboard2/
+#+end_src
+
+*** 2순위: Hacker's Keyboard ⭐⭐⭐⭐
+
+#+begin_src text
+특징:
+- SSH/터미널 전용 최적화
+- 물리 키보드 레이아웃 (ESC, Ctrl, Alt, F1-F12)
+- Direct Input Mode → IME 완전 우회
+- 무료, 오픈소스
+
+단점:
+- 2015년 이후 업데이트 중단
+- 최신 안드로이드에서 일부 기능 제한
+
+설치:
+F-Droid: https://f-droid.org/packages/org.pocketworkstation.pckeyboard/
+#+end_src
+
+** 키보드 설정 방법
+
+1. F-Droid 앱 설치 (Google Play에는 없음)
+2. Unexpected Keyboard (또는 Hacker's Keyboard) 설치
+3. 안드로이드 설정:
+   - 설정 → 언어 및 입력
+   - Unexpected Keyboard 활성화
+   - 기본 키보드로 설정
+4. 터미널 앱(Termux/JuiceSSH)에서 키보드 선택
+
+** 중요: 안드로이드 IME 한영 전환 사용 금지
+
+#+begin_quote
+❌ 삼성 키보드 한영 전환 사용 안 함
+✅ Emacs 입력 메서드로만 한글 입력
+#+end_quote
+
+* 2단계: Emacs 설정
+
+** config.el 수정
+
+현재 한글 입력 설정(라인 186-212)을 다음과 같이 *완전히 교체*:
+
+#+begin_src elisp
+;;; Input System : Hangul - Emacs 전용 입력 메서드
+
+;; 1. 기본 UTF-8 설정
+(setq default-input-method "korean-hangul")
+(set-language-environment "Korean")
+(set-keyboard-coding-system 'utf-8)
+(setq locale-coding-system 'utf-8)
+
+(prefer-coding-system 'utf-8)
+(set-charset-priority 'unicode)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(setq-default buffer-file-coding-system 'utf-8-unix)
+
+(set-selection-coding-system 'utf-8)
+(set-clipboard-coding-system 'utf-8)
+(setq coding-system-for-read 'utf-8)
+(setq coding-system-for-write 'utf-8)
+(set-buffer-multibyte t)
+(setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
+
+(setq-default line-spacing 3)
+(setq system-time-locale "C")
+
+;; Termux 환경 최적화
+(when IS-TERMUX
+  (setenv "LANG" "C.UTF-8")
+  (setenv "LC_ALL" "C.UTF-8"))
+
+;; 2. 입력 메서드 시각적 피드백 최소화 (모바일 최적화)
+(setq input-method-verbose-flag nil
+      input-method-highlight-flag nil)
+
+;; 3. 한영 전환 키 바인딩 (Emacs 입력 메서드 전용)
+;; 안드로이드 IME 한영 전환 사용 안 함!
+(global-set-key (kbd "C-\\") 'toggle-input-method)  ; Emacs 기본 (가장 중요!)
+(global-set-key (kbd "<S-SPC>") 'toggle-input-method) ; Shift+Space (보조)
+
+;; Termux/모바일 전용: 추가 토글 키
+(when IS-TERMUX
+  (global-set-key (kbd "M-SPC") 'toggle-input-method) ; Alt+Space (긴급용)
+  (global-set-key (kbd "C-c \\") 'toggle-input-method) ; 최후 수단
+  
+  ;; 선택적: 특정 입력 메서드로 즉시 전환
+  (global-set-key (kbd "C-c k") 
+    (lambda () (interactive) (set-input-method "korean-hangul")))
+  (global-set-key (kbd "C-c e") 
+    (lambda () (interactive) (deactivate-input-method))))
+
+;; 4. Evil 모드 연동: 자동 한영 전환
+(after! evil
+  ;; 버퍼별 입력 메서드 상태 저장
+  (defvar-local my/saved-input-method nil
+    "Normal 모드 진입 전 입력 메서드 상태")
+
+  (defun my/evil-normal-state-korean-off ()
+    "Normal 모드 진입: 한글 OFF, 상태 저장"
+    (when (and (boundp 'current-input-method) current-input-method)
+      (setq my/saved-input-method current-input-method)
+      (deactivate-input-method)))
+
+  (defun my/evil-insert-state-korean-restore ()
+    "Insert 모드 진입: 이전 한글 상태 복원"
+    (when (and my/saved-input-method 
+               (not current-input-method))
+      (activate-input-method my/saved-input-method)))
+
+  ;; Hook 등록
+  (add-hook 'evil-normal-state-entry-hook #'my/evil-normal-state-korean-off)
+  (add-hook 'evil-insert-state-entry-hook #'my/evil-insert-state-korean-restore)
+  
+  ;; Evil escape 후에도 확실히 끄기
+  (advice-add 'evil-normal-state :after #'my/evil-normal-state-korean-off))
+
+;; 5. Emacs 입력 메서드 추가 최적화
+(with-eval-after-load 'quail
+  ;; 한글 입력 모드 표시 (모드라인)
+  (setq-default mode-line-mule-info 
+    '((:eval (if current-input-method 
+                 (propertize " [한] " 'face '(:foreground "green"))
+               " [En] "))))
+  
+  ;; 2벌식 기본 사용 (3벌식 원하면 변경)
+  ;; (setq default-korean-keyboard "390") ; 3벌식 최종
+  )
+
+;; 6. 안드로이드 Emacs 특화 설정 (해당시)
+(when (string-equal system-type "android")
+  ;; Android Emacs의 IME 간섭 차단
+  (setq overriding-text-conversion-style nil)
+  (setq-default text-conversion-style nil)
+  
+  ;; 안드로이드 IME 완전 우회
+  (setq android-pass-multimedia-buttons-to-system nil))
+#+end_src
+
+** Evil escape 설정 확인
+
+기존 설정(라인 560 근처)에 이미 있는 내용 확인:
+
+#+begin_src elisp
+(after! evil-escape
+  (setq evil-escape-key-sequence ",.") ;; "jk"
+  (setq evil-escape-unordered-key-sequence nil)
+  (setq evil-escape-delay 1.0) ;; 0.5, default 0.1
+  (evil-escape-mode 1))
+#+end_src
+
+모바일에서 타이핑을 고려하면 delay를 조정할 수 있습니다:
+
+#+begin_src elisp
+(when IS-TERMUX
+  (setq evil-escape-delay 0.8)) ; 모바일 타이핑 최적화
+#+end_src
+
+* 3단계: 사용 방법
+
+** 기본 워크플로우
+
+#+begin_src text
+1. 안드로이드 키보드: 순수 영문만 입력 (한영 전환 절대 안 함)
+2. Emacs에서 C-\ 로 한글 모드 활성화
+3. 한글 입력 → Emacs가 2벌식으로 조합
+4. ESC 또는 ,. → Evil Normal 모드 → 자동으로 영문 전환
+5. i → Insert 모드 → 자동으로 한글 모드 복원
+#+end_src
+
+** 주요 키 바인딩
+
+| 키 조합      | 기능                        | 중요도 |
+|--------------+-----------------------------+--------|
+| =C-\=        | 한영 전환 (Emacs 기본)      | ⭐⭐⭐⭐⭐ |
+| =S-SPC=      | 한영 전환 (보조)            | ⭐⭐⭐⭐   |
+| =M-SPC=      | 한영 전환 (Termux 전용)     | ⭐⭐⭐    |
+| =C-c k=      | 한글 모드 강제 활성화       | ⭐⭐     |
+| =C-c e=      | 영문 모드 강제 전환         | ⭐⭐     |
+| =C-c \=      | 한영 전환 (최후 수단)       | ⭐      |
+| =ESC= or =,.= | Evil Normal 모드 (자동 영문) | ⭐⭐⭐⭐⭐ |
+
+** Evil 모드 자동 전환 시나리오
+
+#+begin_src text
+시나리오 1: 한글 입력 중 Normal 모드 전환
+--------------------------------------------
+Insert 모드 (한글 ON) → "안녕하세요" 입력
+↓ ESC or ,.
+Normal 모드 (자동 영문) → hjkl로 이동
+↓ i
+Insert 모드 (자동 한글 복원) → 계속 입력
+
+시나리오 2: 영문 상태 유지
+--------------------------------------------
+Insert 모드 (영문) → "hello" 입력
+↓ ESC
+Normal 모드 (영문 유지)
+↓ i
+Insert 모드 (영문 유지)
+#+end_src
+
+* 4단계: 테스트 및 검증
+
+** 체크리스트
+
+#+begin_src text
+□ Unexpected Keyboard 설치 및 활성화 완료
+□ config.el 수정 및 doom sync 실행
+□ Emacs 재시작
+□ C-\ 로 한글 모드 전환 확인
+□ 한글 입력 테스트: "ㅎㅏㄴ ㄱㅡㄹ" → "한글"
+□ ESC로 Normal 모드 전환 → 자동 영문 전환 확인
+□ i로 Insert 모드 → 한글 상태 복원 확인
+□ 모드라인에 [한] / [En] 표시 확인
+#+end_src
+
+** 디버깅 명령어
+
+#+begin_src elisp
+;; 현재 입력 메서드 확인
+(message "Current IM: %s" current-input-method)
+
+;; 사용 가능한 한글 입력 메서드 목록
+M-x list-input-methods RET hangul
+
+;; 입력 메서드 수동 활성화
+M-x set-input-method RET korean-hangul RET
+
+;; Evil 상태 확인
+M-: evil-state
+
+;; 저장된 입력 메서드 확인
+M-: my/saved-input-method
+#+end_src
+
+* 고급 설정
+
+** 모드라인 커스터마이징
+
+더 명확한 시각적 피드백:
+
+#+begin_src elisp
+;; 이모지로 표시 (터미널 지원시)
+(setq-default mode-line-mule-info 
+  '((:eval (if current-input-method 
+               (propertize " [🇰🇷한] " 'face '(:foreground "green" :weight bold))
+             (propertize " [EN] " 'face '(:foreground "gray"))))))
+
+;; Evil 상태 + 입력 메서드 통합 표시
+(defun my/evil-state-with-input-method ()
+  (let ((state (evil-state-property evil-state :tag t))
+        (input (if current-input-method "🇰🇷" "EN")))
+    (format " %s:%s " state input)))
+
+;; doom-modeline에 추가
+(setq doom-modeline-before-update-env-hook 
+      '(my/evil-state-with-input-method))
+#+end_src
+
+** 3벌식 사용자
+
+#+begin_src elisp
+;; 3벌식 최종 (390) 사용
+(setq default-korean-keyboard "3f")
+
+;; 또는 3벌식 순아래 (390)
+(setq default-korean-keyboard "390")
+#+end_src
+
+** 버퍼별 입력 메서드 자동 설정
+
+특정 버퍼에서 자동으로 한글 모드:
+
+#+begin_src elisp
+;; org-mode에서 자동 한글 활성화
+(add-hook 'org-mode-hook 
+  (lambda () 
+    (when IS-TERMUX
+      (activate-input-method "korean-hangul"))))
+
+;; 특정 파일 확장자
+(add-hook 'text-mode-hook
+  (lambda ()
+    (when (and IS-TERMUX 
+               (string-match-p "\\.txt$\\|\\.md$" (buffer-name)))
+      (activate-input-method "korean-hangul"))))
+#+end_src
+
+* 트러블슈팅
+
+** 문제: C-\ 가 작동하지 않음
+
+*원인*: 터미널이 키 조합을 가로챔
+
+*해결*:
+1. 대체 키 사용: =S-SPC= 또는 =M-SPC=
+2. 터미널 앱 설정에서 키 매핑 확인
+
+** 문제: 한글이 깨져서 표시됨
+
+*원인*: UTF-8 설정 문제
+
+*해결*:
+#+begin_src bash
+# Termux에서
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+
+# Emacs에서
+M-x set-terminal-coding-system RET utf-8
+#+end_src
+
+** 문제: Evil Normal 모드에서 한글이 계속 켜짐
+
+*원인*: Hook이 제대로 등록되지 않음
+
+*해결*:
+#+begin_src elisp
+;; config.el에서 after! evil 블록 확인
+;; doom sync 후 Emacs 완전 재시작
+#+end_src
+
+** 문제: 모드라인에 [한]/[En] 표시 안 됨
+
+*원인*: =mode-line-mule-info= 설정이 적용되지 않음
+
+*해결*:
+#+begin_src elisp
+;; M-x eval-buffer 로 config.el 재평가
+;; 또는 Emacs 재시작
+#+end_src
+
+* 시스템 구조도
+
+#+begin_src text
+┌─────────────────────────────────────────┐
+│  Unexpected Keyboard                    │ ← 안드로이드 키보드
+│  (Direct Input Mode - IME 우회)         │
+│              ↓ raw ASCII keys           │
+├─────────────────────────────────────────┤
+│  터미널 앱 (Termux/JuiceSSH)            │
+│              ↓ SSH                      │
+├─────────────────────────────────────────┤
+│  Remote Emacs Server                    │
+│              ↓                          │
+│  korean-hangul                          │ ← Emacs 입력 메서드
+│  (Emacs 내장 2벌식 한글 조합)           │
+│              ↓                          │
+│  Evil Mode                              │
+│  - Insert → Normal: 자동 영문           │
+│  - Normal → Insert: 한글 복원           │
+└─────────────────────────────────────────┘
+
+핵심: 안드로이드 IME를 완전 우회하고 Emacs가 모든 것을 제어
+#+end_src
+
+* 참고 자료
+
+** Emacs 입력 메서드
+
+- [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Input-Methods.html][GNU Emacs Manual - Input Methods]]
+- [[https://www.emacswiki.org/emacs/InputMethods][EmacsWiki: Input Methods]]
+- [[https://www.emacswiki.org/emacs/WritingKorean][EmacsWiki: Writing Korean]]
+
+** 안드로이드 키보드
+
+- [[https://f-droid.org/en/packages/juloo.keyboard2/][Unexpected Keyboard - F-Droid]]
+- [[https://f-droid.org/packages/org.pocketworkstation.pckeyboard/][Hacker's Keyboard - F-Droid]]
+- [[https://github.com/klausw/hackerskeyboard/wiki/UsersGuide][Hacker's Keyboard User Guide]]
+
+** 관련 문서
+
+- [[file:20251005T173600--terminal-cjk-optimization__terminal_cjk_guide.org][Terminal CJK Optimization]]
+- Doom Emacs Config: =config.el=, =+keybindings.el=
+
+* 변경 이력
+
+- [2025-11-06 Wed] 초안 작성
+  - 안드로이드 SSH 환경 한글 입력 완벽 가이드
+  - Unexpected Keyboard 우선 권장
+  - Evil 모드 자동 전환 로직 추가
+  - 상세 테스트 및 트러블슈팅 섹션
+
+* 메타데이터
+
+#+begin_src yaml
+작성자: junghanacs
+작성일: 2025-11-06
+중요도: ★★★★★ (매우 중요)
+적용 대상: 안드로이드 SSH Emacs 사용자
+필수 구성요소:
+  - Unexpected Keyboard (또는 Hacker's Keyboard)
+  - Doom Emacs with Evil mode
+  - SSH 연결 (Termux/JuiceSSH 등)
+테스트 환경:
+  - Android 11+
+  - Termux/JuiceSSH
+  - Doom Emacs 3.0+
+#+end_src

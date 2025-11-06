@@ -194,7 +194,26 @@
       :desc "window-layout-toggle" "-" 'spacemacs/window-layout-toggle
       :desc "delete-other-window" "O" 'delete-other-windows)
 
+
 ;;;; mode-map
+
+(add-hook 'emacs-lisp-mode-hook (lambda ()
+                                  ;; Emacs' built-in elisp files use a hybrid tab->space indentation scheme
+                                  ;; with a tab width of 8. Any smaller and the indentation will be
+                                  ;; unreadable. Since Emacs' lisp indenter doesn't respect this variable it's
+                                  ;; safe to ignore this setting otherwise.
+                                  ;; (setq-local tab-width 8)
+                                  (setq-local comment-column 0)
+                                  (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "<tab>") 'evil-jump-item)
+                                  ))
+
+(with-eval-after-load 'markdown-mode
+  (map! :map markdown-mode-map
+        :localleader
+        "RET" #'toc-org-markdown-follow-thing-at-point
+        "-" #'markdown-insert-list-item
+        ";" #'my/clear-nbsp-and-ascii-punctuations
+        ":" #'my/insert-nbsp-simple-all))
 
 (map! (:map org-mode-map
        :ni "C-c H" #'org-insert-heading
@@ -211,6 +230,10 @@
        :i "<tab>"  #'completion-at-point ; 2025-02-03
        :i "TAB"  #'completion-at-point
        "M--" #'denote-find-backlink
+
+        ";" #'my/clear-nbsp-and-ascii-punctuations
+        ":" #'my/insert-nbsp-simple-all
+        ;; ":" #'my/insert-nbsp-all-with-wordlist-and-tags
        ))
 
 (map! (:map org-journal-mode-map
