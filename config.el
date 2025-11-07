@@ -1559,7 +1559,7 @@ only those in the selected frame."
   (defvar-local my/saved-input-method nil
     "Normal 모드 진입 전 입력 메서드 상태")
 
-  (defun my/evil-normal-state-korean-off ()
+  (defun my/evil-normal-state-korean-off (&rest _)
     "Normal 모드 진입: 한글 OFF, 상태 저장"
     (when (and (boundp 'current-input-method) current-input-method)
       (setq my/saved-input-method current-input-method)
