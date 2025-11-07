@@ -1,0 +1,161 @@
+#+title:      Private Files Management
+#+date:       [2025-11-07 Thu]
+#+filetags:   :private:local:syncthing:guide:
+#+identifier: 20251107T000000
+
+* Overview
+
+This document describes the private local files used in this Doom Emacs configuration that are NOT committed to Git but ARE synchronized via Syncthing (or similar tools).
+
+This approach allows:
+- Public sharing of general configuration via Git
+- Private management of personal data and machine-specific settings
+- Seamless synchronization across devices without exposing sensitive information
+
+* Private Files List
+
+** Personal Configuration Files
+
+*** =custom.el=
+- *Purpose*: Emacs custom-set-variables and custom-set-faces
+- *Content*: Machine-generated customizations from Emacs customize interface
+- *Why Private*: May contain personal preferences and file paths
+
+*** =per-machine.el=
+- *Purpose*: Machine-specific configuration overrides
+- *Content*: Settings that differ per device (paths, performance tuning, etc.)
+- *Why Private*: Contains local system paths and device-specific settings
+
+*** =user-keys.el=
+- *Purpose*: Personal API keys and authentication tokens
+- *Content*: Keys for services (OpenAI, GitHub, etc.)
+- *Why Private*: Contains sensitive credentials
+
+*** =+office.el=
+- *Purpose*: Office/work-related configuration
+- *Content*: Work-specific settings and integrations
+- *Why Private*: May contain work-related information
+
+** Content and Templates
+
+*** =inbox__human.org=
+- *Purpose*: Personal inbox for quick capture and notes
+- *Content*: Daily thoughts, tasks, and temporary notes
+- *Why Private*: Contains personal information and work-in-progress content
+
+*** =templates/=
+- *Purpose*: Personal document templates
+- *Content*: Org-mode templates, snippets, boilerplate text
+- *Why Private*: Contains personal writing patterns and custom templates
+
+*** =fortune/=
+- *Purpose*: Fortune cookie database
+- *Content*: Custom fortune messages and quotes
+- *Why Private*: Personal collection of quotes and messages
+
+*** =CLAUDE.md=
+- *Purpose*: Claude AI interaction notes
+- *Content*: Context and instructions for Claude Code sessions
+- *Why Private*: Contains personal project notes and AI interaction history
+
+** Development and Cache Files
+
+*** =.claude/=
+- *Purpose*: Claude Code CLI configuration
+- *Content*: Claude Code settings, history, and cached data
+- *Why Private*: Contains local tool state and personal usage patterns
+
+*** =tempel-templates.eld= / =var/tempel-templates.eld=
+- *Purpose*: Compiled Tempel template cache
+- *Content*: Binary/serialized template data
+- *Why Private*: Auto-generated cache file, can be rebuilt
+
+*** =ccmenu=
+- *Purpose*: Command center menu cache
+- *Content*: Cached menu data
+- *Why Private*: Auto-generated cache file
+
+** Security Files
+
+*** =var/sensitive-strings.txt=
+- *Purpose*: Sensitive strings for redaction/filtering
+- *Content*: Passwords, tokens, or other secrets to protect
+- *Why Private*: *CRITICAL* - Contains actual secrets, must NEVER be committed
+
+* Synchronization Strategy
+
+** Git Repository (Public)
+- Core configuration files (=config.el=, =init.el=, =packages.el=)
+- Module configurations (=modules/=)
+- Scripts and utilities (=bin/=)
+- Documentation (=docs/=)
+- README and guides
+
+** Syncthing (Private)
+- All files listed above in this document
+- Synchronized across personal devices
+- Not exposed in public repository
+- Allows local-only content to stay in sync
+
+** Workflow
+1. Public configuration changes → commit to Git
+2. Private files changes → auto-sync via Syncthing
+3. New machine setup:
+   - Clone Git repository
+   - Install Syncthing and connect to sync folder
+   - Private files automatically appear
+
+* Setup Instructions
+
+** For New Users (Creating Your Own Private Files)
+
+1. Start with the public configuration:
+   #+begin_src bash
+   git clone <your-fork-url> ~/.config/doom
+   #+end_src
+
+2. Create your private files as needed:
+   - =custom.el= - Will be created by Emacs automatically
+   - =per-machine.el= - Create if you need machine-specific settings
+   - =user-keys.el= - Create for API keys
+   - =inbox__human.org= - Create for personal notes
+   - =templates/= - Create for custom templates
+
+3. (Optional) Set up Syncthing:
+   - Install Syncthing on all your devices
+   - Share the Doom config directory
+   - Private files sync automatically
+
+4. All these files are already in =.gitignore=, so they won't be committed
+
+** For This Configuration Owner (Restoration)
+
+If you accidentally delete private files (e.g., via =git clean -xfd=):
+
+1. Wait for Syncthing to restore from other devices
+2. Or manually copy from backup
+3. Or restore from Syncthing versioning if enabled
+
+* Best Practices
+
+1. *Never commit sensitive files* - Always verify =.gitignore= is correct
+2. *Use separate files for secrets* - Don't mix public and private config
+3. *Test on clean checkout* - Ensure public config works standalone
+4. *Document dependencies* - Make it clear when features need private files
+5. *Encrypt sensitive data* - Consider encrypting =var/sensitive-strings.txt=
+6. *Regular backups* - Don't rely solely on Syncthing for critical data
+
+* File Organization Philosophy
+
+This configuration follows a clear separation:
+- *Public* = Useful to others, no personal data
+- *Private* = Personal data, credentials, or work-in-progress
+- *Generated* = Can be rebuilt, doesn't need git tracking
+
+This makes it easy to:
+- Share configuration publicly
+- Keep personal data private
+- Maintain consistency across devices
+- Onboard new machines quickly
+
+Anyone can adopt this pattern for their own configuration!
