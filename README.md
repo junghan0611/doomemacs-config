@@ -109,6 +109,7 @@ dotdoom-starter/
 ├── config.el            # Main configuration
 ├── packages.el          # Package declarations
 ├── +user-info.el        # User information
+├── +korean-input-fix.el # Korean NFD→NFC normalization (Termux)
 ├── +gptel.el            # AI/LLM integration
 ├── +functions.el        # Custom functions
 ├── per-machine.el       # Machine-specific config (git-ignored)
@@ -141,7 +142,7 @@ dotdoom-starter/
 - **Tree-sitter**: Enhanced syntax highlighting
 - **Direnv**: Project-specific environments
 - **Docker**: Container management
-- **LLM**: GPTel + Claude Code integration
+- **LLM**: GPTel + Agent Shell (Claude Code integration with agent-shell-manager)
 
 ### Language Support
 
@@ -154,6 +155,29 @@ Python, Nix, JavaScript/TypeScript, Web (HTML/CSS), YAML, Zig, Janet, Emacs Lisp
 - **Org-journal**: Journaling
 - **Org-contacts**: Contact management
 - **Export**: Hugo, Pandoc
+
+### Termux Enhancements
+
+**Korean Input Fix** - Automatic NFD to NFC normalization
+
+Solves the long-standing Korean IME issue in Termux where space key fails to compose jamo into syllables.
+
+Features:
+- **Real-time conversion**: after-change-functions hook with 0.1s debouncing
+- **Safety mechanisms**: before-save-hook, find-file-hook normalization
+- **Auto-activation**: Only in Termux terminal environment
+- **Buffer-local**: Minor mode (korean-nfc-mode) per buffer
+- Keybindings: `SPC m k n` (manual convert), `SPC m k t` (toggle mode)
+
+**Battery Optimization** (GUI mode)
+
+Termux X11 optimizations for Samsung Fold4:
+- Increased auto-save intervals (30s / 300 keystrokes)
+- Raised GC threshold to 50MB
+- Optimized scrolling and font rendering
+- Disabled cursor blinking and system bell
+
+File: `+korean-input-fix.el` (193 lines)
 
 ### Publishing: Denote Export System
 
@@ -175,6 +199,26 @@ Usage:
 ```
 
 Documentation: `docs/20251027T092900--denote-export-system__denote_export_hugo_guide.org`
+
+**Denote dblock Update System**
+
+Batch update dynamic blocks in Denote org files.
+
+Features:
+- **Shell script**: `bin/denote-dblock-update.sh` for batch processing
+- **Emacs Lisp**: `bin/denote-dblock-batch.el` for programmatic access
+- **Documentation**: `bin/README-DBLOCK-UPDATE.md` with usage examples
+
+Usage:
+```bash
+# Update all dblocks in directory
+./bin/denote-dblock-update.sh ~/notes
+
+# Update specific file
+./bin/denote-dblock-update.sh ~/notes/example.org
+```
+
+Documentation: `docs/20251110T190854--denote-dblock-update-system__denote_dblock_meta_batch_guide.org`
 
 ### Disabled Packages
 

@@ -109,6 +109,7 @@ dotdoom-starter/
 ├── config.el            # 주요 설정 파일
 ├── packages.el          # 패키지 선언
 ├── +user-info.el        # 사용자 정보
+├── +korean-input-fix.el # 한글 NFD→NFC 정규화 (Termux)
 ├── +gptel.el            # AI/LLM 통합 설정
 ├── +functions.el        # 커스텀 함수
 ├── per-machine.el       # 머신별 설정 (git 제외)
@@ -141,7 +142,7 @@ dotdoom-starter/
 - **Tree-sitter**: 향상된 구문 강조
 - **Direnv**: 프로젝트별 환경 관리
 - **Docker**: 컨테이너 관리
-- **LLM**: GPTel + Claude Code 통합
+- **LLM**: GPTel + Agent Shell (agent-shell-manager로 Claude Code 통합)
 
 ### 언어 지원
 
@@ -150,9 +151,39 @@ Python, Nix, JavaScript/TypeScript, Web (HTML/CSS), YAML, Zig, Janet, Emacs Lisp
 ### Org-mode
 
 - **Denote**: 노트 관리 시스템 (silo, sequence 포함)
+- **Org-roam**: 지식 그래프
 - **Org-journal**: 일기 기능
 - **Org-contacts**: 연락처 관리
 - **내보내기**: Hugo, Pandoc
+
+### Termux 최적화
+
+**한글 입력 문제 해결** - 자동 NFD → NFC 정규화
+
+Termux에서 스페이스 키를 눌러도 한글 자모가 음절로 조합되지 않는 오랜 문제를 해결합니다.
+
+주요 기능:
+- **실시간 변환**: after-change-functions 훅으로 0.1초 디바운싱
+- **안전 장치**: before-save-hook, find-file-hook 정규화
+- **자동 활성화**: Termux 터미널 환경에서만 작동
+- **버퍼 로컬**: 버퍼별 마이너 모드 (korean-nfc-mode)
+- 키바인딩: `SPC m k n` (수동 변환), `SPC m k t` (모드 토글)
+
+**배터리 최적화** (GUI 모드)
+
+Termux X11에서 삼성 Fold4 최적화:
+- auto-save 간격 증가 (30초 / 300 타이핑)
+- GC 임계값 50MB로 상향
+- 스크롤 및 폰트 렌더링 최적화
+- 커서 깜빡임 및 시스템 벨 비활성화
+
+파일: `+korean-input-fix.el` (193줄)
+
+**기술 세부사항**:
+- 유니코드 범위: 초성(U+1100-U+115F), 중성(U+1160-U+11A7), 종성(U+11A8-U+11FF)
+- 패턴 매칭: 초성 + 중성 + 종성(선택)
+- 검색 윈도우: 변경 지점 ±10자
+- 재귀 방지: inhibit-modification-hooks
 
 ### 퍼블리싱: Denote Export System
 
@@ -174,6 +205,26 @@ Python, Nix, JavaScript/TypeScript, Web (HTML/CSS), YAML, Zig, Janet, Emacs Lisp
 ```
 
 상세 문서: `docs/20251027T092900--denote-export-system__denote_export_hugo_guide.org`
+
+**Denote dblock 업데이트 시스템**
+
+Denote org 파일의 동적 블록을 일괄 업데이트합니다.
+
+주요 기능:
+- **쉘 스크립트**: `bin/denote-dblock-update.sh` 배치 처리용
+- **Emacs Lisp**: `bin/denote-dblock-batch.el` 프로그래밍 접근용
+- **문서**: `bin/README-DBLOCK-UPDATE.md` 사용 예제 포함
+
+사용법:
+```bash
+# 디렉토리 내 모든 dblock 업데이트
+./bin/denote-dblock-update.sh ~/notes
+
+# 특정 파일 업데이트
+./bin/denote-dblock-update.sh ~/notes/example.org
+```
+
+상세 문서: `docs/20251110T190854--denote-dblock-update-system__denote_dblock_meta_batch_guide.org`
 
 ### 비활성화된 패키지
 
