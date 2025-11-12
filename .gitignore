@@ -15,6 +15,7 @@ user-keys.el
 # Private files (synced via Syncthing, not committed to git)
 # These files contain personal data, templates, and local content
 # Anyone can manage similar private local files alongside their public config
+.agent-shell/
 .claude/
 inbox__human.org
 templates/
