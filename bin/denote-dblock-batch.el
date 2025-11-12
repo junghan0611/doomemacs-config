@@ -1,0 +1,178 @@
+#!/usr/bin/env -S emacs --script
+;;; denote-dblock-batch.el --- Batch mode dblock update for Denote notes -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2025 Junghan Kim
+;; Author: Junghan Kim <junghanacs@gmail.com>
+
+;; This file is NOT part of GNU Emacs.
+
+;;; Commentary:
+
+;; Batch mode script for updating dynamic blocks in Denote notes.
+;; Primarily used for meta notes with denote-backlinks.
+;;
+;; Usage:
+;;   emacs --batch --load denote-dblock-batch.el DIRECTORY
+;;   ./denote-dblock-batch.el ~/org/meta
+
+;;; Code:
+
+;; Minimize startup time
+(setq gc-cons-threshold most-positive-fixnum)
+(setq load-prefer-newer t)
+
+;; Enable debug on error
+(setq debug-on-error t)
+
+;; Determine DOOMDIR - use script location
+(defvar doom-user-dir
+  (let ((script-dir (file-name-directory (or load-file-name buffer-file-name))))
+    (if script-dir
+        (expand-file-name ".." script-dir)
+      (expand-file-name "~/repos/gh/doomemacs-config"))))
+
+;; Find Doom Emacs installation
+(defvar doom-emacs-dir
+  (or (getenv "EMACSDIR")
+      (expand-file-name "~/doomemacs-starter")
+      (expand-file-name "~/.config/emacs")))
+
+;; Load Doom core (minimal)
+(when (file-directory-p doom-emacs-dir)
+  (setq user-emacs-directory doom-emacs-dir)
+  (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
+  (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
+
+;; Initialize package system
+(require 'package)
+(setq package-enable-at-startup nil)
+(package-initialize)
+
+;; Add ELPA archives
+(unless (assoc "melpa" package-archives)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t))
+
+;; Helper function to require/install packages
+(defun ensure-package (package)
+  "Ensure PACKAGE is installed and loaded."
+  (unless (require package nil t)
+    (message "[INSTALL] %s not found, installing..." package)
+    (unless package-archive-contents
+      (package-refresh-contents))
+    (package-install package)
+    (require package)))
+
+;; Essential requires
+(require 'org)
+
+;; Install denote and dependencies
+(ensure-package 'dash)
+(ensure-package 'denote)
+
+;; Load denote-explore for backlinks support
+;; Try from straight path first
+(let ((denote-regexp-path (expand-file-name "straight/repos/denote-explore/denote-regexp.el" doom-user-dir)))
+  (when (file-exists-p denote-regexp-path)
+    (load denote-regexp-path nil t)))
+
+;; Try to load denote-explore
+(condition-case err
+    (progn
+      (ensure-package 'denote-explore)
+      (message "[OK] denote-explore loaded"))
+  (error
+   (message "[WARN] denote-explore not available: %s" err)))
+
+;; Set denote directory from command line or default
+(defvar org-directory (expand-file-name "~/org"))
+(setq denote-directory org-directory)
+
+;; Parse .dir-locals.el if exists (for denote-directory override)
+(let ((dir-locals-file (expand-file-name ".dir-locals.el" org-directory)))
+  (when (file-exists-p dir-locals-file)
+    (with-temp-buffer
+      (insert-file-contents dir-locals-file)
+      (goto-char (point-min))
+      (when (re-search-forward "(denote-directory . \"\\([^\"]+\\)\")" nil t)
+        (let ((dir (match-string 1)))
+          ;; Expand tilde in batch mode
+          (when (string-prefix-p "~" dir)
+            (setq dir (expand-file-name dir)))
+          (setq denote-directory dir)
+          (message "[CONFIG] denote-directory = %s" denote-directory))))))
+
+(message "[START] Denote dblock batch update")
+(message "[DOOMDIR] %s" doom-user-dir)
+(message "[DENOTE] %s" denote-directory)
+
+;;;; Main dblock update function
+
+(defun denote-dblock-update-file (file)
+  "Update all dblocks in FILE and save."
+  (message "[PROCESSING] %s" file)
+  (let ((start-time (float-time)))
+    (condition-case err
+        (with-current-buffer (find-file-noselect file)
+          ;; Check if file has dblocks
+          (save-excursion
+            (goto-char (point-min))
+            (if (re-search-forward "^#\\+BEGIN:" nil t)  ; Match any BEGIN block
+                (progn
+                  (message "[DBLOCK] Found in %s" (file-name-nondirectory file))
+                  (goto-char (point-min))
+                  (org-update-all-dblocks)
+                  (save-buffer)
+                  (message "[OK] Updated in %.2fs" (- (float-time) start-time)))
+              (message "[SKIP] No dblock in %s" (file-name-nondirectory file))))
+          (kill-buffer))
+      (error
+       (message "[ERROR] Failed to update %s: %s" file err)))))
+
+(defun denote-dblock-update-directory (directory)
+  "Update all dblocks in DIRECTORY recursively."
+  (let* ((org-files (directory-files-recursively directory "\\.org\\'"))
+         (total (length org-files))
+         (counter 0)
+         (files-with-dblocks 0)
+         (start-time (float-time)))
+    
+    (message "[SCAN] Found %d org files in %s" total directory)
+    (message "========================================")
+    
+    (dolist (file org-files)
+      (setq counter (1+ counter))
+      (message "[%d/%d] Processing..." counter total)
+      
+      ;; Quick pre-check: does file have dblock?
+      (when (with-temp-buffer
+              (insert-file-contents file nil 0 5000) ; Check first 5KB
+              (goto-char (point-min))
+              (re-search-forward "^#\\+BEGIN:" nil t))  ; Match any BEGIN block
+        (setq files-with-dblocks (1+ files-with-dblocks))
+        (denote-dblock-update-file file)))
+    
+    (let ((duration (- (float-time) start-time)))
+      (message "========================================")
+      (message "[SUMMARY] Completed: %d/%d files" counter total)
+      (message "[SUMMARY] Files with dblocks: %d" files-with-dblocks)
+      (message "[SUMMARY] Total time: %.2fs (%.3f files/sec)" 
+               duration 
+               (/ (float counter) duration))
+      (message "========================================"))))
+
+;;;; Entry point
+
+(let ((target-dir (or (car command-line-args-left)
+                      (expand-file-name "~/org/meta"))))
+  (unless (file-directory-p target-dir)
+    (error "Directory not found: %s" target-dir))
+  
+  (message "[TARGET] %s" target-dir)
+  (denote-dblock-update-directory target-dir)
+  (message "[DONE] Batch update completed"))
+
+;; Exit cleanly
+(kill-emacs 0)
+
+;;; denote-dblock-batch.el ends here

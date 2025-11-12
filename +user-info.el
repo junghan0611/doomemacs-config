@@ -5,15 +5,15 @@
 (setq user-full-name "junghanacs"
       user-mail-address "junghanacs@gmail.com")
 
-(setq doom-font (font-spec :family "Sarasa Mono K" :size 15.1))
+(setq doom-font (font-spec :family "Monoplex Nerd" :size 15.1))
 
 ;; (setq doom-font (font-spec :family "Monoplex Nerd" :size 14.0)
 ;;       doom-big-font (font-spec :family "Monoplex Nerd" :size 24.0)
 ;;       doom-variable-pitch-font (font-spec :family "Pretendard Variable" :size 14.0)
 ;;       doom-unicode-font (font-spec :family "Symbola" :size 14.0))
 
-(unless (display-graphic-p) ; terminal
-  (setq doom-font (font-spec :family "Sarasa Term K Nerd Font" :size 15.1)))
+;; (unless (display-graphic-p) ; terminal
+;;   (setq doom-font (font-spec :family "Sarasa Term K Nerd Font" :size 15.1)))
 
 ;;; User Profile
 

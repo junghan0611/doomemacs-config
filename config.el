@@ -1609,4 +1609,46 @@ only those in the selected frame."
   ;; 안드로이드 IME 완전 우회
   (setq android-pass-multimedia-buttons-to-system nil))
 
+;;; TODO TERMUX
+
+(when IS-TERMUX
+  ;; 7. GUI 폰트 설정 (Sarasa Term K Nerd)
+
+  ;; Termux X11 GUI에서 Nerd Font 아이콘 제대로 표시
+  ;; Fold4 7.6" 2176x1812 (373 PPI, DPI 180 기준) 최적화
+  ;; (setq doom-font (font-spec :family "Sarasa Term K Nerd Font" :size 14)
+  ;;       doom-variable-pitch-font (font-spec :family "Sarasa Term K Nerd Font" :size 14))
+
+  ;; 8. 배터리 효율 최적화 설정 (Termux X11 GUI)
+  ;; 작성: 2025-11-08
+
+  ;; Auto-save 간격 늘리기 (디스크 I/O 감소)
+  (setq auto-save-interval 300)        ; 300 타이핑마다
+  (setq auto-save-timeout 30)          ; 30초마다
+
+  ;; GC 임계값 증가 (가비지 컬렉션 빈도 감소)
+  (setq gc-cons-threshold (* 50 1024 1024))  ; 50MB
+
+  ;; 스크롤 최적화
+  (setq scroll-conservatively 101)
+  (setq scroll-margin 0)
+  (setq scroll-preserve-screen-position t)
+
+  ;; 폰트 렌더링 최적화
+  (setq inhibit-compacting-font-caches t)
+
+  ;; 파일 변경 감지 간격 늘리기
+  (setq auto-revert-interval 5)  ; 5초
+
+  ;; 알람/비프음 비활성화 (하드웨어 절전)
+  (setq ring-bell-function 'ignore)
+
+  ;; GUI 전용 최적화
+  (when (display-graphic-p)
+    ;; 커서 깜빡임 비활성화 (배터리 절약)
+    (blink-cursor-mode -1)
+
+    (message "GUI 모드: 배터리 최적화 활성화 ✓"))
+  )
+
 ;;; END
