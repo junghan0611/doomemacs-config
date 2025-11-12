@@ -1526,7 +1526,15 @@ only those in the selected frame."
   (require 'agent-shell)
 
   (setq agent-shell-anthropic-authentication
-        (agent-shell-anthropic-make-authentication :login t)))
+        (agent-shell-anthropic-make-authentication :login t))
+  (setq agent-shell--transcript-file-path-function #'agent-shell--default-transcript-file-path)
+  (setq agent-shell-header-style nil)
+
+  (require 'agent-shell-manager)
+  ;; Bind s-b to toggle agent-shell-manager
+  (map! :n "s-;" #'agent-shell-manager-toggle)
+  (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
+  )
 
 ;;; Load "+keybindings"
 

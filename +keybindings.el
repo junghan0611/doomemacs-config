@@ -91,7 +91,6 @@
   ;; "R" #'denote-rename-file-using-front-matter
   "," #'denote-rename-file-using-front-matter
   "-" #'denote-show-backlinks-buffer
-
   "SPC" #'org-journal-open-current-journal-file
 
   "j" #'org-journal-new-entry
