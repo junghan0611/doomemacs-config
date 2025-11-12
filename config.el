@@ -62,6 +62,7 @@
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
 (load! "+user-info")
+(load! "+korean-input-fix")
 
 ;;; Load 'Per-Machine' - User Configs
 ;; Most of my per-environment config done via =customize= and is in .custom.el.
