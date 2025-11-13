@@ -1532,9 +1532,10 @@ only those in the selected frame."
   (setq agent-shell-header-style nil)
 
   (require 'agent-shell-manager)
-  ;; Bind s-b to toggle agent-shell-manager
-  (map! :n "s-;" #'agent-shell-manager-toggle)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
+  (map! :map agent-shell-mode-map
+        :n "s-;" #'agent-shell-manager-toggle
+        :inv "M-h" #'other-window)
   )
 
 ;;; Load "+keybindings"

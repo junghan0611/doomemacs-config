@@ -147,10 +147,6 @@
       ;; :desc "expand-menu" "V" #'expand-transient
       )
 
-;;;; window
-
-;; doom-leader-map w C-S-w 'ace-swap-window
-
 ;;;; 'n' +notes denote
 
 (map! :leader
@@ -168,12 +164,6 @@
       (:prefix "i"
        :desc "time-stamp" "1" #'time-stamp
        ))
-
-;;;; vterm-mode-map
-
-(after! vterm
-  (setq vterm-always-compile-module t) ;; Compile Vterm without asking.
-  (map! :map vterm-mode-map "M-y" #'vterm-yank-pop))
 
 ;;;; 'w' window
 
@@ -193,6 +183,63 @@
       :desc "window-layout-toggle" "-" 'spacemacs/window-layout-toggle
       :desc "delete-other-window" "O" 'delete-other-windows)
 
+;; 편집 창 포커스 이동을 간단하게
+(progn
+  (global-set-key (kbd "M-s-l") 'evil-window-right)
+  (global-set-key (kbd "M-s-h") 'evil-window-left)
+  ;; (global-set-key (kbd "M-s-]") 'evil-window-right)
+  ;; (global-set-key (kbd "M-s-[") 'evil-window-left)
+  (global-set-key (kbd "M-s-k") 'evil-window-up)
+  (global-set-key (kbd "M-s-j") 'evil-window-down))
+
+;; If you use a window manager be careful of possible key binding clashes
+;; (global-unset-key (kbd "M-<tab>"))
+;; (global-set-key (kbd "M-<tab>") 'other-window) ; very useful
+;; (global-set-key (kbd "M-<iso-lefttab>") (lambda() (interactive) (other-window -1))) ; == M-S-<tab>
+;; (global-set-key (kbd "M-<backtab>") (lambda() (interactive) (other-window -1))) ; for terminal
+
+(global-set-key (kbd "C-c <left>") 'winner-undo) ; built-in winner
+(global-set-key (kbd "C-c <right>") 'winner-redo)
+
+;;;; vterm
+
+(after! vterm
+  ;; sync/code/default/claude-code.el/claude-code.el
+  (defun my/vterm-send-alt-return ()
+    "Send <alt>-<return> to vterm."
+    (interactive)
+    (vterm-send-key "" nil t))
+
+  (setq vterm-always-compile-module t) ;; Compile Vterm without asking.
+  (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0") ;; 2025-07-13 Simpler
+  (map! :map vterm-mode-map
+        :i "M-RET" #'my/vterm-send-alt-return
+        :inv "M-y" #'vterm-yank-pop
+        :inv "M-h" #'other-window
+        :inv "M-z" #'evil-collection-vterm-toggle-send-escape)
+  )
+
+;;;; outli-mode-map / markdown-mode-map
+
+(after! outli
+  (map! :map outli-mode-map
+        :nv "M-j" #'outline-forward-same-level
+        :nv "M-k" #'outline-backward-same-level
+        :nv "M-n" #'outline-next-heading
+        :nv "M-p" #'outline-previous-heading
+        :nv "C-S-p" #'outline-up-heading
+        :nv "z u"   #'outline-up-heading))
+
+;;;; evil-markdown-mode-map
+
+(after! evil-markdown
+  (map! :map evil-markdown-mode-map
+        :nv "M-j" #'markdown-outline-next-same-level
+        :nv "M-k" #'markdown-outline-previous-same-level
+        :nv "M-n" #'markdown-outline-next
+        :nv "M-p" #'markdown-outline-previous
+        :nv "C-S-p" #'outline-up-heading
+        :nv "z u"   #'outline-up-heading))
 
 ;;;; mode-map
 
@@ -204,6 +251,7 @@
                                   ;; (setq-local tab-width 8)
                                   (setq-local comment-column 0)
                                   (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "<tab>") 'evil-jump-item)
+                                  (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "TAB") 'evil-jump-item)
                                   ))
 
 (with-eval-after-load 'markdown-mode
