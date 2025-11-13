@@ -376,6 +376,19 @@
 (add-hook 'backtrace-mode-hook 'display-line-numbers-mode)
 (add-hook 'backtrace-mode-hook 'visual-line-mode)
 
+;;;; pulse-line
+
+(progn
+  ;; add visual pulse when changing focus, like beacon but built-in
+  ;; from from https://karthinks.com/software/batteries-included-with-emacs/
+  (require 'pulse)
+  (defun pulse-line (&rest _)
+    "Pulse the current line."
+    (pulse-momentary-highlight-one-line (point)))
+  (dolist (command
+           '(scroll-up-command scroll-down-command ace-window recenter-top-bottom other-window))
+    (advice-add command :after #'pulse-line)))
+
 ;;;; which-key
 
 (after! which-key
@@ -1552,16 +1565,7 @@ only those in the selected frame."
   ;; Update every minute
   (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
 
-
-;;; makrdown-ts-mode
-
-(use-package! markdown-ts-mode
-  :mode ("\\.md\\'" . markdown-ts-mode)
-  :config
-  (add-to-list 'treesit-language-source-alist '(markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown/src"))
-  (add-to-list 'treesit-language-source-alist '(markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown-inline/src")))
-
-;;;;; evil + hangul
+;;;; evil + hangul
 
 ;; 4. Evil 모드 연동: 자동 한영 전환
 (after! evil

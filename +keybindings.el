@@ -241,18 +241,33 @@
         :nv "C-S-p" #'outline-up-heading
         :nv "z u"   #'outline-up-heading))
 
+;;;; dired-mode-map
+
+(map! :map dired-mode-map
+      :inv "M-h" #'other-window)
+
+;;;; prog-mode-map
+
+(map! :map prog-mode-map
+      :inv "M-h" #'other-window)
+
+;;;; hook
+
+(add-hook
+ 'emacs-lisp-mode-hook
+ (lambda ()
+   ;; Emacs' built-in elisp files use a hybrid tab->space indentation scheme
+   ;; with a tab width of 8. Any smaller and the indentation will be
+   ;; unreadable. Since Emacs' lisp indenter doesn't respect this variable it's
+   ;; safe to ignore this setting otherwise.
+   ;; (setq-local tab-width 8)
+   (setq-local comment-column 0)
+   (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "<tab>") 'evil-jump-item)
+   (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "TAB") 'evil-jump-item)
+   ))
+
 ;;;; mode-map
 
-(add-hook 'emacs-lisp-mode-hook (lambda ()
-                                  ;; Emacs' built-in elisp files use a hybrid tab->space indentation scheme
-                                  ;; with a tab width of 8. Any smaller and the indentation will be
-                                  ;; unreadable. Since Emacs' lisp indenter doesn't respect this variable it's
-                                  ;; safe to ignore this setting otherwise.
-                                  ;; (setq-local tab-width 8)
-                                  (setq-local comment-column 0)
-                                  (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "<tab>") 'evil-jump-item)
-                                  (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "TAB") 'evil-jump-item)
-                                  ))
 
 (with-eval-after-load 'markdown-mode
   (map! :map markdown-mode-map
