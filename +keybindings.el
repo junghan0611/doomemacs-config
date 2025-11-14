@@ -85,6 +85,12 @@
   "s" #'denote-silo-open-or-create
   "S" #'denote-silo-select-silo-then-command
 
+  ;; Dynamic Silo Management
+  "M-l" #'denote-silo-list-all      ; List all silos
+  "M-r" #'denote-silo-refresh       ; Refresh silo list
+  "M-F" #'denote-silo-find-file-all ; Find file in all silos
+  "M-c" #'denote-silo-count-files   ; Count files in all silos
+
   "t" #'denote-type
 
   "r" #'denote-region ; "contents" mnemonic

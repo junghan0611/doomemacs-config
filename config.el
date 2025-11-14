@@ -63,6 +63,7 @@
 ;; sync' after modifying this file!
 (load! "+user-info")
 (load! "+korean-input-fix")
+(load! "+denote-silo-dynamic")
 
 ;;; Load 'Per-Machine' - User Configs
 ;; Most of my per-environment config done via =customize= and is in .custom.el.
@@ -1075,7 +1076,8 @@ only those in the selected frame."
                              (denote-rename-buffer-mode +1)))
 
   ;; for claude memory integration
-  (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/"))
+  ;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
+  ;; (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/"))
 
   ;; (use-package! consult-notes
   ;;   :defer 2
@@ -1458,9 +1460,9 @@ only those in the selected frame."
   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
 
 ;;; denote-silo
-
-(after! denote
-  (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
+;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
+;; (after! denote
+;;   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
 
 ;;; denote-export system
 
