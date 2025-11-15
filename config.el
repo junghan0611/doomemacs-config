@@ -1532,6 +1532,34 @@ only those in the selected frame."
 
 (setq auth-sources '(password-store "~/.authinfo.gpg"))
 
+;;;; knockknock - Notification System
+
+(use-package! knockknock
+  :config
+  (setq knockknock-default-duration 4
+        knockknock-use-svg-layout t
+        knockknock-svg-icon-size 32
+        knockknock-svg-width 320
+        knockknock-border-color "orange"
+        knockknock-border-width 2
+        knockknock-poshandler #'posframe-poshandler-frame-top-center)
+
+  ;; Unified notification function: knockknock + dunst
+  (defun my/notify (title message &optional icon duration)
+    "Unified notification: knockknock for Emacs, dunst for system."
+    ;; Emacs internal notification (if GUI and focused)
+    (when (and (display-graphic-p) (frame-focus-state))
+      (knockknock-notify :title title
+                         :message message
+                         :icon (or icon "cod-info")
+                         :duration (or duration 4)))
+    ;; System notification via dunst (always)
+    (when (executable-find "notify-send")
+      (call-process "notify-send" nil nil nil
+                    "-u" "normal"
+                    "-t" (format "%d" (* 1000 (or duration 4)))
+                    title message))))
+
 ;;;; ACP (Agent Client Protocol)
 ;; https://agentclientprotocol.com/
 ;; https://github.com/xenodium/agent-shell/issues/27
@@ -1551,6 +1579,59 @@ only those in the selected frame."
   (map! :map agent-shell-mode-map
         :n "s-;" #'agent-shell-manager-toggle
         :inv "M-h" #'other-window)
+
+  ;; agent-shell notification integration with knockknock
+  (defvar my/agent-shell-notify-on-tool-completion t
+    "When non-nil, notify on tool call completion/failure.")
+
+  (defvar my/agent-shell-notify-on-permission-request t
+    "When non-nil, notify on permission requests.")
+
+  (defun my/agent-shell-notification-handler (state notification)
+    "Handle agent-shell notifications and trigger knockknock alerts."
+    (let* ((method (map-elt notification :method))
+           (params (map-elt notification :params))
+           (updates (map-elt params :updates)))
+
+      ;; Handle tool_call_update events
+      (when (and my/agent-shell-notify-on-tool-completion
+                 (string= method "session/update"))
+        (dolist (update updates)
+          (let* ((type (map-elt update :type))
+                 (data (map-elt update :data)))
+            (when (string= type "tool_call_update")
+              (let ((status (map-elt data :status))
+                    (title (map-elt data :title))
+                    (description (map-elt data :description)))
+                (cond
+                 ((string= status "completed")
+                  (my/notify "Agent Shell: Tool Complete"
+                             (format "%s - %s" title (or description "Success"))
+                             "cod-check"
+                             3))
+                 ((string= status "failed")
+                  (my/notify "Agent Shell: Tool Failed"
+                             (format "%s - %s" title (or description "Error"))
+                             "cod-error"
+                             5))))))))
+
+      ;; Handle permission requests
+      (when (and my/agent-shell-notify-on-permission-request
+                 (string= method "session/request_permission"))
+        (let ((tool-name (map-elt params :tool_name))
+              (reason (map-elt params :reason)))
+          (my/notify "Agent Shell: Permission Needed"
+                     (format "Tool: %s\n%s" tool-name (or reason "Approval required"))
+                     "cod-warning"
+                     6)))))
+
+  ;; Add advice to agent-shell notification handler
+  (when (fboundp 'agent-shell--on-notification)
+    (advice-add 'agent-shell--on-notification :before
+                (lambda (&rest args)
+                  (let ((state (plist-get args :state))
+                        (notification (plist-get args :notification)))
+                    (my/agent-shell-notification-handler state notification)))))
   )
 
 ;;; Load "+keybindings"

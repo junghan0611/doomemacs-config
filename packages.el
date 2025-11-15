@@ -114,6 +114,9 @@
 (package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
 (package! dired-preview)
 
+;; Notification system
+(package! knockknock :recipe (:host github :repo "konrad1977/knockknock"))
+
 ;;;; Editing
 
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
