@@ -1746,6 +1746,52 @@ only those in the selected frame."
     (blink-cursor-mode -1)
 
     (message "GUI 모드: 배터리 최적화 활성화 ✓"))
+
+  ;; Termux extra-keys 방향키 설정
+  ;; Termux 환경에서 방향키가 제대로 동작하도록 보장
+  (when (and (not (display-graphic-p))
+             (or (getenv "TERMUX_VERSION")
+                 (string-match-p "termux" (or (getenv "PREFIX") ""))))
+
+    ;; Termux는 ESC O 시퀀스를 전송 (Application Keypad Mode)
+    ;; input-decode-map과 function-key-map 모두에 매핑 (더 강력)
+    (defun termux-fix-arrow-keys ()
+      "Fix arrow keys for Termux extra-keys."
+      ;; input-decode-map (우선순위 높음)
+      (define-key input-decode-map "\eOA" [up])
+      (define-key input-decode-map "\eOB" [down])
+      (define-key input-decode-map "\eOC" [right])
+      (define-key input-decode-map "\eOD" [left])
+      (define-key input-decode-map "\e[A" [up])
+      (define-key input-decode-map "\e[B" [down])
+      (define-key input-decode-map "\e[C" [right])
+      (define-key input-decode-map "\e[D" [left])
+      ;; function-key-map (호환성)
+      (define-key function-key-map "\eOA" [up])
+      (define-key function-key-map "\eOB" [down])
+      (define-key function-key-map "\eOC" [right])
+      (define-key function-key-map "\eOD" [left])
+      (define-key function-key-map "\e[A" [up])
+      (define-key function-key-map "\e[B" [down])
+      (define-key function-key-map "\e[C" [right])
+      (define-key function-key-map "\e[D" [left])
+      ;; local-function-key-map (로컬)
+      (define-key local-function-key-map "\eOA" [up])
+      (define-key local-function-key-map "\eOB" [down])
+      (define-key local-function-key-map "\eOC" [right])
+      (define-key local-function-key-map "\eOD" [left]))
+
+    ;; 즉시 적용
+    (termux-fix-arrow-keys)
+
+    ;; 터미널 초기화 후에도 적용 (tty-setup-hook)
+    (add-hook 'tty-setup-hook #'termux-fix-arrow-keys)
+
+    ;; evil-mode 로드 후에도 적용 (evil이 키를 오버라이드할 수 있음)
+    (after! evil
+      (termux-fix-arrow-keys))
+
+    (message "Termux 방향키 ESC O 시퀀스 매핑 완료 ✓"))
   )
 
 ;;; END

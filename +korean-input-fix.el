@@ -173,6 +173,9 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
 (add-hook 'text-mode-hook #'korean/enable-nfc-mode-if-needed)
 (add-hook 'prog-mode-hook #'korean/enable-nfc-mode-if-needed)
 
+;; comint 기반 모드들 (agent-shell, shell, eshell 등)에서도 활성화
+(add-hook 'comint-mode-hook #'korean/enable-nfc-mode-if-needed)
+
 ;; 파일 열기 시에도 체크
 (add-hook 'find-file-hook #'korean/find-file-nfc-normalize)
 
