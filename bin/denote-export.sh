@@ -15,8 +15,14 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_SCRIPT="${SCRIPT_DIR}/denote-export-parallel.py"
-DEFAULT_ORG_DIR="${HOME}/org"
+ORG_ROOT="${HOME}/org"
 DEFAULT_DAEMONS=4
+
+# Target directories
+META_DIR="${ORG_ROOT}/meta"
+BIB_DIR="${ORG_ROOT}/bib"
+NOTES_DIR="${ORG_ROOT}/notes"
+TEST_DIR="${ORG_ROOT}/test"
 
 # Colors
 GREEN='\033[0;32m'
@@ -30,42 +36,40 @@ show_usage() {
 ${GREEN}Denote Export - 병렬 처리 기반 Hugo 변환${NC}
 
 ${BLUE}사용법:${NC}
-  $0 [명령] [옵션]
+  denote-export.sh [명령] [옵션]
 
 ${BLUE}명령:${NC}
-  run [dir] [daemons]    - 병렬 export 실행 (기본)
-  bg  [dir] [daemons]    - 백그라운드 실행 (장시간 작업)
-  test [daemons]         - 테스트 폴더만 실행
-  help                   - 이 도움말 표시
+  all [daemons]          - 전체 폴더 순차 처리 (meta, bib, notes) ${YELLOW}⭐ 권장${NC}
+  meta [daemons]         - ~/org/meta 폴더만 (530 files)
+  bib [daemons]          - ~/org/bib 폴더만 (649 files)
+  notes [daemons]        - ~/org/notes 폴더만 (797 files)
+  test [daemons]         - ~/org/test 폴더만 (빠른 검증)
+  run [dir] [daemons]    - 커스텀 디렉토리 지정
+  --help                 - 이 도움말 표시
 
 ${BLUE}옵션:${NC}
-  dir      - Org 파일 디렉토리 (기본: ~/org)
   daemons  - 병렬 daemon 개수 (기본: 4, 권장: CPU 코어 수)
 
 ${BLUE}예제:${NC}
-  ${GREEN}# 기본 실행 (~/org, 4 daemons)${NC}
-  $0
+  ${GREEN}# 전체 export (meta, bib, notes 순차)${NC}
+  denote-export.sh all
 
-  ${GREEN}# 특정 디렉토리, 8 daemons${NC}
-  $0 run ~/org/notes 8
-
-  ${GREEN}# 백그라운드 실행 (잠자기 전)${NC}
-  $0 bg ~/org 8
+  ${GREEN}# meta 폴더만, 8 daemons${NC}
+  denote-export.sh meta 8
 
   ${GREEN}# 테스트 폴더만 (빠른 검증)${NC}
-  $0 test 2
+  denote-export.sh test 2
 
-${BLUE}성능:${NC}
-  - 속도: 1.8 files/sec
-  - 품질: 100% 성공률
-  - 2008 파일 기준:
-    * 4 daemons: ~18분
-    * 8 daemons: ~9분
+  ${GREEN}# 커스텀 디렉토리${NC}
+  denote-export.sh run ~/custom/path 4
+
+${BLUE}성능 (4 daemons):${NC}
+  - meta:  530 files → ~5분
+  - bib:   649 files → ~6분
+  - notes: 797 files → ~7분
+  - 전체:  1976 files → ~18분
 
 ${BLUE}로그 확인:${NC}
-  # 실시간 로그
-  tail -f /tmp/denote-export-*.log
-
   # 에러만 확인
   grep "✗" /tmp/denote-export-*.log
 
@@ -102,7 +106,7 @@ if [ ! -f "$PYTHON_SCRIPT" ]; then
 fi
 
 # Parse command
-COMMAND="${1:-run}"
+COMMAND="${1:-all}"
 
 case "$COMMAND" in
   help|--help|-h)
@@ -110,66 +114,108 @@ case "$COMMAND" in
     exit 0
     ;;
 
-  run)
-    ORG_DIR="${2:-$DEFAULT_ORG_DIR}"
-    NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+  all)
+    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
 
-    if [ ! -d "$ORG_DIR" ]; then
-      log_error "Directory not found: $ORG_DIR"
-      exit 1
-    fi
-
-    log_info "======================================"
-    log_info "Denote Export - 병렬 처리"
-    log_info "Directory: $ORG_DIR"
-    log_info "Daemons: $NUM_DAEMONS"
-    log_info "======================================"
+    log_info "=========================================="
+    log_info "Denote Export - 전체 폴더 순차 처리"
+    log_info "Daemons per folder: $NUM_DAEMONS"
+    log_info "Folders: meta → bib → notes"
+    log_info "=========================================="
     echo ""
 
-    # Run Python script
-    python3 "$PYTHON_SCRIPT" "$ORG_DIR" "$NUM_DAEMONS"
+    # Process each directory sequentially
+    FOLDER_NUM=1
+    TOTAL_FOLDERS=3
+    for DIR_NAME in meta bib notes; do
+      DIR_PATH="${ORG_ROOT}/${DIR_NAME}"
+
+      if [ ! -d "$DIR_PATH" ]; then
+        log_warn "Directory not found: $DIR_PATH (skipping)"
+        continue
+      fi
+
+      echo ""
+      log_info "=================================================="
+      log_info "[$FOLDER_NUM/$TOTAL_FOLDERS] Processing: $DIR_NAME"
+      log_info "=================================================="
+      echo ""
+
+      python3 "$PYTHON_SCRIPT" "$DIR_PATH" "$NUM_DAEMONS"
+
+      echo ""
+      log_info "✓ Folder $DIR_NAME completed"
+      echo ""
+
+      FOLDER_NUM=$((FOLDER_NUM + 1))
+    done
+
+    echo ""
+    log_info "=========================================="
+    log_info "✓ 전체 export 완료!"
+    log_info "=========================================="
     ;;
 
-  bg)
-    ORG_DIR="${2:-$DEFAULT_ORG_DIR}"
-    NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+  meta)
+    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
 
-    if [ ! -d "$ORG_DIR" ]; then
-      log_error "Directory not found: $ORG_DIR"
+    if [ ! -d "$META_DIR" ]; then
+      log_error "Directory not found: $META_DIR"
       exit 1
     fi
 
-    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-    LOG_FILE="/tmp/denote-export-${TIMESTAMP}.log"
-
     log_info "======================================"
-    log_info "Denote Export - 백그라운드 실행"
-    log_info "Directory: $ORG_DIR"
+    log_info "Denote Export - meta 폴더"
+    log_info "Directory: $META_DIR"
     log_info "Daemons: $NUM_DAEMONS"
-    log_info "Log file: $LOG_FILE"
     log_info "======================================"
     echo ""
 
-    # Run in background
-    nohup python3 "$PYTHON_SCRIPT" "$ORG_DIR" "$NUM_DAEMONS" \
-      > "$LOG_FILE" 2>&1 &
+    python3 "$PYTHON_SCRIPT" "$META_DIR" "$NUM_DAEMONS"
+    ;;
 
-    PID=$!
-    echo "$PID" > /tmp/denote-export.pid
+  bib)
+    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
 
-    log_info "프로세스 시작: PID=$PID"
-    log_info "로그 확인: tail -f $LOG_FILE"
-    log_info "프로세스 종료: kill $PID"
+    if [ ! -d "$BIB_DIR" ]; then
+      log_error "Directory not found: $BIB_DIR"
+      exit 1
+    fi
+
+    log_info "======================================"
+    log_info "Denote Export - bib 폴더"
+    log_info "Directory: $BIB_DIR"
+    log_info "Daemons: $NUM_DAEMONS"
+    log_info "======================================"
+    echo ""
+
+    python3 "$PYTHON_SCRIPT" "$BIB_DIR" "$NUM_DAEMONS"
+    ;;
+
+  notes)
+    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+
+    if [ ! -d "$NOTES_DIR" ]; then
+      log_error "Directory not found: $NOTES_DIR"
+      exit 1
+    fi
+
+    log_info "======================================"
+    log_info "Denote Export - notes 폴더"
+    log_info "Directory: $NOTES_DIR"
+    log_info "Daemons: $NUM_DAEMONS"
+    log_info "======================================"
+    echo ""
+
+    python3 "$PYTHON_SCRIPT" "$NOTES_DIR" "$NUM_DAEMONS"
     ;;
 
   test)
     NUM_DAEMONS="${2:-2}"
-    TEST_DIR="${HOME}/org/test"
 
     if [ ! -d "$TEST_DIR" ]; then
-      log_warn "Test directory not found: $TEST_DIR"
-      log_warn "Using default org directory instead"
-      TEST_DIR="$DEFAULT_ORG_DIR"
+      log_error "Test directory not found: $TEST_DIR"
+      exit 1
     fi
 
     log_info "======================================"
@@ -179,8 +225,33 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    # Run Python script
     python3 "$PYTHON_SCRIPT" "$TEST_DIR" "$NUM_DAEMONS"
+    ;;
+
+  run)
+    ORG_DIR="${2}"
+    NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+
+    if [ -z "$ORG_DIR" ]; then
+      log_error "Directory argument required for 'run' command"
+      echo ""
+      show_usage
+      exit 1
+    fi
+
+    if [ ! -d "$ORG_DIR" ]; then
+      log_error "Directory not found: $ORG_DIR"
+      exit 1
+    fi
+
+    log_info "======================================"
+    log_info "Denote Export - 커스텀 디렉토리"
+    log_info "Directory: $ORG_DIR"
+    log_info "Daemons: $NUM_DAEMONS"
+    log_info "======================================"
+    echo ""
+
+    python3 "$PYTHON_SCRIPT" "$ORG_DIR" "$NUM_DAEMONS"
     ;;
 
   *)

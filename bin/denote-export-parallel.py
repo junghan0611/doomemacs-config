@@ -37,14 +37,12 @@ def is_daemon_running(daemon_name):
 
 def start_daemons(num_daemons):
     """Start daemons and wait until they're ready."""
-    print(f"[INFO] Starting {num_daemons} daemons...")
-
     for i in range(1, num_daemons + 1):
         daemon_name = f"denote-export-daemon-{i}"
 
         # Stop if already running
         if is_daemon_running(daemon_name):
-            print(f"[INFO] Daemon {i} already running, stopping...")
+            print(f"[INFO] Daemon {i} already running, stopping...", flush=True)
             subprocess.run(
                 ['emacsclient', '-s', daemon_name, '--eval', '(kill-emacs)'],
                 capture_output=True
@@ -52,7 +50,7 @@ def start_daemons(num_daemons):
             time.sleep(1)
 
         # Start daemon
-        print(f"[INFO] Starting daemon {i}: {daemon_name}")
+        print(f"[INFO] Creating daemon {i}: {daemon_name}", flush=True)
         subprocess.Popen(
             ['emacs', '--quick', f'--daemon={daemon_name}', '--load', str(SERVER_SCRIPT)],
             stdout=subprocess.DEVNULL,
@@ -74,7 +72,7 @@ def start_daemons(num_daemons):
                     timeout=2
                 )
                 if result.returncode == 0 and 't' in result.stdout:
-                    print(f"[INFO] ✓ Daemon {i} ready!")
+                    print(f"[INFO]   ✓ Daemon {i} initialized and ready!", flush=True)
                     break
             except:
                 pass
@@ -83,14 +81,11 @@ def start_daemons(num_daemons):
             elapsed += 1
 
         if elapsed >= timeout:
-            print(f"[ERROR] Daemon {i} initialization timeout")
+            print(f"[ERROR] Daemon {i} initialization timeout", flush=True)
             sys.exit(1)
-
-    print(f"[INFO] All {num_daemons} daemons ready!\n")
 
 def stop_daemons(num_daemons):
     """Stop all daemons."""
-    print("\n[INFO] Stopping daemons...")
     for i in range(1, num_daemons + 1):
         daemon_name = f"denote-export-daemon-{i}"
         try:
@@ -99,9 +94,9 @@ def stop_daemons(num_daemons):
                 capture_output=True,
                 timeout=5
             )
-            print(f"[INFO] ✓ Daemon {i} stopped")
-        except:
-            pass
+            print(f"[INFO]   ✓ Daemon {i} stopped successfully", flush=True)
+        except Exception as e:
+            print(f"[WARN]   ✗ Failed to stop daemon {i}: {e}", flush=True)
 
 def export_file_via_daemon(args):
     """Export a single file via emacsclient to a specific daemon."""
@@ -159,44 +154,54 @@ def main():
     print(flush=True)
 
     # Start daemons
+    print(f"[INFO] ====================================== Daemon Lifecycle ======================================", flush=True)
     start_daemons(num_daemons)
+    print(f"[INFO] ✓ All {num_daemons} daemons created and ready!", flush=True)
+    print(f"[INFO] =============================================================================================", flush=True)
+    print(flush=True)
 
-    # Assign files to daemons (round-robin)
-    file_daemon_pairs = []
-    for idx, file_path in enumerate(org_files):
-        daemon_id = (idx % num_daemons) + 1
-        file_daemon_pairs.append((file_path, daemon_id))
+    try:
+        # Assign files to daemons (round-robin)
+        file_daemon_pairs = []
+        for idx, file_path in enumerate(org_files):
+            daemon_id = (idx % num_daemons) + 1
+            file_daemon_pairs.append((file_path, daemon_id))
 
-    # Process in parallel
-    start_time = time.time()
-    success_count = 0
-    error_count = 0
+        # Process in parallel
+        start_time = time.time()
+        success_count = 0
+        error_count = 0
 
-    with ProcessPoolExecutor(max_workers=num_daemons) as executor:
-        futures = {executor.submit(export_file_via_daemon, pair): pair
-                  for pair in file_daemon_pairs}
+        with ProcessPoolExecutor(max_workers=num_daemons) as executor:
+            futures = {executor.submit(export_file_via_daemon, pair): pair
+                      for pair in file_daemon_pairs}
 
-        for future in as_completed(futures):
-            success, basename = future.result()
-            if success:
-                success_count += 1
-            else:
-                error_count += 1
+            for future in as_completed(futures):
+                success, basename = future.result()
+                if success:
+                    success_count += 1
+                else:
+                    error_count += 1
 
-    duration = time.time() - start_time
-    speed = total_files / duration if duration > 0 else 0
+        duration = time.time() - start_time
+        speed = total_files / duration if duration > 0 else 0
 
-    print()
-    print(f"[INFO] ========================================")
-    print(f"[INFO] Export completed!")
-    print(f"[INFO] Success: {success_count}, Errors: {error_count}, Total: {total_files}")
-    print(f"[INFO] Duration: {duration:.1f}s, Speed: {speed:.2f} files/sec")
-    print(f"[INFO] ========================================")
+        print()
+        print(f"[INFO] ========================================")
+        print(f"[INFO] Export completed!")
+        print(f"[INFO] Success: {success_count}, Errors: {error_count}, Total: {total_files}")
+        print(f"[INFO] Duration: {duration:.1f}s, Speed: {speed:.2f} files/sec")
+        print(f"[INFO] ========================================")
 
-    # Cleanup daemons
-    stop_daemons(num_daemons)
+        return 0 if error_count == 0 else 1
 
-    return 0 if error_count == 0 else 1
+    finally:
+        # ALWAYS cleanup daemons (even on error/interrupt)
+        print()
+        print(f"[INFO] ====================================== Daemon Cleanup ======================================", flush=True)
+        stop_daemons(num_daemons)
+        print(f"[INFO] ✓ All {num_daemons} daemons stopped and cleaned up!", flush=True)
+        print(f"[INFO] =============================================================================================", flush=True)
 
 if __name__ == '__main__':
     sys.exit(main())
