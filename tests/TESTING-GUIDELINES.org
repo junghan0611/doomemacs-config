@@ -1,0 +1,393 @@
+#+title: Emacs Lisp Testing Guidelines
+#+date: [2025-11-15 Fri]
+#+filetags: :testing:ert:guidelines:
+
+* 테스트 프레임워크 가이드라인
+
+이 문서는 doomemacs-config 프로젝트의 Emacs Lisp 테스트 작성 가이드입니다.
+
+** 왜 ERT를 선택했는가?
+
+*** 생태계 분석 결과
+- Emacs 내장: 별도 설치 불필요
+- 압도적 사용률: ERT 359개 vs Buttercup 35개 (10:1 비율)
+- 주요 패키지들이 사용: denote, agent-shell, transient, markdown-mode
+- 단순성: 복잡한 mocking 프레임워크 불필요
+- 디버깅 용이: 내장이라 문서화 충실
+
+*** ERT의 철학
+#+begin_quote
+Simple, straightforward, built-in.
+복잡한 기능보다 간단하고 명확한 테스트.
+#+end_quote
+
+* 테스트 작성 원칙
+
+** 1. 파일 구조
+
+#+begin_src
+tests/
+├── test-helper.el          # 공통 헬퍼 함수
+├── test-<module-name>.el   # 모듈별 테스트
+├── run-tests.sh            # 실행 스크립트
+└── README.org
+#+end_src
+
+** 2. 테스트 파일 템플릿
+
+#+begin_src elisp
+;;; test-<module-name>.el --- Tests for <module> -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2025 Junghan Kim
+
+;;; Commentary:
+
+;; Tests for <module> functionality
+
+;;; Code:
+
+(require 'test-helper)
+
+;; Load the module or define functions to test
+;; (load-file "../+<module>.el")
+
+(ert-deftest test-<function-name> ()
+  "Test description explaining what this tests."
+  (should (equal (<function> input) expected-output)))
+
+;;; test-<module-name>.el ends here
+#+end_src
+
+** 3. 테스트 명명 규칙
+
+*** 패턴
+#+begin_example
+test-<module>-<function>-<scenario>
+#+end_example
+
+*** 예시
+- =test-denote-silo--is-git-repo= : Git 저장소 감지
+- =test-notify-basic= : 기본 알림 테스트
+- =test-notify-with-urgency= : urgency 파라미터 테스트
+- =test-notify-without-notify-send= : notify-send 없을 때 예외 처리
+
+*** 가이드라인
+- 소문자와 하이픈 사용
+- 언더스코어(=__=)는 private 함수용
+- 시나리오를 명확히 표현
+
+** 4. 테스트 구조
+
+*** 기본 패턴
+#+begin_src elisp
+(ert-deftest test-function-name ()
+  "Clear description of what is being tested."
+  ;; Given (준비)
+  (let ((input "test"))
+    ;; When (실행)
+    (let ((result (my-function input)))
+      ;; Then (검증)
+      (should (equal result "expected")))))
+#+end_src
+
+*** Assertion 종류
+
+**** should
+#+begin_src elisp
+(should condition)                    ; condition이 참이어야 함
+(should-not condition)                ; condition이 거짓이어야 함
+(should (equal actual expected))      ; 값이 같아야 함
+(should (eq actual expected))         ; 동일한 객체여야 함
+(should (string= str1 str2))          ; 문자열이 같아야 함
+#+end_src
+
+**** should-error
+#+begin_src elisp
+(should-error (my-func bad-input))                ; 에러 발생해야 함
+(should-error (my-func bad-input) :type 'error)   ; 특정 타입 에러
+#+end_src
+
+** 5. 헬퍼 함수 활용
+
+*** 임시 디렉토리
+#+begin_src elisp
+(ert-deftest test-with-temp-directory ()
+  (test-helper/with-temp-dir
+   (lambda (temp-dir)
+     ;; temp-dir을 사용한 테스트
+     (should (file-directory-p temp-dir))
+     ;; 자동으로 cleanup됨
+     )))
+#+end_src
+
+*** 임시 파일
+#+begin_src elisp
+(ert-deftest test-with-temp-file ()
+  (test-helper/with-temp-file "initial content"
+   (lambda (temp-file)
+     ;; temp-file을 사용한 테스트
+     (should (file-exists-p temp-file))
+     ;; 자동으로 cleanup됨
+     )))
+#+end_src
+
+*** Org 테스트 파일 생성
+#+begin_src elisp
+(ert-deftest test-org-file-operations ()
+  (test-helper/with-temp-dir
+   (lambda (dir)
+     (let ((org-file (test-helper/create-test-org-file dir "test.org")))
+       (should (file-exists-p org-file))
+       (with-temp-buffer
+         (insert-file-contents org-file)
+         (should (string-match "Test Content" (buffer-string))))))))
+#+end_src
+
+** 6. 조건부 테스트 스킵
+
+*** 외부 의존성 체크
+#+begin_src elisp
+(ert-deftest test-requires-external-tool ()
+  "Test that requires external command."
+  (skip-unless (executable-find "some-tool"))
+  ;; 테스트 코드
+  )
+#+end_src
+
+*** 환경 체크
+#+begin_src elisp
+(ert-deftest test-gui-only ()
+  "Test that only works in GUI mode."
+  (skip-unless (display-graphic-p))
+  ;; GUI 전용 테스트
+  )
+#+end_src
+
+** 7. 모킹 (Mocking)
+
+*** 함수 오버라이드
+#+begin_src elisp
+(ert-deftest test-with-mocked-function ()
+  "Test with mocked executable-find."
+  (cl-letf (((symbol-function 'executable-find)
+             (lambda (_) nil)))
+    ;; executable-find가 항상 nil을 반환
+    (should (null (my/notify "Test" "Message")))))
+#+end_src
+
+*** 변수 바인딩
+#+begin_src elisp
+(ert-deftest test-with-custom-config ()
+  "Test with custom configuration."
+  (let ((my-config-var "test-value"))
+    ;; my-config-var이 임시로 변경됨
+    (should (equal (my-function) "expected-with-test-value"))))
+#+end_src
+
+** 8. 테스트 조직화
+
+*** 관련 테스트 그룹화
+#+begin_src elisp
+;;;; Git Repository Detection Tests
+
+(ert-deftest test-git-repo--with-git-dir ()
+  ...)
+
+(ert-deftest test-git-repo--without-git-dir ()
+  ...)
+
+;;;; Display Name Formatting Tests
+
+(ert-deftest test-format-name--docs-directory ()
+  ...)
+
+(ert-deftest test-format-name--org-directory ()
+  ...)
+#+end_src
+
+** 9. 실행 방법
+
+*** 명령줄에서 전체 실행
+#+begin_src bash
+cd tests
+./run-tests.sh
+#+end_src
+
+*** 명령줄에서 개별 파일 실행
+#+begin_src bash
+emacs -Q --batch \
+  -L .. \
+  -l test-helper.el \
+  -l test-notifications.el \
+  -f ert-run-tests-batch-and-exit
+#+end_src
+
+*** Emacs 내에서 실행
+#+begin_src elisp
+;; 모든 테스트 실행
+(ert t)
+
+;; 특정 테스트 실행
+(ert 'test-notify-basic)
+
+;; 패턴 매칭으로 실행
+(ert "test-notify-")  ; test-notify-로 시작하는 모든 테스트
+
+;; 실패한 테스트만 재실행
+(ert :failed)
+#+end_src
+
+*** 인터랙티브 디버깅
+#+begin_src elisp
+;; 테스트 파일 로드
+(load-file "tests/test-helper.el")
+(load-file "tests/test-notifications.el")
+
+;; 개별 실행 및 디버깅
+M-x ert RET test-notify-basic RET
+
+;; 실패 시 backtrace 확인
+;; "b" 키를 눌러 backtrace 보기
+;; "d" 키를 눌러 edebug 모드 진입
+#+end_src
+
+** 10. CI/CD 통합
+
+*** GitHub Actions 예시
+#+begin_src yaml
+name: Run Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: purcell/setup-emacs@master
+        with:
+          version: 29.1
+      - name: Run tests
+        run: |
+          cd tests
+          ./run-tests.sh
+#+end_src
+
+* 베스트 프랙티스
+
+** DO ✅
+
+1. **테스트를 간결하게 유지**: 한 테스트당 하나의 시나리오
+2. **명확한 설명**: docstring으로 무엇을 테스트하는지 명시
+3. **자동 cleanup**: =unwind-protect= 또는 헬퍼 함수 사용
+4. **독립적 테스트**: 테스트 간 의존성 제거
+5. **엣지 케이스 커버**: nil, empty, invalid input 테스트
+6. **실제 코드 기반**: 실제 사용 시나리오 반영
+
+** DON'T ❌
+
+1. **외부 상태 의존 금지**: 글로벌 변수 변경 지양
+2. **순서 의존 금지**: 테스트 실행 순서에 무관하게 동작
+3. **과도한 mocking 지양**: 진짜 동작을 테스트하라
+4. **sleep/delay 사용 금지**: 비결정적 테스트 방지
+5. **너무 많은 assertion**: 한 테스트에 10개 이상 should는 분리 고려
+
+* 예제: 전체 워크플로우
+
+** 1. 새 기능 개발 시 (TDD)
+
+#+begin_src elisp
+;; 1단계: 테스트 먼저 작성 (실패함)
+(ert-deftest test-slugify-title ()
+  "Test title slugification removes special chars."
+  (should (equal (my-slugify "Hello World!") "hello-world")))
+
+;; 2단계: 구현 (테스트 통과하도록)
+(defun my-slugify (title)
+  "Slugify TITLE."
+  (downcase (replace-regexp-in-string "[^a-zA-Z0-9]+" "-" title)))
+
+;; 3단계: 엣지 케이스 추가
+(ert-deftest test-slugify-title--empty ()
+  (should (equal (my-slugify "") "")))
+
+(ert-deftest test-slugify-title--unicode ()
+  (should (equal (my-slugify "안녕 世界") "---")))
+#+end_src
+
+** 2. 버그 수정 시
+
+#+begin_src elisp
+;; 1단계: 버그를 재현하는 테스트 작성
+(ert-deftest test-bug-empty-string-crash ()
+  "Regression test for crash on empty string."
+  (should-not-error (my-function "")))
+
+;; 2단계: 버그 수정
+(defun my-function (input)
+  (when (and input (> (length input) 0))  ; 빈 문자열 체크 추가
+    (process input)))
+
+;; 3단계: 테스트 통과 확인
+#+end_src
+
+** 3. 리팩토링 시
+
+#+begin_src elisp
+;; 1단계: 기존 동작 테스트로 고정
+(ert-deftest test-current-behavior ()
+  (should (equal (legacy-function "input") "expected")))
+
+;; 2단계: 리팩토링 수행
+(defun new-function (input)
+  ;; 새로운 구현
+  )
+
+;; 3단계: 테스트가 여전히 통과하는지 확인
+;; 4단계: 추가 테스트 작성
+#+end_src
+
+* 참고 자료
+
+** 공식 문서
+- [[https://www.gnu.org/software/emacs/manual/html_node/ert/][ERT Manual]]
+- [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Testing.html][Elisp Testing]]
+
+** 실제 프로젝트 예제
+- =~/.emacs.d/.local/straight/repos/denote/tests/=
+- =~/.emacs.d/.local/straight/repos/agent-shell/tests/=
+- =~/.emacs.d/.local/straight/repos/transient/test/=
+
+** 이 프로젝트
+- =tests/test-helper.el= : 헬퍼 함수 참고
+- =tests/test-notifications.el= : 간단한 함수 테스트 예제
+- =tests/test-denote-silo.el= : 복잡한 통합 테스트 예제
+
+* FAQ
+
+** Q: 모든 함수에 테스트를 작성해야 하나요?
+A: 아니요. 다음 우선순위로 작성하세요:
+1. Public API / 사용자 호출 함수
+2. 복잡한 로직 / 버그 발생 가능성 높은 코드
+3. 엣지 케이스 많은 함수
+4. 리팩토링 대상 코드
+
+** Q: 테스트가 너무 느립니다.
+A: 다음을 확인하세요:
+1. 불필요한 파일 I/O 제거
+2. 외부 프로세스 호출 mocking
+3. 큰 데이터셋 대신 작은 샘플 사용
+4. =skip-unless= 로 조건부 실행
+
+** Q: Private 함수는 어떻게 테스트하나요?
+A: 두 가지 접근:
+1. Public 함수를 통해 간접 테스트 (추천)
+2. 직접 테스트 (함수명에 =--= 사용)
+
+** Q: 비동기 코드는 어떻게 테스트하나요?
+A: 가능하면 동기화하거나, =ert-with-message-capture= 등 사용.
+복잡하면 integration test로 분리.
+
+* 변경 이력
+
+- [2025-11-15 Fri] :: 초안 작성 (ERT 기반 가이드라인)

@@ -114,8 +114,7 @@
 (package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
 (package! dired-preview)
 
-;; Notification system
-(package! knockknock :recipe (:host github :repo "konrad1977/knockknock"))
+;; Notification system removed (using dunst/notify-send directly)
 
 ;;;; Editing
 

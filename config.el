@@ -1234,7 +1234,7 @@ only those in the selected frame."
         claude-code-ide-window-height 50)
   :config
   (setq claude-code-ide-terminal-backend 'vterm)
-  ;; (setq claude-code-ide-use-ide-diff nil)
+  (setq claude-code-ide-use-ide-diff nil)
   (claude-code-ide-emacs-tools-setup)
 
   (after! vterm
@@ -1532,33 +1532,30 @@ only those in the selected frame."
 
 (setq auth-sources '(password-store "~/.authinfo.gpg"))
 
-;;;; knockknock - Notification System
+;;;; Notification System (dunst via notify-send)
 
-(use-package! knockknock
-  :config
-  (setq knockknock-default-duration 4
-        knockknock-use-svg-layout t
-        knockknock-svg-icon-size 32
-        knockknock-svg-width 320
-        knockknock-border-color "orange"
-        knockknock-border-width 2
-        knockknock-poshandler #'posframe-poshandler-frame-top-center)
+(defun my/notify (title message &optional urgency duration)
+  "Send system notification via notify-send (dunst).
 
-  ;; Unified notification function: knockknock + dunst
-  (defun my/notify (title message &optional icon duration)
-    "Unified notification: knockknock for Emacs, dunst for system."
-    ;; Emacs internal notification (if GUI and focused)
-    (when (and (display-graphic-p) (frame-focus-state))
-      (knockknock-notify :title title
-                         :message message
-                         :icon (or icon "cod-info")
-                         :duration (or duration 4)))
-    ;; System notification via dunst (always)
-    (when (executable-find "notify-send")
-      (call-process "notify-send" nil nil nil
-                    "-u" "normal"
-                    "-t" (format "%d" (* 1000 (or duration 4)))
-                    title message))))
+TITLE: notification title
+MESSAGE: notification body
+URGENCY: low, normal, critical (default: normal)
+DURATION: milliseconds (default: 4000)
+
+Works in both GUI and terminal (emacs -nw) environments.
+Requires notify-send (libnotify) and dunst daemon.
+
+Returns t on success, nil if notify-send is not available."
+  (when (executable-find "notify-send")
+    (let ((urgency (or urgency "normal"))
+          (duration (or duration 4000)))
+      (ignore-errors
+        (call-process "notify-send" nil 0 nil
+                      "-u" urgency
+                      "-t" (format "%d" duration)
+                      title
+                      message))
+      t)))
 
 ;;;; ACP (Agent Client Protocol)
 ;; https://agentclientprotocol.com/
@@ -1607,13 +1604,13 @@ only those in the selected frame."
                  ((string= status "completed")
                   (my/notify "Agent Shell: Tool Complete"
                              (format "%s - %s" title (or description "Success"))
-                             "cod-check"
-                             3))
+                             "low"
+                             3000))
                  ((string= status "failed")
                   (my/notify "Agent Shell: Tool Failed"
                              (format "%s - %s" title (or description "Error"))
-                             "cod-error"
-                             5))))))))
+                             "critical"
+                             5000))))))))
 
       ;; Handle permission requests
       (when (and my/agent-shell-notify-on-permission-request
@@ -1622,8 +1619,8 @@ only those in the selected frame."
               (reason (map-elt params :reason)))
           (my/notify "Agent Shell: Permission Needed"
                      (format "Tool: %s\n%s" tool-name (or reason "Approval required"))
-                     "cod-warning"
-                     6)))))
+                     "normal"
+                     6000)))))
 
   ;; Add advice to agent-shell notification handler
   (when (fboundp 'agent-shell--on-notification)

@@ -1,0 +1,95 @@
+#+title: Doomemacs Config Tests
+#+date: [2025-11-15 Fri]
+
+* 테스트 구조
+
+이 디렉토리는 doomemacs-config의 ERT 기반 테스트 시스템입니다.
+
+** 파일 구조
+
+#+begin_src
+tests/
+├── test-helper.el          # 공통 헬퍼 함수 및 유틸리티
+├── test-notifications.el   # my/notify 함수 테스트
+├── test-denote-silo.el     # denote-silo-dynamic 테스트
+├── run-tests.sh            # 전체 테스트 실행 스크립트
+└── README.org              # 이 파일
+#+end_src
+
+* 테스트 실행
+
+** 전체 테스트 실행
+#+begin_src bash
+cd tests
+./run-tests.sh
+#+end_src
+
+** 개별 테스트 파일 실행
+#+begin_src bash
+emacs -Q --batch \
+  -L .. \
+  -l test-helper.el \
+  -l test-notifications.el \
+  -f ert-run-tests-batch-and-exit
+#+end_src
+
+** Emacs 내에서 실행
+#+begin_src elisp
+;; 테스트 파일 로드
+(load-file "tests/test-helper.el")
+(load-file "tests/test-notifications.el")
+
+;; 전체 테스트 실행
+(ert t)
+
+;; 특정 테스트 실행
+(ert 'test-notify-basic)
+
+;; 패턴 매칭 테스트 실행
+(ert "test-notify-")
+#+end_src
+
+* 테스트 작성 가이드
+
+** 기본 구조
+
+#+begin_src elisp
+(require 'test-helper)
+
+(ert-deftest test-function-name ()
+  "Test description."
+  (should (equal (my-function "input") "expected")))
+#+end_src
+
+** 헬퍼 함수 사용
+
+#+begin_src elisp
+;; 임시 디렉토리 사용
+(ert-deftest test-with-temp-dir ()
+  (test-helper/with-temp-dir
+   (lambda (temp-dir)
+     ;; temp-dir을 사용한 테스트
+     (should (file-directory-p temp-dir)))))
+
+;; 임시 파일 사용
+(ert-deftest test-with-temp-file ()
+  (test-helper/with-temp-file "content"
+   (lambda (temp-file)
+     ;; temp-file을 사용한 테스트
+     (should (file-exists-p temp-file)))))
+#+end_src
+
+** 스킵 조건
+
+#+begin_src elisp
+(ert-deftest test-requires-tool ()
+  (skip-unless (executable-find "some-tool"))
+  ;; 테스트 코드
+  )
+#+end_src
+
+* 참고 자료
+
+- ERT 매뉴얼: [[https://www.gnu.org/software/emacs/manual/html_node/ert/]]
+- denote 테스트: =~/.emacs.d/.local/straight/repos/denote/tests/=
+- agent-shell 테스트: =~/.emacs.d/.local/straight/repos/agent-shell/tests/=
