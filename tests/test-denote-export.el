@@ -162,4 +162,109 @@ Returns meta, bib, notes, or test based on parent directory name."
        (should (equal (get-org-hugo-section-from-path test-file)
                      "meta"))))))
 
+;;;; Denote Link Export Tests (Broken Link Handling)
+
+;; Load denote and export functions for link tests
+;; Try to load denote (might not be available in test environment)
+(require 'denote nil t)
+
+;; Always try to load +denote-export.el for link export tests
+(let ((export-file (expand-file-name "+denote-export.el"
+                                     (expand-file-name ".."
+                                                     (file-name-directory
+                                                      (or load-file-name buffer-file-name))))))
+  (when (file-exists-p export-file)
+    ;; Load required dependencies first
+    (require 'org nil t)
+    (require 'ox nil t)
+    ;; Load export config
+    (condition-case err
+        (load export-file nil t)
+      (error
+       (message "Warning: Could not load +denote-export.el: %S" err)))))
+
+(ert-deftest test-denote-link-export--broken-link-md ()
+  "Test broken denote link export to markdown format.
+When denote-link--ol-resolve-link-to-target returns nil (file not found),
+should return plain text in brackets without error."
+  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
+
+  (skip-unless (fboundp 'my/denote-link-ol-export))
+
+  ;; Mock denote-link--ol-resolve-link-to-target to return nil (broken link)
+  (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
+             (lambda (link &rest args) nil)))
+
+    ;; Test with description
+    (let ((result (my/denote-link-ol-export "20251021T113500" "Test Description" 'md)))
+      (should (stringp result))
+      (should (string-match-p "\\[Test Description\\]" result)))
+
+    ;; Test without description
+    (let ((result (my/denote-link-ol-export "20251021T113500" nil 'md)))
+      (should (stringp result))
+      (should (string-match-p "\\[denote:20251021T113500\\]" result)))))
+
+(ert-deftest test-denote-link-export--broken-link-html ()
+  "Test broken denote link export to HTML format."
+  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
+
+  (skip-unless (fboundp 'my/denote-link-ol-export))
+
+  (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
+             (lambda (link &rest args) nil)))
+
+    (let ((result (my/denote-link-ol-export "20251021T113500" "Test Link" 'html)))
+      (should (stringp result))
+      (should (string-match-p "\\[Test Link\\]" result)))))
+
+(ert-deftest test-denote-link-export--broken-link-latex ()
+  "Test broken denote link export to LaTeX format."
+  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
+
+  (skip-unless (fboundp 'my/denote-link-ol-export))
+
+  (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
+             (lambda (link &rest args) nil)))
+
+    (let ((result (my/denote-link-ol-export "20251021T113500" "Test Link" 'latex)))
+      (should (stringp result))
+      (should (string-match-p "\\[Test Link\\]" result)))))
+
+(ert-deftest test-denote-link-export--normal-link ()
+  "Test normal denote link export (file exists).
+This tests that the fix doesn't break normal link export."
+  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
+
+  (skip-unless (fboundp 'my/denote-link-ol-export))
+
+  ;; Mock denote-link--ol-resolve-link-to-target to return valid path-id
+  (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
+             (lambda (link &rest args)
+               ;; Return format: (path id query)
+               (list "/home/user/org/notes/20251021T113500--test-file.org"
+                     "20251021T113500"
+                     nil))))
+
+    (let ((result (my/denote-link-ol-export "20251021T113500" "Test Link" 'md)))
+      (should (stringp result))
+      ;; Should not be plain text - should have some link format
+      (should-not (equal result "[Test Link]")))))
+
+(ert-deftest test-denote-link-export--no-wrong-type-argument-error ()
+  "Critical test: Ensure broken links don't throw wrong-type-argument error.
+This was the original bug: file-relative-name receiving nil."
+  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
+
+  (skip-unless (fboundp 'my/denote-link-ol-export))
+
+  (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
+             (lambda (link &rest args) nil)))
+
+    ;; Should NOT signal wrong-type-argument error
+    (should-not
+     (should-error
+      (my/denote-link-ol-export "20251021T113500" "Test" 'md)
+      :type 'wrong-type-argument))))
+
 ;;; test-denote-export.el ends here

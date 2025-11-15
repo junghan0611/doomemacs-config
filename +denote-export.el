@@ -238,28 +238,38 @@ If USE-RELREF is non-nil, format it as a Hugo relref link."
 (defun my/denote-link-ol-export (link description format)
   "Export a `denote:' link from Org files.
 The LINK, DESCRIPTION, and FORMAT are handled by the export
-backend."
-  (let* (
-         (path-id (denote-link--ol-resolve-link-to-target link :full-data))
-         (path (file-relative-name (nth 0 path-id)))
-         (id (nth 1 path-id))
-         (query (nth 2 path-id))
-         (anchor (file-name-sans-extension path))
-         (desc (cond
-                (description)
-                (query (format "denote:%s::%s" id query))
-                (t (concat "denote:" id)))))
-    (cond
-     ((eq format 'html)
-      (if query
-          (format "<a href=\"%s.html%s\">%s</a>" anchor query desc)
-        (format "<a href=\"%s.html\">%s</a>" anchor desc)))
-     ((eq format 'latex) (format "\\href{%s}{%s}" (replace-regexp-in-string "[\\{}$%&_#~^]" "\\\\\\&" path) desc))
-     ((eq format 'texinfo) (format "@uref{%s,%s}" path desc))
-     ((eq format 'ascii) (format "[%s] <denote:%s>" desc path))
-     ((eq format 'md)  (my/denote-markdown-export link desc))
-     ;; ((eq format 'md) (format "[%s](%s)" desc path))
-     (t path))))
+backend.
+
+Handles broken links (when target file doesn't exist) by returning
+plain text, consistent with org-export-with-broken-links 'mark setting."
+  (let* ((path-id (denote-link--ol-resolve-link-to-target link :full-data))
+         (path (when path-id (nth 0 path-id)))
+         (id (when path-id (nth 1 path-id)))
+         (query (when path-id (nth 2 path-id))))
+
+    ;; Handle broken links - return plain text
+    (if (not path)
+        (let ((desc (or description (concat "denote:" link))))
+          (format "[%s]" desc))  ; Just return description in brackets
+
+      ;; Normal link processing
+      (let* ((path-rel (file-relative-name path))
+             (anchor (file-name-sans-extension path-rel))
+             (desc (cond
+                    (description)
+                    (query (format "denote:%s::%s" id query))
+                    (t (concat "denote:" id)))))
+        (cond
+         ((eq format 'html)
+          (if query
+              (format "<a href=\"%s.html%s\">%s</a>" anchor query desc)
+            (format "<a href=\"%s.html\">%s</a>" anchor desc)))
+         ((eq format 'latex) (format "\\href{%s}{%s}" (replace-regexp-in-string "[\\{}$%&_#~^]" "\\\\\\&" path-rel) desc))
+         ((eq format 'texinfo) (format "@uref{%s,%s}" path-rel desc))
+         ((eq format 'ascii) (format "[%s] <denote:%s>" desc path-rel))
+         ((eq format 'md)  (my/denote-markdown-export link desc))
+         ;; ((eq format 'md) (format "[%s](%s)" desc path))
+         (t path-rel))))))
 
 ;; Register denote link export handler
 (org-link-set-parameters "denote" :export #'my/denote-link-ol-export)

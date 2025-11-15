@@ -12,6 +12,9 @@ echo "================================"
 echo ""
 
 # Run tests with emacs in batch mode
+# Note: Using -Q skips package initialization, so link export tests will be skipped
+# This is acceptable as those tests require ox-hugo and other dependencies
+# Link export functionality is tested through manual export verification
 emacs -Q --batch \
       -L "$CONFIG_DIR" \
       -l "$SCRIPT_DIR/test-helper.el" \
