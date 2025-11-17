@@ -490,7 +490,10 @@
 (after! vertico
   (map! :map vertico-map
         "M-j" #'vertico-next
-        "M-k" #'vertico-previous))
+        "M-k" #'vertico-previous
+
+        ;; M-d: 문자 하나씩 삭제 (DEL은 기본 동작 유지: 디렉토리 단위 삭제)
+        "M-d" #'delete-backward-char))
 
 ;;; evil
 

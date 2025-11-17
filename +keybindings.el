@@ -216,13 +216,22 @@
     (interactive)
     (vterm-send-key "" nil t))
 
+  (defun my/vterm-send-meta-backspace ()
+    "Send M-Backspace to vterm (backward-kill-word).
+Fix: 전체 라인이 삭제되는 문제 해결 - 단어만 삭제."
+    (interactive)
+    (vterm-send-key (kbd "DEL") nil t))  ; Alt+Backspace -> backward-kill-word
+
   (setq vterm-always-compile-module t) ;; Compile Vterm without asking.
   (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0") ;; 2025-07-13 Simpler
   (map! :map vterm-mode-map
         :i "M-RET" #'my/vterm-send-alt-return
         :inv "M-y" #'vterm-yank-pop
         :inv "M-h" #'other-window
-        :inv "M-z" #'evil-collection-vterm-toggle-send-escape)
+        :inv "M-z" #'evil-collection-vterm-toggle-send-escape
+
+        ;; M-Backspace: 단어 삭제 (전체 라인 삭제 방지)
+        :inv "M-DEL" #'my/vterm-send-meta-backspace)
   )
 
 ;;;; outli-mode-map / markdown-mode-map
