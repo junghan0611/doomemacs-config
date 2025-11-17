@@ -262,6 +262,61 @@ Denote org 파일의 동적 블록을 일괄 업데이트합니다.
 2. `config.el`에 설정 추가
 3. `esync` 실행
 
+## 한영 전환 (터미널 환경)
+
+### Kitty/Ghostty에서 한영 키 설정
+
+터미널 환경에서 한영 전환을 위한 2가지 방법을 제공합니다:
+
+#### 1. Kitty 설정 (v22.16+)
+
+**Kitty 설정** (`~/.config/kitty/kitty.conf`):
+```conf
+# 한영 전환 키 설정 (Kitty v22.16+)
+map Hangul        send_text all \x1b\x1f\x50\x60\x1f
+map SHIFT+SPACE   send_text all \x1b\x1f\x50\x21\x1f
+```
+
+#### 2. Ghostty 설정
+
+**Shift+Space로 한영 전환**:
+```conf
+keybind = shift+space=text:\x1b\x1fP!\x1f
+```
+
+**한글 키 대안 (F13 사용)**:
+```conf
+# Ghostty는 Hangul 키를 지원하지 않으므로 F13을 대안으로 사용
+keybind = f13=text:\x1b\x1fP`\x1f
+```
+
+#### 3. Emacs 설정 (자동 적용)
+
+`+korean-input-fix.el`에서 자동으로 처리됩니다:
+- Kitty term-keys 시퀀스를 `S-SPC`와 `<Hangul>` 키로 변환
+- `korean/test-raw-input` 함수로 키 입력 디버깅 가능
+- KKP(Kitty Keyboard Protocol) 호환
+
+#### 지원 환경
+
+- **터미널**: Kitty, Ghostty
+- **프로토콜**: term-keys (Kitty 기반)
+- **입력 방식**: Emacs 내장 `korean-hangul` 입력기
+- **시스템 설정**: 시스템 언어는 'en' 권장 (IME 충돌 방지)
+
+#### 작동 원리
+
+1. 터미널에서 Shift+Space 또는 Hangul 키 입력
+2. 터미널이 term-keys 시퀀스 전송 (`\x1b\x1fP!\x1f` 또는 `\x1b\x1fP`\x1f`)
+3. Emacs `input-decode-map`이 시퀀스를 `S-SPC` 또는 `<Hangul>` 키로 변환
+4. `toggle-input-method` 실행으로 한영 전환
+
+#### 디버깅
+
+```emacs-lisp
+M-x korean/test-raw-input  ; 터미널에서 전송되는 시퀀스 확인
+```
+
 ## 문제 해결
 
 ### 동기화 이슈

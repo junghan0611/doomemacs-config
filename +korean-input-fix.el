@@ -192,5 +192,95 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
 (with-eval-after-load 'doom-keybinds
   (korean/setup-keybindings))
 
+;;; 9. KKP (Kitty Keyboard Protocol) 한영 키 지원
+;;
+;; 필요한 키:
+;;   - S-SPC: Shift+Space (한영 전환)
+;;   - Alt_R: 시스템 언어 en일 때 한글 키 위치 (한영 전환)
+;;   - M-v: Meta+v (추가 시 사용)
+;;
+;; 디버깅:
+;;   M-x korean/test-raw-input → 키 누르면 hex 시퀀스 확인
+;;   M-x kkp-status → KKP 활성화 상태 확인
+
+(defun korean/test-raw-input ()
+  "터미널에서 raw 키 입력 확인 (input-decode-map 우회).
+새 키 추가 시 이 함수로 hex 시퀀스를 확인한 후 아래에 매핑 추가."
+  (interactive)
+  (let ((input-decode-map (make-sparse-keymap))
+        (events nil)
+        (key (read-event "Press a key (raw mode): "))
+        (timeout 0.5)
+        evt)
+    (push key events)
+    (while (setq evt (read-event nil nil timeout))
+      (push evt events)
+      (setq timeout 0.1))
+    (setq events (nreverse events))
+    (message "RAW events: %s\nHex: %s"
+             events
+             (mapconcat (lambda (e) (format "0x%x" e)) events " "))))
+
+(defun korean/setup-kkp-hangul-key ()
+  "KKP 키 매핑 설정: S-SPC, Alt_R (한글 키), M-v.
+
+주의:
+  - report-all-keys-as-escape-codes 플래그 사용 금지!
+    (a-z 키가 escape code로 전송되면 한글 입력 불가)
+  - modifyOtherKeys 호환 시퀀스만 사용
+  - 시스템 언어 en일 때 한글 키는 Alt_R로 전송됨"
+  (when (and (featurep 'kkp)
+             (not (display-graphic-p)))
+
+    ;; ========================================
+    ;; Kitty term-keys 시퀀스 매핑 (함수 방식)
+    ;; ========================================
+
+    ;; ESC 뒤에 오는 시퀀스를 읽어서 처리하는 함수
+    (define-key input-decode-map [?\e ?\x1f]
+      (lambda (&optional _prompt)
+        (let ((char (read-event nil nil 0.01)))
+          (cond
+           ;; P! 시퀀스 시작: S-SPC 또는 Hangul
+           ((eq char ?P)
+            (let ((next (read-event nil nil 0.01)))
+              (cond
+               ;; S-SPC: \x1b\x1fP!\x1f
+               ((eq next ?!)
+                (let ((end (read-event nil nil 0.01)))
+                  (if (eq end ?\x1f)
+                      (kbd "S-SPC")
+                    [?\e ?\x1f ?P ?! end])))
+               ;; Hangul: \x1b\x1fP`\x1f (96 = 백틱)
+               ((eq next 96)
+                (let ((end (read-event nil nil 0.01)))
+                  (if (eq end ?\x1f)
+                      (kbd "<Hangul>")
+                    [?\e ?\x1f ?P 96 end])))
+               ;; 다른 시퀀스
+               (t [?\e ?\x1f ?P next]))))
+           ;; 다른 시퀀스는 그대로 전달
+           (t [?\e ?\x1f char])))))
+
+    ;; M-v: Meta+v (필요 시 추가)
+    ;; 대부분 터미널에서 M-v는 이미 작동하므로 명시적 매핑 불필요
+    ;; 작동 안 하면 아래 주석 해제:
+    ;; (define-key input-decode-map "\e[27;3;118~" (kbd "M-v"))  ; modifyOtherKeys
+
+    ;; Modifier 키 단독 입력 무시 (undefined 메시지 방지)
+    (global-set-key (kbd "<SHIFT_L>") 'ignore)
+    (global-set-key (kbd "<SHIFT_R>") 'ignore)
+    (global-set-key (kbd "<Control_L>") 'ignore)
+    (global-set-key (kbd "<Control_R>") 'ignore)
+    (global-set-key (kbd "<Alt_L>") 'ignore)
+
+    (message "✅ KKP: S-SPC, Alt_R (Hangul) 매핑 완료")))
+
+;; KKP 로드 후 자동 실행
+(with-eval-after-load 'kkp
+  (korean/setup-kkp-hangul-key))
+
+(add-hook 'tty-setup-hook #'korean/setup-kkp-hangul-key)
+
 (provide '+korean-input-fix)
 ;;; +korean-input-fix.el ends here

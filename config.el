@@ -194,8 +194,11 @@
 ;; 3. 한영 전환 키 바인딩 (Emacs 입력 메서드 전용)
 ;; 안드로이드 IME 한영 전환 사용 안 함!
 (global-set-key (kbd "C-\\") 'toggle-input-method)  ; Emacs 기본 (가장 중요!)
-(global-set-key (kbd "<S-SPC>") 'toggle-input-method) ; Shift+Space (보조)
-(global-set-key (kbd "<Hangul>") 'toggle-input-method) ; 한글 키 (물리 키보드)
+
+;; KKP (Kitty Keyboard Protocol) 한영 전환 키
+;; +korean-input-fix.el에서 Alt_R → <Hangul> 매핑 처리
+(global-set-key (kbd "<S-SPC>") 'toggle-input-method)  ; GUI 호환
+(global-set-key (kbd "<Hangul>") 'toggle-input-method) ; 한글 키 (Alt_R)
 
 ;; Termux/모바일 전용: 추가 토글 키
 (when IS-TERMUX
@@ -1185,10 +1188,6 @@ only those in the selected frame."
 ;;;; claude-code
 
 (use-package! claude-code
-  :init
-  ;; Ensure claude-code-acp is in exec-path for Termux
-  (when IS-TERMUX
-    (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
   :config
   (setq claude-code-terminal-backend 'vterm)
   (defun my-claude-notify-with-sound (title message)
@@ -1206,8 +1205,8 @@ only those in the selected frame."
     (add-hook 'claude-code-process-environment-functions #'monet-start-server-function)
     (monet-mode 1))
 
-  ;; (set-popup-rule! "^\\*claude" :vslot -15 :width 90 :side 'right :ttl t :select t :quit nil :modeline t)
-  (set-popup-rule! "^\\*claude" :vslot -15 :size 0.4 :side 'bottom :ttl t :select t :quit nil :modeline t)
+  (set-popup-rule! "^\\*claude" :vslot -15 :width 90 :side 'right :ttl t :select t :quit nil :modeline t)
+  ;; (set-popup-rule! "^\\*claude" :vslot -15 :size 0.4 :side 'bottom :ttl t :select t :quit nil :modeline t)
 
   (claude-code-mode)
 
@@ -1217,7 +1216,7 @@ only those in the selected frame."
               (when (eq claude-code-terminal-backend 'vterm)
                 (visual-line-mode -1)
                 (toggle-truncate-lines 1)
-                ;; (setq-local x-gtk-use-native-input t)
+                (setq-local x-gtk-use-native-input t)
                 (define-key claude-code-command-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
                 (define-key vterm-mode-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
                 (setq-local vterm-max-scrollback 100000))))
@@ -1229,8 +1228,8 @@ only those in the selected frame."
 (use-package! claude-code-ide
   :init
   ;; Open Claude at the bottom with custom height
-  (setq claude-code-ide-window-side 'bottom
-        claude-code-ide-window-width 80
+  (setq claude-code-ide-window-side 'right
+        claude-code-ide-window-width 84
         claude-code-ide-window-height 50)
   :config
   (setq claude-code-ide-terminal-backend 'vterm)
@@ -1558,6 +1557,7 @@ Returns t on success, nil if notify-send is not available."
       t)))
 
 ;;;; ACP (Agent Client Protocol)
+
 ;; https://agentclientprotocol.com/
 ;; https://github.com/xenodium/agent-shell/issues/27
 
@@ -1565,6 +1565,10 @@ Returns t on success, nil if notify-send is not available."
   (require 'shell-maker)
   (require 'acp)
   (require 'agent-shell)
+
+  ;; Ensure claude-code-acp is in exec-path for Termux
+  (when IS-TERMUX
+    (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
 
   (setq agent-shell-anthropic-authentication
         (agent-shell-anthropic-make-authentication :login t))
