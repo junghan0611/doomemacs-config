@@ -26,16 +26,26 @@
 ;;;; Core Functions
 
 (defcustom denote-silo-repos-roots
-  '("~/repos/gh")
+  '("~/repos/gh" "~/repos/work"
+    )
   "리포지토리 루트 디렉토리 목록.
 각 디렉토리 하위의 */docs 폴더를 Silo로 자동 등록합니다."
   :group 'denote-silo
   :type '(repeat directory))
 
 (defcustom denote-silo-base-directories
-  '("~/claude-memory"
+  '(
+    "~/claude-memory/areas"
+    "~/claude-memory/projects"
+    "~/claude-memory/resources/"
+    "~/claude-memory/resources/solutions/"
     "~/org"
-    "~/org/llmlog")
+    "~/org/meta"
+    "~/org/bib"
+    "~/org/notes"
+    "~/org/llmlog"
+    "~/org/elisp"
+    )
   "기본 Denote Silo 디렉토리 목록.
 리포지토리 발견과 별개로 항상 포함됩니다."
   :group 'denote-silo

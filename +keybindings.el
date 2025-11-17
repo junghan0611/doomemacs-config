@@ -86,10 +86,10 @@
   "S" #'denote-silo-select-silo-then-command
 
   ;; Dynamic Silo Management
-  "M-l" #'denote-silo-list-all      ; List all silos
-  "M-r" #'denote-silo-refresh       ; Refresh silo list
-  "M-F" #'denote-silo-find-file-all ; Find file in all silos
-  "M-c" #'denote-silo-count-files   ; Count files in all silos
+  "M-f" #'denote-silo-find-file-all ; Find file in all silos
+  "M-0" #'denote-silo-list-all      ; List all silos
+  "M-9" #'denote-silo-count-files   ; Count files in all silos
+  "M-8" #'denote-silo-refresh       ; Refresh silo list
 
   "t" #'denote-type
 
@@ -105,7 +105,7 @@
   "k" #'denote-rename-file-keywords
   "z" #'denote-rename-file-signature
 
-  "M-f" #'denote-find-link
+  "M-l" #'denote-find-link
   "M-b" #'denote-find-backlink
   )
 (keymap-set global-map "C-c n" ews-denote-map)

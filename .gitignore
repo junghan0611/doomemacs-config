@@ -31,3 +31,5 @@ var/tempel-templates.eld
 # Security - DO NOT COMMIT
 # Sensitive information that should never be in version control
 var/sensitive-strings.txt
+
+deprecated
