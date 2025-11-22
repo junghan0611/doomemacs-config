@@ -1,0 +1,92 @@
+;;; $DOOMDIR/lisp/ai-agent-shell.el --- Agent Shell Configuration -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2025 Junghan Kim
+
+;; Author: Junghan Kim <junghanacs@gmail.com>
+;; URL: https://github.com/junghan0611/doomemacs-config
+;; Package-Requires: ((emacs "29.1"))
+
+;;; Commentary:
+
+;; Agent Shell (ACP - Agent Client Protocol) 설정
+;; - agent-shell: Claude Code, Qwen 등 AI 에이전트 인터페이스
+;; - agent-shell-manager: 버퍼 관리
+;; - agent-shell-sidebar: 사이드바 UI
+
+;;; Code:
+
+;;;; ACP (Agent Client Protocol)
+
+;; https://agentclientprotocol.com/
+;; https://github.com/xenodium/agent-shell/issues/27
+
+(progn
+  (require 'shell-maker)
+  (require 'acp)
+  (require 'agent-shell)
+
+  ;; Ensure claude-code-acp is in exec-path for Termux
+  (when IS-TERMUX
+    (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
+
+  (setq agent-shell-anthropic-authentication
+        (agent-shell-anthropic-make-authentication :login t))
+
+  (setq agent-shell-qwen-authentication
+        (agent-shell-qwen-make-authentication :login t))
+
+  ;; (setq agent-shell-google-authentication
+  ;;       (agent-shell-google-make-authentication :login t))
+  ;; (setq agent-shell-openai-authentication
+  ;;       (agent-shell-openai-make-authentication :login t))
+
+  (setq agent-shell--transcript-file-path-function #'agent-shell--default-transcript-file-path)
+  (setq agent-shell-header-style nil)
+
+  (require 'agent-shell-manager)
+  (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
+  (map! :n "s-;" #'agent-shell-manager-toggle)
+  (map! :map agent-shell-mode-map :inv "M-h" #'other-window)
+
+  (require 'agent-shell-sidebar)
+  (setq agent-shell-sidebar-width "25%"
+        agent-shell-sidebar-minimum-width 80
+        agent-shell-sidebar-maximum-width "50%"
+        agent-shell-sidebar-position 'right
+        agent-shell-sidebar-locked t
+        agent-shell-sidebar-default-config (agent-shell-anthropic-make-claude-code-config))
+
+  ;; agent-shell 버퍼를 실제 버퍼로 표시 (버퍼 목록에서 보이게)
+  (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
+  )
+
+;;;; TODO MCP (Model Context Protocol)
+
+;; (unless IS-TERMUX
+;;   (when (display-graphic-p) ; gui
+;;     (use-package! mcp-server-lib
+;;       :after org
+;;       :config
+;;       (mcp-server-lib-install))
+
+;;     (use-package! elisp-dev-mcp
+;;       :after mcp-server-lib
+;;       :commands (elisp-dev-mcp-enable elisp-dev-mcp-disable)
+;;       :config
+;;       (setq mcp-server-lib-log-level 'info))  ;; 필요시 'debug로 변경
+
+;;     (use-package! org-mcp
+;;       :after mcp-server-lib
+;;       :config
+;;       (setq org-mcp-allowed-files
+;;             (append
+;;              (directory-files-recursively "~/org/" "\\.org$")
+;;              (directory-files-recursively "~/claude-memory/" "\\.org$")))
+;;       (org-mcp-enable)
+;;       ;; Start the server automatically when Emacs starts
+;;       (mcp-server-lib-start))
+;;     )
+;;   )
+
+(provide 'ai-agent-shell)
+;;; ai-agent-shell.el ends here
