@@ -31,6 +31,11 @@
 ;;     )
 ;;   )
 
+;;;; Custom
+
+;; delete insert keymap
+(setq evil-org-key-theme '(navigation textobjects additional calendar todo))
+
 ;;;; Modules
 
 (doom! :input
@@ -153,9 +158,9 @@
        :app
        calendar
        ;; emms
-       everywhere        ; *leave* Emacs!? You must be joking
+       ;; everywhere        ; *leave* Emacs!? You must be joking
        ;; irc               ; how neckbeards socialize
-       (rss +org)        ; emacs as an RSS reader
+       (rss +org +youtube)        ; emacs as an RSS reader
 
        :config
        ;; literate ; use manually

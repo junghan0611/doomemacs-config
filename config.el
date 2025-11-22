@@ -1433,6 +1433,10 @@ only those in the selected frame."
 ;; See: http://chris.beams.io/posts/git-commit
 (setq git-commit-summary-max-length 72) ; defaults to Github's max commit message length
 
+(use-package! magit-todos
+  :after magit
+  :hook (magit-mode . magit-todos-mode))
+
 ;;; tramp
 
 (progn
@@ -1575,68 +1579,63 @@ Returns t on success, nil if notify-send is not available."
 
   (setq agent-shell-anthropic-authentication
         (agent-shell-anthropic-make-authentication :login t))
+
+  (setq agent-shell-qwen-authentication
+        (agent-shell-qwen-make-authentication :login t))
+
+  ;; (setq agent-shell-google-authentication
+  ;;       (agent-shell-google-make-authentication :login t))
+  ;; (setq agent-shell-openai-authentication
+  ;;       (agent-shell-openai-make-authentication :login t))
+
   (setq agent-shell--transcript-file-path-function #'agent-shell--default-transcript-file-path)
   (setq agent-shell-header-style nil)
 
   (require 'agent-shell-manager)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
-  (map! :map agent-shell-mode-map
-        :n "s-;" #'agent-shell-manager-toggle
-        :inv "M-h" #'other-window)
+  (map! :n "s-;" #'agent-shell-manager-toggle)
+  (map! :map agent-shell-mode-map :inv "M-h" #'other-window)
 
-  ;; agent-shell notification integration with knockknock
-  (defvar my/agent-shell-notify-on-tool-completion t
-    "When non-nil, notify on tool call completion/failure.")
+  (require 'agent-shell-sidebar)
+  (setq agent-shell-sidebar-width "25%"
+        agent-shell-sidebar-minimum-width 80
+        agent-shell-sidebar-maximum-width "50%"
+        agent-shell-sidebar-position 'right
+        agent-shell-sidebar-locked t
+        agent-shell-sidebar-default-config (agent-shell-anthropic-make-claude-code-config))
 
-  (defvar my/agent-shell-notify-on-permission-request t
-    "When non-nil, notify on permission requests.")
-
-  (defun my/agent-shell-notification-handler (state notification)
-    "Handle agent-shell notifications and trigger knockknock alerts."
-    (let* ((method (map-elt notification :method))
-           (params (map-elt notification :params))
-           (updates (map-elt params :updates)))
-
-      ;; Handle tool_call_update events
-      (when (and my/agent-shell-notify-on-tool-completion
-                 (string= method "session/update"))
-        (dolist (update updates)
-          (let* ((type (map-elt update :type))
-                 (data (map-elt update :data)))
-            (when (string= type "tool_call_update")
-              (let ((status (map-elt data :status))
-                    (title (map-elt data :title))
-                    (description (map-elt data :description)))
-                (cond
-                 ((string= status "completed")
-                  (my/notify "Agent Shell: Tool Complete"
-                             (format "%s - %s" title (or description "Success"))
-                             "low"
-                             3000))
-                 ((string= status "failed")
-                  (my/notify "Agent Shell: Tool Failed"
-                             (format "%s - %s" title (or description "Error"))
-                             "critical"
-                             5000))))))))
-
-      ;; Handle permission requests
-      (when (and my/agent-shell-notify-on-permission-request
-                 (string= method "session/request_permission"))
-        (let ((tool-name (map-elt params :tool_name))
-              (reason (map-elt params :reason)))
-          (my/notify "Agent Shell: Permission Needed"
-                     (format "Tool: %s\n%s" tool-name (or reason "Approval required"))
-                     "normal"
-                     6000)))))
-
-  ;; Add advice to agent-shell notification handler
-  (when (fboundp 'agent-shell--on-notification)
-    (advice-add 'agent-shell--on-notification :before
-                (lambda (&rest args)
-                  (let ((state (plist-get args :state))
-                        (notification (plist-get args :notification)))
-                    (my/agent-shell-notification-handler state notification)))))
+  ;; agent-shell 버퍼를 실제 버퍼로 표시 (버퍼 목록에서 보이게)
+  (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
   )
+
+;;;; TODO MCP (Model Context Protocol)
+
+;; (unless IS-TERMUX
+;;   (when (display-graphic-p) ; gui
+;;     (use-package! mcp-server-lib
+;;       :after org
+;;       :config
+;;       (mcp-server-lib-install))
+
+;;     (use-package! elisp-dev-mcp
+;;       :after mcp-server-lib
+;;       :commands (elisp-dev-mcp-enable elisp-dev-mcp-disable)
+;;       :config
+;;       (setq mcp-server-lib-log-level 'info))  ;; 필요시 'debug로 변경
+
+;;     (use-package! org-mcp
+;;       :after mcp-server-lib
+;;       :config
+;;       (setq org-mcp-allowed-files
+;;             (append
+;;              (directory-files-recursively "~/org/" "\\.org$")
+;;              (directory-files-recursively "~/claude-memory/" "\\.org$")))
+;;       (org-mcp-enable)
+;;       ;; Start the server automatically when Emacs starts
+;;       (mcp-server-lib-start))
+;;     )
+;;   )
+
 
 ;;; Load "+keybindings"
 
@@ -1705,10 +1704,7 @@ Returns t on success, nil if notify-send is not available."
 (when (string-equal system-type "android")
   ;; Android Emacs의 IME 간섭 차단
   (setq overriding-text-conversion-style nil)
-  (setq-default text-conversion-style nil)
-
-  ;; 안드로이드 IME 완전 우회
-  (setq android-pass-multimedia-buttons-to-system nil))
+  (setq-default text-conversion-style nil))
 
 ;;; TODO TERMUX
 

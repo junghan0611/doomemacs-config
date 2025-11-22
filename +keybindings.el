@@ -277,12 +277,11 @@ Fix: 전체 라인이 삭제되는 문제 해결 - 단어만 삭제."
    ;; safe to ignore this setting otherwise.
    ;; (setq-local tab-width 8)
    (setq-local comment-column 0)
-   (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "<tab>") 'evil-jump-item)
-   (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "TAB") 'evil-jump-item)
+   ;; (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "<tab>") 'evil-jump-item) ;; outli-mode 와 충돌
+   ;; (evil-define-key '(normal visual) emacs-lisp-mode-map (kbd "TAB") 'evil-jump-item)
    ))
 
 ;;;; mode-map
-
 
 (with-eval-after-load 'markdown-mode
   (map! :map markdown-mode-map

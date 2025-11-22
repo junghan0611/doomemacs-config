@@ -124,6 +124,7 @@
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
 (package! aggressive-indent)
+(package! magit-todos)
 
 (package! clipetty) ; osc52 support
 
@@ -150,6 +151,13 @@
 (package! acp :recipe (:host github :repo "xenodium/acp.el"))
 (package! agent-shell :recipe (:host github :repo "xenodium/agent-shell"))
 (package! agent-shell-manager :recipe (:host github :repo "ElleNajt/agent-shell-manager"))
+(package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
+
+;;;;; MCP (Model Context Protocol)
+
+;; (package! mcp-server-lib :recipe (:host github :repo "laurynas-biveinis/mcp-server-lib.el"))
+;; (package! elisp-dev-mcp :recipe (:host github :repo "laurynas-biveinis/elisp-dev-mcp"))
+;; (package! org-mcp :recipe (:host github :repo "laurynas-biveinis/org-mcp"))
 
 ;;; DEPRECATED
 

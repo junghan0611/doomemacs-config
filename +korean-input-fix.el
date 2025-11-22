@@ -160,13 +160,11 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
         (setq korean/nfc-timer nil))
       (message "❌ 한글 NFC 모드 비활성화"))))
 
-;;; 7. 전역 활성화 (Termux 환경에서만)
+;;; 7. 전역 활성화 (터미널 환경)
 
 (defun korean/enable-nfc-mode-if-needed ()
-  "Termux 환경이면 자동으로 korean-nfc-mode 활성화"
-  (when (and (not (display-graphic-p))
-             (or (getenv "TERMUX_VERSION")
-                 (string-match-p "termux" (or (getenv "PREFIX") ""))))
+  "터미널 환경이면 자동으로 korean-nfc-mode 활성화"
+  (unless (display-graphic-p)
     (korean-nfc-mode 1)))
 
 ;; text-mode와 prog-mode에서 자동 활성화
@@ -175,6 +173,9 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
 
 ;; comint 기반 모드들 (agent-shell, shell, eshell 등)에서도 활성화
 (add-hook 'comint-mode-hook #'korean/enable-nfc-mode-if-needed)
+
+(when (locate-library "agent-shell")
+  (add-hook 'agent-shell-mode-hook #'korean/enable-nfc-mode-if-needed))
 
 ;; 파일 열기 시에도 체크
 (add-hook 'find-file-hook #'korean/find-file-nfc-normalize)
