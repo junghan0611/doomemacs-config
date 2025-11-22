@@ -115,6 +115,41 @@
     (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
   ) ; optionally enable Emacs MCP tools
 
+;;;; Efrit (Steve Yegge's AI Assistant)
+
+;; AI-powered autonomous Emacs assistant
+;; - efrit-chat: Multi-turn conversational interface
+;; - efrit-do: Natural language command execution
+;; - efrit-do-async: Async command execution with session management
+;; - efrit-remote-queue: AI agent communication channel
+
+(use-package! efrit
+  :commands (efrit-chat efrit-do efrit-do-async efrit-unified-do
+             efrit-streamlined-send efrit-remote-queue-start)
+  :init
+  (setq efrit-model "claude-sonnet-4-20250514")
+  (setq efrit-max-tokens 8192)
+  ;; Data directory under doom user dir
+  (setq efrit-data-directory (expand-file-name ".efrit" doom-user-dir))
+  :config
+  ;; Performance settings
+  (setq efrit-performance-cache-ttl 300) ; Cache for 5 minutes
+  (setq efrit-performance-max-sessions 10)
+  (setq efrit-async-max-work-log-entries 50)
+
+  ;; Keybindings
+  (map! :leader
+        (:prefix ("e" . "efrit")
+         :desc "Chat" "c" #'efrit-chat
+         :desc "Do (sync)" "d" #'efrit-do
+         :desc "Do (async)" "D" #'efrit-do-async
+         :desc "Unified" "u" #'efrit-unified-do
+         :desc "Streamlined" "s" #'efrit-streamlined-send
+         :desc "Start queue" "q" #'efrit-remote-queue-start
+         :desc "Queue status" "Q" #'efrit-remote-queue-status
+         :desc "Dashboard" "b" #'efrit-dashboard
+         :desc "Performance" "p" #'efrit-performance-show-stats)))
+
 ;;;; TODO MCP (Model Context Protocol)
 
 ;; (unless IS-TERMUX

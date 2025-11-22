@@ -145,6 +145,10 @@
 ;; Option 2
 (package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
 
+;;;;; Efrit (Steve Yegge's AI Assistant)
+
+(package! efrit :recipe (:host github :repo "steveyegge/efrit" :files ("lisp/*.el")))
+
 ;;;;; ACP (Agent Client Protocol)
 
 (package! shell-maker)
