@@ -15,6 +15,16 @@
 
 ;;; Code:
 
+;;;; remember (builtin annotation)
+
+(use-package! remember
+  :commands remember
+  :init
+  (setq
+   remember-notes-initial-major-mode 'org-mode
+   remember-notes-auto-save-visited-file-name t)
+  :config (setq remember-data-file (my/org-remember-file)))
+
 ;;;; org
 
 ;; (require 'ob-tangle)

@@ -151,9 +151,69 @@
 
 ;;; overide doomemacs
 
+;;;; dired
+
+(after! dired
+  (setq dired-make-directory-clickable t) ; Emacs 29.1, doom t
+  (setq dired-free-space nil) ; Emacs 29.1, doom first
+
+  ;; Better dired flags:
+  ;; `-l' is mandatory
+  ;; `-a' shows all files
+  ;; `-h' uses human-readable sizes
+  ;; `-F' appends file-type classifiers to file names (for better highlighting)
+  ;; -g     like -l, but do not list owner
+  (setq dired-listing-switches "-AGFhgv --group-directories-first --time-style=long-iso") ;; doom "-ahl -v --group-directories-first"
+  (setq dired-recursive-copies 'always ; doom 'always
+        dired-dwim-target t) ; doom t
+  (setq dired-ls-F-marks-symlinks nil ; doom nil -F marks links with @
+        delete-by-moving-to-trash t) ; doom nil
+
+  (setq dired-use-ls-dired t)  ; doom t
+  (setq dired-do-revert-buffer t) ; doom nil
+  ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
+  )
+
+;;;; tempel
+
+(use-package! tempel
+  :bind
+  (("M-+" . tempel-complete) ;; Alternative tempel-expand
+   ("M-*" . tempel-insert))
+  :init
+  (setq tempel-path (expand-file-name "var/tempel-templates.eld" doom-user-dir)))
+
+(use-package! tempel-collection
+  :after tempel)
+
+;;;; imenu-list
+
+;; Show an outline summary of the current buffer.
+(use-package! imenu-list
+  :init
+  (add-hook 'imenu-list-major-mode-hook #'toggle-truncate-lines)
+  (setq imenu-list-focus-after-activation nil)
+  (setq imenu-list-auto-resize nil)
+  (setq imenu-list-position 'left)
+  (setq imenu-list-idle-update-delay 1.0) ; default 1.0
+  (setq imenu-list-size 45) ; default 0.3
+  :config
+  ;;;###autoload
+  (defun spacemacs/imenu-list-smart-focus ()
+    "Focus the `imenu-list' buffer, creating as necessary.
+If the imenu-list buffer is displayed in any window, focus it, otherwise create and focus."
+    (interactive)
+    (if (get-buffer-window imenu-list-buffer-name t)
+        (imenu-list-show)
+      (imenu-list-smart-toggle))))
+
+;;;; bookmark
+
 (setq bookmark-default-file "~/emacs-bookmarks.el")
 (setq bookmark-use-annotations nil)
 (setq bookmark-automatically-show-annotations t)
+
+;;;; dabbrev
 
 (progn
   (require 'dabbrev)
@@ -164,33 +224,6 @@
           "\\.\\(?:pdf\\|jpe?g\\|png\\)\\'"
           "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
   (setq dabbrev-abbrev-skip-leading-regexp "[$*/=~']"))
-  )
-  )
-  :config (setq remember-data-file (my/org-remember-file)))
-  (setq claude-code-notification-function #'my-claude-notify-with-sound)
-
-  ;; optional IDE integration with Monet
-  (when (locate-library "monet")
-    (require 'monet)
-    (add-hook 'claude-code-process-environment-functions #'monet-start-server-function)
-    (monet-mode 1))
-
-  (set-popup-rule! "^\\*claude" :vslot -15 :width 90 :side 'right :ttl t :select t :quit nil :modeline t)
-  ;; (set-popup-rule! "^\\*claude" :vslot -15 :size 0.4 :side 'bottom :ttl t :select t :quit nil :modeline t)
-
-  (claude-code-mode)
-
-  (add-hook 'claude-code-start-hook
-            (lambda ()
-              ;; Only increase scrollback for vterm backend
-              (when (eq claude-code-terminal-backend 'vterm)
-                (visual-line-mode -1)
-                (toggle-truncate-lines 1)
-                (setq-local x-gtk-use-native-input t)
-                (define-key claude-code-command-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
-                (define-key vterm-mode-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
-                (setq-local vterm-max-scrollback 100000))))
-  )
 
 
 
@@ -297,10 +330,6 @@
                                  '(
                                    (tramp-parse-sconfig "~/.ssh/config"))))
 
-;;;; load functions
-
-(load! "+functions")
-
 ;;; termux-fixes
 ;; Fix async issues in Termux/Android
 
@@ -321,10 +350,6 @@
 ;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
 ;; (after! denote
 ;;   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
-
-;;; denote-export system
-
-(load! "+denote-export")
 
 ;;; TODO Custom Integration
 

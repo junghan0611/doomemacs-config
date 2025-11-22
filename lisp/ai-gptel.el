@@ -19,9 +19,28 @@
 ;;
 ;;; Code:
 
-;;;;; gptel openrouter models
+(use-package! gptel
+  :config
+  (setq gptel-default-mode 'org-mode)
+  (setq gptel-temperature 0.3) ; gptel 1.0, Perplexity 0.2
+  (set-popup-rule! "^\\*ChatGPT\\*$" :side 'right :size 84 :vslot 100 :quit t) ; size 0.4
 
-(require 'gptel)
+  (with-eval-after-load 'gptel-org
+    (defun gptel-org-toggle-branching-context ()
+      "Toggle gptel context between doc and subheading."
+      (interactive)
+      (if gptel-org-branching-context
+          (progn
+            (setq-local gptel-org-branching-context nil)
+            (message "Context: whole doc"))
+        (setq-local gptel-org-branching-context t)
+        (message "Context: subheading")))
+    (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@user: "
+          (alist-get 'org-mode gptel-response-prefix-alist) "@assistant:\n"
+          (alist-get 'markdown-mode gptel-prompt-prefix-alist) "#### ")
+    (setq-default gptel-org-branching-context t))
+
+;;;;; gptel openrouter models
 
 (defconst gptel--openrouter-models
   '(
@@ -134,8 +153,8 @@
     (auto-fill-mode -1)
     (doom-mark-buffer-as-real-h)))
 
-;;;; load fuctions
+  ) ; end of use-package! gptel
 
-(provide '+functions)
+(provide 'ai-gptel)
 
-;;; +gptel.el ends here
+;;; ai-gptel.el ends here
