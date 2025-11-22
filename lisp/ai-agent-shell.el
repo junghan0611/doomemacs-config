@@ -15,51 +15,6 @@
 
 ;;; Code:
 
-;;;; ACP (Agent Client Protocol)
-
-;; https://agentclientprotocol.com/
-;; https://github.com/xenodium/agent-shell/issues/27
-
-(progn
-  (require 'shell-maker)
-  (require 'acp)
-  (require 'agent-shell)
-
-  ;; Ensure claude-code-acp is in exec-path for Termux
-  (when IS-TERMUX
-    (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
-
-  (setq agent-shell-anthropic-authentication
-        (agent-shell-anthropic-make-authentication :login t))
-
-  (setq agent-shell-qwen-authentication
-        (agent-shell-qwen-make-authentication :login t))
-
-  ;; (setq agent-shell-google-authentication
-  ;;       (agent-shell-google-make-authentication :login t))
-  ;; (setq agent-shell-openai-authentication
-  ;;       (agent-shell-openai-make-authentication :login t))
-
-  (setq agent-shell--transcript-file-path-function #'agent-shell--default-transcript-file-path)
-  (setq agent-shell-header-style nil)
-
-  (require 'agent-shell-manager)
-  (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
-  (map! :n "s-;" #'agent-shell-manager-toggle)
-  (map! :map agent-shell-mode-map :inv "M-h" #'other-window)
-
-  (require 'agent-shell-sidebar)
-  (setq agent-shell-sidebar-width "25%"
-        agent-shell-sidebar-minimum-width 80
-        agent-shell-sidebar-maximum-width "50%"
-        agent-shell-sidebar-position 'right
-        agent-shell-sidebar-locked t
-        agent-shell-sidebar-default-config (agent-shell-anthropic-make-claude-code-config))
-
-  ;; agent-shell 버퍼를 실제 버퍼로 표시 (버퍼 목록에서 보이게)
-  (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
-  )
-
 ;;;; claude-code (stevemolitor/claude-code.el)
 
 (use-package! claude-code
@@ -114,6 +69,49 @@
     (define-key vterm-mode-map (kbd "M-RET") 'claude-code-ide-insert-newline)
     (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
   ) ; optionally enable Emacs MCP tools
+
+;;;; ACP (Agent Client Protocol)
+
+;; https://agentclientprotocol.com/
+;; https://github.com/xenodium/agent-shell/issues/27
+
+(progn
+  (require 'shell-maker)
+  (require 'acp)
+  (require 'agent-shell)
+
+  ;; Ensure claude-code-acp is in exec-path for Termux
+  (when IS-TERMUX
+    (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
+
+  (setq agent-shell-anthropic-authentication
+        (agent-shell-anthropic-make-authentication :login t))
+
+  ;; (setq agent-shell-google-authentication
+  ;;       (agent-shell-google-make-authentication :login t))
+  ;; (setq agent-shell-openai-authentication
+  ;;       (agent-shell-openai-make-authentication :login t))
+
+  (setq agent-shell--transcript-file-path-function #'agent-shell--default-transcript-file-path)
+  (setq agent-shell-header-style nil)
+
+  (require 'agent-shell-manager)
+  (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
+  (map! :n "s-;" #'agent-shell-manager-toggle)
+  (map! :map agent-shell-mode-map :inv "M-h" #'other-window)
+
+  (require 'agent-shell-sidebar)
+  (setq agent-shell-sidebar-width "25%"
+        agent-shell-sidebar-minimum-width 80
+        agent-shell-sidebar-maximum-width "50%"
+        agent-shell-sidebar-position 'right
+        agent-shell-sidebar-locked t
+        ;; agent-shell-sidebar-default-config (agent-shell-anthropic-make-claude-code-config)
+        )
+
+  ;; agent-shell 버퍼를 실제 버퍼로 표시 (버퍼 목록에서 보이게)
+  (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
+  )
 
 ;;;; Efrit (Steve Yegge's AI Assistant)
 
