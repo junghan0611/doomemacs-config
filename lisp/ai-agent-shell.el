@@ -60,6 +60,24 @@
   (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
   )
 
+;;;; claude-code-ide
+
+(use-package! claude-code-ide
+  :init
+  ;; Open Claude at the bottom with custom height
+  (setq claude-code-ide-window-side 'right
+        claude-code-ide-window-width 84
+        claude-code-ide-window-height 50)
+  :config
+  (setq claude-code-ide-terminal-backend 'vterm)
+  (setq claude-code-ide-use-ide-diff nil)
+  (claude-code-ide-emacs-tools-setup)
+
+  (after! vterm
+    (define-key vterm-mode-map (kbd "M-RET") 'claude-code-ide-insert-newline)
+    (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
+  ) ; optionally enable Emacs MCP tools
+
 ;;;; TODO MCP (Model Context Protocol)
 
 ;; (unless IS-TERMUX

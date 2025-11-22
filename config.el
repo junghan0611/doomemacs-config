@@ -317,24 +317,6 @@
   )
 
 
-;;;; claude-code-ide
-
-(use-package! claude-code-ide
-  :init
-  ;; Open Claude at the bottom with custom height
-  (setq claude-code-ide-window-side 'right
-        claude-code-ide-window-width 84
-        claude-code-ide-window-height 50)
-  :config
-  (setq claude-code-ide-terminal-backend 'vterm)
-  (setq claude-code-ide-use-ide-diff nil)
-  (claude-code-ide-emacs-tools-setup)
-
-  (after! vterm
-    (define-key vterm-mode-map (kbd "M-RET") 'claude-code-ide-insert-newline)
-    (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
-  ) ; optionally enable Emacs MCP tools
-(add-hook 'doom-first-input-hook #'my/doom-themes-toggle)
 
 ;;;; flymake
 
@@ -573,60 +555,6 @@ Returns t on success, nil if notify-send is not available."
   ;; Update every minute
   (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
 
-;;;; evil + hangul
-
-;; 4. Evil 모드 연동: 자동 한영 전환
-(after! evil
-  ;; 버퍼별 입력 메서드 상태 저장
-  (defvar-local my/saved-input-method nil
-    "Normal 모드 진입 전 입력 메서드 상태")
-
-  (defun my/evil-normal-state-korean-off (&rest _)
-    "Normal 모드 진입: 한글 OFF, 상태 저장"
-    (when (and (boundp 'current-input-method) current-input-method)
-      (setq my/saved-input-method current-input-method)
-      (deactivate-input-method)))
-
-  (defun my/evil-insert-state-korean-restore ()
-    "Insert 모드 진입: 이전 한글 상태 복원"
-    (when (and my/saved-input-method
-               (not current-input-method))
-      (activate-input-method my/saved-input-method)))
-
-  ;; Hook 등록
-  (add-hook 'evil-normal-state-entry-hook #'my/evil-normal-state-korean-off)
-  (add-hook 'evil-insert-state-entry-hook #'my/evil-insert-state-korean-restore)
-
-  ;; Evil escape 후에도 확실히 끄기
-  (advice-add 'evil-normal-state :after #'my/evil-normal-state-korean-off)
-
-  ;; Shift+Space 메시지 (motion/normal/visual 모드에서)
-  (mapc (lambda (mode)
-          (let ((keymap (intern (format "evil-%s-state-map" mode))))
-            (define-key (symbol-value keymap) [?\S- ]
-                        #'(lambda () (interactive)
-                            (message
-                             (format "Input method is disabled in %s state." evil-state))))))
-        '(motion normal visual))
-  )
-
-;; 5. Emacs 입력 메서드 추가 최적화
-(with-eval-after-load 'quail
-  ;; 한글 입력 모드 표시 (모드라인)
-  (setq-default mode-line-mule-info
-    '((:eval (if current-input-method
-                 (propertize " [한] " 'face '(:foreground "green"))
-               " [En] "))))
-
-  ;; 2벌식 기본 사용 (3벌식 원하면 변경)
-  ;; (setq default-korean-keyboard "390") ; 3벌식 최종
-  )
-
-;; 6. 안드로이드 Emacs 특화 설정 (해당시)
-(when (string-equal system-type "android")
-  ;; Android Emacs의 IME 간섭 차단
-  (setq overriding-text-conversion-style nil)
-  (setq-default text-conversion-style nil))
 
 ;;; TODO TERMUX
 
