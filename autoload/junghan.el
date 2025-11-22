@@ -1,6 +1,6 @@
-;;; +functions.el -*- lexical-binding: t; -*-
+;;; $DOOMDIR/autoload/junghan.el -*- lexical-binding: t; -*-
 
-;;; core fuctions
+;;; Autoloaded functions for junghan's config
 
 ;;;; my/consult-fd
 

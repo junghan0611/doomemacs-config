@@ -61,9 +61,13 @@
 
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
+
+;;; Load libraries
 (load! "+user-info")
-(load! "+korean-input-fix")
-(load! "+denote-silo-dynamic")
+(load! "lisp/korean-input")
+(load! "lisp/denote-silo")
+(load! "lisp/denote-export")
+(load! "lisp/ai-gptel")
 
 ;;; Load 'Per-Machine' - User Configs
 ;; Most of my per-environment config done via =customize= and is in .custom.el.

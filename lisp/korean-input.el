@@ -1,16 +1,10 @@
-;;; ~/.doom.d/+korean-input-fix.el -*- lexical-binding: t; -*-
+;;; $DOOMDIR/lisp/korean-input.el --- Korean Input NFD to NFC Normalization -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Termux Emacs 터미널 환경에서 한글 입력 시 NFD → NFC 실시간 변환
-;;
-;; 문제: Termux IME가 한글을 NFD(분해형)로 입력하여 스페이스 입력 시
-;;       조합형 자모가 완성형 음절로 변환되지 않고 분리되어 저장됨
-;;
-;; 해결: after-change-functions 훅으로 입력 즉시 NFC 정규화 적용
-;;
-;; Author: junghanacs (with Claude Code)
-;; Date: 2025-11-12
-;; Version: 2.0.0
+
+;; 터미널 환경에서 한글 입력 시 NFD → NFC 실시간 변환
+;; - Termux/Kitty 등 터미널에서 한글 NFD(분해형) → NFC(완성형) 정규화
+;; - term-keys 프로토콜 지원 (Shift+Space, Hangul 키)
 ;;
 ;; References:
 ;; - https://github.com/wezterm/wezterm/issues/2482
@@ -283,5 +277,5 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
 
 (add-hook 'tty-setup-hook #'korean/setup-kkp-hangul-key)
 
-(provide '+korean-input-fix)
-;;; +korean-input-fix.el ends here
+(provide 'korean-input)
+;;; korean-input.el ends here
