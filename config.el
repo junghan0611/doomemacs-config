@@ -446,11 +446,8 @@ Returns t on success, nil if notify-send is not available."
   (load! "lisp/ai-gptel")
   (load! "lisp/ai-agent-shell")
   (load! "lisp/utils-config")
+  (load! "lisp/keybindings-config")
   )
-
-;;; Load "+keybindings"
-
-(load! "+keybindings")
 
 ;;; py3status integration (ElleNajit)
 
