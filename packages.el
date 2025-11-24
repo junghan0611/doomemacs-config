@@ -148,7 +148,7 @@
 ;;;;; Efrit (Steve Yegge's AI Assistant)
 
 ;; Use junghan0611/efrit-ko fork with OpenRouter backend support
-(package! efrit :recipe (:host github :repo "junghan0611/efrit-ko" :files ("lisp/*.el")))
+(package! efrit :recipe (:host github :repo "junghan0611/efrit" :files ("lisp/*.el")))
 
 ;;;;; ACP (Agent Client Protocol)
 
