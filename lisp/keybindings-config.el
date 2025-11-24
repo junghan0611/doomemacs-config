@@ -19,9 +19,9 @@
 ;;;; Global Unset Keys
 
 (map! "<f2>" nil
-      "M-a" nil   ; forward-sentence -> use ')'
+      "M-a" nil   ; forward-sentence - use evil motion instead
       "M-c" nil   ; capitalize-word
-      "M-e" nil)  ; backward-sentence -> use '('
+      "M-e" nil)  ; backward-sentence - use evil motion instead
 
 ;;;; Global Keys
 
