@@ -284,6 +284,7 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
 ;; text-mode와 prog-mode에서 자동 활성화
 (add-hook 'text-mode-hook #'korean/enable-nfc-mode-if-needed)
 (add-hook 'prog-mode-hook #'korean/enable-nfc-mode-if-needed)
+(add-hook 'conf-mode-hook #'korean/enable-nfc-mode-if-needed)
 
 ;; comint 기반 모드들 (agent-shell, shell, eshell 등)에서도 활성화
 (add-hook 'comint-mode-hook #'korean/enable-nfc-mode-if-needed)
@@ -383,11 +384,11 @@ Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
     ;; (define-key input-decode-map "\e[27;3;118~" (kbd "M-v"))  ; modifyOtherKeys
 
     ;; Modifier 키 단독 입력 무시 (undefined 메시지 방지)
-    (global-set-key (kbd "<SHIFT_L>") 'ignore)
-    (global-set-key (kbd "<SHIFT_R>") 'ignore)
-    (global-set-key (kbd "<Control_L>") 'ignore)
-    (global-set-key (kbd "<Control_R>") 'ignore)
-    (global-set-key (kbd "<Alt_L>") 'ignore)
+    ;; (global-set-key (kbd "<SHIFT_L>") 'ignore)
+    ;; (global-set-key (kbd "<SHIFT_R>") 'ignore)
+    ;; (global-set-key (kbd "<Control_L>") 'ignore)
+    ;; (global-set-key (kbd "<Control_R>") 'ignore)
+    ;; (global-set-key (kbd "<Alt_L>") 'ignore)
 
     (message "✅ KKP: S-SPC, Alt_R (Hangul) 매핑 완료")))
 

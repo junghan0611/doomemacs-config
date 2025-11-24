@@ -182,7 +182,7 @@
   (setq org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
 
 ;; Load export configuration
-(let ((export-config (expand-file-name "+denote-export.el" original-doom-user-dir)))
+(let ((export-config (expand-file-name "lisp/denote-export.el" original-doom-user-dir)))
   (if (file-exists-p export-config)
       (load export-config)
     (error "[Server] Export config not found: %s" export-config)))

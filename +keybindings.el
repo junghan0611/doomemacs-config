@@ -261,6 +261,25 @@ Fix: 전체 라인이 삭제되는 문제 해결 - 단어만 삭제."
 (map! :map dired-mode-map
       :inv "M-h" #'other-window)
 
+;; "H" #'dired-hide-details-mode
+(with-eval-after-load 'dired
+  (evil-define-key 'normal dired-mode-map
+    (kbd "C-c C-e") 'wdired-change-to-wdired-mode
+    (kbd "C-c l") 'org-store-link
+    (kbd "C-x /") 'dired-narrow-regexp
+    (kbd ".") 'consult-line
+    ;; (kbd "K") 'dired-kill-subdir
+    (kbd "K") 'dired-do-kill-lines
+    ;; (kbd "F") 'evil-avy-goto-line-below ;; 2024-01-25 useful
+    (kbd "h") 'dired-up-directory
+    (kbd "l") 'dired-find-file
+    ;; (kbd "RET") 'dired-find-file
+    (kbd "S-<return>") 'dired-find-file-other-window
+    ;; evil-force-normal-state
+    (kbd "S-SPC") 'dired-toggle-marks
+    )
+  )
+
 ;;;; prog-mode-map
 
 (map! :map prog-mode-map
@@ -306,11 +325,13 @@ Fix: 전체 라인이 삭제되는 문제 해결 - 단어만 삭제."
        :i "<tab>"  #'completion-at-point ; 2025-02-03
        :i "TAB"  #'completion-at-point
        "M--" #'denote-find-backlink
-
-        ";" #'my/clear-nbsp-and-ascii-punctuations
-        ":" #'my/insert-nbsp-simple-all
-        ;; ":" #'my/insert-nbsp-all-with-wordlist-and-tags
        ))
+
+(map! :map org-mode-map
+      :localleader
+      ";" #'my/clear-nbsp-and-ascii-punctuations
+      ":" #'my/insert-nbsp-simple-all
+      )
 
 (map! (:map org-journal-mode-map
        :n "]f"  #'org-journal-next-entry

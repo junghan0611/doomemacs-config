@@ -159,6 +159,8 @@
   (setq dired-use-ls-dired t)  ; doom t
   (setq dired-do-revert-buffer t) ; doom nil
   ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
+
+  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
   )
 
 ;;;; tempel
@@ -334,6 +336,7 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
 
 ;;; denote-silo
+
 ;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
 ;; (after! denote
 ;;   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
@@ -349,43 +352,43 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
 
 ;;;; DONT  Notmuch 이메일 설정
 
-;; (after! notmuch
-;;   ;; 다중 계정 설정
-;;   (setq notmuch-identities
-;;         '("jhkim2@goqual.com"
-;;           "junghanacs@gmail.com"))
+(after! notmuch
+  ;; 다중 계정 설정
+  (setq notmuch-identities
+        '("jhkim2@goqual.com"
+          "junghanacs@gmail.com"))
 
-;;   ;; FCC (보낸 메일 저장 위치)
-;;   (setq notmuch-fcc-dirs
-;;         '(("jhkim2@goqual.com" . "work/[Gmail]/&yVwwYA-")
-;;           ("junghanacs@gmail.com" . "personal/[Gmail]/Sent Mail")))
+  ;; FCC (보낸 메일 저장 위치)
+  (setq notmuch-fcc-dirs
+        '(("jhkim2@goqual.com" . "work/[Gmail]/&yVwwYA-")
+          ("junghanacs@gmail.com" . "personal/[Gmail]/Sent Mail")))
 
-;;   ;; 메일 발송 설정
-;;   (setq message-send-mail-function 'message-send-mail-with-sendmail
-;;         sendmail-program "/usr/bin/msmtp"
-;;         message-sendmail-extra-arguments '("--read-envelope-from")
-;;         message-sendmail-f-is-evil t)
+  ;; 메일 발송 설정
+  (setq message-send-mail-function 'message-send-mail-with-sendmail
+        sendmail-program "/usr/bin/msmtp"
+        message-sendmail-extra-arguments '("--read-envelope-from")
+        message-sendmail-f-is-evil t)
 
-;;   ;; 동기화 명령
-;;   (setq +notmuch-sync-backend "mbsync -a")
+  ;; 동기화 명령
+  (setq +notmuch-sync-backend "mbsync -a")
 
-;;   ;; 저장된 검색
-;;   (setq notmuch-saved-searches
-;;         '((:name "📧 Work Inbox"
-;;            :query "tag:inbox AND to:jhkim2@goqual.com"
-;;            :key "w")
-;;           (:name "📧 Personal Inbox"
-;;            :query "tag:inbox AND to:junghanacs@gmail.com"
-;;            :key "p")
-;;           (:name "📬 Unread"
-;;            :query "tag:unread"
-;;            :key "u")
-;;           (:name "📤 Sent"
-;;            :query "tag:sent"
-;;            :key "s")
-;;           (:name "🗓️ Today"
-;;            :query "date:today"
-;;            :key "t"))))
+  ;; 저장된 검색
+  (setq notmuch-saved-searches
+        '((:name "📧 Work Inbox"
+           :query "tag:inbox AND to:jhkim2@goqual.com"
+           :key "w")
+          (:name "📧 Personal Inbox"
+           :query "tag:inbox AND to:junghanacs@gmail.com"
+           :key "p")
+          (:name "📬 Unread"
+           :query "tag:unread"
+           :key "u")
+          (:name "📤 Sent"
+           :query "tag:sent"
+           :key "s")
+          (:name "🗓️ Today"
+           :query "date:today"
+           :key "t"))))
 
 ;;;; pass + auth
 
@@ -441,7 +444,9 @@ Returns t on success, nil if notify-send is not available."
   (load! "lisp/denote-silo")
   (load! "lisp/denote-export")
   (load! "lisp/ai-gptel")
-  (load! "lisp/ai-agent-shell"))
+  (load! "lisp/ai-agent-shell")
+  (load! "lisp/utils-config")
+  )
 
 ;;; Load "+keybindings"
 

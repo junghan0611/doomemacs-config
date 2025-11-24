@@ -152,7 +152,7 @@
        (cc +tree-sitter)
 
        :email
-       ;; (notmuch +org)
+       (notmuch +org)
        (mu4e +org +gmail +mbsync)
 
        :app

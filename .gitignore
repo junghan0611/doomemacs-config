@@ -4,6 +4,8 @@
 *.log
 tmp/
 
+__pycache__
+
 # Personal configuration (machine-specific, not shared via git)
 custom.el
 flycheck_config.el
