@@ -57,67 +57,68 @@
 
 ;;;; Denote Keymap (C-c n, M-e)
 
-;; Bibliography submenu under "C-c n b"
-(map! :prefix ("C-c n b" . "bibliography")
-      "b" #'org-cite-insert
-      "c" #'citar-open
-      "d" #'citar-denote-dwim
-      "e" #'citar-denote-open-reference-entry
-      "a" #'citar-denote-add-reference
-      "1" #'citar-denote-find-citation
-      "i" #'citar-insert-citation
-      "n" #'citar-create-note
-      "o" #'citar-denote-open-note
-      "O" #'citar-open-links
-      "f" #'citar-denote-find-reference
-      "l" #'citar-denote-link-reference
-      "s" #'citar-denote-create-silo-note
-      "k" #'citar-denote-remove-reference)
+;; Bibliography submenu (requires citar-denote)
+(after! citar-denote
+  (map! :prefix ("C-c n b" . "bibliography")
+        "b" #'org-cite-insert
+        "c" #'citar-open
+        "d" #'citar-denote-dwim
+        "e" #'citar-denote-open-reference-entry
+        "a" #'citar-denote-add-reference
+        "1" #'citar-denote-find-citation
+        "i" #'citar-insert-citation
+        "n" #'citar-create-note
+        "o" #'citar-denote-open-note
+        "O" #'citar-open-links
+        "f" #'citar-denote-find-reference
+        "l" #'citar-denote-link-reference
+        "s" #'citar-denote-create-silo-note
+        "k" #'citar-denote-remove-reference))
 
 ;; Main Denote keymap (C-c n)
-(map! :prefix ("C-c n" . "denote")
-      "B" #'denote-org-backlinks-for-heading
-      "d" #'denote-create-note
-      "f" #'+default/find-in-notes
-      "i" #'denote-org-dblock-insert-links
-      "I" #'denote-org-dblock-insert-backlinks
-      "l" #'denote-link-or-create
-      "L" #'denote-link-after-creating-with-command
-      "n" #'consult-notes
-      "G" #'consult-notes-search-in-all-notes
-      "s" #'denote-silo-open-or-create
-      "S" #'denote-silo-select-silo-then-command
-      "M-f" #'denote-silo-find-file-all
-      "M-0" #'denote-silo-list-all
-      "M-9" #'denote-silo-count-files
-      "M-8" #'denote-silo-refresh
-      "t" #'denote-type
-      "r" #'denote-region
-      "," #'denote-rename-file-using-front-matter
-      "-" #'denote-show-backlinks-buffer
-      "SPC" #'org-journal-open-current-journal-file
-      "j" #'org-journal-new-entry
-      "u" #'org-transclusion-mode
-      "k" #'denote-rename-file-keywords
-      "z" #'denote-rename-file-signature
-      "M-l" #'denote-find-link
-      "M-b" #'denote-find-backlink)
+(after! denote
+  (map! :prefix ("C-c n" . "denote")
+        "B" #'denote-org-backlinks-for-heading
+        "d" #'denote
+        "f" #'+default/find-in-notes
+        "i" #'denote-org-dblock-insert-links
+        "I" #'denote-org-dblock-insert-backlinks
+        "l" #'denote-link-or-create
+        "L" #'denote-link-after-creating-with-command
+        "n" #'consult-notes
+        "G" #'consult-notes-search-in-all-notes
+        "s" #'denote-silo-open-or-create
+        "S" #'denote-silo-select-silo-then-command
+        "M-f" #'denote-silo-find-file-all
+        "M-0" #'denote-silo-list-all
+        "M-9" #'denote-silo-count-files
+        "M-8" #'denote-silo-refresh
+        "t" #'denote-type
+        "r" #'denote-region
+        "," #'denote-rename-file-using-front-matter
+        "-" #'denote-show-backlinks-buffer
+        "SPC" #'org-journal-open-current-journal-file
+        "j" #'org-journal-new-entry
+        "u" #'org-transclusion-mode
+        "k" #'denote-rename-file-keywords
+        "z" #'denote-rename-file-signature
+        "M-l" #'denote-find-link
+        "M-b" #'denote-find-backlink)
 
-;; M-e as alternative prefix for denote (quick access)
-(map! :prefix ("M-e" . "denote")
-      "b" (cmd! (execute-kbd-macro (kbd "C-c n b")))
-      "B" #'denote-org-backlinks-for-heading
-      "d" #'denote-create-note
-      "f" #'+default/find-in-notes
-      "i" #'denote-org-dblock-insert-links
-      "l" #'denote-link-or-create
-      "n" #'consult-notes
-      "G" #'consult-notes-search-in-all-notes
-      "s" #'denote-silo-open-or-create
-      "," #'denote-rename-file-using-front-matter
-      "-" #'denote-show-backlinks-buffer
-      "SPC" #'org-journal-open-current-journal-file
-      "j" #'org-journal-new-entry)
+  ;; M-e as alternative prefix for denote (quick access)
+  (map! :prefix ("M-e" . "denote")
+        "B" #'denote-org-backlinks-for-heading
+        "d" #'denote
+        "f" #'+default/find-in-notes
+        "i" #'denote-org-dblock-insert-links
+        "l" #'denote-link-or-create
+        "n" #'consult-notes
+        "G" #'consult-notes-search-in-all-notes
+        "s" #'denote-silo-open-or-create
+        "," #'denote-rename-file-using-front-matter
+        "-" #'denote-show-backlinks-buffer
+        "SPC" #'org-journal-open-current-journal-file
+        "j" #'org-journal-new-entry))
 
 ;;;; Doom Leader Keys
 
@@ -146,7 +147,7 @@
        "u" #'org-transclusion-mode
        ;; Denote submenu
        (:prefix ("d" . "denote")
-        "d" #'denote-create-note
+        "d" #'denote
         "f" #'+default/find-in-notes
         "l" #'denote-link-or-create
         "n" #'consult-notes
@@ -175,7 +176,7 @@
       ;; Custom bindings
       "TAB" #'evil-window-prev
       "d" #'delete-window
-      "m" #'toggle-maximize-buffer
+      "m" #'doom/window-maximize-buffer
       "M" #'ace-swap-window
       "=" #'balance-windows-area
       :desc "vsplit" "/" #'evil-window-vsplit
