@@ -134,7 +134,15 @@
   (require 'agent-shell-manager)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
   (map! :n "s-;" #'agent-shell-manager-toggle)
-  (map! :map agent-shell-mode-map :inv "M-h" #'other-window)
+  (map! :map agent-shell-mode-map
+        :inv "M-h" #'other-window
+        :inv "M-RET" #'+default/newline
+        :inv "M-<return>" #'+default/newline
+        :inv "DEL" #'evil-delete-backward-char-and-join
+        ;; :inv "M-<return>" #'+default/newline
+        :in "C-RET" #'shell-maker-submit
+        :in "C-<return>" #'shell-maker-submit
+        )
 
   (require 'agent-shell-sidebar)
   (setq agent-shell-sidebar-width "25%"

@@ -75,7 +75,7 @@
     "Pulse the current line."
     (pulse-momentary-highlight-one-line (point)))
   (dolist (command
-           '(scroll-up-command scroll-down-command ace-window recenter-top-bottom other-window))
+           '(scroll-up-command evil-window-right evil-window-left scroll-down-command ace-window recenter-top-bottom other-window))
     (advice-add command :after #'pulse-line)))
 
 ;;;; which-key
@@ -189,5 +189,8 @@
   (load-theme doom-theme t))
 (add-hook 'doom-first-input-hook #'my/doom-themes-toggle)
 
+;;; provide
+
 (provide 'ui-config)
+
 ;;; ui-config.el ends here

@@ -60,6 +60,8 @@
 ;; +korean-input-fix.el에서 Alt_R → <Hangul> 매핑 처리
 (global-set-key (kbd "<S-SPC>") 'toggle-input-method)  ; GUI 호환
 (global-set-key (kbd "<Hangul>") 'toggle-input-method) ; 한글 키 (Alt_R)
+(global-set-key (kbd "<menu>") 'toggle-input-method) ;; caps lock as <menu>
+(add-hook 'context-menu-mode-hook '(lambda () (define-key context-menu-mode-map (kbd "<menu>") #'toggle-input-method)))
 
 ;; Termux/모바일 전용: 추가 토글 키
 (when IS-TERMUX
