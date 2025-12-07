@@ -111,7 +111,7 @@
 
        make              ; run make tasks from Emacs
        (pass +auth)              ; password manager for nerds
-       ;; (:unless IS-TERMUX (pdf)) ; pdf enhancements
+       (:unless IS-TERMUX (pdf)) ; pdf enhancements
        ;;terraform         ; infrastructure as code
        ;;tmux              ; an API for interacting with tmux
        tree-sitter ;; syntax and parsing, sitting in a tree...
@@ -126,7 +126,7 @@
        emacs-lisp        ; drown in parentheses
        ;; plantuml            ; diagrams for confusing people more
        ;; graphviz
-       latex ; +cdlatex    ; writing papers in Emacs has never been so fun
+       (latex +cdlatex)    ; writing papers in Emacs has never been so fun
        markdown          ; writing docs for people to ignore
        (org                         ; organize your plain life in plain text
         +hugo                     ; use Emacs for hugo blogging
@@ -148,8 +148,11 @@
        (javascript +tree-sitter) ; all(hope(abandon(ye(who(enter(here))))))
        (web +tree-sitter) ; the tubes
        (yaml +tree-sitter) ; JSON, but readable
-       (zig +tree-sitter)  ; C, but simpler
+       (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
+
+       (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
+       (scheme +mit) ;; +racket ; a fully conniving family of lisps
 
        :email
        (notmuch +org)
