@@ -118,6 +118,7 @@
        :desc "ECA 중지" "q" #'eca-stop
        :desc "ECA 로그" "l" #'eca-show-stderr))
 
+(global-unset-key (kbd "M-a"))  ; unset forward-sentence -> use ')'
 (global-set-key (kbd "M-a") #'whisper-run)
 
 ;;; 사용법

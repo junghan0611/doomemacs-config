@@ -4,7 +4,6 @@
 
 (global-unset-key (kbd "<f2>"))
 
-(global-unset-key (kbd "M-a"))  ; unset forward-sentence -> use ')'
 (global-unset-key (kbd "M-c"))  ; unset capitalize-word
 (global-unset-key (kbd "M-e"))  ; unset backward-sentence -> use '('
 
