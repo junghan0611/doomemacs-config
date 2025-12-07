@@ -72,8 +72,86 @@
         "M-j" #'vertico-next
         "M-k" #'vertico-previous
 
-        ;; M-d: 문자 하나씩 삭제 (DEL은 기본 동작 유지: 디렉토리 단위 삭제)
-        "M-d" #'delete-backward-char))
+        ;; C-d M-d: 문자 하나씩 삭제 (DEL은 기본 동작 유지: 디렉토리 단위 삭제)
+        "C-d" #'delete-backward-char
+        "M-d" #'delete-backward-char
+        ))
+
+;;;;; marginalia with vertico-sort
+
+;;;;;; marginalia for file
+
+(after! vertico
+  (require 'marginalia)
+  (defun gr/marginalia--annotate-local-file (cand)
+    "Annotate local file CAND.
+Removes modes, which I've never needed or wanted."
+    (marginalia--in-minibuffer
+      (when-let (attrs (ignore-errors
+                         ;; may throw permission denied errors
+                         (file-attributes (substitute-in-file-name
+                                           (marginalia--full-candidate cand))
+                                          'integer)))
+        (marginalia--fields
+         ((marginalia--file-size attrs) :face 'marginalia-size :width -7)
+         ((marginalia--time (file-attribute-modification-time attrs))
+          :face 'marginalia-date :width -12)
+         ;; File owner at the right
+         ((marginalia--file-owner attrs) :face 'marginalia-file-owner)))))
+
+  (defun gr/marginalia-annotate-file (cand)
+    "Annotate file CAND with its size, modification time and other attributes.
+These annotations are skipped for remote paths."
+    (if-let (remote (or (marginalia--remote-file-p cand)
+                        (when-let (win (active-minibuffer-window))
+                          (with-current-buffer (window-buffer win)
+                            (marginalia--remote-file-p (minibuffer-contents-no-properties))))))
+        (marginalia--fields (remote :format "*%s*" :face 'marginalia-documentation))
+      (gr/marginalia--annotate-local-file cand)))
+
+  ;; M-A 순서를 바꾸면 된다.
+  (add-to-list 'marginalia-annotators
+               '(file gr/marginalia-annotate-file marginalia-annotate-file builtin none))
+
+;;;;;; vertico sort modified
+
+  ;; (setq vertico-multiform-categories nil)
+  ;; (setq vertico-multiform-categories
+  ;;       '(
+  ;;         ;; (file (vertico-sort-function . sort-directories-first))
+  ;;         ;; (file (vertico-sort-function . gr/sort-modified))
+  ;;         (file (+vertico-transform-functions . +vertico-highlight-directory)) ; doom default
+  ;;         ))
+
+  ;; Sort directories before files
+  (defun sort-directories-first (files)
+    (setq files (vertico-sort-history-length-alpha files))
+    (nconc (seq-filter (lambda (x) (string-suffix-p "/" x)) files)
+           (seq-remove (lambda (x) (string-suffix-p "/" x)) files)))
+
+  (defun gr/sort-modified (list)
+    "Sort LIST of files for latest modified."
+    (let ((ht (make-hash-table :test #'equal :size 5000)))
+      (dolist (x list)
+        (puthash x (file-attribute-modification-time (file-attributes x)) ht))
+      (sort list
+            (lambda (a b)
+              (let ((one
+                     (gethash a ht))
+                    (two
+                     (gethash b ht)))
+                (time-less-p two one))))))
+
+  (defun vertico-sort-modified ()
+    (interactive)
+    (setq-local vertico-sort-override-function
+                (and (not vertico-sort-override-function)
+                     #'gr/sort-modified)
+                vertico--input t))
+
+  (keymap-set vertico-map "M-," #'vertico-sort-modified))
+
+;;; provide
 
 (provide 'completion-config)
 ;;; completion-config.el ends here
