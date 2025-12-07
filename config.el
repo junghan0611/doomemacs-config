@@ -443,6 +443,7 @@ Returns t on success, nil if notify-send is not available."
   (load! "lisp/ai-eca-whisper")
   (load! "lisp/utils-config")
   (load! "lisp/keybindings-config")
+  (load! "lisp/keybindings-remap")
   (load! "lisp/functions")
   )
 

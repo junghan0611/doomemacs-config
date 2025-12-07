@@ -118,7 +118,7 @@
        :desc "ECA 중지" "q" #'eca-stop
        :desc "ECA 로그" "l" #'eca-show-stderr))
 
-(global-set-key (kbd "M-r") #'whisper-run)
+(global-set-key (kbd "M-a") #'whisper-run)
 
 ;;; 사용법
 ;;
