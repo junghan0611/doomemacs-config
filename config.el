@@ -26,11 +26,6 @@
 ;; (setq doom-font (font-spec :family "monospace" :size 12 :weight 'semi-light)
 ;;       doom-variable-pitch-font (font-spec :family "sans" :size 13))
 
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-;; (setq doom-theme 'doom-one)
-
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
 ;; (setq org-directory "~/org/")
@@ -38,7 +33,7 @@
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type t)
-(remove-hook! (text-mode conf-mode) #'display-line-numbers-mode)
+;; (remove-hook! (text-mode conf-mode) #'display-line-numbers-mode)
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -445,19 +440,21 @@ Returns t on success, nil if notify-send is not available."
   (load! "lisp/denote-export")
   (load! "lisp/ai-gptel")
   (load! "lisp/ai-agent-shell")
+  (load! "lisp/ai-eca-whisper")
   (load! "lisp/utils-config")
   (load! "lisp/keybindings-config")
+  (load! "lisp/functions")
   )
 
-;;; py3status integration (ElleNajit)
+;;; TODO py3status integration (ElleNajit)
 
-(with-eval-after-load 'org-clock
-  (add-hook 'org-clock-in-hook #'junghan/update-org-clocked-in-task-file)
-  (add-hook 'org-clock-out-hook #'junghan/update-org-clocked-in-task-file)
-  (add-hook 'org-after-todo-state-change-hook #'junghan/update-org-clocked-in-task-file)
+;; (with-eval-after-load 'org-clock
+;;   (add-hook 'org-clock-in-hook #'junghan/update-org-clocked-in-task-file)
+;;   (add-hook 'org-clock-out-hook #'junghan/update-org-clocked-in-task-file)
+;;   (add-hook 'org-after-todo-state-change-hook #'junghan/update-org-clocked-in-task-file)
 
-  ;; Update every minute
-  (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
+;;   ;; Update every minute
+;;   (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
 
 
 ;;; TODO TERMUX
@@ -493,13 +490,6 @@ Returns t on success, nil if notify-send is not available."
 
   ;; 알람/비프음 비활성화 (하드웨어 절전)
   (setq ring-bell-function 'ignore)
-
-  ;; GUI 전용 최적화
-  (when (display-graphic-p)
-    ;; 커서 깜빡임 비활성화 (배터리 절약)
-    (blink-cursor-mode -1)
-
-    (message "GUI 모드: 배터리 최적화 활성화 ✓"))
 
   ;; Termux extra-keys 방향키 설정
   ;; Termux 환경에서 방향키가 제대로 동작하도록 보장
@@ -547,5 +537,89 @@ Returns t on success, nil if notify-send is not available."
 
     (message "Termux 방향키 ESC O 시퀀스 매핑 완료 ✓"))
   )
+
+;;; TODO MIGRATIONS
+
+;;;; ~/sync/emacs/emacs-fulllab-config/dotdoomemacs/+markdown.el
+
+(progn
+
+;;;###autoload
+(defun yank-as-org ()
+  "Convert region of markdown text to org while yanking."
+  (interactive)
+  (let* ((_ (unless (executable-find "pandoc")
+              (user-error "pandoc not found")))
+         (beg (if evil-mode
+                  (marker-position evil-visual-beginning)
+                (region-beginning)))
+         (end (if evil-mode
+                  (marker-position evil-visual-end)
+                (region-end)))
+         (region-content (buffer-substring-no-properties beg end))
+         (_ (print region-content))
+         (converted-content
+          (with-temp-buffer
+            (insert region-content)
+            (shell-command-on-region
+             (point-min)
+             (point-max)
+             "pandoc --wrap=none -f markdown -t org" nil t)
+            (buffer-string))))
+    (kill-new converted-content)
+    (message "yanked Markdown as Org")))
+
+;;;###autoload
+(defun yank-as-markdown ()
+  "Convert region of Org-mode to markdown while yanking."
+  (interactive)
+  (let* ((_ (unless (executable-find "pandoc")
+              (user-error "pandoc not found")))
+         (beg (if evil-mode
+                  (marker-position evil-visual-beginning)
+                (region-beginning)))
+         (end (if evil-mode
+                  (marker-position evil-visual-end)
+                (region-end)))
+         (region-content (buffer-substring-no-properties beg end))
+         (_ (print region-content))
+         (converted-content
+          (with-temp-buffer
+            (insert region-content)
+            (shell-command-on-region
+             (point-min)
+             (point-max)
+             "pandoc --wrap=none -f org -t gfm" nil t)
+            (buffer-string))))
+    (kill-new converted-content)
+    (message "yanked Org as Markdown")))
+)
+
+;;;; bh/insert-inactive-timestamp
+
+(defun bh/insert-inactive-timestamp ()
+  (interactive)
+  (org-insert-time-stamp nil t t nil nil nil))
+
+(after! org
+  (define-key org-mode-map (kbd "<f3>") 'org-toggle-link-display)
+  )
+
+;;;; my/enable-alice-keyboard-toggle-input-method
+
+(defun my/enable-alice-keyboard-toggle-input-method ()
+  (interactive)
+  (map! (:map vertico-map
+              "`"   #'toggle-input-method)
+        (:map vterm-mode-map
+              "`"   #'toggle-input-method)
+        (:map prog-mode-map
+              "`"   #'toggle-input-method)
+        (:map minibuffer-mode-map
+              "`"   #'toggle-input-method)
+        (:map minibuffer-local-map
+              "`"   #'toggle-input-method)
+        (:map org-mode-map
+              "`"   #'toggle-input-method)))
 
 ;;; END

@@ -135,6 +135,11 @@
 
 ;;;; AI AGENT
 
+(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
+(package! whisper :recipe (:host github :repo "natrys/whisper.el"))
+(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
+(package! semext :recipe (:host github :repo "ahyatt/semext"))
+
 ;;;;; ClaudeCode
 
 ;; Option 1
