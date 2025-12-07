@@ -15,6 +15,9 @@ bd.sock
 db.sqlite
 bd.db
 
+# Syncthing conflict files
+*.sync-conflict-*
+
 # Merge artifacts (temporary files from 3-way merge)
 beads.base.jsonl
 beads.base.meta.json
