@@ -37,6 +37,7 @@
       "C-c L" #'my/org-store-link-id-optional
       "C-c i" #'org-insert-link
       "C-c a" #'org-agenda
+
       ;; Scroll (evil)
       "M-u" #'evil-scroll-up
       "M-v" #'evil-scroll-down
@@ -45,6 +46,12 @@
       "M-s-h" #'evil-window-left
       "M-s-k" #'evil-window-up
       "M-s-j" #'evil-window-down
+
+      "s-[" #'evil-window-left
+      "s-]" #'evil-window-right
+      "s-{" #'evil-window-up
+      "s-}" #'evil-window-down
+
       ;; Winner
       "C-c <left>" #'winner-undo
       "C-c <right>" #'winner-redo)

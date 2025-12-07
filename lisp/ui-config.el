@@ -127,6 +127,7 @@
   ;; (add-to-list 'outli-heading-config '(tex-mode "%%" ?% t))
   (add-to-list 'outli-heading-config '(js2-mode "//" ?\/ t))
   (add-to-list 'outli-heading-config '(js-ts-mode "//" ?\/ t))
+  (add-to-list 'outli-heading-config '(zig-ts-mode "//" ?\/ t))
   (add-to-list 'outli-heading-config '(typescript-mode "//" ?\/ t))
   (add-to-list 'outli-heading-config '(typescript-ts-mode "//" ?\/ t))
   (add-to-list 'outli-heading-config '(python-mode "##" ?# t))
@@ -183,7 +184,7 @@
 
 (defun my/doom-themes-toggle ()
   (interactive)
-  (setq doom-theme 'doom-one)
+  (setq doom-theme 'doom-dracula)
   (doom-themes-visual-bell-config)
   (load-theme doom-theme t))
 (add-hook 'doom-first-input-hook #'my/doom-themes-toggle)
