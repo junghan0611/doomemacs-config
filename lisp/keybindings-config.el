@@ -16,13 +16,6 @@
 
 ;;; Code:
 
-;;;; Global Unset Keys
-
-(map! "<f2>" nil
-      "M-a" nil   ; forward-sentence - use evil motion instead
-      "M-c" nil   ; capitalize-word
-      "M-e" nil)  ; backward-sentence - use evil motion instead
-
 ;;;; Global Keys
 
 (map! "C-M-;" #'pp-eval-expression
@@ -190,6 +183,30 @@
       :desc "layout-toggle" "-" #'spacemacs/window-layout-toggle
       :desc "delete-other" "O" #'delete-other-windows)
 
+;;;;; Layout (l)
+
+;; spacemacs's style
+(map! :leader
+      (:prefix ("l". "layout/workspace")
+       :desc "+workspace/other" "<tab>" #'+workspace/other
+       :desc "+workspace/display" "d" #'+workspace/display
+       :desc "+workspace/delete" "D" #'+workspace/delete
+       :desc "+workspace/switch-to" "l" #'+workspace/switch-to
+       :desc "open workspaces" "o" #'my/open-workspaces
+       :desc "+workspace/load" "L" #'+workspace/load
+       :desc "+workspace/new" "n" #'+workspace/new
+       :desc "+workspace/rename " "r" #'+workspace/rename
+       :desc "+workspace/restore-last-session" "R" #'+workspace/restore-last-session
+       :desc "+workspace/save" "s" #'+workspace/save
+       :desc "+workspace/kill-session" "x" #'+workspace/kill-session
+       :desc "1st workspace" "1" #'+workspace/switch-to-0
+       :desc "2nd workspace" "2" #'+workspace/switch-to-1
+       :desc "3rd workspace" "3" #'+workspace/switch-to-2
+       :desc "4th workspace" "4" #'+workspace/switch-to-3
+       :desc "5th workspace" "5" #'+workspace/switch-to-4
+       :desc "6th workspace" "6" #'+workspace/switch-to-5
+       :desc "7th workspace" "7" #'+workspace/switch-to-6))
+
 ;;;; Evil Keys
 
 (map! :after evil
@@ -241,6 +258,8 @@
 
 (after! outli
   (map! :map outli-mode-map
+        :nv "<tab>" #'outline-cycle
+        :nv "TAB" #'outline-cycle
         :nv "M-j" #'outline-forward-same-level
         :nv "M-k" #'outline-backward-same-level
         :nv "M-n" #'outline-next-heading

@@ -177,3 +177,8 @@
 
 (setq user-dict-file (concat doom-user-dir "var/core-words.txt"))
 
+;;; user-calendar
+
+(setq user-calendar-latitude 37.26
+      user-calendar-longitude 127.01
+      user-calendar-location-name "Suwon, KR")

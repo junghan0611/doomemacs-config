@@ -52,6 +52,7 @@
   (setq eca-chat-auto-add-cursor t
         eca-chat-auto-add-repomap nil)
 
+  (add-hook 'eca-chat-mode-hook #'doom-mark-buffer-as-real-h)
   ;; ECA 설정 파일: ~/claude-config/eca/config.json
   ;; (심볼릭 링크: ~/.config/eca/config.json)
   )

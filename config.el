@@ -57,6 +57,13 @@
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
 
+;;; Global Unset Keys
+
+(map! "<f2>" nil
+      "M-a" nil   ; forward-sentence - use evil motion instead
+      "M-c" nil   ; capitalize-word
+      "M-e" nil)  ; backward-sentence - use evil motion instead
+
 ;;; Load 'Per-Machine' - User Configs
 ;; Most of my per-environment config done via =customize= and is in .custom.el.
 ;; However, some config is more involved, such as packages I just want in one
@@ -433,11 +440,13 @@ Returns t on success, nil if notify-send is not available."
   (load! "lisp/ui-config")
   (load! "lisp/evil-config")
   (load! "lisp/korean-input")
+  (load! "lisp/time-config")
   (load! "lisp/completion-config")
   (load! "lisp/org-config")
   (load! "lisp/denote-config")
   (load! "lisp/denote-silo")
   (load! "lisp/denote-export")
+  (load! "lisp/denote-functions")
   (load! "lisp/ai-gptel")
   (load! "lisp/ai-agent-shell")
   (load! "lisp/ai-eca-whisper")
