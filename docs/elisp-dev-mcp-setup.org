@@ -1,0 +1,155 @@
+#+title: Elisp Dev MCP 설정 완료 - 다음 단계
+#+date: [2025-11-21 Thu]
+#+filetags: :emacs:mcp:setup:
+
+* 설치 완료!
+
+elisp-dev-mcp 설정이 완료되었습니다. 이제 Emacs를 재시작하면 됩니다.
+
+* 재시작 방법
+
+** 방법 1: Emacs 내부에서 재시작
+
+Emacs에서 다음 명령 실행:
+
+#+begin_src elisp
+M-x doom/restart-and-restore
+#+end_src
+
+또는
+
+#+begin_src elisp
+M-x restart-emacs
+#+end_src
+
+** 방법 2: 터미널에서 재시작
+
+#+begin_src bash
+# Emacs 종료
+pkill -15 emacs
+
+# Emacs 재시작
+emacs --daemon=starter
+
+# 또는 GUI로 시작
+emacs &
+#+end_src
+
+* 재시작 후 확인 사항
+
+** 1. MCP 서버 라이브러리 확인
+
+Emacs에서:
+
+#+begin_src elisp
+M-x mcp-server-lib-start
+#+end_src
+
+메시지 버퍼에 "MCP server started" 또는 유사한 메시지가 나타나야 합니다.
+
+** 2. elisp-dev-mcp 로드 확인
+
+#+begin_src elisp
+M-: (featurep 'elisp-dev-mcp)
+#+end_src
+
+결과: ~t~ 가 반환되어야 합니다.
+
+** 3. Claude MCP 연결 테스트
+
+터미널에서:
+
+#+begin_src bash
+claude mcp list
+#+end_src
+
+~elisp-dev~ 가 ✓ Connected 상태여야 합니다.
+
+* 사용 시작하기
+
+Claude에게 다음과 같이 요청해보세요:
+
+#+begin_example
+"sit-for 함수가 무엇을 하는지 Info 매뉴얼에서 찾아서 설명해줘"
+#+end_example
+
+#+begin_example
+"org-mode의 주요 함수들 중 org-insert-heading 함수의 소스 코드를 보여줘"
+#+end_example
+
+#+begin_example
+"denote-directory 변수의 현재 설정값과 문서를 확인해줘"
+#+end_example
+
+* 트러블슈팅
+
+** elisp-dev MCP 서버가 여전히 연결 안 되는 경우
+
+1. *Emacs 서버 상태 확인*:
+   #+begin_src bash
+   emacsclient -s starter -e '(server-running-p)'
+   #+end_src
+
+   결과: ~t~ 가 나와야 합니다.
+
+2. *elisp-dev-mcp 함수 확인*:
+   #+begin_src bash
+   emacsclient -s starter -e '(fboundp 'elisp-dev-mcp-enable)'
+   #+end_src
+
+   결과: ~t~ 가 나와야 합니다.
+
+3. *수동으로 MCP 활성화*:
+   #+begin_src elisp
+   M-x elisp-dev-mcp-enable
+   #+end_src
+
+4. *디버그 로그 활성화*:
+   #+begin_src elisp
+   M-: (setq mcp-server-lib-log-level 'debug)
+   M-x mcp-server-lib-start
+   #+end_src
+
+   ~*Messages*~ 버퍼를 확인하세요.
+
+** "Symbol's function definition is void" 에러
+
+패키지가 로드되지 않았습니다:
+
+#+begin_src bash
+# Doom 패키지 재동기화
+doom sync
+
+# Emacs 재시작
+doom restart
+#+end_src
+
+** MCP 스크립트 실행 권한 문제
+
+#+begin_src bash
+chmod +x ~/.emacs.d/emacs-mcp-stdio.sh
+#+end_src
+
+* 다음 단계
+
+설정이 완료되면:
+
+1. [[file:elisp-dev-mcp-guide.org][Elisp Dev MCP 사용 가이드]] 참고
+2. Denote + org-mcp와 통합하여 지식 관리 워크플로우 구축
+3. 커스텀 MCP 도구 개발 고려
+
+* 현재 설정 요약
+
+| 항목 | 상태 | 위치 |
+|------|------|------|
+| packages.el | ✓ 완료 | ~/sync/emacs/doomemacs-config/packages.el |
+| config.el | ✓ 완료 | ~/sync/emacs/doomemacs-config/config.el |
+| MCP 스크립트 | ✓ 완료 | ~/.emacs.d/emacs-mcp-stdio.sh |
+| Claude 등록 | ✓ 완료 | ~/.claude.json |
+| Emacs 재시작 | ⏳ 대기 중 | 사용자 액션 필요 |
+
+* 참고
+
+- config.el:1574-1579 (elisp-dev-mcp 설정)
+- packages.el:156 (패키지 선언)
+- [[file:elisp-dev-mcp-guide.org][상세 사용 가이드]]

@@ -18,6 +18,29 @@ PYTHON_SCRIPT="${SCRIPT_DIR}/denote-export-parallel.py"
 ORG_ROOT="${HOME}/org"
 DEFAULT_DAEMONS=4
 
+# Cleanup function for trap
+cleanup_on_exit() {
+  echo ""
+  echo -e "${YELLOW}[WARN]${NC} Interrupted! Cleaning up daemons..."
+
+  # Kill any remaining daemon processes
+  pkill -f "denote-export-daemon" 2>/dev/null || true
+
+  # Double-check with emacsclient (graceful shutdown)
+  for i in $(seq 1 "${CLEANUP_DAEMONS:-4}"); do
+    emacsclient -s "denote-export-daemon-$i" --eval '(kill-emacs)' 2>/dev/null || true
+  done
+
+  echo -e "${GREEN}[INFO]${NC} Cleanup completed."
+  exit 130
+}
+
+# Register trap for SIGINT (Ctrl+C) and SIGTERM
+trap cleanup_on_exit SIGINT SIGTERM
+
+# Track daemon count for cleanup
+CLEANUP_DAEMONS=4
+
 # Target directories
 META_DIR="${ORG_ROOT}/meta"
 BIB_DIR="${ORG_ROOT}/bib"
@@ -116,6 +139,7 @@ case "$COMMAND" in
 
   all)
     NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     log_info "=========================================="
     log_info "Denote Export - 전체 폴더 순차 처리"
@@ -158,6 +182,7 @@ case "$COMMAND" in
 
   meta)
     NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$META_DIR" ]; then
       log_error "Directory not found: $META_DIR"
@@ -176,6 +201,7 @@ case "$COMMAND" in
 
   bib)
     NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$BIB_DIR" ]; then
       log_error "Directory not found: $BIB_DIR"
@@ -194,6 +220,7 @@ case "$COMMAND" in
 
   notes)
     NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$NOTES_DIR" ]; then
       log_error "Directory not found: $NOTES_DIR"
@@ -212,6 +239,7 @@ case "$COMMAND" in
 
   test)
     NUM_DAEMONS="${2:-2}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$TEST_DIR" ]; then
       log_error "Test directory not found: $TEST_DIR"
@@ -231,6 +259,7 @@ case "$COMMAND" in
   run)
     ORG_DIR="${2}"
     NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ -z "$ORG_DIR" ]; then
       log_error "Directory argument required for 'run' command"

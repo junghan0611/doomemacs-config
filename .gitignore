@@ -4,6 +4,8 @@
 *.log
 tmp/
 
+__pycache__
+
 # Personal configuration (machine-specific, not shared via git)
 custom.el
 flycheck_config.el
@@ -27,6 +29,12 @@ CLAUDE.md
 # Generated/cache files
 tempel-templates.eld
 var/tempel-templates.eld
+
+# Personal dictionaries and abbreviations (machine-specific)
+var/abbrev_defs
+var/aspell.en.pws
+var/hunspell_ko_personal
+var/logo.png
 
 # Security - DO NOT COMMIT
 # Sensitive information that should never be in version control

@@ -135,6 +135,11 @@
 
 ;;;; AI AGENT
 
+(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
+(package! whisper :recipe (:host github :repo "natrys/whisper.el"))
+(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
+(package! semext :recipe (:host github :repo "ahyatt/semext"))
+
 ;;;;; ClaudeCode
 
 ;; Option 1
@@ -144,6 +149,11 @@
 
 ;; Option 2
 (package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
+
+;;;;; Efrit (Steve Yegge's AI Assistant)
+
+;; Use junghan0611/efrit-ko fork with OpenRouter backend support
+(package! efrit :recipe (:host github :repo "junghan0611/efrit" :files ("lisp/*.el")))
 
 ;;;;; ACP (Agent Client Protocol)
 

@@ -1,0 +1,216 @@
+#+title: Elisp Dev MCP 설정 및 사용 가이드
+#+date: [2025-11-21 Thu]
+#+filetags: :emacs:mcp:elisp:llmlog:
+#+identifier: 20251121000000
+
+* 개요
+
+Elisp Dev MCP는 Claude와 같은 AI 에이전트가 Emacs Lisp 개발을 지원하는 MCP(Model Context Protocol) 서버입니다.
+
+** 핵심 기능
+- 함수 문서 조회 (~elisp-describe-function~)
+- 함수 정의 추출 (~elisp-get-function-definition~)
+- 변수 정보 조회 (~elisp-describe-variable~)
+- Info 문서 접근 (~elisp-info-lookup~)
+- 안전한 소스 파일 읽기 (~elisp-read-file~)
+
+** 철학
+- 읽기 전용 (Read-only)
+- 안전성 우선 (시스템 디렉터리와 패키지만 접근)
+- Info 매뉴얼 직접 활용
+
+* 설치 완료 사항
+
+** 1. Doom Emacs 패키지 설정 (~packages.el~)
+
+#+begin_src elisp
+;;;;; MCP (Model Context Protocol)
+(package! mcp-server-lib :recipe (:host github :repo "laurynas-biveinis/mcp-server-lib.el"))
+(package! elisp-dev-mcp :recipe (:host github :repo "laurynas-biveinis/elisp-dev-mcp"))
+(package! org-mcp :recipe (:host github :repo "laurynas-biveinis/org-mcp"))
+#+end_src
+
+** 2. Doom Emacs 초기화 설정 (~config.el~)
+
+#+begin_src elisp
+;;;;; MCP (Model Context Protocol)
+
+(use-package! mcp-server-lib
+  :after org
+  :config
+  (mcp-server-lib-install))
+
+(use-package! elisp-dev-mcp
+  :after mcp-server-lib
+  :commands (elisp-dev-mcp-enable elisp-dev-mcp-disable)
+  :config
+  (setq mcp-server-lib-log-level 'info))  ;; 필요시 'debug로 변경
+
+(use-package! org-mcp
+  :after mcp-server-lib
+  :config
+  (setq org-mcp-allowed-files
+        (append
+         (directory-files-recursively "~/org/" "\\.org$")
+         (directory-files-recursively "~/claude-memory/" "\\.org$")))
+  (org-mcp-enable)
+  ;; Start the server automatically when Emacs starts
+  (mcp-server-lib-start))
+#+end_src
+
+** 3. MCP 스크립트 생성 (~/.emacs.d/emacs-mcp-stdio.sh~)
+
+Emacs 서버와 통신하는 MCP 래퍼 스크립트가 생성되었습니다.
+
+#+begin_src bash
+chmod +x ~/.emacs.d/emacs-mcp-stdio.sh
+#+end_src
+
+** 4. Claude CLI 등록
+
+#+begin_src bash
+claude mcp add -s user -t stdio elisp-dev -- \
+  ~/.emacs.d/emacs-mcp-stdio.sh \
+  --init-function=elisp-dev-mcp-enable \
+  --stop-function=elisp-dev-mcp-disable \
+  --server-id=elisp-dev-mcp
+#+end_src
+
+* 사용 방법
+
+** 1. Emacs 서버 시작
+
+Emacs에서 다음 명령어로 MCP 서버를 시작합니다:
+
+#+begin_src elisp
+M-x mcp-server-lib-start
+#+end_src
+
+** 2. 서버 중지 (필요시)
+
+#+begin_src elisp
+M-x mcp-server-lib-stop
+#+end_src
+
+** 3. Claude와 대화 예시
+
+*** 함수 이해하기
+
+#+begin_example
+프롬프트: "sit-for가 무엇을 하고 어떤 인자를 받는지 설명해줘"
+도구: elisp-describe-function
+#+end_example
+
+*** 함수 디버깅
+
+#+begin_example
+프롬프트: "내 커스텀 함수 my-org-export에서 에러가 나. 소스 코드를 찾아줘"
+도구: elisp-get-function-definition, elisp-read-file
+#+end_example
+
+*** Info 매뉴얼 학습
+
+#+begin_example
+프롬프트: "transient로 명령 메뉴를 만드는 방법을 알려줘. Info 매뉴얼을 확인해봐"
+도구: elisp-info-lookup
+#+end_example
+
+*** 변수 정보 조회
+
+#+begin_example
+프롬프트: "org-directory 변수의 현재 값과 타입을 확인해줘"
+도구: elisp-describe-variable
+#+end_example
+
+* 디버깅
+
+** 로그 레벨 변경
+
+필요시 ~config.el~에서 로그 레벨을 변경할 수 있습니다:
+
+#+begin_src elisp
+(setq mcp-server-lib-log-level 'debug)  ;; info -> debug
+#+end_src
+
+** 환경 변수로 디버그 로그 활성화
+
+#+begin_src bash
+export EMACS_MCP_DEBUG_LOG=/tmp/mcp-debug.log
+#+end_src
+
+** 서버 상태 확인
+
+#+begin_src bash
+claude mcp list
+#+end_src
+
+* 문제 해결
+
+** Emacs 서버가 실행되지 않는 경우
+
+#+begin_src elisp
+M-x server-start
+#+end_src
+
+또는 ~init.el~에 자동 시작 추가:
+
+#+begin_src elisp
+(use-package! server
+  :unless (display-graphic-p)
+  :after-call doom-first-input-hook doom-first-file-hook focus-out-hook
+  :defer 1
+  :config
+  (setq server-name "starter")
+  (unless (server-running-p)
+    (server-start)))
+#+end_src
+
+** MCP 서버가 응답하지 않는 경우
+
+1. Emacs 서버 재시작:
+   #+begin_src elisp
+   M-x server-force-delete
+   M-x server-start
+   #+end_src
+
+2. MCP 서버 재시작:
+   #+begin_src elisp
+   M-x mcp-server-lib-stop
+   M-x mcp-server-lib-start
+   #+end_src
+
+3. Claude CLI 재시작:
+   #+begin_src bash
+   # Claude Code 재시작
+   #+end_src
+
+* 고급 활용
+
+** 커스텀 도구 추가
+
+~mcp-server-lib.el~을 사용하면 자신만의 Elisp 함수를 새 MCP 도구로 쉽게 등록할 수 있습니다.
+
+예시:
+
+#+begin_src elisp
+(mcp-server-lib-register-tool
+ "my-custom-tool"
+ "My custom tool description"
+ '((param1 . "First parameter"))
+ (lambda (params)
+   (my-custom-function (alist-get 'param1 params))))
+#+end_src
+
+** Denote 워크플로우와 통합
+
+~org-mcp~와 함께 사용하여 지식 관리 시스템과 AI 에이전트를 통합할 수 있습니다.
+
+* 참고 자료
+
+- [[https://github.com/laurynas-biveinis/elisp-dev-mcp][elisp-dev-mcp GitHub]]
+- [[https://github.com/laurynas-biveinis/mcp-server-lib.el][mcp-server-lib.el GitHub]]
+- [[https://skywork.ai/skypage/en/emacs-elisp-ai-engineers/1981212320358912000][Elisp AI Engineers Blog Post]]
+- [[https://www.pulsemcp.com/servers/laurynas-biveinis-elisp-dev][PulseMCP Documentation]]
+
+* 히스토리
+- [2025-11-21 Thu] 초기 설정 완료

@@ -70,13 +70,25 @@
 (ensure-package 'dash)
 (ensure-package 'denote)
 
-;; Load denote-explore for backlinks support
-;; Try from straight path first
+;; CRITICAL: Load denote-org for dblock functions (denote-links, denote-backlinks)
+;; This provides org-dblock-write:denote-links and org-dblock-write:denote-backlinks
+(condition-case err
+    (progn
+      (ensure-package 'denote-org)
+      (message "[OK] denote-org loaded (dblock functions available)"))
+  (error
+   (message "[WARN] denote-org not available: %s" err)
+   ;; Fallback: try loading from straight repos
+   (let ((denote-org-path (expand-file-name "straight/repos/denote/denote-org-extras.el" doom-user-dir)))
+     (when (file-exists-p denote-org-path)
+       (load denote-org-path nil t)
+       (message "[OK] denote-org-extras loaded from straight")))))
+
+;; Load denote-explore for extended backlinks support
 (let ((denote-regexp-path (expand-file-name "straight/repos/denote-explore/denote-regexp.el" doom-user-dir)))
   (when (file-exists-p denote-regexp-path)
     (load denote-regexp-path nil t)))
 
-;; Try to load denote-explore
 (condition-case err
     (progn
       (ensure-package 'denote-explore)
@@ -86,7 +98,12 @@
 
 ;; Set denote directory from command line or default
 (defvar org-directory (expand-file-name "~/org"))
-(setq denote-directory org-directory)
+(setq denote-directory (expand-file-name "~/org"))
+
+;; Verify dblock functions are available
+(unless (fboundp 'org-dblock-write:denote-links)
+  (message "[ERROR] org-dblock-write:denote-links not defined!")
+  (message "[ERROR] denote-org or denote-org-extras not loaded properly"))
 
 ;; Parse .dir-locals.el if exists (for denote-directory override)
 (let ((dir-locals-file (expand-file-name ".dir-locals.el" org-directory)))
@@ -131,13 +148,18 @@
 
 (defun denote-dblock-update-directory (directory)
   "Update all dblocks in DIRECTORY recursively."
-  (let* ((org-files (directory-files-recursively directory "\\.org\\'"))
+  (let* ((all-files (directory-files-recursively directory "\\.org\\'"))
+         ;; Filter out Emacs lock files (.#filename)
+         (org-files (seq-filter (lambda (f)
+                                  (not (string-match-p "/\\.#" f)))
+                                all-files))
          (total (length org-files))
          (counter 0)
          (files-with-dblocks 0)
          (start-time (float-time)))
     
-    (message "[SCAN] Found %d org files in %s" total directory)
+    (message "[SCAN] Found %d org files in %s (excluded %d lock files)"
+             total directory (- (length all-files) total))
     (message "========================================")
     
     (dolist (file org-files)
@@ -145,12 +167,14 @@
       (message "[%d/%d] Processing..." counter total)
       
       ;; Quick pre-check: does file have dblock?
-      (when (with-temp-buffer
-              (insert-file-contents file nil 0 5000) ; Check first 5KB
-              (goto-char (point-min))
-              (re-search-forward "^#\\+BEGIN:" nil t))  ; Match any BEGIN block
-        (setq files-with-dblocks (1+ files-with-dblocks))
-        (denote-dblock-update-file file)))
+      (condition-case nil
+          (when (with-temp-buffer
+                  (insert-file-contents file nil 0 5000) ; Check first 5KB
+                  (goto-char (point-min))
+                  (re-search-forward "^#\\+BEGIN:" nil t))  ; Match any BEGIN block
+            (setq files-with-dblocks (1+ files-with-dblocks))
+            (denote-dblock-update-file file))
+        (file-missing (message "[SKIP] File not found: %s" file))))
     
     (let ((duration (- (float-time) start-time)))
       (message "========================================")
