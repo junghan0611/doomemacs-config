@@ -257,46 +257,47 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
           (when (> count 0)
             (message "📂 파일 열기: %d개 자모 정리됨" count)))))))
 
-;;; 6. 마이너 모드 정의
+;;; 6. 글로벌 마이너 모드 정의
 
-(define-minor-mode korean-nfc-mode
-  "한글 NFD → NFC 자동 변환 마이너 모드.
-Termux 터미널 환경에서 한글 입력 문제를 해결합니다."
+(define-minor-mode global-korean-nfc-mode
+  "한글 NFD → NFC 자동 변환 글로벌 마이너 모드.
+모든 버퍼에서 한글 입력 시 NFD(분해형)를 NFC(완성형)로 변환합니다.
+
+성능 최적화:
+- 디바운스: 0.1초 지연 (연속 입력 시 마지막만 처리)
+- 제한된 영역: 변경 위치 ±10자만 검사
+- 패턴 매칭: 한글 자모가 있을 때만 정규화 실행
+
+활성화 이유:
+- Termux/macOS 등에서 IME가 NFD로 입력
+- 클립보드에서 NFD 인코딩 텍스트 붙여넣기
+- AI API 호출 시 NFD 한글이 문제 발생"
   :lighter " 한"
-  :global nil
-  (if korean-nfc-mode
+  :global t
+  :group 'korean
+  (if global-korean-nfc-mode
       (progn
-        (add-hook 'after-change-functions #'korean/after-change-nfc-normalize nil t)
-        (add-hook 'before-save-hook #'korean/before-save-nfc-normalize nil t)
-        (message "✅ 한글 NFC 모드 활성화"))
+        (add-hook 'after-change-functions #'korean/after-change-nfc-normalize)
+        (add-hook 'before-save-hook #'korean/before-save-nfc-normalize)
+        (message "✅ 글로벌 한글 NFC 모드 활성화"))
     (progn
-      (remove-hook 'after-change-functions #'korean/after-change-nfc-normalize t)
-      (remove-hook 'before-save-hook #'korean/before-save-nfc-normalize t)
-      (when korean/nfc-timer
-        (cancel-timer korean/nfc-timer)
-        (setq korean/nfc-timer nil))
-      (message "❌ 한글 NFC 모드 비활성화"))))
+      (remove-hook 'after-change-functions #'korean/after-change-nfc-normalize)
+      (remove-hook 'before-save-hook #'korean/before-save-nfc-normalize)
+      (message "❌ 글로벌 한글 NFC 모드 비활성화"))))
 
-;;; 7. 전역 활성화 (터미널 환경)
+;; 하위 호환성: 기존 korean-nfc-mode 호출 시 글로벌 모드로 리다이렉트
+(defalias 'korean-nfc-mode 'global-korean-nfc-mode)
 
-(defun korean/enable-nfc-mode-if-needed ()
-  "터미널 환경이면 자동으로 korean-nfc-mode 활성화"
-  (unless (display-graphic-p)
-    (korean-nfc-mode 1)))
+;;; 7. 자동 활성화 (터미널 Emacs에서만)
 
-;; text-mode와 prog-mode에서 자동 활성화
-(add-hook 'text-mode-hook #'korean/enable-nfc-mode-if-needed)
-(add-hook 'prog-mode-hook #'korean/enable-nfc-mode-if-needed)
-(add-hook 'conf-mode-hook #'korean/enable-nfc-mode-if-needed)
+;; 터미널 Emacs (-nw)에서만 글로벌 모드 활성화
+;; GUI Emacs에서는 시스템 IME가 NFC로 정상 입력됨
+(unless (display-graphic-p)
+  (global-korean-nfc-mode 1))
 
-;; comint 기반 모드들 (agent-shell, shell, eshell 등)에서도 활성화
-(add-hook 'comint-mode-hook #'korean/enable-nfc-mode-if-needed)
-
-(when (locate-library "agent-shell")
-  (add-hook 'agent-shell-mode-hook #'korean/enable-nfc-mode-if-needed))
-
-;; 파일 열기 시에도 체크
-(add-hook 'find-file-hook #'korean/find-file-nfc-normalize)
+;; 파일 열기 시 기존 NFD 문자 정리 (터미널에서만, 안전망)
+(unless (display-graphic-p)
+  (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
 
 ;;; 8. 키바인딩 (옵션)
 
