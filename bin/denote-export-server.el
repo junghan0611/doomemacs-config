@@ -71,85 +71,87 @@
   (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
   (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
 
-;; Initialize package system
-(require 'package)
+;; CRITICAL: Disable package.el completely to prevent ELPA usage
 (setq package-enable-at-startup nil)
-(package-initialize)
+(setq package-archives nil)
+(fset 'package-initialize #'ignore)
+(fset 'package-install (lambda (&rest _) (error "ELPA is disabled! Use Doom's straight packages only")))
+(fset 'package-refresh-contents (lambda (&rest _) (error "ELPA is disabled!")))
 
-;; Add ELPA archives if needed
-(unless (assoc "melpa" package-archives)
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-  (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t))
+;; Helper function to find straight build directory (version-agnostic)
+(defun find-straight-build-dir ()
+  "Find the straight build directory, handling different Emacs versions."
+  (let ((straight-build-base (expand-file-name ".local/straight/" doom-emacs-dir)))
+    (when (file-directory-p straight-build-base)
+      (let ((build-dirs (directory-files straight-build-base t "^build-")))
+        (when build-dirs
+          ;; Return the most recent build directory
+          (car (sort build-dirs #'file-newer-than-file-p)))))))
 
-;; Helper function to require/install packages
-(defun ensure-package (package)
-  "Ensure PACKAGE is installed and loaded."
-  (unless (require package nil t)
-    (message "[Server] Installing %s..." package)
-    (unless package-archive-contents
-      (package-refresh-contents))
-    (package-install package)
-    (require package)))
+;; Add Doom's straight paths to load-path AND load autoloads
+(let ((build-dir (find-straight-build-dir))
+      (repos-dir (expand-file-name ".local/straight/repos/" doom-emacs-dir)))
+  (when (and build-dir (file-directory-p build-dir))
+    ;; Add all package directories from build dir
+    (message "[Server] Loading packages from: %s" build-dir)
+    (let ((pkg-dirs (directory-files build-dir t "^[^.]" t)))
+      (dolist (pkg-dir pkg-dirs)
+        (when (and (file-directory-p pkg-dir)
+                   (not (string-suffix-p ".el" pkg-dir)))
+          (add-to-list 'load-path pkg-dir)
+          ;; Load autoloads file if exists
+          (let ((autoload-file (expand-file-name 
+                                (concat (file-name-nondirectory pkg-dir) "-autoloads.el")
+                                pkg-dir)))
+            (when (file-exists-p autoload-file)
+              (load autoload-file nil t)))))))
+  (when (file-directory-p repos-dir)
+    ;; Add all repos as fallback
+    (let ((repo-dirs (directory-files repos-dir t "^[^.]" t)))
+      (dolist (repo-dir repo-dirs)
+        (when (file-directory-p repo-dir)
+          (add-to-list 'load-path repo-dir))))))
 
-(message "[Server] Loading essential packages...")
+(message "[Server] Loading essential packages from Doom's straight...")
 
-;; Essential requires
+;; Essential requires (built-in)
 (require 'org)
 (require 'ox)
-
-;; Install required packages
-(ensure-package 'ox-hugo)
-(ensure-package 'dash)
-(ensure-package 'denote)
-(ensure-package 'citar)
-
-;; CRITICAL: Load org-cite and citar for bibliography support
-(require 'oc)           ;; org-cite
-(require 'oc-csl)       ;; CSL citation processor
-(require 'citar)        ;; citar frontend
-
-(message "[Server] Loading denote-explore dependencies...")
-
-;; Built-in packages
 (require 'cl-lib)
 (require 'seq)
 (require 'json)
 (require 'browse-url)
 
+;; Load required packages from Doom's straight repos
+(message "[Server] Loading packages from Doom...")
+(or (require 'dash nil t) (error "dash not found in Doom"))
+(or (require 'denote nil t) (error "denote not found in Doom"))
+(or (require 'ox-hugo nil t) (error "ox-hugo not found in Doom"))
+(or (require 'citar nil t) (error "citar not found in Doom"))
+(or (require 'parsebib nil t) (error "parsebib not found in Doom"))
+
+;; CRITICAL: Load org-cite and citar for bibliography support
+(require 'oc)           ;; org-cite
+(require 'oc-basic)     ;; basic citation processor
+(require 'oc-csl)       ;; CSL citation processor
+
 ;; Chart package (optional)
+(require 'chart nil t)
+
+;; denote-regexp (required by denote-explore)
+(require 'denote-regexp nil t)
+
+;; denote-explore (for macros like denote-explore-count-notes)
 (condition-case err
-    (require 'chart)
+    (progn
+      (require 'denote-explore)
+      (message "[Server] ✓ denote-explore loaded successfully"))
   (error
-   (message "[Server] WARNING: chart not available")))
+   (message "[Server] WARNING: denote-explore failed to load: %S" err)
+   (defun denote-explore-count-notes () "0")
+   (defun denote-explore-count-keywords () "0")))
 
-;; denote-regexp
-(unless (require 'denote-regexp nil t)
-  (let ((denote-regexp-paths (list
-                              (expand-file-name ".local/straight/build-30.1.90/denote-regexp" doom-emacs-dir)
-                              (expand-file-name ".local/straight/repos/denote-regexp" doom-emacs-dir))))
-    (dolist (path denote-regexp-paths)
-      (when (file-directory-p path)
-        (add-to-list 'load-path path)))
-    (condition-case err
-        (require 'denote-regexp)
-      (error
-       (message "[Server] WARNING: Could not load denote-regexp")))))
-
-;; denote-explore
-(unless (require 'denote-explore nil t)
-  (let ((search-paths (list
-                       (expand-file-name ".local/elpa/denote-explore" doom-emacs-dir)
-                       (expand-file-name ".local/straight/repos/denote-explore" doom-emacs-dir)
-                       (expand-file-name ".local/straight/build-30.1.90/denote-explore" doom-emacs-dir))))
-    (dolist (path search-paths)
-      (when (file-directory-p path)
-        (add-to-list 'load-path path)))
-    (condition-case err
-        (require 'denote-explore)
-      (error
-       (message "[Server] WARNING: denote-explore not loaded")
-       (defun denote-explore-count-notes () "0")
-       (defun denote-explore-count-keywords () "0")))))
+(message "[Server] ✓ All required packages loaded from Doom")
 
 ;; Set denote-directory
 (setq denote-directory (expand-file-name "~/org/"))
@@ -264,6 +266,13 @@ Returns meta, bib, notes, or test based on parent directory name."
 (defun denote-export-file (file)
   "Export single org FILE to Hugo markdown.
 This function is called via emacsclient."
+  ;; Increment file counter and check for GC
+  (setq denote-export-file-counter (1+ denote-export-file-counter))
+  (when (zerop (mod denote-export-file-counter denote-export-gc-interval))
+    (message "[Server] [GC] Running garbage collection at file #%d..." denote-export-file-counter)
+    (garbage-collect)
+    (message "[Server] [GC] Done"))
+  
   (condition-case err
       (let* ((dir (file-name-directory file))
              (dir-locals-file (expand-file-name ".dir-locals.el" dir))
@@ -465,6 +474,14 @@ This function handles filenames internally, avoiding shell quoting issues with N
       (message "[Directory] Export completed: %s" summary)
       summary)))
 
+;; ========== Memory Management ==========
+;; Counter for periodic garbage collection
+(defvar denote-export-file-counter 0
+  "Counter for tracking number of files processed by this server.")
+
+(defvar denote-export-gc-interval 100
+  "Run garbage collection every N files to prevent memory buildup.")
+
 ;; Set ready flag AFTER all initialization
 (setq denote-export-server-ready t)
 
@@ -473,6 +490,7 @@ This function handles filenames internally, avoiding shell quoting issues with N
 (message "[Server] Server name: %s" denote-export-server-name)
 (message "[Server] Export function: denote-export-file")
 (message "[Server] Ready flag: %s" denote-export-server-ready)
+(message "[Server] GC interval: every %d files" denote-export-gc-interval)
 (message "[Server] ========================================")
 
 ;; Keep server running

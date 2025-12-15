@@ -50,113 +50,92 @@
   (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
   (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
 
-;; Initialize package system
-(require 'package)
+;; CRITICAL: Disable package.el completely to prevent ELPA usage
 (setq package-enable-at-startup nil)
-(package-initialize)
+(setq package-archives nil)
+(fset 'package-initialize #'ignore)
+(fset 'package-install #'ignore)
+(fset 'package-refresh-contents #'ignore)
+(fset 'package-install-file #'ignore)
+(fset 'package-install-from-archive #'ignore)
 
-;; Add ELPA archives if needed
-(unless (assoc "melpa" package-archives)
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-  (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t))
+;; Helper function to find straight build directory (version-agnostic)
+(defun find-straight-build-dir ()
+  "Find the straight build directory, handling different Emacs versions."
+  (let ((straight-build-base (expand-file-name ".local/straight/" doom-emacs-dir)))
+    (when (file-directory-p straight-build-base)
+      (let ((build-dirs (directory-files straight-build-base t "^build-")))
+        (when build-dirs
+          ;; Return the most recent build directory
+          (car (sort build-dirs #'file-newer-than-file-p)))))))
 
-;; Helper function to require/install packages
-(defun ensure-package (package)
-  "Ensure PACKAGE is installed and loaded."
-  (unless (require package nil t)
-    (message "%s not found, attempting to install..." package)
-    (unless package-archive-contents
-      (package-refresh-contents))
-    (package-install package)
-    (require package)))
+;; Add Doom's straight paths to load-path AND load autoloads
+(let ((build-dir (find-straight-build-dir))
+      (repos-dir (expand-file-name ".local/straight/repos/" doom-emacs-dir)))
+  (when (and build-dir (file-directory-p build-dir))
+    ;; Add all package directories from build dir
+    (let ((pkg-dirs (directory-files build-dir t "^[^.]" t)))
+      (dolist (pkg-dir pkg-dirs)
+        (when (and (file-directory-p pkg-dir)
+                   (not (string-suffix-p ".el" pkg-dir)))
+          (add-to-list 'load-path pkg-dir)
+          ;; Load autoloads file if exists
+          (let ((autoload-file (expand-file-name 
+                                (concat (file-name-nondirectory pkg-dir) "-autoloads.el")
+                                pkg-dir)))
+            (when (file-exists-p autoload-file)
+              (load autoload-file nil t)))))))
+  (when (file-directory-p repos-dir)
+    ;; Add all repos as fallback
+    (let ((repo-dirs (directory-files repos-dir t "^[^.]" t)))
+      (dolist (repo-dir repo-dirs)
+        (when (file-directory-p repo-dir)
+          (add-to-list 'load-path repo-dir))))))
 
-;; Essential requires
+;; Verify package is available in load-path
+(defun verify-package-available (package)
+  "Verify PACKAGE is available in load-path before loading."
+  (let ((found nil))
+    (dolist (dir load-path)
+      (when (file-exists-p (expand-file-name (format "%s.el" package) dir))
+        (setq found t)))
+    (unless found
+      (error "Package %s not found in Doom's straight repos. Check installation." package))
+    found))
+
+;; Essential requires (built-in)
 (require 'org)
 (require 'ox)
-
-;; Install required packages
-(ensure-package 'ox-hugo)
-
-;; Install denote-explore dependencies in order
-;; (message "Installing denote-explore dependencies...")
-
-;; Built-in packages (should always be available)
 (require 'cl-lib)
 (require 'json)
 (require 'browse-url)
 
-;; External packages that need installation
-(ensure-package 'dash)
-(ensure-package 'denote)
-(ensure-package 'citar)  ;; Bibliography support
+;; Load required packages from Doom's straight repos
+;; If any package is missing, we want a clear error (NOT silent ELPA install)
+(message "Loading packages from Doom's straight repos...")
+(or (require 'dash nil t) (error "dash not found in Doom"))
+(or (require 'denote nil t) (error "denote not found in Doom"))
+(or (require 'ox-hugo nil t) (error "ox-hugo not found in Doom"))
+(or (require 'citar nil t) (error "citar not found in Doom"))
+(or (require 'parsebib nil t) (error "parsebib not found in Doom"))
 
-;; Chart package (may need separate installation)
+;; Chart package (optional)
+(require 'chart nil t)
+
+;; denote-regexp (required by denote-explore)
+(require 'denote-regexp nil t)
+
+;; denote-explore (for macros like denote-explore-count-notes)
 (condition-case err
-    (require 'chart)
+    (progn
+      (require 'denote-explore)
+      (message "✓ denote-explore loaded successfully"))
   (error
-   (message "chart not available, attempting to install...")
-   (condition-case install-err
-       (progn
-         (unless package-archive-contents
-           (package-refresh-contents))
-         (package-install 'chart)
-         (require 'chart))
-     (error
-      (message "WARNING: Could not install chart package: %S" install-err)
-      (message "  denote-explore may have limited functionality")))))
+   (message "WARNING: denote-explore failed to load: %S" err)
+   (defun denote-explore-count-notes () "0")
+   (defun denote-explore-count-keywords () "0")))
 
-;; denote-regexp (separate package in straight)
-(unless (require 'denote-regexp nil t)
-  ;; (message "denote-regexp not found, searching...")
-  (let ((denote-regexp-paths (list
-                              (expand-file-name ".local/straight/build-30.1.90/denote-regexp" doom-emacs-dir)
-                              (expand-file-name ".local/straight/repos/denote-regexp" doom-emacs-dir))))
-    (dolist (path denote-regexp-paths)
-      (when (file-directory-p path)
-        ;; (message "Found denote-regexp in: %s" path)
-        (add-to-list 'load-path path)))
-    (condition-case err
-        (require 'denote-regexp)
-      (error
-       (message "WARNING: Could not load denote-regexp: %S" err)))))
-
-;; Try to require denote-explore (for macros like denote-explore-count-notes)
-(unless (require 'denote-explore nil t)
-  ;; (message "denote-explore not found, searching in package directories...")
-
-  ;; Search in multiple possible locations
-  (let ((search-paths (list
-                       ;; Check doom-emacs-dir first
-                       (expand-file-name ".local/elpa/denote-explore" doom-emacs-dir)
-                       (expand-file-name ".local/straight/repos/denote-explore" doom-emacs-dir)
-                       (expand-file-name ".local/straight/build-30.1.90/denote-explore" doom-emacs-dir)
-                       ;; Fallback to user-emacs-directory
-                       (expand-file-name "denote-explore" (concat user-emacs-directory ".local/elpa/"))
-                       (expand-file-name "denote-explore" (concat user-emacs-directory "elpa/"))))
-        (found nil))
-
-    ;; Try to find existing installation
-    (dolist (path search-paths)
-      (when (and (not found) (file-directory-p path))
-        ;; (message "Found denote-explore in: %s" path)
-        (add-to-list 'load-path path)
-        (setq found t)))
-
-    ;; Try to load (denote must be already loaded)
-    (if found
-        (condition-case err
-            (progn
-              (require 'denote-explore)
-              ;; (message "Successfully loaded denote-explore")
-              )
-          (error
-           (message "WARNING: Failed to load denote-explore: %S" err)
-           (defun denote-explore-count-notes () "0")
-           (defun denote-explore-count-keywords () "0")))
-      ;; Not found in any path - use stub
-      (message "WARNING: denote-explore not found")
-      (defun denote-explore-count-notes () "0")
-      (defun denote-explore-count-keywords () "0"))))
+(message "✓ All required packages loaded from Doom")
 
 ;; Set denote-directory immediately after loading denote (critical for link resolution!)
 (setq denote-directory (expand-file-name "~/org/"))
@@ -191,7 +170,7 @@
   (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
 
 ;; Load export configuration (use original-doom-user-dir)
-(let ((export-config (expand-file-name "+denote-export.el" original-doom-user-dir)))
+(let ((export-config (expand-file-name "lisp/denote-export.el" original-doom-user-dir)))
   (if (file-exists-p export-config)
       (load export-config)
     (error "Export config not found: %s" export-config)))

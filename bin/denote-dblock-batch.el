@@ -43,58 +43,74 @@
   (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
   (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
 
-;; Initialize package system
-(require 'package)
+;; CRITICAL: Disable package.el completely to prevent ELPA usage
 (setq package-enable-at-startup nil)
-(package-initialize)
+(setq package-archives nil)
+(fset 'package-initialize #'ignore)
+(fset 'package-install (lambda (&rest _) (error "ELPA is disabled! Use Doom's straight packages only")))
+(fset 'package-refresh-contents (lambda (&rest _) (error "ELPA is disabled!")))
 
-;; Add ELPA archives
-(unless (assoc "melpa" package-archives)
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-  (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/") t))
+;; Helper function to find straight build directory (version-agnostic)
+(defun find-straight-build-dir ()
+  "Find the straight build directory, handling different Emacs versions."
+  (let ((straight-build-base (expand-file-name ".local/straight/" doom-emacs-dir)))
+    (when (file-directory-p straight-build-base)
+      (let ((build-dirs (directory-files straight-build-base t "^build-")))
+        (when build-dirs
+          ;; Return the most recent build directory
+          (car (sort build-dirs #'file-newer-than-file-p)))))))
 
-;; Helper function to require/install packages
-(defun ensure-package (package)
-  "Ensure PACKAGE is installed and loaded."
-  (unless (require package nil t)
-    (message "[INSTALL] %s not found, installing..." package)
-    (unless package-archive-contents
-      (package-refresh-contents))
-    (package-install package)
-    (require package)))
+;; Add Doom's straight paths to load-path AND load autoloads
+(let ((build-dir (find-straight-build-dir))
+      (repos-dir (expand-file-name ".local/straight/repos/" doom-emacs-dir)))
+  (when (and build-dir (file-directory-p build-dir))
+    ;; Add all package directories from build dir
+    (let ((pkg-dirs (directory-files build-dir t "^[^.]" t)))
+      (dolist (pkg-dir pkg-dirs)
+        (when (and (file-directory-p pkg-dir)
+                   (not (string-suffix-p ".el" pkg-dir)))
+          (add-to-list 'load-path pkg-dir)
+          ;; Load autoloads file if exists
+          (let ((autoload-file (expand-file-name 
+                                (concat (file-name-nondirectory pkg-dir) "-autoloads.el")
+                                pkg-dir)))
+            (when (file-exists-p autoload-file)
+              (load autoload-file nil t)))))))
+  (when (file-directory-p repos-dir)
+    ;; Add all repos as fallback
+    (let ((repo-dirs (directory-files repos-dir t "^[^.]" t)))
+      (dolist (repo-dir repo-dirs)
+        (when (file-directory-p repo-dir)
+          (add-to-list 'load-path repo-dir))))))
 
-;; Essential requires
+;; Essential requires (built-in)
 (require 'org)
 
-;; Install denote and dependencies
-(ensure-package 'dash)
-(ensure-package 'denote)
+;; Load required packages from Doom's straight repos
+(message "[DBLOCK] Loading packages from Doom...")
+(or (require 'dash nil t) (error "dash not found in Doom"))
+(or (require 'denote nil t) (error "denote not found in Doom"))
 
-;; CRITICAL: Load denote-org for dblock functions (denote-links, denote-backlinks)
+;; CRITICAL: Load denote-org-extras for dblock functions
 ;; This provides org-dblock-write:denote-links and org-dblock-write:denote-backlinks
 (condition-case err
     (progn
-      (ensure-package 'denote-org)
-      (message "[OK] denote-org loaded (dblock functions available)"))
+      (require 'denote-org-extras)
+      (message "[OK] denote-org-extras loaded (dblock functions available)"))
   (error
-   (message "[WARN] denote-org not available: %s" err)
-   ;; Fallback: try loading from straight repos
-   (let ((denote-org-path (expand-file-name "straight/repos/denote/denote-org-extras.el" doom-user-dir)))
-     (when (file-exists-p denote-org-path)
-       (load denote-org-path nil t)
-       (message "[OK] denote-org-extras loaded from straight")))))
+   (message "[WARN] denote-org-extras not available: %s" err)))
 
 ;; Load denote-explore for extended backlinks support
-(let ((denote-regexp-path (expand-file-name "straight/repos/denote-explore/denote-regexp.el" doom-user-dir)))
-  (when (file-exists-p denote-regexp-path)
-    (load denote-regexp-path nil t)))
+(require 'denote-regexp nil t)
 
 (condition-case err
     (progn
-      (ensure-package 'denote-explore)
+      (require 'denote-explore)
       (message "[OK] denote-explore loaded"))
   (error
    (message "[WARN] denote-explore not available: %s" err)))
+
+(message "[OK] All required packages loaded from Doom")
 
 ;; Set denote directory from command line or default
 (defvar org-directory (expand-file-name "~/org"))
