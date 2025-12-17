@@ -39,7 +39,7 @@ via =calendar-read-date=."
                         (number-sequence 0 6)))
          (regexp (mapconcat (lambda (d) (concat d "T*")) dates "\\\\|")))
     (insert
-     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date nil\n#+END:\n"
              regexp))))
 
 ;;; provide
