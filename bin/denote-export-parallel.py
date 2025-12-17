@@ -197,7 +197,7 @@ def export_file_via_daemon(args):
             ['emacsclient', '-s', daemon_name, '--eval', elisp_cmd],
             capture_output=True,
             text=True,
-            timeout=180
+            timeout=360
         )
 
         basename = file_path.name

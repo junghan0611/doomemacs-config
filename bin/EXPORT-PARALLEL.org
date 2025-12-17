@@ -385,7 +385,7 @@ def export_file_via_daemon(args):
             ['emacsclient', '-s', daemon_name, '--eval', elisp_cmd],
             capture_output=True,
             text=True,
-            timeout=180
+            timeout=360
         )
 
         basename = file_path.name
@@ -503,7 +503,7 @@ with open('/tmp/failed-files-paths.txt', 'r') as f:
 
 print(f"[Retry] Found {len(failed_files)} failed files")
 print(f"[Retry] Using daemon: denote-export-daemon-1")
-print(f"[Retry] Timeout: 180 seconds\n")
+print(f"[Retry] Timeout: 360 seconds\n")
 
 success = 0
 errors = 0
@@ -523,7 +523,7 @@ for idx, file_path in enumerate(failed_files, 1):
             ['emacsclient', '-s', 'denote-export-daemon-1', '--eval', elisp_cmd],
             capture_output=True,
             text=True,
-            timeout=180  # 180 seconds timeout
+            timeout=360  # 180 seconds timeout
         )
 
         if result.returncode == 0 and 'SUCCESS:' in result.stdout:
@@ -533,7 +533,7 @@ for idx, file_path in enumerate(failed_files, 1):
             print(f"  ✗ Failed", flush=True)
             errors += 1
     except subprocess.TimeoutExpired:
-        print(f"  ✗ Timeout (180s)", flush=True)
+        print(f"  ✗ Timeout (360s)", flush=True)
         errors += 1
     except Exception as e:
         print(f"  ✗ Exception: {e}", flush=True)
@@ -564,7 +564,7 @@ python3 /tmp/retry-failed.py
 - 시간: 2206초 (약 37분)
 - 속도: 0.24 files/sec
 
-**** 2차 개별 재처리 (180초 timeout)
+**** 2차 개별 재처리 (360초 timeout)
 - 성공: 17/17 (100%)
 - 실패: 0개
 - 추가 시간: 약 8분
@@ -575,7 +575,7 @@ python3 /tmp/retry-failed.py
 - **실패**: 0개
 - **총 시간**: 약 45분 (37분 + 재시도 8분)
 
-**** v2 개선 (2025-10-31): Timeout 180초로 증가
+**** v2 개선 (2025-10-31): Timeout 360초로 증가
 - **전략**: 재시도 불필요하도록 충분한 timeout 설정
 - **예상 결과**: 1회 실행으로 100% 성공
 - **장점**: 워크플로우 단순화, 실패 파일 추출/재시도 불필요
@@ -588,7 +588,7 @@ python3 /tmp/retry-failed.py
 - syntopicon 시리즈
 - 프로그래밍 코딩
 
-→ 60초 timeout으로는 부족, 180초로 재시도 시 모두 성공
+→ 60초 timeout으로는 부족, 360초로 재시도 시 모두 성공
 
 ** 성능 비교
 
@@ -597,7 +597,7 @@ python3 /tmp/retry-failed.py
 | Makefile (단일) | 1 | 60s | 0.1 files/sec | 88분 |
 | Makefile (멀티) | 4 | 60s | 0.27 files/sec | 32분 |
 | **Python (멀티, v1)** | **4** | **60s** | **0.24 files/sec** | **37분 + 재시도 8분** |
-| **Python (멀티, v2)** | **4** | **180s** | **0.24 files/sec** | **37분 (100%)** |
+| **Python (멀티, v2)** | **4** | **360s** | **0.24 files/sec** | **37분 (100%)** |
 
 ** 핵심 장점
 

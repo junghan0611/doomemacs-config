@@ -32,7 +32,7 @@ def main():
 
     print(f"[Retry] Found {len(failed_files)} failed files")
     print(f"[Retry] Using daemon: denote-export-daemon-1")
-    print(f"[Retry] Timeout: 180 seconds\n")
+    print(f"[Retry] Timeout: 360 seconds\n")
 
     success = 0
     errors = 0
@@ -52,7 +52,7 @@ def main():
                 ['emacsclient', '-s', 'denote-export-daemon-1', '--eval', elisp_cmd],
                 capture_output=True,
                 text=True,
-                timeout=180  # 180 seconds timeout
+                timeout=360  # 180 seconds timeout
             )
 
             if result.returncode == 0 and 'SUCCESS:' in result.stdout:
@@ -64,7 +64,7 @@ def main():
                     print(f"    Error: {result.stderr[:200]}", flush=True)
                 errors += 1
         except subprocess.TimeoutExpired:
-            print(f"  ✗ Timeout (180s)", flush=True)
+            print(f"  ✗ Timeout (360s)", flush=True)
             errors += 1
         except Exception as e:
             print(f"  ✗ Exception: {e}", flush=True)
