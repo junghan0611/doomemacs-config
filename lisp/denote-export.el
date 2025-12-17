@@ -105,6 +105,7 @@
 (when (require 'citar nil t)
   (when (boundp 'config-bibfiles)
     (setq citar-bibliography config-bibfiles)
+    (setq bibtex-files config-bibfiles)
     (setq org-cite-global-bibliography config-bibfiles))
 
   ;; CSL styles directory
@@ -113,7 +114,13 @@
     (setq citar-citeproc-csl-styles-dir (concat org-directory ".csl")))
 
   ;; Default CSL style
-  (setq citar-citeproc-csl-style "apa.csl"))
+;; Setup export processor; default csl/citeproc-el, with biblatex for latex
+  (after! oc
+    (require 'citar-citeproc)
+    (setq citar-citeproc-csl-style "apa.csl")
+    (setq org-cite-csl-link-cites nil) ; default t
+    (setq org-cite-export-processors '((latex biblatex) (t csl))))
+  )
 
 ;; Zero-width space handling
 ;; charset: unicode (Unicode (ISO10646)) code point in charset: 0xA0
@@ -550,7 +557,7 @@ Export File Name is the denote identifier."
              "\n#+export_file_name: %s.md"
              (denote-retrieve-filename-identifier buffer-file-name)))))
 
-;;;; TODO: pass CLI integration
+;;;; pass CLI integration
 ;; Future enhancement: Integrate password-store for secret validation
 ;; (defun my/validate-secrets-before-export () ...)
 

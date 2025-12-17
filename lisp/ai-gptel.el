@@ -45,18 +45,17 @@
 (defconst gptel--openrouter-models
   '(
     ;; https://openrouter.ai/provider/deepseek
-    ;; Created Jan 20, 2025 163,840 context $0.40/M input tokens $2/M output tokens
-    (deepseek/deepseek-r1-0528
+    (deepseek/deepseek-v3.2-speciale
      :capabilities (tool reasoning)
-     :context-window 164
-     :input-cost 0.55
-     :output-cost 2.19)
-
-    (deepseek/deepseek-chat-v3-0324
-     :capabilities (tool)
      :context-window 131
-     :input-cost 0.27
-     :output-cost 1.1)
+     :input-cost 0.28
+     :output-cost 0.42)
+
+    (deepseek/deepseek-v3.2
+     :capabilities (tool reasoning)
+     :context-window 131
+     :input-cost 0.25
+     :output-cost 0.38)
 
     ;; https://openrouter.ai/google/gemini-2.5-pro
     (google/gemini-2.5-pro
@@ -83,42 +82,26 @@
      :output-cost 10
      :cutoff-date "2024-09")
 
-    (openai/gpt-oss-120b
-     :description "gpt-oss-120b is an open-weight, 117B-parameter Mixture-of-Experts (MoE) language model from OpenAI designed for high-reasoning, agentic, and general-purpose production use cases."
-     :capabilities (media tool-use json url)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
-     :context-window 131
-     :input-cost 0.072
-     :output-cost 0.28
-     :cutoff-date "2025-08")
-
-    (openai/gpt-5-mini
-     :description "Faster, more cost-efficient version of GPT-5"
-     :capabilities (media json url)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
-     :context-window 400
-     :input-cost 0.25
-     :output-cost 2.0
-     :cutoff-date "2024-09")
-
     ;; https://openrouter.ai/anthropic/claude-sonnet-4
-    (anthropic/claude-sonnet-4
-     :description "Hybrid model capable of standard thinking and extended thinking modes"
-     :capabilities (media tool-use cache)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-     :context-window 200
-     :input-cost 3
-     :output-cost 15
-     :cutoff-date "2025-05")
+    ;; (anthropic/claude-sonnet-4.5
+    ;;  :description "Hybrid model capable of standard thinking and extended thinking modes"
+    ;;  :capabilities (media tool-use cache)
+    ;;  :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
+    ;;  :context-window 200
+    ;;  :input-cost 3
+    ;;  :output-cost 15
+    ;;  :cutoff-date "2025-05")
 
-    (anthropic/claude-opus-4.1
-     :description "Hybrid model capable of standard thinking and extended thinking modes"
-     :capabilities (media tool-use cache)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-     :context-window 200
-     :input-cost 15
-     :output-cost 75
-     :cutoff-date "2025-07")))
+    ;; (anthropic/claude-opus-4.5
+    ;;  :description "Hybrid model capable of standard thinking and extended thinking modes"
+    ;;  :capabilities (media tool-use cache)
+    ;;  :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
+    ;;  :context-window 200
+    ;;  :input-cost 15
+    ;;  :output-cost 25
+    ;;  :cutoff-date "2025-12")
+    )
+  )
 
 (setq gptel-openrouter-backend
       (gptel-make-openai "OpenRouter"
@@ -129,7 +112,12 @@
         :models gptel--openrouter-models))
 
 (setq gptel-backend gptel-openrouter-backend)
-(setq gptel-model 'google/gemini-2.5-flash)
+(setq gptel-model 'deepseek/deepseek-v3.2)
+;; (setq gptel-model 'google/gemini-2.5-flash)
+
+(gptel-make-deepseek "DeepSeek"       ;Any name you want
+  :stream t                           ;for streaming responses
+  :key #'gptel-api-key)               ;can be a function that returns the key
 
 ;;;; gptel-mode-hook
 

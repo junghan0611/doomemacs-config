@@ -126,7 +126,7 @@
        emacs-lisp        ; drown in parentheses
        ;; plantuml            ; diagrams for confusing people more
        ;; graphviz
-       (latex +cdlatex)    ; writing papers in Emacs has never been so fun
+       latex             ; writing papers in Emacs has never been so fun
        markdown          ; writing docs for people to ignore
        (org                         ; organize your plain life in plain text
         +hugo                     ; use Emacs for hugo blogging

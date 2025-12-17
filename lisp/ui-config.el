@@ -121,8 +121,10 @@
 
 (use-package! outli
   :defer 1
-  :init (setq outli-speed-commands nil)
-  :hook (prog-mode . outli-mode)
+  :init
+  (setq outli-speed-commands nil)
+  (add-hook 'prog-mode-hook #'outli-mode)
+  (add-hook 'conf-mode-hook #'outli-mode)
   :config
   ;; (add-to-list 'outli-heading-config '(tex-mode "%%" ?% t))
   (add-to-list 'outli-heading-config '(js2-mode "//" ?\/ t))
@@ -132,6 +134,8 @@
   (add-to-list 'outli-heading-config '(typescript-ts-mode "//" ?\/ t))
   (add-to-list 'outli-heading-config '(python-mode "##" ?# t))
   (add-to-list 'outli-heading-config '(python-ts-mode "##" ?# t))
+  (add-to-list 'outli-heading-config '(yaml-mode "##" ?# t))
+  (add-to-list 'outli-heading-config '(yaml-ts-mode "##" ?# t))
   (add-to-list 'outli-heading-config '(awk-mode "##" ?# t))
   (add-to-list 'outli-heading-config '(awk-ts-mode "##" ?# t))
   (add-to-list 'outli-heading-config '(elixir-mode "##" ?# t))

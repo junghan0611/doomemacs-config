@@ -47,9 +47,9 @@
         (file-name-concat org-directory (concat "." system-name "-orgids"))) ; ".org-id-locations"))
 
   ;; overide here! important
-  ;; (setq org-insert-heading-respect-content nil) ; doom t
+  (setq org-insert-heading-respect-content nil) ; doom t
   ;; org-indent-mode 사용하면 org-hide-leading-stars 자동 on
-  ;; (setq org-hide-leading-stars nil) ; doom t
+  (setq org-hide-leading-stars nil) ; doom t
   )
 
 (after! org
@@ -342,9 +342,9 @@
 
 (progn
   (require 'citar)
-  ;; MOVE to +denote-export.el
-  ;; (setq citar-bibliography config-bibfiles)
-  ;; (setq org-cite-global-bibliography config-bibfiles)
+  (require 'bibtex)
+  (setq citar-bibliography config-bibfiles)
+  (setq org-cite-global-bibliography config-bibfiles)
 
   ;; ;; use #+cite_export: csl apa.csl
   ;; (setq org-cite-csl-styles-dir (concat org-directory ".csl"))
@@ -355,20 +355,25 @@
 
   ;; (require 'citar-citeproc)
   ;; (setq citar-format-reference-function 'citar-citeproc-format-reference)
+  (setq bibtex-files config-bibfiles)
   (setq citar-format-reference-function 'citar-format-reference)
 
-  (setq
-   citar-templates
-   '((main . ;; [${urldate:10}]
-      "[${dateadded:10}] \{${datemodified:10}\} ${author editor:20} ${translator:8} (${date year issued:4}) @${=key= id:16} ${title:68} ")  ; 2024-09-12 김정한
-     (suffix
-      . "${shorttitle:25} ${=type=:10} ${namea:16} ${url:20} ${tags keywords:*}") ; 2024-11-17 add url
-     (preview
-      .
-      "${title} :${year issued date:4}\n- ${author} ${translator} ${namea}\n- ${abstract}\n- ${shorttitle}") ; citar-copy-reference
-     (note . "#+title: ${author translator:10}, ${title}")))
+  (setq citar-templates
+        '((main
+           .
+           ;; [${urldate:10}]
+           "'${dateadded:10} ${author editor:19} ${title:49} ${date year issued:4} ${translator:7} №${=key= id:17}")  ; 2024-09-12 김정한
+          (suffix
+           . "#${datemodified:10} ${=type=:10} ${shorttitle:19} ${namea:16} ${url:19} ${tags keywords:*}") ; 2024-11-17 add url
+          (preview
+           .
+           "*** ${title}\n${shorttitle}\n${author} ${translator} ${namea} ${year issued date:4}\n\n${abstract}\n") ; citar-copy-reference
+          (note . "#+title: ${author translator:10}, ${title}")))
+
 
   (add-hook 'bibtex-mode-hook 'display-line-numbers-mode)
+  (add-hook 'bibtex-mode-hook 'visual-line-mode)
+
   (setq bibtex-dialect 'biblatex)
   (setq bibtex-align-at-equal-sign t)
   (setq bibtex-text-indentation 20)

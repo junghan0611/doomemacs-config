@@ -117,6 +117,68 @@
     (citar-denote-mode))
   )
 
+;;;; Dired dblock update
+
+(progn
+  (defun my/denote-dblock-update-file (file)
+    "Update all dblocks in FILE and save."
+    (let ((buf (find-file-noselect file)))
+      (with-current-buffer buf
+        (save-excursion
+          (goto-char (point-min))
+          (when (re-search-forward "^#\\+BEGIN:" nil t)
+            (goto-char (point-min))
+            (org-update-all-dblocks)
+            (save-buffer)
+            (message "[OK] Updated dblocks: %s" (file-name-nondirectory file)))))
+      ;; Don't kill buffer if it was already open
+      (unless (get-file-buffer file)
+        (kill-buffer buf))))
+
+;;;###autoload
+  (defun my/denote-dblock-update-marked-files ()
+    "Update dblocks in all marked files in Dired.
+If no files are marked, update the file at point."
+    (interactive)
+    (unless (derived-mode-p 'dired-mode)
+      (user-error "Not in Dired mode"))
+    (let* ((files (dired-get-marked-files nil nil nil t))
+           ;; Handle single file case (returns t as first element)
+           (files (if (eq (car files) t)
+                      (cdr files)
+                    files))
+           (org-files (seq-filter (lambda (f) (string-suffix-p ".org" f)) files))
+           (total (length org-files))
+           (count 0))
+      (if (zerop total)
+          (message "No org files selected")
+        (message "Updating dblocks in %d files..." total)
+        (dolist (file org-files)
+          (setq count (1+ count))
+          (message "[%d/%d] %s" count total (file-name-nondirectory file))
+          (my/denote-dblock-update-file file))
+        (message "Done! Updated %d files." total))))
+
+;;;###autoload
+  (defun my/denote-dblock-update-current-buffer ()
+    "Update all dblocks in current buffer."
+    (interactive)
+    (unless (derived-mode-p 'org-mode)
+      (user-error "Not in Org mode"))
+    (save-excursion
+      (goto-char (point-min))
+      (if (re-search-forward "^#\\+BEGIN:" nil t)
+          (progn
+            (goto-char (point-min))
+            (org-update-all-dblocks)
+            (message "Dblocks updated in %s" (buffer-name)))
+        (message "No dblocks found in %s" (buffer-name)))))
+
+  ;; Dired keybinding
+  (after! dired
+    (define-key dired-mode-map (kbd "C-c d u") #'my/denote-dblock-update-marked-files))
+  )
+
 ;;;; denote-explore
 
 (use-package! denote-explore)

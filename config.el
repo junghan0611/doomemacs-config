@@ -620,6 +620,9 @@ Returns t on success, nil if notify-send is not available."
 
 (defun my/enable-alice-keyboard-toggle-input-method ()
   (interactive)
+
+  ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
+
   (map! (:map vertico-map
               "`"   #'toggle-input-method)
         (:map vterm-mode-map
@@ -630,7 +633,10 @@ Returns t on success, nil if notify-send is not available."
               "`"   #'toggle-input-method)
         (:map minibuffer-local-map
               "`"   #'toggle-input-method)
+        (:map agent-shell-mode-map
+         :i "`" #'toggle-input-method)
         (:map org-mode-map
-              "`"   #'toggle-input-method)))
+         :i "`" #'toggle-input-method))
+  )
 
 ;;; END
