@@ -154,6 +154,7 @@
 
 ;; Use junghan0611/efrit-ko fork with OpenRouter backend support
 (package! efrit :recipe (:host github :repo "junghan0611/efrit" :files ("lisp/*.el")))
+(package! beads :recipe (:host github :repo "r0man/beads.el"))
 
 ;;;;; ACP (Agent Client Protocol)
 

@@ -193,19 +193,30 @@
   (setq efrit-performance-cache-ttl 300) ; Cache for 5 minutes
   (setq efrit-performance-max-sessions 10)
   (setq efrit-async-max-work-log-entries 50)
+)
 
-  ;; Keybindings
-  (map! :leader
-        (:prefix ("e" . "efrit")
-         :desc "Chat" "c" #'efrit-chat
-         :desc "Do (sync)" "d" #'efrit-do
-         :desc "Do (async)" "D" #'efrit-do-async
-         :desc "Unified" "u" #'efrit-unified-do
-         :desc "Streamlined" "s" #'efrit-streamlined-send
-         :desc "Start queue" "q" #'efrit-remote-queue-start
-         :desc "Queue status" "Q" #'efrit-remote-queue-status
-         :desc "Dashboard" "b" #'efrit-dashboard
-         :desc "Performance" "p" #'efrit-performance-show-stats)))
+;;;; Beads
+
+(use-package! beads
+  :defer 2
+  :commands (beads beads-list beads-ready beads-show beads-create)
+  ;; :bind ("C-c b" . beads)
+  :hook (doom-after-init . beads-eldoc-mode))  ; Enable eldoc support
+
+;;;; Efrit + Beads Keybindings
+
+(map! :leader
+      (:prefix ("3" . "efrit/beads")
+       :desc "beads" "3" #'beads
+       :desc "Chat" "c" #'efrit-chat
+       :desc "Do (sync)" "d" #'efrit-do
+       :desc "Do (async)" "D" #'efrit-do-async
+       :desc "Unified" "u" #'efrit-unified-do
+       :desc "Streamlined" "s" #'efrit-streamlined-send
+       :desc "Start queue" "q" #'efrit-remote-queue-start
+       :desc "Queue status" "Q" #'efrit-remote-queue-status
+       :desc "Dashboard" "b" #'efrit-dashboard
+       :desc "Performance" "p" #'efrit-performance-show-stats))
 
 ;;;; TODO MCP (Model Context Protocol)
 
