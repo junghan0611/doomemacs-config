@@ -28,7 +28,8 @@
 (defvar denote-export-server-name "denote-export-server"
   "Unique name for the Denote export server to avoid conflicts.")
 
-;; Minimize startup time
+;; Minimize startup time (will be reset after initialization)
+(defvar denote-export--original-gc-threshold gc-cons-threshold)
 (setq gc-cons-threshold most-positive-fixnum)
 (setq load-prefer-newer t)
 
@@ -272,119 +273,127 @@ This function is called via emacsclient."
     (message "[Server] [GC] Running garbage collection at file #%d..." denote-export-file-counter)
     (garbage-collect)
     (message "[Server] [GC] Done"))
-  
-  (condition-case err
-      (let* ((dir (file-name-directory file))
-             (dir-locals-file (expand-file-name ".dir-locals.el" dir))
-             (dir-locals-settings nil)
-             (denote-id (extract-denote-id-from-filename file)))
 
-        ;; Verify Denote ID exists
-        (unless denote-id
-          (error "No Denote ID found in filename: %s" file))
+  (let ((buf nil)
+        (result nil))
+    (condition-case err
+        (let* ((dir (file-name-directory file))
+               (dir-locals-file (expand-file-name ".dir-locals.el" dir))
+               (dir-locals-settings nil)
+               (denote-id (extract-denote-id-from-filename file)))
 
-        ;; Parse .dir-locals.el if exists
-        (when (file-exists-p dir-locals-file)
-          (with-temp-buffer
-            (insert-file-contents dir-locals-file)
-            (let ((locals (read (current-buffer))))
-              (setq dir-locals-settings (cdr (assoc 'org-mode locals))))))
+          ;; Verify Denote ID exists
+          (unless denote-id
+            (error "No Denote ID found in filename: %s" file))
 
-        ;; Open file and apply settings
-        (with-current-buffer (find-file-noselect file)
-          ;; CRITICAL: Ensure org-mode is active (always call to reinitialize)
-          (org-mode)
+          ;; Parse .dir-locals.el if exists
+          (when (file-exists-p dir-locals-file)
+            (with-temp-buffer
+              (insert-file-contents dir-locals-file)
+              (let ((locals (read (current-buffer))))
+                (setq dir-locals-settings (cdr (assoc 'org-mode locals))))))
 
-          ;; Apply dir-locals settings
-          (when dir-locals-settings
-            (dolist (setting dir-locals-settings)
-              (when (and (consp setting)
-                         (not (eq (car setting) 'eval)))
-                (let* ((var-name (car setting))
-                       (original-value (cdr setting))
-                       (expanded-value (if (and (stringp original-value)
-                                                (string-prefix-p "~" original-value))
-                                           (expand-file-name original-value)
-                                         original-value)))
-                  ;; Use setq-local to properly override global settings
-                  (set (make-local-variable var-name) expanded-value)
-                  (set var-name expanded-value)))))
+          ;; Open file and save buffer reference for cleanup
+          (setq buf (find-file-noselect file))
 
-          ;; CRITICAL: Force set org-hugo-section from directory path
-          ;; This overrides .dir-locals.el to ensure correct section
-          (let ((computed-section (get-org-hugo-section-from-path file)))
-            ;; Set both local and global to ensure ox-hugo picks it up
-            (set (make-local-variable 'org-hugo-section) computed-section)
-            (setq org-hugo-section computed-section)
-            (message "[Server] File: %s" (file-name-nondirectory file))
-            (message "[Server] Computed section: %s" computed-section)
-            (message "[Server] Actual org-hugo-section: %s" org-hugo-section))
+          (unwind-protect
+              (with-current-buffer buf
+                ;; CRITICAL: Ensure org-mode is active (always call to reinitialize)
+                (org-mode)
 
-          ;; Verify required variables
-          (unless org-hugo-base-dir
-            (error "org-hugo-base-dir is nil!"))
-          (unless org-hugo-section
-            (error "org-hugo-section is nil!"))
+                ;; Apply dir-locals settings
+                (when dir-locals-settings
+                  (dolist (setting dir-locals-settings)
+                    (when (and (consp setting)
+                               (not (eq (car setting) 'eval)))
+                      (let* ((var-name (car setting))
+                             (original-value (cdr setting))
+                             (expanded-value (if (and (stringp original-value)
+                                                      (string-prefix-p "~" original-value))
+                                                 (expand-file-name original-value)
+                                               original-value)))
+                        ;; Use setq-local to properly override global settings
+                        (set (make-local-variable var-name) expanded-value)
+                        (set var-name expanded-value)))))
 
-          ;; Force expand tilde before export
-          (when (and org-hugo-base-dir (string-prefix-p "~" org-hugo-base-dir))
-            (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
+                ;; CRITICAL: Force set org-hugo-section from directory path
+                ;; This overrides .dir-locals.el to ensure correct section
+                (let ((computed-section (get-org-hugo-section-from-path file)))
+                  ;; Set both local and global to ensure ox-hugo picks it up
+                  (set (make-local-variable 'org-hugo-section) computed-section)
+                  (setq org-hugo-section computed-section)
+                  (message "[Server] File: %s" (file-name-nondirectory file))
+                  (message "[Server] Computed section: %s" computed-section)
+                  (message "[Server] Actual org-hugo-section: %s" org-hugo-section))
 
-          (message "[Server] Before export - section: %s, base-dir: %s"
-                   org-hugo-section org-hugo-base-dir)
+                ;; Verify required variables
+                (unless org-hugo-base-dir
+                  (error "org-hugo-base-dir is nil!"))
+                (unless org-hugo-section
+                  (error "org-hugo-section is nil!"))
 
-          ;; Export
-          (let* ((result (condition-case export-err
-                             (org-hugo-export-to-md)
-                           (error
-                            (format "ERROR:%s:%s" file (error-message-string export-err)))))
-                 (final-result result))
+                ;; Force expand tilde before export
+                (when (and org-hugo-base-dir (string-prefix-p "~" org-hugo-base-dir))
+                  (setq-local org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
 
-            ;; If export succeeded, rename to Denote ID and add date to frontmatter
-            (when (and (stringp result)
-                       (not (string-prefix-p "ERROR:" result))
-                       (file-exists-p result))
-              (let* ((result-dir (file-name-directory result))
-                     (target-file (expand-file-name (concat denote-id ".md") result-dir)))
-                ;; Rename exported file to Denote ID
-                (rename-file result target-file t)
+                (message "[Server] Before export - section: %s, base-dir: %s"
+                         org-hugo-section org-hugo-base-dir)
 
-                ;; Add date to frontmatter from Denote ID (only if not present)
-                ;; Format: 20230521T215600 -> 2023-05-21
-                (when (string-match "\\([0-9]\\{4\\}\\)\\([0-9]\\{2\\}\\)\\([0-9]\\{2\\}\\)" denote-id)
-                  (let ((date-str (format "%s-%s-%s"
-                                        (match-string 1 denote-id)
-                                        (match-string 2 denote-id)
-                                        (match-string 3 denote-id))))
-                    (with-temp-file target-file
-                      (insert-file-contents target-file)
-                      (goto-char (point-min))
-                      ;; Find frontmatter boundaries
-                      (when (re-search-forward "^---\n" nil t)
-                        (let ((frontmatter-start (point)))
-                          (when (re-search-forward "^---\n" nil t)
-                            ;; Check if date: already exists in frontmatter
-                            (goto-char frontmatter-start)
-                            (unless (re-search-forward "^date:" (match-end 0) t)
-                              ;; No date field found, add it
-                              (goto-char (match-beginning 0))
-                              (insert (format "date: %s\n" date-str)))))))))
+                ;; Export
+                (let* ((export-result (condition-case export-err
+                                          (org-hugo-export-to-md)
+                                        (error
+                                         (format "ERROR:%s:%s" file (error-message-string export-err)))))
+                       (final-result export-result))
 
-                (setq final-result target-file)))
+                  ;; If export succeeded, rename to Denote ID and add date to frontmatter
+                  (when (and (stringp export-result)
+                             (not (string-prefix-p "ERROR:" export-result))
+                             (file-exists-p export-result))
+                    (let* ((result-dir (file-name-directory export-result))
+                           (target-file (expand-file-name (concat denote-id ".md") result-dir)))
+                      ;; Rename exported file to Denote ID
+                      (rename-file export-result target-file t)
 
-            (kill-buffer)
-            (if (stringp final-result)
-                (if (string-prefix-p "ERROR:" final-result)
-                    ;; Error case
-                    final-result
-                  ;; Success case - return formatted success message
-                  (format "SUCCESS:%s:%s" file final-result))
-              ;; Export returned nil
-              (format "ERROR:%s:Export returned nil" file))))
-        )
-    (error
-     (message "[Server] ✗ Error: %s" (error-message-string err))
-     nil)))
+                      ;; Add date to frontmatter from Denote ID (only if not present)
+                      ;; Format: 20230521T215600 -> 2023-05-21
+                      (when (string-match "\\([0-9]\\{4\\}\\)\\([0-9]\\{2\\}\\)\\([0-9]\\{2\\}\\)" denote-id)
+                        (let ((date-str (format "%s-%s-%s"
+                                                (match-string 1 denote-id)
+                                                (match-string 2 denote-id)
+                                                (match-string 3 denote-id))))
+                          (with-temp-file target-file
+                            (insert-file-contents target-file)
+                            (goto-char (point-min))
+                            ;; Find frontmatter boundaries
+                            (when (re-search-forward "^---\n" nil t)
+                              (let ((frontmatter-start (point)))
+                                (when (re-search-forward "^---\n" nil t)
+                                  ;; Check if date: already exists in frontmatter
+                                  (goto-char frontmatter-start)
+                                  (unless (re-search-forward "^date:" (match-end 0) t)
+                                    ;; No date field found, add it
+                                    (goto-char (match-beginning 0))
+                                    (insert (format "date: %s\n" date-str)))))))))
+
+                      (setq final-result target-file)))
+
+                  (setq result
+                        (if (stringp final-result)
+                            (if (string-prefix-p "ERROR:" final-result)
+                                final-result
+                              (format "SUCCESS:%s:%s" file final-result))
+                          (format "ERROR:%s:Export returned nil" file)))))
+            ;; CLEANUP: Always kill buffer, even on error
+            (when (buffer-live-p buf)
+              (kill-buffer buf))))
+      (error
+       (message "[Server] ✗ Error: %s" (error-message-string err))
+       ;; Ensure buffer cleanup on outer error too
+       (when (and buf (buffer-live-p buf))
+         (kill-buffer buf))
+       (setq result nil)))
+    result))
 
 ;; Batch export function - process list of files independently
 (defun denote-export-batch-files (files &optional log-file)
@@ -422,7 +431,7 @@ Each server processes its own list independently."
            (duration (float-time (time-subtract end-time start-time)))
            (speed (if (> duration 0) (/ total duration) 0))
            (summary (format "Batch completed: %d success, %d errors, %.1fs (%.3f files/sec)"
-                           success errors duration speed)))
+                            success errors duration speed)))
 
       (message "[Batch] %s" summary)
       (when log-buffer
@@ -479,8 +488,14 @@ This function handles filenames internally, avoiding shell quoting issues with N
 (defvar denote-export-file-counter 0
   "Counter for tracking number of files processed by this server.")
 
-(defvar denote-export-gc-interval 100
+(defvar denote-export-gc-interval 50
   "Run garbage collection every N files to prevent memory buildup.")
+
+;; CRITICAL: Reset gc-cons-threshold to reasonable value after initialization
+;; 16MB is a good balance between performance and memory usage
+(setq gc-cons-threshold (* 16 1024 1024))
+(garbage-collect)  ; Force initial GC
+(message "[Server] gc-cons-threshold reset to 16MB, initial GC done")
 
 ;; Set ready flag AFTER all initialization
 (setq denote-export-server-ready t)

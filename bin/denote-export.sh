@@ -16,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_SCRIPT="${SCRIPT_DIR}/denote-export-parallel.py"
 ORG_ROOT="${HOME}/org"
-DEFAULT_DAEMONS=4
+DEFAULT_DAEMONS=2  # Reduced from 4 to prevent memory exhaustion
 
 # Cleanup function for trap
 cleanup_on_exit() {
@@ -71,7 +71,7 @@ ${BLUE}명령:${NC}
   --help                 - 이 도움말 표시
 
 ${BLUE}옵션:${NC}
-  daemons  - 병렬 daemon 개수 (기본: 4, 권장: CPU 코어 수)
+  daemons  - 병렬 daemon 개수 (기본: 2, 메모리 여유 시 4까지)
 
 ${BLUE}예제:${NC}
   ${GREEN}# 전체 export (meta, bib, notes 순차)${NC}
@@ -86,11 +86,11 @@ ${BLUE}예제:${NC}
   ${GREEN}# 커스텀 디렉토리${NC}
   denote-export.sh run ~/custom/path 4
 
-${BLUE}성능 (4 daemons):${NC}
-  - meta:  530 files → ~5분
-  - bib:   649 files → ~6분
-  - notes: 797 files → ~7분
-  - 전체:  1976 files → ~18분
+${BLUE}성능 (2 daemons, 메모리 안정):${NC}
+  - meta:  530 files → ~9분
+  - bib:   649 files → ~11분
+  - notes: 797 files → ~13분
+  - 전체:  1976 files → ~33분
 
 ${BLUE}로그 확인:${NC}
   # 에러만 확인
