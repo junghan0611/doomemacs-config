@@ -20,13 +20,14 @@
 ;;; ECA (Editor Code Assistant) 설정
 
 (use-package! eca
-  :defer t
+  :defer 3
   :commands (eca eca-restart eca-stop eca-show-stderr)
   :config
 
   ;; 채팅 창 설정
-  (setq eca-chat-window-side 'right
-        eca-chat-window-width 0.45
+  (setq eca-chat-window-side 'bottom
+        ;; eca-chat-window-width 0.50
+        eca-chat-window-height 0.50
         eca-chat-use-side-window t
         eca-chat-focus-on-open t)
 
@@ -42,7 +43,7 @@
 ;;; Whisper.el 설정 (Groq API - 무료)
 
 (use-package! whisper
-  :defer t
+  :defer 5
   :commands (whisper-run whisper-file whisper-select-language)
   :config
   ;; Groq API 모드 (로컬 whisper.cpp 설치 불필요!)
@@ -72,7 +73,7 @@
            (eca-session)
            (fboundp 'eca--session-id))
       (let* ((session-id (eca--session-id (eca-session)))
-             (eca-buf (get-buffer (format "<eca-chat:%s>" session-id))))
+             (eca-buf (get-buffer (format "<eca-chat:%s:0>" session-id))))
         (if eca-buf
             (progn
               (pop-to-buffer eca-buf)
