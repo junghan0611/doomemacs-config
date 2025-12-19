@@ -1,4 +1,4 @@
-;;; ai-eca-whisper.el --- ECA + Whisper 음성 입력 설정 -*- lexical-binding: t; -*-
+;;; ai-stt-eca-whisper.el --- ECA + Whisper 음성 입력 설정 -*- lexical-binding: t; -*-
 ;;
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; Created: 2025-12-07
@@ -8,32 +8,14 @@
 ;; Emacs + Claude Code (ECA) + 음성제어 워크플로우
 ;; - ECA: Claude Max 구독 OAuth 인증
 ;; - whisper.el: Groq API (무료 whisper-large-v3)
-;; - 한글 입력 지원
+;; - 한국어, 영어 등 다국어 지원
+;; - ECA, GPTel 등 AI 도구와 통합
 ;;
+;; 필수 패키지:
+;;   - ffmpeg: 오디오 녹음용
+;;   - curl: API 호출용
+
 ;;; Code:
-
-;;; semext
-
-;; (use-package! semext
-;;   :init
-;;   ;; Replace provider with whatever you want, see https://github.com/ahyatt/llm
-;;   (setopt semext-provider (make-llm-ollama :chat-model "gemma3:1b")))
-
-;;; AI CODE Interface (AIDER.el)
-
-(use-package! ai-code-interface
-  :config
-  (ai-code-set-backend  'claude-code-ide) ;; use claude-code-ide as backend
-  ;; Enable global keybinding for the main menu
-  ;; (global-set-key (kbd "C-c a") #'ai-code-menu)
-  ;; Optional: Use vterm if you prefer, by default it is eat
-  ;; (setq claude-code-terminal-backend 'vterm) ;; for openai codex, github copilot cli, opencode; for claude-code-ide.el and gemini-cli.el, you can check their config
-  ;; Optional: Turn on auto-revert buffer, so that the AI code change automatically appears in the buffer
-  (global-auto-revert-mode 1)
-  (setq auto-revert-interval 1) ;; set to 1 second for faster update
-  ;; Optional: Set up Magit integration for AI commands in Magit popups
-  (with-eval-after-load 'magit
-    (ai-code-magit-setup-transients)))
 
 ;;; ECA (Editor Code Assistant) 설정
 
@@ -57,9 +39,7 @@
   ;; (심볼릭 링크: ~/.config/eca/config.json)
   )
 
-;;; ============================================================================
 ;;; Whisper.el 설정 (Groq API - 무료)
-;;; ============================================================================
 
 (use-package! whisper
   :defer t
@@ -145,6 +125,6 @@
 ;;    - Groq whisper-large-v3: 무료, 한국어 CER ~11%
 ;;    - 로컬 설치 불필요, API 호출만으로 동작
 ;;
-;;; ai-eca-whisper.el ends here
+;;; ai-stt-eca-whisper.el ends here
 
-(provide 'ai-eca-whisper)
+(provide 'ai-stt-eca-whisper)

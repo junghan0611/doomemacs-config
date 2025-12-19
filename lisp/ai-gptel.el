@@ -17,7 +17,18 @@
 ;;
 ;;  Description
 ;;
+
 ;;; Code:
+
+;;;; semext
+
+;; (use-package! semext
+;;   :init
+;;   ;; Replace provider with whatever you want, see https://github.com/ahyatt/llm
+;;   (setopt semext-provider (make-llm-ollama :chat-model "gemma3:1b")))
+
+
+;;;; gptel
 
 (use-package! gptel
   :config
@@ -119,7 +130,7 @@
   :stream t                           ;for streaming responses
   :key #'gptel-api-key)               ;can be a function that returns the key
 
-;;;; gptel-mode-hook
+;;;;; gptel-mode-hook
 
 (add-hook! 'gptel-mode-hook
   (defun gptel-mode-set-local-keys ()

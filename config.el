@@ -450,7 +450,8 @@ Returns t on success, nil if notify-send is not available."
   (load! "lisp/ai-gptel")
   (load! "lisp/ai-agent-shell")   ; acp 설정
   ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
-  (load! "lisp/ai-eca-whisper")
+  (load! "lisp/ai-stt-eca-whisper")
+  (load! "lisp/ai-tts-edge")
   (load! "lisp/utils-config")
   (load! "lisp/project-config")
   (load! "lisp/keybindings-config")

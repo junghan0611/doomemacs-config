@@ -5,7 +5,8 @@
 (setq user-full-name "junghanacs"
       user-mail-address "junghanacs@gmail.com")
 
-(setq doom-font (font-spec :family "Monoplex Nerd" :size 15.1))
+(when (display-graphic-p) ; terminal
+  (setq doom-font (font-spec :family "GLG Nerd Font Mono" :size 15.1)))
 
 ;; (setq doom-font (font-spec :family "Monoplex Nerd" :size 14.0)
 ;;       doom-big-font (font-spec :family "Monoplex Nerd" :size 24.0)

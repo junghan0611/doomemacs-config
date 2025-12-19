@@ -106,6 +106,23 @@
       (setq-local x-gtk-use-native-input t))))
 
 
+
+;;;; AI CODE Interface (AIDER.el)
+
+;; (use-package! ai-code-interface
+;;   :config
+;;   (ai-code-set-backend  'claude-code-ide) ;; use claude-code-ide as backend
+;;   ;; Enable global keybinding for the main menu
+;;   ;; (global-set-key (kbd "C-c a") #'ai-code-menu)
+;;   ;; Optional: Use vterm if you prefer, by default it is eat
+;;   ;; (setq claude-code-terminal-backend 'vterm) ;; for openai codex, github copilot cli, opencode; for claude-code-ide.el and gemini-cli.el, you can check their config
+;;   ;; Optional: Turn on auto-revert buffer, so that the AI code change automatically appears in the buffer
+;;   (global-auto-revert-mode 1)
+;;   (setq auto-revert-interval 1) ;; set to 1 second for faster update
+;;   ;; Optional: Set up Magit integration for AI commands in Magit popups
+;;   (with-eval-after-load 'magit
+;;     (ai-code-magit-setup-transients)))
+
 ;;;; ACP (Agent Client Protocol)
 
 ;; https://agentclientprotocol.com/
@@ -127,8 +144,6 @@
   ;;       (agent-shell-google-make-authentication :login t))
   ;; (setq agent-shell-openai-authentication
   ;;       (agent-shell-openai-make-authentication :login t))
-
-  (setq agent-shell--transcript-file-path-function #'agent-shell--default-transcript-file-path)
   (setq agent-shell-header-style nil)
 
   (require 'agent-shell-manager)
@@ -138,7 +153,8 @@
         :inv "M-h" #'other-window
         :inv "M-RET" #'+default/newline
         :inv "M-<return>" #'+default/newline
-        :inv "DEL" #'evil-delete-backward-char-and-join
+        :i "DEL" #'evil-delete-backward-char-and-join
+        :n "DEL" #'evil-switch-to-windows-last-buffer
         ;; :inv "M-<return>" #'+default/newline
         :in "C-RET" #'shell-maker-submit
         :in "C-<return>" #'shell-maker-submit
@@ -146,7 +162,7 @@
 
   (require 'agent-shell-sidebar)
   (setq agent-shell-sidebar-width "25%"
-        agent-shell-sidebar-minimum-width 80
+        agent-shell-sidebar-minimum-width 86
         agent-shell-sidebar-maximum-width "50%"
         agent-shell-sidebar-position 'right
         agent-shell-sidebar-locked t
