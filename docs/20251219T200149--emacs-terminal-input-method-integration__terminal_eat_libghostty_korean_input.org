@@ -1,0 +1,272 @@
+#+title:      Emacs 터미널 입력기 통합 연구
+#+date:       [2025-12-19 Thu 20:01]
+#+filetags:   :terminal:eat:libghostty:eaf:korean:input:
+#+identifier: 20251219T200149
+
+* 개요
+
+Emacs 터미널에서 한글 입력 문제를 해결하기 위한 연구 문서.
+목표: Emacs 입력기(Input Method)가 완전히 제어하는 터미널 구현.
+
+** 핵심 요구사항
+
+- =toggle-input-method= (C-\) 그대로 지원
+- modeline에 입력 언어 표시
+- eshell의 한글 입력 방식 활용
+- eat의 터미널 호환성 유지
+
+* 현재 문제점
+
+** vterm 문제
+- libvterm(C 라이브러리)이 PTY와 직접 통신
+- Emacs 입력기 완전히 우회
+- 한글 조합 중 각 자모가 바로 터미널로 전송
+
+** eat 문제
+- 순수 Elisp (libvterm 의존성 없음!)
+- 하지만 =eat-self-input= 에서 =last-command-event= 즉시 전송
+- 조합 중인 한글도 각 키 이벤트마다 PTY로 전송됨
+
+#+begin_src elisp
+;; eat.el:5567 - 문제의 핵심
+(defun eat-self-input ()
+  (interactive)
+  (when-let* ((event last-command-event)
+              (event (if (characterp event)
+                         (char-to-string event)
+                       ...)))
+    (eat-term-input-event eat-terminal event)))
+#+end_src
+
+* libghostty-vt 분석
+
+** 개요
+
+Ghostty 터미널의 VT 파싱 라이브러리.
+- 위치: ~/repos/3rd/ghostty
+- 언어: Zig (C FFI 지원)
+- 상태: 개발 중이나 핵심 기능 사용 가능
+
+** 핵심 API (입력기 통합에 유용)
+
+*** 조합 상태 설정
+#+begin_src c
+// include/ghostty/vt/key/event.h:414
+void ghostty_key_event_set_composing(GhosttyKeyEvent event, bool composing);
+#+end_src
+
+*** UTF-8 텍스트 직접 전달
+#+begin_src c
+// include/ghostty/vt/key/event.h:439
+void ghostty_key_event_set_utf8(GhosttyKeyEvent event, const char *utf8, size_t len);
+#+end_src
+
+** 사용 예시
+
+#+begin_src c
+// 1. 인코더 생성
+GhosttyKeyEncoder encoder;
+ghostty_key_encoder_new(NULL, &encoder);
+
+// 2. 키 이벤트 생성
+GhosttyKeyEvent event;
+ghostty_key_event_new(NULL, &event);
+
+// 3. 완성된 한글 설정 (Emacs IM에서 받은 문자열)
+ghostty_key_event_set_utf8(event, "한글", 6);
+
+// 4. 터미널 시퀀스로 인코딩
+char buf[128];
+size_t written = 0;
+ghostty_key_encoder_encode(encoder, event, buf, sizeof(buf), &written);
+
+// 5. PTY로 전송
+write(pty_fd, buf, written);
+#+end_src
+
+** 주요 파일 위치
+
+| 파일 | 설명 |
+|------|------|
+| include/ghostty/vt.h | 메인 VT 헤더 |
+| include/ghostty/vt/key.h | 키 인코딩 |
+| include/ghostty/vt/key/event.h | 키 이벤트 (composing, utf8) |
+| include/ghostty/vt/key/encoder.h | 인코더 API |
+| example/c-vt-key-encode/ | C 예제 |
+
+* eat 분석
+
+** 아키텍처
+
+#+begin_example
+eat.el (8327줄, 순수 Elisp)
+├── Terminal Structure (eat--t-term)
+├── Input Processing (eat-self-input → eat--send-input)
+├── Output Processing (eat--t-handle-output)
+├── Mode Management (semi-char, char, emacs, line)
+└── Process Handling
+#+end_example
+
+** 입력 파이프라인
+
+#+begin_example
+Emacs Event
+  ↓
+eat-self-input() [5567]
+  ↓
+eat-term-input-event() [4277]
+  ↓
+eat--t-term-input-fn (function pointer)
+  ↓
+eat--send-input() [6793]
+  ↓
+eat--send-string() [6776]
+  ↓
+process-send-string() (PTY로 전송)
+#+end_example
+
+** 왜 빠른가?
+
+1. 청크 단위 배치 처리 (eat--t-handle-output)
+2. 상태 머신으로 파싱 (parser-state)
+3. insert 최소화, 직접 버퍼 조작
+4. 플리커 없는 렌더링 (inhibit-redisplay)
+
+** 터미널 호환성
+
+| 기능 | 지원 | 용도 |
+|------|------|------|
+| CSI 시퀀스 | ✅ | 커서 이동, 화면 지우기 |
+| SGR (색상) | ✅ | 256색, TrueColor |
+| 마우스 | ✅ | 클릭, 드래그, 스크롤 |
+| Bracketed Paste | ✅ | 안전한 붙여넣기 |
+| Alt Screen | ✅ | TUI 앱 전환 |
+| Sixel | ✅ | 이미지 표시 |
+| Focus Events | ✅ | 창 포커스 감지 |
+
+* 해결 방안
+
+** 방안 1: eat에 "Emacs IM Mode" 추가 (순수 Elisp)
+
+libghostty-vt 없이 가능.
+
+#+begin_src elisp
+;; 개념적 구현
+(defvar eat-emacs-im-mode nil)
+
+(defun eat-emacs-im-self-input ()
+  "Emacs 입력기가 완성한 문자만 전송"
+  (interactive)
+  ;; 조합 중이면 아무것도 안 함
+  (unless (and (boundp 'input-method-function)
+               input-method-function
+               ;; 조합 상태 확인
+               (ignore-errors
+                 (funcall input-method-function nil)))
+    ;; 완성된 문자만 전송
+    (eat-term-send-string eat-terminal
+                          (buffer-substring ...))))
+
+;; after-change-functions 훅으로 조합 완료 감지
+(add-hook 'after-change-functions
+          #'eat--send-completed-input nil t)
+#+end_src
+
+핵심 아이디어:
+1. semi-char mode 대신 "im-mode" 추가
+2. 키 이벤트를 버퍼에 먼저 삽입 (eshell처럼)
+3. 입력기 조합 완료 후에만 PTY로 전송
+4. 특수 키(화살표, F1-F12 등)는 즉시 전송
+
+** 방안 2: eat + libghostty-vt 하이브리드
+
+Emacs Dynamic Module로 libghostty-vt 연결.
+
+장점:
+- Kitty 키보드 프로토콜 지원
+- 더 정확한 키 인코딩
+
+단점:
+- Zig 빌드 필요
+- 외부 의존성
+
+** 방안 3: 완전한 새 터미널 (emacs-ghostty)
+
+libghostty (full)을 Emacs 모듈로 포팅.
+
+장점:
+- Ghostty의 모든 기능
+- GPU 가속 가능성
+
+단점:
+- libghostty 아직 macOS 전용
+- 렌더러 레이어 구현 필요
+- 개발 비용 매우 높음
+
+** 방안 4: EAF-pyqterminal (실용적 대안) ★
+
+EAF (Emacs Application Framework)의 터미널 모듈 사용.
+
+#+begin_example
+EAF 아키텍처:
+Emacs ─── EPC (RPC) ─── Python/Qt 프로세스
+                              ↓
+                        Qt 위젯 (터미널)
+                              ↓
+                        시스템 입력기 (fcitx5/ibus)
+#+end_example
+
+장점:
+- *한글 입력 완벽 지원* - Qt가 시스템 IM과 직접 통신
+- Emacs 이벤트 루프 우회 → 입력기 문제 원천 해결
+- 네이티브 터미널과 동일한 경험
+- 별도 개발 불필요 (이미 검증됨)
+
+단점:
+- Python + Qt 의존성
+- EPC 통신 오버헤드 (체감 미미)
+- Emacs 버퍼가 아닌 외부 위젯
+
+결론:
+eat/vterm의 입력기 문제를 해결하려면 Elisp 레벨에서 복잡한 작업이
+필요하지만, EAF-pyqterminal은 *이미 동작하는 해결책*이다.
+실용적 관점에서 가장 즉시 사용 가능한 대안.
+
+참고:
+- [[https://github.com/emacs-eaf/emacs-application-framework][EAF GitHub]]
+- [[https://github.com/emacs-eaf/eaf-pyqterminal][eaf-pyqterminal]]
+
+* eshell이 한글 입력 되는 이유
+
+#+begin_example
+eshell = line mode
+├── 버퍼에서 편집
+├── Emacs 입력기가 버퍼에서 완전히 동작
+├── RET으로 완성된 문자열만 프로세스 전송
+└── 조합 중인 상태는 버퍼에만 존재
+#+end_example
+
+* 다음 단계
+
+1. [ ] eat 소스 분석: 입력 처리 지점 상세 파악
+2. [ ] PoC: eat-im-mode 프로토타입 작성
+3. [ ] 테스트: 한글 조합 → PTY 전송 흐름 검증
+4. [ ] 통합: eat upstream 제안 또는 포크
+
+* 참고 자료
+
+- [[https://codeberg.org/akib/emacs-eat][emacs-eat (Codeberg)]]
+- [[https://github.com/akermu/emacs-libvterm][emacs-libvterm (GitHub)]]
+- [[https://mitchellh.com/writing/libghostty-is-coming][libghostty is coming (Mitchell Hashimoto)]]
+- [[https://emacsconf.org/2023/talks/eat/][EmacsConf 2023 - Eat talk]]
+
+* 관련 문서
+
+- [[denote:20251005T173600][terminal-cjk-optimization]]
+
+* 변경 이력
+
+| 날짜 | 내용 |
+|------|------|
+| 2025-12-19 | 초안 작성 (ghostty + eat 분석) |
+| 2025-12-20 | EAF-pyqterminal 대안 추가 (검증 완료) |

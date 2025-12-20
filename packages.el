@@ -124,9 +124,12 @@
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
 (package! aggressive-indent)
-(package! magit-todos)
-
 (package! clipetty) ; osc52 support
+
+;;;; project-config.el
+
+(package! magit-todos)
+(package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 
 ;;;; Transient Menu
 

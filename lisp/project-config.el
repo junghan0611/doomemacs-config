@@ -6,7 +6,7 @@
 ;; URL: https://github.com/junghan0611/doomemacs-config
 ;; Package-Requires: ((emacs "29.1"))
 
-;;;;; Projectile
+;;;; Projectile
 
 ;; External tools required to make projectile fly! fd, ag, rg
 ;; evil-dot-doom/modules/custom/projects/config.el
@@ -48,6 +48,13 @@
   ;; (setq projectile-project-root-files-bottom-up
   ;;       (remove ".git" projectile-project-root-files-bottom-up))
   )
+
+
+;;;; majutsu jj-mode
+
+(use-package! majutsu
+  :after magit
+  :commands majutsu)
 
 ;;; provide
 
