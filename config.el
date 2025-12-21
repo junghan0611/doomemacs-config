@@ -315,11 +315,21 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
 
 ;;; tramp
 
-(progn
-  (require 'tramp)
-  (tramp-set-completion-function "ssh"
-                                 '(
-                                   (tramp-parse-sconfig "~/.ssh/config"))))
+;; Host *
+;;     ControlMaster auto
+;;     ControlPath ~/.ssh/sockets/%r@%h-%p
+;;     ControlPersist 600
+(after! tramp
+  (setq tramp-default-method "ssh")
+
+  ;; 소켓 디렉토리 자동 생성
+  (let ((socket-dir "~/.ssh/sockets"))
+    (unless (file-exists-p socket-dir)
+      (make-directory socket-dir t)
+      (set-file-modes socket-dir #o700)))  ;; 권한 700
+
+  (setq tramp-ssh-controlmaster-options
+        "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
 ;;; termux-fixes
 ;; Fix async issues in Termux/Android
@@ -399,7 +409,7 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
         password-store-password-length 24))
 
 (use-package! password-store-menu
-  :defer 2
+  :defer 1
   :commands (password-store-menu-enable)
   :custom (password-store-menu-key "C-c C-p")
   :config

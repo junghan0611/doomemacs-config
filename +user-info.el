@@ -1,9 +1,14 @@
 ;;; $DOOMDIR/+user-info.el -*- lexical-binding: t; -*-
 
-;; User Identify (optional)
+;;; User Identify (optional)
+
 ;; e.g. GPG configuration, email clients, file templates and snippets
 (setq user-full-name "junghanacs"
       user-mail-address "junghanacs@gmail.com")
+;; 나의 공개키는 다음 에서 확인 할수 있다.
+;; https://meta.sr.ht/~junghanacs.keys, https://meta.sr.ht/~junghanacs.pgp
+(setq-default epa-file-encrypt-to '("B5ADD9F47612A9DB"))
+(setq auth-source-cache-expiry nil)
 
 (when (display-graphic-p) ; terminal
   (setq doom-font (font-spec :family "GLG Nerd Font Mono" :size 15.1)))
@@ -15,49 +20,6 @@
 
 ;; (unless (display-graphic-p) ; terminal
 ;;   (setq doom-font (font-spec :family "Sarasa Term K Nerd Font" :size 15.1)))
-
-;;; User Profile
-
-;; (defconst user-data-dir (file-name-as-directory (getenv "DATA_DIR")))
-
-;; 나의 공개키는 다음 에서 확인 할수 있다.
-;; https://meta.sr.ht/~junghanacs.keys, https://meta.sr.ht/~junghanacs.pgp
-
-(setq user-full-name (if (getenv "USER_FULL_NAME")
-                         (getenv "USER_FULL_NAME")
-                       "John Doe"))
-
-(setq user-mail-address (if (getenv "USER_MAIL_ADDRESS")
-                            (getenv "USER_MAIL_ADDRESS")
-                          "john.doe@example.com"))
-
-;; Set my GPG key as the default key
-(setq-default epa-file-encrypt-to (if (getenv "EPA_FILE_ENCRYPT_TO")
-                                      (list (getenv "EPA_FILE_ENCRYPT_TO"))
-                                    (list "ABCDEFGHIJKLMN")))
-
-;;;; authinfo
-
-;; (let ((auth-gpg (expand-file-name "~/.authinfo.gpg"))
-;;       (auth-file (expand-file-name "~/.authinfo")))
-;;   (cond
-;;    ;; gpg 파일이 있으면 그것을 auth-source로 사용
-;;    ((file-exists-p auth-gpg)
-;;     (setq auth-sources (list auth-gpg)
-;;           auth-source-cache-expiry nil))
-;;    ;; gpg는 없고 일반 파일은 이미 있으면 그대로 사용
-;;    ((file-exists-p auth-file)
-;;     (setq auth-sources (list auth-file)
-;;           auth-source-cache-expiry nil))
-;;    ;; 둘 다 없으면 일반 파일 새로 생성 후 사용
-;;    (t
-;;     (with-temp-buffer
-;;       (write-file auth-file))
-;;     (setq auth-sources (list auth-file)
-;;           auth-source-cache-expiry nil))))
-
-;; (setq user-mail-address "junghanacs@gmail.com")
-;; (setq-default epa-file-encrypt-to '("B5ADD9F47612A9DB"))
 
 ;;;; directory path
 
@@ -183,3 +145,5 @@
 (setq user-calendar-latitude 37.26
       user-calendar-longitude 127.01
       user-calendar-location-name "Suwon, KR")
+
+;;; end-of-file
