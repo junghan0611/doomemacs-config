@@ -33,7 +33,6 @@
   (require 'eaf-browser)
   (require 'eaf-pdf-viewer)
   (require 'eaf-pyqterminal)
-  ;; (require 'eaf-terminal)        ; xterm.js 기반
   ;; (require 'eaf-jupyter)         ; Qt 위젯 직접 통합 예시
   ;; (require 'eaf-vue-tailwindcss)
 
@@ -50,6 +49,8 @@
 ;;;; Evil 통합
 
   (require 'eaf-evil)
+
+  ;; eaf-evil-leader-key "C-SPC"
 
   ;; SPC 키: EAF 앱별로 다르게 처리
   ;; - browser (입력 포커스 없을 때): leader
@@ -75,6 +76,13 @@
         eaf-browser-enable-adblocker "true")
 
   (eaf-bind-key nil "M-q" eaf-browser-keybinding)
+
+;;;; pyqterminal 설정
+
+  (setq eaf-pyqterminal-font-size 16
+        eaf-pyqterminal-font-family "Sarasa Term K Nerd")
+
+  ;; TODO: M-m local leader - EAF 키 처리 방식 조사 필요 (doom-xxx)
 
   ) ; end when
 
