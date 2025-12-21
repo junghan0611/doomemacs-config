@@ -1,25 +1,32 @@
 # doomemacs-config
 
-A lightweight, terminal-optimized Doom Emacs configuration for practical use
+Multi-agent focused Doom Emacs configuration for AI-assisted workflows
 
 [한국어 문서](./README-KO.md)
 
 ## Overview
 
-`doomemacs-config` is a streamlined Doom Emacs configuration optimized for terminal (`-nw`) usage. It works consistently across Ubuntu 24.04, NixOS 25.05, and Termux (Android) environments.
+`doomemacs-config` is my main Doom Emacs configuration, evolved from a lightweight terminal starter to a comprehensive multi-agent environment. It integrates AI tools (GPTel, Agent Shell, ECA Whisper, Edge TTS) with EAF for a powerful GUI experience including Korean input support in terminals.
+
+### Philosophy
+
+> "Being to Being Collaboration" - Treating AI as a collaborator, not just a tool.
+
+This configuration supports the workflow where AI handles routine tasks while humans focus on creative seeds. Built for reproducibility with NixOS, Emacs, and Digital Garden.
 
 ### Key Features
 
-- **Terminal-first design**: Optimized for `-nw` mode
-- **Cross-platform**: Identical setup for laptop, server, and Android
-- **Lightweight**: ~2000 lines of focused configuration
-- **Simple setup**: Uses DOOMDIR environment variable instead of Doom's profile system
+- **Multi-agent integration**: GPTel, Agent Shell (ACP), Claude Code IDE
+- **Voice interfaces**: ECA Whisper (STT), Edge TTS (text-to-speech)
+- **EAF applications**: Browser, PDF viewer, pyqterminal with Korean input
+- **Denote ecosystem**: Export to Hugo, dblock automation, silo management
+- **Cross-platform**: Ubuntu 24.04, NixOS 25.05, Termux
 
 ### Tested Environments
 
 - **Platforms**: Ubuntu 24.04, NixOS 25.05, Termux
-- **Emacs version**: 30.2
-- **Terminal**: Ghostty recommended (works with others)
+- **Emacs version**: 30.x
+- **Terminals**: Ghostty (recommended), Kitty, Termux
 
 ## Installation
 
@@ -38,7 +45,6 @@ environment.systemPackages = [ pkgs.emacs ];
 **Termux**
 ```bash
 pkg install emacs-nox
-bash install-termux-pkgs-for-emacs.sh  # Additional packages
 ```
 
 ### 2. Install Doom Emacs and doomemacs-config
@@ -49,56 +55,20 @@ git clone https://github.com/doomemacs/doomemacs.git ~/doomemacs-starter
 
 # Clone doomemacs-config
 mkdir -p ~/repos/gh/
-git clone https://github.com/junghan0611/doomemacs-config.git ~/repos/gh/dotdoom-starter
+git clone https://github.com/junghan0611/doomemacs-config.git ~/repos/gh/doomemacs-config
 
 # Initial sync
 DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync
 ```
 
-### 3. Shell Configuration (bashrc/zshrc)
+### 3. Shell Configuration
 
 ```bash
-# Aliases
+# Aliases for .bashrc or .zshrc
 alias esync='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync'
-alias esyncenv='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom env'
 alias esyncf='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync -u -j 4'
-alias e='env GTK_IM_MODULE=emacs XMODIFIERS=@im=emacs EMACS=emacs DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run -nw'
-```
-
-### 4. .desktop File (Optional, for GUI)
-
-```bash
-# Copy and modify paths in doomemacs-config.desktop
-cp doomemacs-config.desktop ~/.local/share/applications/
-# Edit the file to match your paths
-```
-
-## Usage
-
-### Terminal Launch
-
-```bash
-# Basic launch
-e
-
-# Open file
-e ~/document.org
-
-# GUI mode (rarely used)
-DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom run
-```
-
-### Sync Configuration
-
-```bash
-# Normal sync (after init.el, packages.el changes)
-esync
-
-# Environment sync
-esyncenv
-
-# Force sync with package updates
-esyncf
+alias e='DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run -nw'
+alias egui='DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run'
 ```
 
 ## Structure
@@ -106,201 +76,149 @@ esyncf
 ```
 doomemacs-config/
 ├── init.el              # Doom module declarations
-├── config.el            # Main configuration
+├── config.el            # Main configuration (loader)
 ├── packages.el          # Package declarations
-├── +user-info.el        # User information
-├── +korean-input-fix.el # Korean NFD→NFC normalization (Termux)
-├── +gptel.el            # AI/LLM integration
-├── +functions.el        # Custom functions
-├── per-machine.el       # Machine-specific config (git-ignored)
-├── user-keys.el         # Custom keybindings (git-ignored)
 ├── custom.el            # Emacs customize (git-ignored)
-├── snippets/            # Custom snippets
-├── var/                 # Runtime data
-└── docs/                # Project documentation
+│
+├── lisp/                # Modular configuration (5000+ lines)
+│   ├── korean-input.el      # Korean input, fonts, NFD→NFC
+│   ├── evil-config.el       # Evil mode settings
+│   ├── completion-config.el # Corfu, Vertico, Consult
+│   ├── ui-config.el         # Dashboard, Modeline, Themes
+│   ├── org-config.el        # Org-mode settings
+│   ├── denote-config.el     # Denote settings
+│   ├── denote-silo.el       # Dynamic silo management
+│   ├── denote-export.el     # Export to Hugo/Markdown
+│   ├── ai-gptel.el          # GPTel (Claude, OpenAI, Gemini)
+│   ├── ai-agent-shell.el    # Agent Shell, ACP, Claude Code
+│   ├── ai-stt-eca-whisper.el # Speech-to-text
+│   ├── ai-tts-edge.el       # Text-to-speech (Edge)
+│   ├── eaf-config.el        # EAF applications
+│   ├── keybindings-config.el # Key bindings
+│   └── ...
+│
+├── bin/                 # Standalone scripts
+│   ├── denote-export.el     # Unified export/dblock server
+│   └── denote-export.sh     # Shell wrapper
+│
+├── autoload/            # Autoloaded functions
+└── docs/                # Documentation
 ```
-
-### Key Files
-
-- **init.el**: Doom module activation (~160 lines)
-- **config.el**: Core settings and package configuration (~1850 lines)
-- **packages.el**: Package additions/disables (~140 lines)
-- **per-machine.el**: Machine-specific customization (auto-loaded, git-ignored)
 
 ## Core Features
 
-### Editor
+### AI/Agent Integration
 
-- **Evil mode**: Vim keybindings (`+everywhere`)
-- **Completion**: Corfu + Orderless + Vertico
-- **Snippets**: YASnippet + Tempel
-- **File templates**: Auto-templates for empty files
+| Tool | Description | File |
+|------|-------------|------|
+| **GPTel** | LLM integration (Claude, OpenAI, Gemini, local) | `ai-gptel.el` |
+| **Agent Shell** | ACP protocol, agent-shell-manager | `ai-agent-shell.el` |
+| **ECA Whisper** | Speech-to-text via whisper.cpp | `ai-stt-eca-whisper.el` |
+| **Edge TTS** | Microsoft Edge text-to-speech | `ai-tts-edge.el` |
+| **Claude Code IDE** | Integration with Claude Code | `ai-agent-shell.el` |
 
-### Tools
+### EAF (Emacs Application Framework)
 
-- **Git**: Magit
-- **Tree-sitter**: Enhanced syntax highlighting
-- **Direnv**: Project-specific environments
-- **Docker**: Container management
-- **LLM**: GPTel + Agent Shell (Claude Code integration with agent-shell-manager)
+Configured in `lisp/eaf-config.el`:
+- **eaf-browser**: Chromium-based web browser
+- **eaf-pdf-viewer**: Fast PDF viewing
+- **eaf-pyqterminal**: Terminal with Korean input support (via Qt native input)
 
-### Language Support
-
-Python, Nix, JavaScript/TypeScript, Web (HTML/CSS), YAML, Zig, Janet, Emacs Lisp
-
-### Org-mode
-
-- **Denote**: Note-taking system (with silo, sequence)
-- **Org-roam**: Knowledge graph
-- **Org-journal**: Journaling
-- **Org-contacts**: Contact management
-- **Export**: Hugo, Pandoc
-
-### Termux Enhancements
-
-**Korean Input Fix** - Automatic NFD to NFC normalization
-
-Solves the long-standing Korean IME issue in Termux where space key fails to compose jamo into syllables.
-
-Features:
-- **Real-time conversion**: after-change-functions hook with 0.1s debouncing
-- **Safety mechanisms**: before-save-hook, find-file-hook normalization
-- **Auto-activation**: Only in Termux terminal environment
-- **Buffer-local**: Minor mode (korean-nfc-mode) per buffer
-- Keybindings: `SPC m k n` (manual convert), `SPC m k t` (toggle mode)
-
-**Battery Optimization** (GUI mode)
-
-Termux X11 optimizations for Samsung Fold4:
-- Increased auto-save intervals (30s / 300 keystrokes)
-- Raised GC threshold to 50MB
-- Optimized scrolling and font rendering
-- Disabled cursor blinking and system bell
-
-File: `+korean-input-fix.el` (193 lines)
-
-### Publishing: Denote Export System
-
-**Integrated export system** - Convert Denote notes to Hugo markdown with parallel processing
-
-Key features:
-- **Denote links → Hugo relref** automatic conversion
-- **Security filtering**: ROT13, sensitive strings
-- **Parallel processing**: Process 1,400+ files in 2-3 minutes with 8 cores
-- **Sequential/parallel modes** supported
-
-Usage:
+Key settings:
 ```elisp
-;; Sequential mode
-(my/update-dblock-export-garden-all)
+;; Korean input enabled
+(setq-local x-gtk-use-native-input t)
 
-;; Parallel mode (recommended)
-(my/update-dblock-export-garden-all-parallel)
+;; Evil integration with SPC key handling
+;; M-\ for other-window across all modes
 ```
 
-Documentation: `docs/20251027T092900--denote-export-system__denote_export_hugo_guide.org`
+### Denote Export System
 
-**Denote dblock Update System**
-
-Batch update dynamic blocks in Denote org files.
+**bin/denote-export.el** - Unified Denote operations server
 
 Features:
-- **Shell script**: `bin/denote-dblock-update.sh` for batch processing
-- **Emacs Lisp**: `bin/denote-dblock-batch.el` for programmatic access
-- **Documentation**: `bin/README-DBLOCK-UPDATE.md` with usage examples
+- Daemon mode for fast repeated exports
+- Batch mode for CI/scripts
+- Hugo markdown conversion with relref links
+- Dblock update automation
+- Doom straight.el package loading (standalone execution)
 
 Usage:
 ```bash
-# Update all dblocks in directory
-./bin/denote-dblock-update.sh ~/notes
+# Daemon mode
+emacs --daemon=denote-export-server --load bin/denote-export.el
+emacsclient -s denote-export-server --eval '(denote-export-file "note.org")'
 
-# Update specific file
-./bin/denote-dblock-update.sh ~/notes/example.org
+# Batch mode
+emacs --batch --load bin/denote-export.el -- dblock ~/org/meta
+
+# Shell wrapper
+./bin/denote-export.sh ~/org/notes
 ```
 
-Documentation: `docs/20251110T190854--denote-dblock-update-system__denote_dblock_meta_batch_guide.org`
+### Korean Input
 
-### Disabled Packages
+Comprehensive Korean support in `lisp/korean-input.el`:
+- Input method configuration (korean-hangul)
+- Sarasa/D2Coding Nerd fonts
+- NFD → NFC normalization (Termux fix)
+- Evil mode auto-switching
+- EAF Qt native input integration
 
-These packages are intentionally disabled:
+### Keybindings
 
-- LSP-mode (prefer eglot when needed)
-- Flycheck (using flymake)
-
-See `packages.el` for complete list.
+Global consistency via `lisp/keybindings-config.el`:
+- **M-\\**: `other-window` (works in vterm, eaf, dired, org)
+- **M-u/M-v**: scroll up/down
+- **SPC**: Doom leader (context-aware in EAF)
 
 ## Customization
 
 ### Per-machine Settings
 
-Create `per-machine.el` for machine-specific configuration:
-
+Create `per-machine.el` (git-ignored):
 ```elisp
 ;;; per-machine.el -*- lexical-binding: t; -*-
-
-;; Font settings
-(setq doom-font (font-spec :family "JetBrains Mono" :size 14))
-
-;; Theme
+(setq doom-font (font-spec :family "Sarasa Term K Nerd" :size 16))
 (setq doom-theme 'doom-one)
 ```
 
-### Custom Keybindings
-
-Create `user-keys.el` for personal keybindings.
-
 ### Adding Packages
 
-1. Add package declaration to `packages.el`
-2. Add configuration to `config.el`
+1. Add to `packages.el`
+2. Configure in appropriate `lisp/*.el`
 3. Run `esync`
 
 ## Troubleshooting
-
-### Sync Issues
 
 ```bash
 # Full rebuild
 DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync -u -j 4
 
-# Clean byte-compiled files
+# Diagnostics
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom doctor
+
+# Clean
 DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom clean
 ```
 
-### Diagnostics
+## Project Evolution
 
-```bash
-DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom doctor
-```
+Started as a lightweight terminal-first configuration, evolved into a comprehensive multi-agent environment. Key milestones:
+- Terminal optimization with Korean input fixes
+- AI tool integration (GPTel → Agent Shell → Voice interfaces)
+- EAF adoption for GUI capabilities
+- Denote export system for Digital Garden publishing
 
-### Server Restart
-
-Terminal mode auto-starts an Emacs server named `starter`:
-
-```bash
-# Stop server
-emacsclient -s starter -e '(kill-emacs)'
-
-# Restart
-e
-```
-
-## Project Background
-
-This project was born from the realization that my personal Emacs configuration had become too complex to serve as a starter kit. After evaluating Doom's profiles feature and finding it problematic, I opted for a simpler approach using the DOOMDIR environment variable.
-
-The goal is to create a practical Emacs environment that can serve as an alternative to CLI tools like Claude Code, covering diverse functionality in a terminal setting. While packages and configurations continue to grow, the focus remains on maintaining only essential features through continuous refinement.
+The focus remains on AI-assisted workflows while maintaining reproducibility across devices.
 
 ## License
 
 MIT License
 
-## Contributing
-
-Issues and PRs welcome.
-
 ## Related Links
 
 - [Doom Emacs](https://github.com/doomemacs/doomemacs)
-- [Ghostty Terminal](https://ghostty.org)
-- [힣' Digital Garden: Dotfiles Emacs StarterKit](https://notes.junghanacs.com/notes/20240915T235008)
+- [EAF](https://github.com/emacs-eaf/emacs-application-framework)
+- [힣's Digital Garden](https://notes.junghanacs.com)
