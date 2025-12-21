@@ -58,6 +58,22 @@
    (if time-zone
        ")")))
 
+;;;; calfw
+
+(when (modulep! :app calendar)
+  (after! calfw
+    (setq truncate-string-ellipsis "...")
+    ;; Default setting
+    (setq calfw-fchar-junction ?+
+          calfw-fchar-vertical-line ?|
+          calfw-fchar-horizontal-line ?-
+          calfw-fchar-left-junction ?+
+          calfw-fchar-right-junction ?+
+          calfw-fchar-top-junction ?+
+          calfw-fchar-top-left-corner ?+
+          calfw-fchar-top-right-corner ?+ ))
+  )
+
 ;;; provide
 
 (provide 'time-config)
