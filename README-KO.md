@@ -20,11 +20,11 @@ AI 협업 워크플로우를 위한 멀티 에이전트 중심 Doom Emacs 설정
 - **음성 인터페이스**: ECA Whisper (STT), Edge TTS (음성 합성)
 - **EAF 애플리케이션**: 브라우저, PDF 뷰어, pyqterminal (한글 입력 지원!)
 - **Denote 생태계**: Hugo 내보내기, dblock 자동화, silo 관리
-- **크로스 플랫폼**: Ubuntu 24.04, NixOS 25.05, Termux
+- **크로스 플랫폼**: Ubuntu 24.04, NixOS 25.11, Termux
 
 ### 테스트 환경
 
-- **플랫폼**: Ubuntu 24.04, NixOS 25.05, Termux
+- **플랫폼**: Ubuntu 24.04, NixOS 25.11, Termux
 - **Emacs 버전**: 30.x
 - **터미널**: Ghostty (권장), Kitty, Termux
 
@@ -37,7 +37,7 @@ AI 협업 워크플로우를 위한 멀티 에이전트 중심 Doom Emacs 설정
 snap install emacs --classic
 ```
 
-**NixOS 25.05**
+**NixOS 25.11**
 ```nix
 environment.systemPackages = [ pkgs.emacs ];
 ```
@@ -180,7 +180,7 @@ emacs --batch --load bin/denote-export.el -- dblock ~/org/meta
 `per-machine.el` 생성 (git 제외):
 ```elisp
 ;;; per-machine.el -*- lexical-binding: t; -*-
-(setq doom-font (font-spec :family "Sarasa Term K Nerd" :size 16))
+(setq doom-font (font-spec :family "GLG Nerd Font Mono" :size 15.1))
 (setq doom-theme 'doom-one)
 ```
 
@@ -221,4 +221,5 @@ MIT License
 
 - [Doom Emacs](https://github.com/doomemacs/doomemacs)
 - [EAF](https://github.com/emacs-eaf/emacs-application-framework)
+- [GLG-Mono Font](https://github.com/junghan0611/GLG-Mono)
 - [힣's 디지털가든](https://notes.junghanacs.com)

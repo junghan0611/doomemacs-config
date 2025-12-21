@@ -346,18 +346,6 @@
   (setq citar-bibliography config-bibfiles)
   (setq org-cite-global-bibliography config-bibfiles)
 
-  ;; ;; use #+cite_export: csl apa.csl
-  ;; (setq org-cite-csl-styles-dir (concat org-directory ".csl"))
-  ;; (setq citar-citeproc-csl-styles-dir (concat org-directory ".csl"))
-  ;; ;; (setq citar-citeproc-csl-locales-dir "~/.csl/locales")
-  ;; (setq citar-citeproc-csl-style "apa.csl") ; ieee.csl
-  ;; (setq citar-symbol-separator " ")
-
-  ;; (require 'citar-citeproc)
-  ;; (setq citar-format-reference-function 'citar-citeproc-format-reference)
-  (setq bibtex-files config-bibfiles)
-  (setq citar-format-reference-function 'citar-format-reference)
-
   (setq citar-templates
         '((main
            .

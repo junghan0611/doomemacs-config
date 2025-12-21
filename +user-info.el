@@ -101,7 +101,6 @@
 (defvar org-screenshot-path  "~/screenshot/")
 
 ;; bib
-(setq citar-notes-paths (list (concat user-org-directory "bib/")))
 ;; (defvar config-bibfiles (list (concat user-org-directory "bib/zotero-biblatex.bib")))
 (defvar config-bibfiles (list
                          (concat user-org-directory "resources/Slipbox.bib")

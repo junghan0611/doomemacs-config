@@ -226,15 +226,13 @@
 (message "[Server] Loaded export configuration")
 
 ;;;; Bibliography/Citation Setup
+;; NOTE: org-cite settings are in lisp/denote-export.el (loaded above)
+;; - org-cite-csl-link-cites t
+;; - org-cite-export-processors
 
 (require 'oc)
 (require 'oc-basic)
 (require 'oc-csl)
-
-(setq org-cite-export-processors
-      '((html . (csl "apa.csl"))
-        (latex . biblatex)
-        (t . (basic))))
 
 ;; Configure bibliography paths (config-bibfiles defined in +user-info.el)
 (when (boundp 'config-bibfiles)

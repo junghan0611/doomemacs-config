@@ -106,19 +106,22 @@
   (when (boundp 'config-bibfiles)
     (setq citar-bibliography config-bibfiles)
     (setq bibtex-files config-bibfiles)
-    (setq org-cite-global-bibliography config-bibfiles))
+    (setq org-cite-global-bibliography config-bibfiles)
+    (setq citar-notes-paths (list (concat org-directory "bib/"))))
 
   ;; CSL styles directory
   (when (boundp 'org-directory)
     (setq org-cite-csl-styles-dir (concat org-directory ".csl"))
     (setq citar-citeproc-csl-styles-dir (concat org-directory ".csl")))
 
-  ;; Default CSL style
-;; Setup export processor; default csl/citeproc-el, with biblatex for latex
+  ;; Setup export processor; default csl/citeproc-el, with biblatex for latex
   (after! oc
     (require 'citar-citeproc)
+    (setq bibtex-files config-bibfiles)
+    (setq citar-format-reference-function 'citar-citeproc-format-reference)
     (setq citar-citeproc-csl-style "apa.csl")
-    (setq org-cite-csl-link-cites nil) ; default t
+    ;; org-cite-csl-link-cites t = generate #citeproc_bib_item_N anchor links
+    (setq org-cite-csl-link-cites t)
     (setq org-cite-export-processors '((latex biblatex) (t csl))))
   )
 

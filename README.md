@@ -20,11 +20,11 @@ This configuration supports the workflow where AI handles routine tasks while hu
 - **Voice interfaces**: ECA Whisper (STT), Edge TTS (text-to-speech)
 - **EAF applications**: Browser, PDF viewer, pyqterminal with Korean input
 - **Denote ecosystem**: Export to Hugo, dblock automation, silo management
-- **Cross-platform**: Ubuntu 24.04, NixOS 25.05, Termux
+- **Cross-platform**: Ubuntu 24.04, NixOS 25.11, Termux
 
 ### Tested Environments
 
-- **Platforms**: Ubuntu 24.04, NixOS 25.05, Termux
+- **Platforms**: Ubuntu 24.04, NixOS 25.11, Termux
 - **Emacs version**: 30.x
 - **Terminals**: Ghostty (recommended), Kitty, Termux
 
@@ -37,7 +37,7 @@ This configuration supports the workflow where AI handles routine tasks while hu
 snap install emacs --classic
 ```
 
-**NixOS 25.05**
+**NixOS 25.11**
 ```nix
 environment.systemPackages = [ pkgs.emacs ];
 ```
@@ -180,7 +180,7 @@ Global consistency via `lisp/keybindings-config.el`:
 Create `per-machine.el` (git-ignored):
 ```elisp
 ;;; per-machine.el -*- lexical-binding: t; -*-
-(setq doom-font (font-spec :family "Sarasa Term K Nerd" :size 16))
+(setq doom-font (font-spec :family "GLG Nerd Font Mono" :size 15.1))
 (setq doom-theme 'doom-one)
 ```
 
@@ -221,4 +221,5 @@ MIT License
 
 - [Doom Emacs](https://github.com/doomemacs/doomemacs)
 - [EAF](https://github.com/emacs-eaf/emacs-application-framework)
+- [GLG-Mono Font](https://github.com/junghan0611/GLG-Mono)
 - [힣's Digital Garden](https://notes.junghanacs.com)
