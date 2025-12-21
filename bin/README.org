@@ -1,0 +1,79 @@
+#+title: Denote Export Tools
+#+author: Junghan Kim
+#+date: [2025-12-21 Sat]
+
+* Overview
+
+Denote 노트를 Hugo 마크다운으로 변환하고 dblock을 업데이트하는 도구.
+
+- *Export*: Org → Hugo MD (멀티 데몬 병렬 처리)
+- *Dblock*: 동적 블록 업데이트 (멀티 데몬 병렬 처리, 재귀)
+
+* Files
+
+| 파일                       | 설명                          |
+|----------------------------+-------------------------------|
+| denote-export.sh           | 통합 wrapper (export + dblock) |
+| denote-export-parallel.py  | Python 병렬 처리               |
+| denote-export.el           | Elisp 서버/배치 로직           |
+
+* Usage
+
+** Export (멀티 데몬)
+
+#+begin_src bash
+# 전체 폴더 (meta, bib, notes)
+denote-export.sh all
+
+# 특정 폴더
+denote-export.sh meta 4      # 4 daemons
+denote-export.sh notes 2
+
+# 커스텀 디렉토리
+denote-export.sh run ~/custom/path 4
+#+end_src
+
+** Dblock (멀티 데몬)
+
+#+begin_src bash
+# 기본 (~/org/meta, 2 daemons)
+denote-export.sh dblock
+
+# 커스텀 디렉토리, 4 daemons
+denote-export.sh dblock ~/org/notes 4
+#+end_src
+
+** Help
+
+#+begin_src bash
+denote-export.sh --help
+#+end_src
+
+* Troubleshooting
+
+#+begin_src bash
+# 좀비 데몬 정리
+pkill -f "denote-export-daemon"
+
+# 에러 로그 확인
+grep "✗" /tmp/denote-export-*.log
+#+end_src
+
+* Changelog
+
+** v2.0.0 (2025-12-21)
+- denote-export-server.el + denote-dblock-batch.el → denote-export.el 통합
+- dblock도 멀티 데몬 병렬 처리로 통합 (export와 동일한 아키텍처)
+- Python 스크립트: mode 인자 추가 (export | dblock)
+- Python 스크립트: 상대경로 사용으로 범용성 확보
+- obsolete 파일 6개 삭제
+- seq 패키지 누락 버그 수정
+
+** v1.5.0 (2025-12-17)
+- Python ProcessPoolExecutor 기반 병렬 처리
+- NBSP(U+00A0) 유니코드 안전 처리
+- 멀티 데몬 아키텍처
+
+** v1.0.0 (2025-11)
+- 초기 denote-export-batch.el
+- 단일 프로세스 순차 처리

@@ -1,5 +1,5 @@
 #!/usr/bin/env emacs --script
-;;; denote-export-server.el --- Emacs server for Denote export -*- lexical-binding: t; -*-
+;;; denote-export.el --- Unified Denote export & dblock server -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Junghan Kim
 ;; Author: Junghan Kim <junghanacs@gmail.com>
@@ -8,21 +8,27 @@
 
 ;;; Commentary:
 
-;; Emacs daemon for fast Denote → Hugo export via emacsclient.
+;; Unified Emacs server/batch for Denote operations:
+;; - Hugo export (daemon mode with emacsclient)
+;; - Dblock update (batch or daemon mode)
 ;;
 ;; Server name: "denote-export-server"
 ;;
-;; Usage:
-;;   # Start server
-;;   emacs --daemon=denote-export-server --load denote-export-server.el
-;;
-;;   # Export via client
-;;   emacsclient -s denote-export-server --eval '(export-file "file.org")'
-;;
-;;   # Stop server
+;; Usage (Export - daemon mode):
+;;   emacs --daemon=denote-export-server --load denote-export.el
+;;   emacsclient -s denote-export-server --eval '(denote-export-file "file.org")'
 ;;   emacsclient -s denote-export-server --eval '(kill-emacs)'
+;;
+;; Usage (Dblock - batch mode):
+;;   emacs --batch --load denote-export.el -- dblock ~/org/meta
+;;
+;; Usage (Dblock - daemon mode):
+;;   emacs --daemon=denote-dblock --load denote-export.el
+;;   emacsclient -s denote-dblock --eval '(denote-dblock-update-file "file.org")'
 
 ;;; Code:
+
+;;;; Configuration
 
 ;; Server configuration
 (defvar denote-export-server-name "denote-export-server"
@@ -50,6 +56,8 @@
 (setq org-export-with-author nil)
 
 (message "[Server] Starting Denote Export Server: %s" denote-export-server-name)
+
+;;;; Doom Emacs Integration
 
 ;; Determine DOOMDIR
 (defvar doom-user-dir
@@ -79,6 +87,8 @@
 (fset 'package-install (lambda (&rest _) (error "ELPA is disabled! Use Doom's straight packages only")))
 (fset 'package-refresh-contents (lambda (&rest _) (error "ELPA is disabled!")))
 
+;;;; Package Loading (straight.el)
+
 ;; Helper function to find straight build directory (version-agnostic)
 (defun find-straight-build-dir ()
   "Find the straight build directory, handling different Emacs versions."
@@ -101,7 +111,7 @@
                    (not (string-suffix-p ".el" pkg-dir)))
           (add-to-list 'load-path pkg-dir)
           ;; Load autoloads file if exists
-          (let ((autoload-file (expand-file-name 
+          (let ((autoload-file (expand-file-name
                                 (concat (file-name-nondirectory pkg-dir) "-autoloads.el")
                                 pkg-dir)))
             (when (file-exists-p autoload-file)
@@ -115,11 +125,23 @@
 
 (message "[Server] Loading essential packages from Doom's straight...")
 
-;; Essential requires (built-in)
+;;;; Required Packages
+
+;; CRITICAL: Ensure Doom's org is loaded before built-in org
+;; In batch mode, built-in org can be loaded first causing version mismatch
+(let ((build-dir (find-straight-build-dir)))
+  (when build-dir
+    (let ((org-dir (expand-file-name "org" build-dir)))
+      (when (file-directory-p org-dir)
+        ;; Add to front of load-path to override built-in
+        (push org-dir load-path)
+        (message "[Server] Prioritized Doom's org: %s" org-dir)))))
+
+;; Essential requires
 (require 'org)
 (require 'ox)
 (require 'cl-lib)
-(require 'seq)
+(require 'seq)  ;; CRITICAL: Required for seq-filter in dblock functions
 (require 'json)
 (require 'browse-url)
 
@@ -142,6 +164,14 @@
 ;; denote-regexp (required by denote-explore)
 (require 'denote-regexp nil t)
 
+;; denote-org for dblock functions (formerly denote-org-extras)
+(condition-case err
+    (progn
+      (require 'denote-org)
+      (message "[Server] ✓ denote-org loaded (dblock functions available)"))
+  (error
+   (message "[Server] WARNING: denote-org failed to load: %S" err)))
+
 ;; denote-explore (for macros like denote-explore-count-notes)
 (condition-case err
     (progn
@@ -154,7 +184,10 @@
 
 (message "[Server] ✓ All required packages loaded from Doom")
 
+;;;; Directory Configuration
+
 ;; Set denote-directory
+(defvar org-directory (expand-file-name "~/org"))
 (setq denote-directory (expand-file-name "~/org/"))
 (message "[Server] Set denote-directory: %s" denote-directory)
 
@@ -192,7 +225,8 @@
 
 (message "[Server] Loaded export configuration")
 
-;; ========== Bibliography/Citation 초기화 ==========
+;;;; Bibliography/Citation Setup
+
 (require 'oc)
 (require 'oc-basic)
 (require 'oc-csl)
@@ -219,7 +253,8 @@
 
 (message "[Server] Bibliography initialized")
 
-;; ========== 매크로 확장 설정 ==========
+;;;; Macro Expansion Setup
+
 (require 'org-macro)
 
 (defun batch-expand-macros-before-export (backend)
@@ -242,7 +277,8 @@
 
 (message "[Server] Macro expansion configured")
 
-;; ========== Helper Functions ==========
+;;;; Helper Functions
+
 (defun extract-denote-id-from-filename (filename)
   "Extract Denote ID (YYYYMMDDTHHMMSS) from FILENAME.
 Returns nil if no ID found."
@@ -254,8 +290,8 @@ Returns nil if no ID found."
   "Determine org-hugo-section from FILEPATH directory.
 Returns meta, bib, notes, or test based on parent directory name."
   (let ((parent-dir (file-name-nondirectory
-                     (directory-file-name
-                      (file-name-directory filepath)))))
+                      (directory-file-name
+                       (file-name-directory filepath)))))
     (cond
      ((string= parent-dir "meta") "meta")
      ((string= parent-dir "bib") "bib")
@@ -263,7 +299,15 @@ Returns meta, bib, notes, or test based on parent directory name."
      ((string= parent-dir "test") "test")
      (t "notes")))) ; default to notes
 
-;; ========== Export Function ==========
+;;;; Export Functions
+
+;; Counter for periodic garbage collection
+(defvar denote-export-file-counter 0
+  "Counter for tracking number of files processed by this server.")
+
+(defvar denote-export-gc-interval 50
+  "Run garbage collection every N files to prevent memory buildup.")
+
 (defun denote-export-file (file)
   "Export single org FILE to Hugo markdown.
 This function is called via emacsclient."
@@ -446,7 +490,7 @@ Each server processes its own list independently."
 (defun denote-export-directory (directory &optional shard-id total-shards)
   "Export all .org files in DIRECTORY.
 If SHARD-ID and TOTAL-SHARDS are provided, only process SHARD-ID's portion
-(for parallel processing across multiple daemons).
+\(for parallel processing across multiple daemons).
 This function handles filenames internally, avoiding shell quoting issues with NBSP."
   (let* ((all-files (directory-files directory t "\\.org$" t))
          (total-count (length all-files))
@@ -483,19 +527,86 @@ This function handles filenames internally, avoiding shell quoting issues with N
       (message "[Directory] Export completed: %s" summary)
       summary)))
 
-;; ========== Memory Management ==========
-;; Counter for periodic garbage collection
-(defvar denote-export-file-counter 0
-  "Counter for tracking number of files processed by this server.")
+;;;; Dblock Functions
 
-(defvar denote-export-gc-interval 50
-  "Run garbage collection every N files to prevent memory buildup.")
+(defun denote-dblock-update-file (file)
+  "Update all dblocks in FILE and save."
+  (message "[DBLOCK] Processing: %s" file)
+  (let ((start-time (float-time))
+        (buf nil))
+    (condition-case err
+        (progn
+          (setq buf (find-file-noselect file))
+          (with-current-buffer buf
+            ;; CRITICAL: Ensure org-mode is active for dblock functions
+            (unless (derived-mode-p 'org-mode)
+              (org-mode))
+            ;; Check if file has dblocks
+            (save-excursion
+              (goto-char (point-min))
+              (if (re-search-forward "^#\\+BEGIN:" nil t)  ; Match any BEGIN block
+                  (progn
+                    (message "[DBLOCK] Found in %s" (file-name-nondirectory file))
+                    (goto-char (point-min))
+                    (org-update-all-dblocks)
+                    (save-buffer)
+                    (message "[DBLOCK] ✓ Updated in %.2fs" (- (float-time) start-time)))
+                (message "[DBLOCK] SKIP: No dblock in %s" (file-name-nondirectory file)))))
+          (when (buffer-live-p buf)
+            (kill-buffer buf)))
+      (error
+       (message "[DBLOCK] ✗ Failed to update %s: %s" file err)
+       (when (and buf (buffer-live-p buf))
+         (kill-buffer buf))))))
+
+(defun denote-dblock-update-directory (directory)
+  "Update all dblocks in DIRECTORY recursively."
+  (let* ((all-files (directory-files-recursively directory "\\.org\\'"))
+         ;; Filter out Emacs lock files (.#filename)
+         (org-files (seq-filter (lambda (f)
+                                  (not (string-match-p "/\\.#" f)))
+                                all-files))
+         (total (length org-files))
+         (counter 0)
+         (files-with-dblocks 0)
+         (start-time (float-time)))
+
+    (message "[DBLOCK] Found %d org files in %s (excluded %d lock files)"
+             total directory (- (length all-files) total))
+    (message "========================================")
+
+    (dolist (file org-files)
+      (setq counter (1+ counter))
+      (message "[%d/%d] Processing..." counter total)
+
+      ;; Quick pre-check: does file have dblock?
+      (condition-case nil
+          (when (with-temp-buffer
+                  (insert-file-contents file nil 0 5000) ; Check first 5KB
+                  (goto-char (point-min))
+                  (re-search-forward "^#\\+BEGIN:" nil t))  ; Match any BEGIN block
+            (setq files-with-dblocks (1+ files-with-dblocks))
+            (denote-dblock-update-file file))
+        (file-missing (message "[DBLOCK] SKIP: File not found: %s" file))))
+
+    (let ((duration (- (float-time) start-time)))
+      (message "========================================")
+      (message "[DBLOCK] SUMMARY: Completed %d/%d files" counter total)
+      (message "[DBLOCK] SUMMARY: Files with dblocks: %d" files-with-dblocks)
+      (message "[DBLOCK] SUMMARY: Total time: %.2fs (%.3f files/sec)"
+               duration
+               (if (> duration 0) (/ (float counter) duration) 0))
+      (message "========================================"))))
+
+;;;; Memory Management
 
 ;; CRITICAL: Reset gc-cons-threshold to reasonable value after initialization
 ;; 16MB is a good balance between performance and memory usage
 (setq gc-cons-threshold (* 16 1024 1024))
 (garbage-collect)  ; Force initial GC
 (message "[Server] gc-cons-threshold reset to 16MB, initial GC done")
+
+;;;; Server Startup (for daemon mode)
 
 ;; Set ready flag AFTER all initialization
 (setq denote-export-server-ready t)
@@ -504,15 +615,16 @@ This function handles filenames internally, avoiding shell quoting issues with N
 (message "[Server] Denote Export Server FULLY READY!")
 (message "[Server] Server name: %s" denote-export-server-name)
 (message "[Server] Export function: denote-export-file")
+(message "[Server] Dblock function: denote-dblock-update-file")
 (message "[Server] Ready flag: %s" denote-export-server-ready)
 (message "[Server] GC interval: every %d files" denote-export-gc-interval)
 (message "[Server] ========================================")
 
-;; Keep server running
+;; Keep server running (for daemon mode)
 ;; NOTE: server-name is automatically set to daemon-name when started with --daemon=name
-;; We don't need to set it explicitly here
-(server-start)
+(unless noninteractive
+  (server-start)
+  (message "[Server] Server socket created"))
 
-(message "[Server] Server socket created")
-
-;;; denote-export-server.el ends here
+(provide 'denote-export)
+;;; denote-export.el ends here

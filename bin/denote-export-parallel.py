@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-Denote Export Parallel - Python multiprocessing for NBSP-safe parallel export
+Denote Export/Dblock Parallel - Python multiprocessing for NBSP-safe parallel processing
 
 This script handles Unicode filenames (including NBSP U+00A0) correctly
 and manages multiple Emacs daemons for parallel processing.
+
+Modes:
+- export: Org → Hugo MD conversion
+- dblock: Dynamic block update
 
 Features:
 - Automatic daemon management (start/stop)
@@ -23,13 +27,15 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Configuration
 HOME = Path.home()
-SERVER_SCRIPT = HOME / "repos/gh/doomemacs-config/bin/denote-export-server.el"
+SCRIPT_DIR = Path(__file__).parent.resolve()
+SERVER_SCRIPT = SCRIPT_DIR / "denote-export.el"
 
 # Global state for cleanup
 _num_daemons = 0
 _cleanup_done = False
 _executor = None  # Global executor reference for signal handler
 _interrupted = False  # Flag to stop processing
+_mode = "export"  # Current mode: export or dblock
 
 
 def cleanup_daemons():
@@ -179,18 +185,25 @@ def stop_daemons(num_daemons):
         except Exception as e:
             print(f"[WARN]   ✗ Failed to stop daemon {i}: {e}", flush=True)
 
-def export_file_via_daemon(args):
-    """Export a single file via emacsclient to a specific daemon."""
-    global _is_main_process
+def process_file_via_daemon(args):
+    """Process a single file via emacsclient to a specific daemon."""
+    global _is_main_process, _mode
     # Mark as worker process to prevent signal handler execution
     _is_main_process = False
 
-    file_path, daemon_id = args
+    file_path, daemon_id, mode = args
     daemon_name = f"denote-export-daemon-{daemon_id}"
 
     # Escape quotes in file path for Elisp string
     file_path_escaped = str(file_path).replace('"', '\\"')
-    elisp_cmd = f'(denote-export-file "{file_path_escaped}")'
+
+    # Choose function based on mode
+    if mode == "dblock":
+        elisp_cmd = f'(denote-dblock-update-file "{file_path_escaped}")'
+        success_marker = None  # dblock doesn't return SUCCESS:
+    else:
+        elisp_cmd = f'(denote-export-file "{file_path_escaped}")'
+        success_marker = "SUCCESS:"
 
     try:
         result = subprocess.run(
@@ -201,50 +214,95 @@ def export_file_via_daemon(args):
         )
 
         basename = file_path.name
-        if result.returncode == 0 and 'SUCCESS:' in result.stdout:
-            print(f"✓ [D{daemon_id}] {basename}", flush=True)
-            return True, basename
+
+        # Check success
+        if mode == "dblock":
+            # dblock: success if no error
+            if result.returncode == 0:
+                print(f"✓ [D{daemon_id}] {basename}", flush=True)
+                return True, basename
+            else:
+                print(f"✗ [D{daemon_id}] {basename}", flush=True)
+                if result.stderr:
+                    print(f"  Stderr: {result.stderr[:200]}", flush=True)
+                return False, basename
         else:
-            print(f"✗ [D{daemon_id}] {basename}", flush=True)
-            if result.returncode != 0:
-                print(f"  Return code: {result.returncode}", flush=True)
-            if result.stderr:
-                print(f"  Stderr: {result.stderr[:200]}", flush=True)
-            if result.stdout and 'SUCCESS:' not in result.stdout:
-                print(f"  Stdout: {result.stdout[:200]}", flush=True)
-            return False, basename
+            # export: success if SUCCESS: in output
+            if result.returncode == 0 and 'SUCCESS:' in result.stdout:
+                print(f"✓ [D{daemon_id}] {basename}", flush=True)
+                return True, basename
+            else:
+                print(f"✗ [D{daemon_id}] {basename}", flush=True)
+                if result.returncode != 0:
+                    print(f"  Return code: {result.returncode}", flush=True)
+                if result.stderr:
+                    print(f"  Stderr: {result.stderr[:200]}", flush=True)
+                if result.stdout and 'SUCCESS:' not in result.stdout:
+                    print(f"  Stdout: {result.stdout[:200]}", flush=True)
+                return False, basename
     except Exception as e:
         print(f"✗ [D{daemon_id}] {file_path.name} - Error: {e}")
         return False, file_path.name
 
+def get_org_files(directory, mode):
+    """Get list of .org files based on mode."""
+    if mode == "dblock":
+        # Recursive search for dblock mode
+        all_files = []
+        for org_file in directory.rglob("*.org"):
+            # Skip lock files (.#filename)
+            if not org_file.name.startswith(".#"):
+                all_files.append(org_file)
+        return sorted(all_files)
+    else:
+        # Non-recursive for export mode
+        return sorted(directory.glob("*.org"))
+
 def main():
-    global _num_daemons
+    global _num_daemons, _mode
 
     # Register signal handlers in main process
     _register_handlers()
 
-    if len(sys.argv) < 3:
-        print("Usage: denote-export-parallel.py <directory> <num_daemons>")
+    if len(sys.argv) < 4:
+        print("Usage: denote-export-parallel.py <mode> <directory> <num_daemons>")
+        print("  mode: export | dblock")
+        print("  directory: target directory")
+        print("  num_daemons: number of parallel daemons")
         sys.exit(1)
 
-    directory = Path(sys.argv[1])
-    num_daemons = int(sys.argv[2])
+    mode = sys.argv[1]
+    directory = Path(sys.argv[2])
+    num_daemons = int(sys.argv[3])
 
-    # Set global for cleanup handler
+    if mode not in ("export", "dblock"):
+        print(f"Error: Invalid mode '{mode}'. Use 'export' or 'dblock'")
+        sys.exit(1)
+
+    # Set globals
     _num_daemons = num_daemons
+    _mode = mode
 
     if not directory.exists():
         print(f"Error: Directory not found: {directory}")
         sys.exit(1)
 
     # Get all .org files (Python handles Unicode perfectly)
-    org_files = sorted(directory.glob("*.org"))
+    org_files = get_org_files(directory, mode)
     total_files = len(org_files)
 
-    print(f"[INFO] Found {total_files} files in {directory}", flush=True)
+    mode_desc = "Hugo Export" if mode == "export" else "Dblock Update"
+    search_type = "non-recursive" if mode == "export" else "recursive"
+
+    print(f"[INFO] Mode: {mode_desc}", flush=True)
+    print(f"[INFO] Found {total_files} files in {directory} ({search_type})", flush=True)
     print(f"[INFO] Using {num_daemons} parallel daemons", flush=True)
     print(f"[INFO] NBSP(U+00A0) safe: Python handles Unicode correctly", flush=True)
     print(flush=True)
+
+    if total_files == 0:
+        print("[INFO] No files to process. Exiting.")
+        return 0
 
     # Start daemons
     print(f"[INFO] ====================================== Daemon Lifecycle ======================================", flush=True)
@@ -258,7 +316,7 @@ def main():
         file_daemon_pairs = []
         for idx, file_path in enumerate(org_files):
             daemon_id = (idx % num_daemons) + 1
-            file_daemon_pairs.append((file_path, daemon_id))
+            file_daemon_pairs.append((file_path, daemon_id, mode))
 
         # Process in parallel
         global _executor, _interrupted
@@ -269,7 +327,7 @@ def main():
 
         _executor = ProcessPoolExecutor(max_workers=num_daemons)
         try:
-            futures = {_executor.submit(export_file_via_daemon, pair): pair
+            futures = {_executor.submit(process_file_via_daemon, pair): pair
                       for pair in file_daemon_pairs}
 
             for future in as_completed(futures):
@@ -300,10 +358,10 @@ def main():
         print()
         print(f"[INFO] ========================================")
         if _interrupted:
-            print(f"[INFO] Export interrupted!")
+            print(f"[INFO] {mode_desc} interrupted!")
             print(f"[INFO] Processed: {processed}/{total_files}, Success: {success_count}, Errors: {error_count}")
         else:
-            print(f"[INFO] Export completed!")
+            print(f"[INFO] {mode_desc} completed!")
             print(f"[INFO] Success: {success_count}, Errors: {error_count}, Total: {total_files}")
         print(f"[INFO] Duration: {duration:.1f}s, Speed: {speed:.2f} files/sec")
         print(f"[INFO] ========================================")

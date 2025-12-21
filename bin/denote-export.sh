@@ -38,8 +38,8 @@ cleanup_on_exit() {
 # Register trap for SIGINT (Ctrl+C) and SIGTERM
 trap cleanup_on_exit SIGINT SIGTERM
 
-# Track daemon count for cleanup
-CLEANUP_DAEMONS=4
+# Track daemon count for cleanup (matches DEFAULT_DAEMONS)
+CLEANUP_DAEMONS=$DEFAULT_DAEMONS
 
 # Target directories
 META_DIR="${ORG_ROOT}/meta"
@@ -56,18 +56,21 @@ NC='\033[0m'
 
 show_usage() {
   cat <<EOF
-${GREEN}Denote Export - 병렬 처리 기반 Hugo 변환${NC}
+${GREEN}Denote Export - 병렬 처리 기반 Hugo 변환 & Dblock 업데이트${NC}
 
 ${BLUE}사용법:${NC}
   denote-export.sh [명령] [옵션]
 
-${BLUE}명령:${NC}
+${BLUE}Export 명령 (멀티 데몬):${NC}
   all [daemons]          - 전체 폴더 순차 처리 (meta, bib, notes) ${YELLOW}⭐ 권장${NC}
   meta [daemons]         - ~/org/meta 폴더만 (530 files)
   bib [daemons]          - ~/org/bib 폴더만 (649 files)
   notes [daemons]        - ~/org/notes 폴더만 (797 files)
   test [daemons]         - ~/org/test 폴더만 (빠른 검증)
   run [dir] [daemons]    - 커스텀 디렉토리 지정
+
+${BLUE}Dblock 명령 (멀티 데몬):${NC}
+  dblock [dir] [daemons] - 디렉토리 내 dblock 업데이트 (기본: ~/org/meta, 재귀)
   --help                 - 이 도움말 표시
 
 ${BLUE}옵션:${NC}
@@ -85,6 +88,12 @@ ${BLUE}예제:${NC}
 
   ${GREEN}# 커스텀 디렉토리${NC}
   denote-export.sh run ~/custom/path 4
+
+  ${GREEN}# dblock 업데이트 (meta 폴더, 2 daemons)${NC}
+  denote-export.sh dblock
+
+  ${GREEN}# dblock 업데이트 (커스텀 디렉토리, 4 daemons)${NC}
+  denote-export.sh dblock ~/org/notes 4
 
 ${BLUE}성능 (2 daemons, 메모리 안정):${NC}
   - meta:  530 files → ~9분
@@ -104,8 +113,7 @@ ${BLUE}문제 해결:${NC}
   cd ${SCRIPT_DIR}/../tests && ./run-tests.sh
 
 ${BLUE}상세 문서:${NC}
-  ${SCRIPT_DIR}/README.md
-  ${SCRIPT_DIR}/EXPORT-PARALLEL.org
+  ${SCRIPT_DIR}/README.org
 
 EOF
 }
@@ -165,7 +173,7 @@ case "$COMMAND" in
       log_info "=================================================="
       echo ""
 
-      python3 "$PYTHON_SCRIPT" "$DIR_PATH" "$NUM_DAEMONS"
+      python3 "$PYTHON_SCRIPT" export "$DIR_PATH" "$NUM_DAEMONS"
 
       echo ""
       log_info "✓ Folder $DIR_NAME completed"
@@ -196,7 +204,7 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" "$META_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$META_DIR" "$NUM_DAEMONS"
     ;;
 
   bib)
@@ -215,7 +223,7 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" "$BIB_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$BIB_DIR" "$NUM_DAEMONS"
     ;;
 
   notes)
@@ -234,7 +242,7 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" "$NOTES_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$NOTES_DIR" "$NUM_DAEMONS"
     ;;
 
   test)
@@ -253,7 +261,7 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" "$TEST_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$TEST_DIR" "$NUM_DAEMONS"
     ;;
 
   run)
@@ -280,7 +288,27 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" "$ORG_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$ORG_DIR" "$NUM_DAEMONS"
+    ;;
+
+  dblock)
+    DBLOCK_DIR="${2:-$META_DIR}"
+    NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
+
+    if [ ! -d "$DBLOCK_DIR" ]; then
+      log_error "Directory not found: $DBLOCK_DIR"
+      exit 1
+    fi
+
+    log_info "======================================"
+    log_info "Denote Dblock - 멀티 데몬 업데이트"
+    log_info "Directory: $DBLOCK_DIR (재귀)"
+    log_info "Daemons: $NUM_DAEMONS"
+    log_info "======================================"
+    echo ""
+
+    python3 "$PYTHON_SCRIPT" dblock "$DBLOCK_DIR" "$NUM_DAEMONS"
     ;;
 
   *)
