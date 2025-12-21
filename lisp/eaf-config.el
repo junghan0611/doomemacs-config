@@ -21,6 +21,11 @@
 ;;;; Core
 
   (add-to-list 'load-path eaf-directory)
+
+  ;; 기본 동작 덮어쓰기 방지 (require 전에 설정!)
+  (setq eaf-find-file-advisor-enable nil   ; find-file 대체 안함
+        eaf-dired-advisor-enable nil)      ; dired 대체 안함
+
   (require 'eaf)
 
 ;;;; Apps
