@@ -36,9 +36,14 @@
   ;; (require 'eaf-jupyter)         ; Qt 위젯 직접 통합 예시
   ;; (require 'eaf-vue-tailwindcss)
 
-;;;; Doom + 한글 입력
+;;;; Doom 통합
 
   (add-hook 'eaf-mode-hook #'doom-mark-buffer-as-real-h)
+
+  ;; EAF 버퍼에서 mode-line 표시 (popup 모듈이 숨기는 것 방지)
+  (set-popup-rule! "^\\*eaf" :modeline t :quit nil)
+
+;;;; 한글 입력
 
   (defun my/eaf-setup-gtk-use-native-input ()
     "한글 입력을 위한 GTK native input 활성화."
@@ -83,6 +88,17 @@
         eaf-pyqterminal-font-family "Sarasa Term K Nerd")
 
   ;; TODO: M-m local leader - EAF 키 처리 방식 조사 필요 (doom-xxx)
+
+  ;; Python 함수: 문자열
+  (eaf-bind-key scroll_up "M-u" eaf-pyqterminal-keybinding)
+  (eaf-bind-key scroll_down "M-v" eaf-pyqterminal-keybinding)
+  ;; Emacs 함수
+  (eaf-bind-key other-window "M-h" eaf-pyqterminal-keybinding)
+  (eaf-bind-key other-window "M-o" eaf-pyqterminal-keybinding)
+  ;; (eaf-bind-key eaf-send-backspace-key "M-o" eaf-pyqterminal-keybinding)
+
+  (require 'tab-bar)
+  (tab-bar-mode 1)
 
   ) ; end when
 
