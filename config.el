@@ -357,10 +357,10 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
 
 ;;;; MU4e
 
-(after! mu4e
-  (setq mu4e-maildir "~/Maildir"
-        mu4e-get-mail-command "mbsync -a"
-        mu4e-update-interval (* 60 60 3)))  ; 3H 마다 자동 동기화
+;; (after! mu4e
+;;   (setq mu4e-maildir "~/Maildir"
+;;         mu4e-get-mail-command "mbsync -a"
+;;         mu4e-update-interval (* 60 60 3)))  ; 3H 마다 자동 동기화
 
 ;;;; DONT  Notmuch 이메일 설정
 
@@ -462,6 +462,7 @@ Returns t on success, nil if notify-send is not available."
   ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
   (load! "lisp/ai-stt-eca-whisper")
   (load! "lisp/ai-tts-edge")
+  (load! "lisp/eaf-config")        ; EAF (조건부 로딩)
   (load! "lisp/utils-config")
   (load! "lisp/project-config")
   (load! "lisp/keybindings-config")
