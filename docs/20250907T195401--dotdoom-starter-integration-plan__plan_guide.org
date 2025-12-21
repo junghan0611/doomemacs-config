@@ -1,4 +1,4 @@
-* DOTDOOM-STARTER 통합 계획
+* DOOMEMACS-CONFIG 통합 계획
 *작성일*: 2025-09-03\\
 *목적*: Android 설정을 starter로 통합하고 최소 핵심 버전으로 재구성
 
@@ -12,7 +12,7 @@
 ** 구조 설계
 *** 기본 구조
 #+begin_example
-dotdoom-starter/
+doomemacs-config/
 ├── config.el          # 핵심 설정 (최소화)
 ├── init.el            # 모듈 선택 (필수만)
 ├── packages.el        # 최소 패키지
@@ -129,7 +129,7 @@ dotdoom-starter/
 - [ ] 핵심/개인 설정 분리
 
 *** Phase 2: 통합
-- [ ] dotdoom-starter 백업
+- [ ] doomemacs-config 백업
 - [ ] 핵심 설정만 남기기
 - [ ] android 설정 profiles/android.el로 이동
 - [ ] 개인 설정 profiles/user.el.example 생성
@@ -179,5 +179,5 @@ dotdoom-starter/
 
 ** 참고
 - 기존 dotdoom-android- 설정 참조
-- 기존 dotdoom-starter 구조 활용
+- 기존 doomemacs-config 구조 활용
 - Doom Emacs 공식 모듈 문서

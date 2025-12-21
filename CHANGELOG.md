@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.1.0] - 2025-10-03
 
 ### Project Inception
-First public release of dotdoom-starter - a terminal-optimized Doom Emacs configuration.
+First public release of doomemacs-config - a terminal-optimized Doom Emacs configuration.
 
 ### Core Features
 
@@ -142,5 +142,5 @@ The following packages are explicitly disabled to maintain a focused, lightweigh
 - Documentation was initially missing (resolved in this release)
 - Emoji display in terminal can break line alignment (recommendation: avoid emojis in terminal mode)
 
-[unreleased]: https://github.com/junghan0611/dotdoom-starter/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/junghan0611/dotdoom-starter/releases/tag/v0.1.0
+[unreleased]: https://github.com/junghan0611/doomemacs-config/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/junghan0611/doomemacs-config/releases/tag/v0.1.0

@@ -1,4 +1,4 @@
-* DotDoom-Starter: Emacs와 AI의 융합 비전 및 로드맵
+* Doomemacs-Config: Emacs와 AI의 융합 비전 및 로드맵
 *작성일*: 2025-10-05 *상태*: 🚀 비전 문서 *대상*: Emacs 사용자 및 AI
 개발자
 
@@ -111,7 +111,7 @@ Knowledge_Agent:
 
 ** 💡 차별화 요소
 *** vs 기존 스타터킷
-| 기존        | DotDoom-Starter   |
+| 기존        | Doomemacs-Config   |
 |-------------+-------------------|
 | 정적 설정   | AI 동적 최적화    |
 | 수동 관리   | 능동적 에이전트   |
@@ -178,7 +178,7 @@ Knowledge_Agent:
 
 *** 커뮤니티
 - GitHub:
-  [[https://github.com/junghanacs/dotdoom-starter][dotdoom-starter]]
+  [[https://github.com/junghanacs/doomemacs-config][dotdoom-starter]]
 - 디스커션: 아이디어 및 제안
 - 이슈: 버그 리포트
 

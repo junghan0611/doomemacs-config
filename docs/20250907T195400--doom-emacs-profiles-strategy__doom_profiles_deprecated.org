@@ -23,7 +23,7 @@
 ├── doomemacs-junghan0611/  # 중복 설치
 ├── doomemacs-starter/      # 또 다른 중복
 └── repos/gh/
-    └── dotdoom-starter/    # starter 설정 파일
+    └── doomemacs-config/    # starter 설정 파일
 #+end_example
 
 *문제점*: - 둠이맥스 core 중복 (각 ~300MB) - 패키지 중복 설치 (각
@@ -38,7 +38,7 @@
 ├── .doom.d/                # 현재 full 설정
 │   └── profiles.el         # 프로파일 정의
 └── repos/gh/
-    ├── dotdoom-starter/    # starter 설정
+    ├── doomemacs-config/    # starter 설정
     ├── dotdoom-minimal/    # minimal 설정
     └── dotdoom-android/    # android 설정
 #+end_example
@@ -61,7 +61,7 @@ Native GUI 앱 - Termux 터미널
 연동 - GUI/터미널 모드 자동 전환 - 최소한의 LSP와 필수 패키지 - 빠른
 시작 속도 - 기존 dotdoom-android- 설정 통합 예정
 
-*디렉토리*: =~/repos/gh/dotdoom-starter/=
+*디렉토리*: =~/repos/gh/doomemacs-config/=
 
 **** 3. MINIMAL (Debug/Test)
 *용도*: 문제 해결, 패키지 테스트\\
@@ -120,7 +120,7 @@ cp -r ~/doomemacs ~/doomemacs.backup-$(date +%Y%m%d)
   ("DOOMDIR" . "~/dotemacs/dotdoomemacs"))
  
  (starter  ; 통합 경량 버전 (터미널/Android/Termux)
-  ("DOOMDIR" . "~/repos/gh/dotdoom-starter"))
+  ("DOOMDIR" . "~/repos/gh/doomemacs-config"))
  
  (minimal  ; 테스트/디버깅용
   ("DOOMDIR" . "~/repos/gh/dotdoom-minimal")))
@@ -203,7 +203,7 @@ emacs --profile starter &
 **** 설정 동기화
 #+begin_src sh
 # Git으로 설정 관리
-cd ~/repos/gh/dotdoom-starter
+cd ~/repos/gh/doomemacs-config
 git add -A
 git commit -m "Update starter config"
 git push

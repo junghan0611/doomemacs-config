@@ -168,4 +168,4 @@ systemd.user.timers.mbsync = {
 ** 관련 링크
 
 - [[https://github.com/junghan0611/nixos-config][nixos-config]]
-- [[https://github.com/junghan0611/dotdoom-starter][dotdoom-starter]]
+- [[https://github.com/junghan0611/doomemacs-config][dotdoom-starter]]

@@ -182,5 +182,5 @@ Our config uses 90% advice quotes, 10% random samples.
 
 --------------
 
-*Last Updated*: 2025-10-04 *Config Version*: dotdoom-starter v1.0
+*Last Updated*: 2025-10-04 *Config Version*: doomemacs-config v1.0
 *Maintained by*: junghanacs

@@ -1,4 +1,4 @@
-* DOTDOOM-STARTER 경량화 리팩토링 계획
+* DOOMEMACS-CONFIG 경량화 리팩토링 계획
 *작성일*: 2025-09-06 *목표*: Doom Emacs 기본에 충실한 초경량 터미널 중심
 설정
 
@@ -233,7 +233,7 @@ M-x treesit-install-language-grammar
 1. *백업 생성*
 
    #+begin_src sh
-   cp -r ~/repos/gh/dotdoom-starter ~/repos/gh/dotdoom-starter.bak
+   cp -r ~/repos/gh/doomemacs-config ~/repos/gh/dotdoom-starter.bak
    #+end_src
 
 2. *init.el 수정*

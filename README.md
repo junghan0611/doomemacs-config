@@ -1,4 +1,4 @@
-# dotdoom-starter
+# doomemacs-config
 
 A lightweight, terminal-optimized Doom Emacs configuration for practical use
 
@@ -6,7 +6,7 @@ A lightweight, terminal-optimized Doom Emacs configuration for practical use
 
 ## Overview
 
-`dotdoom-starter` is a streamlined Doom Emacs configuration optimized for terminal (`-nw`) usage. It works consistently across Ubuntu 24.04, NixOS 25.05, and Termux (Android) environments.
+`doomemacs-config` is a streamlined Doom Emacs configuration optimized for terminal (`-nw`) usage. It works consistently across Ubuntu 24.04, NixOS 25.05, and Termux (Android) environments.
 
 ### Key Features
 
@@ -41,35 +41,35 @@ pkg install emacs-nox
 bash install-termux-pkgs-for-emacs.sh  # Additional packages
 ```
 
-### 2. Install Doom Emacs and dotdoom-starter
+### 2. Install Doom Emacs and doomemacs-config
 
 ```bash
 # Clone Doom Emacs
 git clone https://github.com/doomemacs/doomemacs.git ~/doomemacs-starter
 
-# Clone dotdoom-starter
+# Clone doomemacs-config
 mkdir -p ~/repos/gh/
-git clone https://github.com/junghan0611/dotdoom-starter.git ~/repos/gh/dotdoom-starter
+git clone https://github.com/junghan0611/doomemacs-config.git ~/repos/gh/dotdoom-starter
 
 # Initial sync
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom sync
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync
 ```
 
 ### 3. Shell Configuration (bashrc/zshrc)
 
 ```bash
 # Aliases
-alias esync='DOOMDIR="$HOME/repos/gh/dotdoom-starter" $HOME/doomemacs-starter/bin/doom sync'
-alias esyncenv='DOOMDIR="$HOME/repos/gh/dotdoom-starter" $HOME/doomemacs-starter/bin/doom env'
-alias esyncf='DOOMDIR="$HOME/repos/gh/dotdoom-starter" $HOME/doomemacs-starter/bin/doom sync -u -j 4'
-alias e='env GTK_IM_MODULE=emacs XMODIFIERS=@im=emacs EMACS=emacs DOOMDIR=$HOME/repos/gh/dotdoom-starter $HOME/doomemacs-starter/bin/doom run -nw'
+alias esync='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync'
+alias esyncenv='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom env'
+alias esyncf='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync -u -j 4'
+alias e='env GTK_IM_MODULE=emacs XMODIFIERS=@im=emacs EMACS=emacs DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run -nw'
 ```
 
 ### 4. .desktop File (Optional, for GUI)
 
 ```bash
-# Copy and modify paths in dotdoom-starter.desktop
-cp dotdoom-starter.desktop ~/.local/share/applications/
+# Copy and modify paths in doomemacs-config.desktop
+cp doomemacs-config.desktop ~/.local/share/applications/
 # Edit the file to match your paths
 ```
 
@@ -85,7 +85,7 @@ e
 e ~/document.org
 
 # GUI mode (rarely used)
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom run
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom run
 ```
 
 ### Sync Configuration
@@ -104,7 +104,7 @@ esyncf
 ## Structure
 
 ```
-dotdoom-starter/
+doomemacs-config/
 ├── init.el              # Doom module declarations
 ├── config.el            # Main configuration
 ├── packages.el          # Package declarations
@@ -261,16 +261,16 @@ Create `user-keys.el` for personal keybindings.
 
 ```bash
 # Full rebuild
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom sync -u -j 4
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync -u -j 4
 
 # Clean byte-compiled files
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom clean
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom clean
 ```
 
 ### Diagnostics
 
 ```bash
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom doctor
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom doctor
 ```
 
 ### Server Restart

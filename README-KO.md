@@ -1,4 +1,4 @@
-# dotdoom-starter
+# doomemacs-config
 
 간결하고 실용적인 터미널 최적화 Doom Emacs 설정
 
@@ -6,7 +6,7 @@
 
 ## 개요
 
-`dotdoom-starter`는 터미널(`-nw`) 사용에 최적화된 경량 Doom Emacs 설정입니다. Ubuntu 24.04, NixOS 25.05, Termux(Android) 환경에서 동일하게 작동합니다.
+`doomemacs-config`는 터미널(`-nw`) 사용에 최적화된 경량 Doom Emacs 설정입니다. Ubuntu 24.04, NixOS 25.05, Termux(Android) 환경에서 동일하게 작동합니다.
 
 ### 주요 특징
 
@@ -41,35 +41,35 @@ pkg install emacs-nox
 bash install-termux-pkgs-for-emacs.sh  # 추가 패키지
 ```
 
-### 2. Doom Emacs 및 dotdoom-starter 설치
+### 2. Doom Emacs 및 doomemacs-config 설치
 
 ```bash
 # Doom Emacs 클론
 git clone https://github.com/doomemacs/doomemacs.git ~/doomemacs-starter
 
-# dotdoom-starter 클론
+# doomemacs-config 클론
 mkdir -p ~/repos/gh/
-git clone https://github.com/junghan0611/dotdoom-starter.git ~/repos/gh/dotdoom-starter
+git clone https://github.com/junghan0611/doomemacs-config.git ~/repos/gh/dotdoom-starter
 
 # 초기 동기화
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom sync
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync
 ```
 
 ### 3. Shell 설정 (bashrc/zshrc)
 
 ```bash
 # 별칭 설정
-alias esync='DOOMDIR="$HOME/repos/gh/dotdoom-starter" $HOME/doomemacs-starter/bin/doom sync'
-alias esyncenv='DOOMDIR="$HOME/repos/gh/dotdoom-starter" $HOME/doomemacs-starter/bin/doom env'
-alias esyncf='DOOMDIR="$HOME/repos/gh/dotdoom-starter" $HOME/doomemacs-starter/bin/doom sync -u -j 4'
-alias e='env GTK_IM_MODULE=emacs XMODIFIERS=@im=emacs EMACS=emacs DOOMDIR=$HOME/repos/gh/dotdoom-starter $HOME/doomemacs-starter/bin/doom run -nw'
+alias esync='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync'
+alias esyncenv='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom env'
+alias esyncf='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync -u -j 4'
+alias e='env GTK_IM_MODULE=emacs XMODIFIERS=@im=emacs EMACS=emacs DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run -nw'
 ```
 
 ### 4. .desktop 파일 (선택사항, GUI용)
 
 ```bash
 # 파일 복사 후 경로 수정
-cp dotdoom-starter.desktop ~/.local/share/applications/
+cp doomemacs-config.desktop ~/.local/share/applications/
 # 파일을 열어 경로를 자신의 환경에 맞게 수정
 ```
 
@@ -85,7 +85,7 @@ e
 e ~/document.org
 
 # GUI 모드 (드물게 사용)
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom run
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom run
 ```
 
 ### 설정 동기화
@@ -104,7 +104,7 @@ esyncf
 ## 구조
 
 ```
-dotdoom-starter/
+doomemacs-config/
 ├── init.el              # Doom 모듈 선언
 ├── config.el            # 주요 설정 파일
 ├── packages.el          # 패키지 선언
@@ -323,16 +323,16 @@ M-x korean/test-raw-input  ; 터미널에서 전송되는 시퀀스 확인
 
 ```bash
 # 완전 재빌드
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom sync -u -j 4
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync -u -j 4
 
 # 바이트 컴파일 정리
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom clean
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom clean
 ```
 
 ### 진단
 
 ```bash
-DOOMDIR="$HOME/repos/gh/dotdoom-starter" ~/doomemacs-starter/bin/doom doctor
+DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom doctor
 ```
 
 ### 서버 재시작
