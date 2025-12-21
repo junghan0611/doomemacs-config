@@ -214,7 +214,7 @@
       "." #'+default/search-buffer)
 
 (map! :i "M-l" #'sp-forward-slurp-sexp
-      :i "M-h" #'sp-forward-barf-sexp
+      :i "M-\\" #'sp-forward-barf-sexp
       :n "] p" (cmd! (evil-forward-paragraph) (recenter))
       :n "[ p" (cmd! (evil-backward-paragraph) (recenter))
       :n "DEL" #'evil-switch-to-windows-last-buffer
@@ -250,7 +250,7 @@
   (map! :map vterm-mode-map
         :i "M-RET" #'my/vterm-send-alt-return
         :inv "M-y" #'vterm-yank-pop
-        :inv "M-h" #'other-window
+        :inv "M-\\" #'other-window
         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
         :inv "M-DEL" #'my/vterm-send-meta-backspace))
 
@@ -290,7 +290,7 @@
 
 (after! dired
   (map! :map dired-mode-map
-        :inv "M-h" #'other-window
+        :inv "M-\\" #'other-window
         :n "C-c C-e" #'wdired-change-to-wdired-mode
         :n "C-c l" #'org-store-link
         :n "C-x /" #'dired-narrow-regexp
@@ -304,7 +304,7 @@
 ;;;;; Prog Mode
 
 (map! :map prog-mode-map
-      :inv "M-h" #'other-window)
+      :inv "M-\\" #'other-window)
 
 ;;;;; Org Mode
 
@@ -323,6 +323,7 @@
         "C-c d" #'cape-dict
         :i "<tab>" #'completion-at-point
         :i "TAB" #'completion-at-point
+        "M-\\" #'other-window
         "M--" #'denote-find-backlink
         ;; Localleader
         :localleader

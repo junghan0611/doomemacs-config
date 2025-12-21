@@ -60,6 +60,7 @@
 ;;; Global Unset Keys
 
 (map! "<f2>" nil
+      "M-\\" nil  ; delete-horizontal-space
       "M-a" nil   ; forward-sentence - use evil motion instead
       "M-c" nil   ; capitalize-word
       "M-e" nil)  ; backward-sentence - use evil motion instead
@@ -462,9 +463,9 @@ Returns t on success, nil if notify-send is not available."
   ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
   (load! "lisp/ai-stt-eca-whisper")
   (load! "lisp/ai-tts-edge")
-  (load! "lisp/eaf-config")        ; EAF (조건부 로딩)
   (load! "lisp/utils-config")
   (load! "lisp/project-config")
+  (load! "lisp/eaf-config")        ; EAF (조건부 로딩)
   (load! "lisp/keybindings-config")
   (load! "lisp/keybindings-remap")
   (load! "lisp/functions")

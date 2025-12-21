@@ -84,7 +84,7 @@
   (map! :map vterm-mode-map
         :i "M-RET" #'my/vterm-send-alt-return
         :inv "M-y" #'vterm-yank-pop
-        :inv "M-h" #'other-window
+        :inv "M-\\" #'other-window
         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
         :inv "M-u" 'evil-scroll-up
         :inv "M-v" 'evil-scroll-down)
@@ -150,7 +150,7 @@
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
   (map! :n "s-;" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
-        :inv "M-h" #'other-window
+        :inv "M-\\" #'other-window
         :inv "M-RET" #'+default/newline
         :inv "M-<return>" #'+default/newline
         :i "DEL" #'evil-delete-backward-char-and-join
