@@ -1,0 +1,110 @@
+#+title:      멀티에이전트 워크플로우 정리: 터미널, EAF, 그리고 VC/Efrit/Beads
+#+date:       [2025-12-22 Mon 12:10]
+#+filetags:   :agents:vc:efrit:beads:bd:terminal:eaf:workflow:
+#+identifier: 20251222T121027
+
+* 요약
+
+이 문서는 대화에서 정리된 결론을 기록한다.
+핵심은 "터미널을 Emacs로 대체"하는 문제가 아니라, 멀티 에이전트 시대에 Emacs를 *Control Plane*으로 두고, CLI 에이전트/터미널을 *Execution Plane*으로 둔 채 둘 사이의 마찰(특히 텍스트 선택/전달)을 최소화하는 시스템을 찾는 것이다.
+
+* 현재 상황과 관찰
+
+** bd 중심 프로젝트 관리
+
+- 사용자는 bd(beads)로 에이전트들의 할 일을 관리한다.
+- 실제 작업(코딩/실행)은 별도 터미널(에이전트별)에서 진행한다.
+- 사용자는 Emacs에서 NOW.org 등 문서를 열어두고 타임라인/컨텍스트를 편집하며 전체 흐름을 관리한다.
+
+** 멀티 에이전트 환경의 특징
+
+- 바이브코딩 CLI 도구(예: claude-code)가 기능/안정성 면에서 강력해지는 추세.
+- 에이전트 협업은 텍스트 입출력량이 매우 많다.
+- 사용자에게 중요한 것은 "로그 축적"이 아니라 *현재 최상의 컨텍스트를 유지*하는 편집/선택 경험이다.
+
+* 문제의 핵심: 입력기 vs 선택 UX
+
+** 입력기(IME) 문제
+
+- Emacs 내부 터미널(eat/vterm)은 구조적으로 IME preedit(한글 조합) 문제가 생기기 쉬움.
+- EAF/Qt 계열은 시스템 IME를 직접 사용하므로 IME 문제를 우회할 수 있음.
+
+** 그러나 현재의 통증 포인트는 A(선택 UX)
+
+사용자는 X11 환경(우분투)에서 ghostty + tmux를 사용하며, 다음이 찝찝함의 핵심이라고 판단함:
+
+- tmux copy-mode에서 선택/복사 자체의 마찰(A)
+- 로그화/아카이브는 중요하지 않으며 오히려 로그를 지우는 편
+
+따라서 "IME 해결" 중심의 EAF 터미널 개선(qtermwidget 등)은 문제를 정확히 겨냥하지 못할 수 있다.
+
+* 선택지 프레임 (대화에서 합의된 비교)
+
+** A. eat 개선
+
+- Emacs-native 입력 자유도(comint/eshell 수준) 가능성이 있으나,
+- 사용자 성향과 eat의 접근이 맞지 않아 제외하기로 함.
+
+** B. EAF + pyqterminal 유지
+
+- IME는 강하고 즉시 실용적.
+- 하지만 선택 UX(A) 해결과는 별개일 수 있음.
+
+** C. EAF + qtermwidget
+
+- EAF를 선택한 순간 Emacs-native 입력 자유도를 일부 포기하는 구조.
+- qtermwidget는 "터미널 위젯 품질"을 올리는 방향이지 "선택 UX"를 직접 해결하는 방향은 아님.
+- 유지비(C++/SIP/Qt 빌드/유지)가 상수로 붙음.
+
+** D. 외부 GPU 터미널 + Emacs 연동 강화
+
+- ghostty/kitty/wezterm 등은 실행 경험이 최상.
+- Emacs는 Control Plane으로 남기고, 텍스트 선택/전달/조율을 시스템적으로 개선.
+
+대화의 결론은 D의 방향성이 현재 통증 포인트(A)에 가장 직접적으로 대응한다는 것.
+
+* Steve Yegge 생태계의 관점: VC/Efrit/Beads
+
+사용자는 "고수의 고민"에서 방향 힌트를 얻기 위해 Steve Yegge의 도구 체계를 검토하기로 함.
+
+** VC (VibeCoder)
+
+- 이슈 지향 오케스트레이션: 작업을 작은 단위로 쪼개고, AI supervisor로 품질/흐름을 관리.
+- 원칙: Zero Framework Cognition(의사결정은 AI에 위임).
+
+** Efrit
+
+- Emacs에서 AI를 쓰는 이유는 "터미널 대체"가 아니라, Emacs의 self-modifying/text-centric 성질을 활용해 Control Plane을 강화하기 위함.
+- 원칙: Zero Client-Side Intelligence(Emacs 쪽은 순수 실행기/컨텍스트 수집기).
+
+** Beads (bd)
+
+- 작업 추적/의존성/상태 변화가 텍스트 기반으로 안정적으로 흘러감.
+- 사용자 경험상 bd에서 이미 큰 학습/효용을 얻었고, 이제 VC/Efrit로 확장해 전체 파이프를 굴려보려 함.
+
+* 현재 머신 상태(체크 결과)
+
+- bd(beads): 설치되어 사용 중
+  - 경로: ~/.local/bin/bd
+  - 버전: 0.30.0
+
+- vc: /home/goqual/repos/3rd/vc 에 클론되어 있고, 최신 커밋 기준으로 빌드 완료
+  - Go: go1.22.2
+  - 바이너리: ~/.local/bin/vc
+  - 주의: vc는 실행 디렉토리에 VC 트래커(.beads/beads.db)가 없으면 에러를 낼 수 있음. 프로젝트 루트에서 `vc init` 또는 `--db` 지정 필요.
+
+- efrit: Doom 설정에 이미 포함되어 있으며, 관련 키바인딩이 준비되어 있음
+  - 설정 파일: /home/goqual/sync/emacs/doomemacs-config/lisp/ai-agent-shell.el
+
+* 실행을 위한 최소 스모크 절차 (추천)
+
+1) VC를 적용할 프로젝트 루트로 이동
+2) `vc init`
+3) `vc doctor --verbose` 로 점검
+4) `vc repl` 로 진입해 자연어로 ready work 확인
+5) 준비되면 `vc execute` 로 event loop 실행(오케스트레이션 시작)
+
+* 다음 단계
+
+- 먼저 VC를 적용할 "첫 번째 프로젝트" 하나를 정한다(경로 1개).
+- 그 프로젝트에서 VC 스모크 테스트를 통과시키고(doctor 통과), 실제 업무 흐름에 붙여본다.

@@ -173,68 +173,9 @@
   (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
   )
 
-;;;; Efrit (Steve Yegge's AI Assistant) - efrit-ko fork
-
-;; AI-powered autonomous Emacs assistant (junghan0611/efrit-ko)
-;; Features:
-;; - efrit-chat: Multi-turn conversational interface
-;; - efrit-do: Natural language command execution
-;; - efrit-do-async: Async command execution with session management
-;; - efrit-remote-queue: AI agent communication channel
-;; - OpenRouter backend support (efrit-ko fork)
-
-(use-package! efrit
-  :commands (efrit-chat efrit-do efrit-do-async efrit-unified-do
-             efrit-streamlined-send efrit-remote-queue-start)
-  :init
-  ;; API Backend: 'anthropic or 'openrouter
-  ;; Set ANTHROPIC_API_KEY or OPENROUTER_API_KEY environment variable
-  (setq efrit-api-backend 'anthropic)  ; or 'openrouter
-
-  ;; Model selection (works with both backends)
-  ;; Anthropic: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022
-  ;; OpenRouter: anthropic/claude-sonnet-4, anthropic/claude-3.5-sonnet
-  (setq efrit-model "claude-sonnet-4-20250514")
-  (setq efrit-max-tokens 8192)
-
-  ;; Data directory under doom user dir
-  (setq efrit-data-directory (expand-file-name ".efrit" doom-user-dir))
-
-  ;; OpenRouter specific settings (only used when efrit-api-backend is 'openrouter)
-  (setq efrit-openrouter-site-url "https://github.com/junghan0611/efrit-ko")
-  (setq efrit-openrouter-site-name "Efrit-KO")
-
-  :config
-  ;; Performance settings
-  (setq efrit-performance-cache-ttl 300) ; Cache for 5 minutes
-  (setq efrit-performance-max-sessions 10)
-  (setq efrit-async-max-work-log-entries 50)
-)
-
-;;;; Beads
-
-(use-package! beads
-  :defer 2
-  :commands (beads beads-list beads-ready beads-show beads-create)
-  ;; :bind ("C-c b" . beads)
-  :hook (doom-after-init . beads-eldoc-mode))  ; Enable eldoc support
-
-;;;; Efrit + Beads Keybindings
-
-(map! :leader
-      (:prefix ("3" . "efrit/beads")
-       :desc "beads" "3" #'beads
-       :desc "Chat" "c" #'efrit-chat
-       :desc "Do (sync)" "d" #'efrit-do
-       :desc "Do (async)" "D" #'efrit-do-async
-       :desc "Unified" "u" #'efrit-unified-do
-       :desc "Streamlined" "s" #'efrit-streamlined-send
-       :desc "Start queue" "q" #'efrit-remote-queue-start
-       :desc "Queue status" "Q" #'efrit-remote-queue-status
-       :desc "Dashboard" "b" #'efrit-dashboard
-       :desc "Performance" "p" #'efrit-performance-show-stats))
-
 ;;;; TODO MCP (Model Context Protocol)
+
+;; Efrit, Beads → ai-orchestration.el로 이동
 
 ;; (unless IS-TERMUX
 ;;   (when (display-graphic-p) ; gui
