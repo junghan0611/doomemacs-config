@@ -3,6 +3,8 @@
 .idea
 *.log
 tmp/
+deprecated
+.efrit
 
 __pycache__
 
@@ -40,4 +42,5 @@ var/logo.png
 # Sensitive information that should never be in version control
 var/sensitive-strings.txt
 
-deprecated
+# QTermWidget build (external project)
+qtermwidget/

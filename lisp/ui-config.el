@@ -188,7 +188,7 @@
 
 (defun my/doom-themes-toggle ()
   (interactive)
-  (setq doom-theme 'doom-dracula)
+  (setq doom-theme 'doom-homage-white)
   (doom-themes-visual-bell-config)
   (load-theme doom-theme t))
 (add-hook 'doom-first-input-hook #'my/doom-themes-toggle)

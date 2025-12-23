@@ -139,6 +139,35 @@
       (cond ((or (executable-find "ripgrep") (executable-find "rg")) 'ripgrep)
             ((executable-find "ugrep") 'ugrep) (t 'grep)))
 
+;;; Load libraries
+
+(progn
+  (load! "+user-info")
+  (load! "lisp/ui-config")
+  (load! "lisp/evil-config")
+  (load! "lisp/korean-input")
+  (load! "lisp/time-config")
+  (load! "lisp/completion-config")
+  (load! "lisp/org-config")
+  (load! "lisp/denote-config")
+  (load! "lisp/denote-silo")
+  (load! "lisp/denote-export")
+  (load! "lisp/denote-functions")
+  (load! "lisp/ai-gptel")
+  (load! "lisp/ai-agent-shell")   ; acp 설정
+  ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
+  (load! "lisp/ai-stt-eca-whisper")
+  (load! "lisp/ai-tts-edge")
+  (load! "lisp/utils-config")
+  (load! "lisp/project-config")
+  (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
+  (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
+  (load! "lisp/keybindings-config")
+  (load! "lisp/keybindings-remap")
+  (load! "lisp/functions")
+  )
+
+
 ;;; overide doomemacs
 
 ;;;; dired
@@ -314,7 +343,7 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
   :after magit
   :hook (magit-mode . magit-todos-mode))
 
-;;; tramp
+;;;; tramp
 
 ;; Host *
 ;;     ControlMaster auto
@@ -332,7 +361,7 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
   (setq tramp-ssh-controlmaster-options
         "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
-;;; termux-fixes
+;;;; termux-fixes
 ;; Fix async issues in Termux/Android
 
 (when IS-TERMUX
@@ -343,12 +372,12 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
   (setq gc-cons-threshold 100000000)
   (setq gc-cons-percentage 0.6))
 
-;;; bugfix treesit
+;;;; bugfix treesit
 
 (after! treesit
   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
 
-;;; denote-silo
+;;;; denote-silo
 
 ;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
 ;; (after! denote
@@ -403,21 +432,6 @@ If the imenu-list buffer is displayed in any window, focus it, otherwise create 
            :query "date:today"
            :key "t"))))
 
-;;;; pass + auth
-
-(after! pass
-  (setq pass-username-field "login"
-        password-store-password-length 24))
-
-(use-package! password-store-menu
-  :defer 1
-  :commands (password-store-menu-enable)
-  :custom (password-store-menu-key "C-c C-p")
-  :config
-  (password-store-menu-enable))
-
-(setq auth-sources '(password-store "~/.authinfo.gpg"))
-
 ;;;; Notification System (dunst via notify-send)
 
 (defun my/notify (title message &optional urgency duration)
@@ -444,33 +458,22 @@ Returns t on success, nil if notify-send is not available."
       t)))
 ;;   )
 
-;;; Load libraries
+;;;; pass + auth
 
-(progn
-  (load! "+user-info")
-  (load! "lisp/ui-config")
-  (load! "lisp/evil-config")
-  (load! "lisp/korean-input")
-  (load! "lisp/time-config")
-  (load! "lisp/completion-config")
-  (load! "lisp/org-config")
-  (load! "lisp/denote-config")
-  (load! "lisp/denote-silo")
-  (load! "lisp/denote-export")
-  (load! "lisp/denote-functions")
-  (load! "lisp/ai-gptel")
-  (load! "lisp/ai-agent-shell")   ; acp 설정
-  ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
-  (load! "lisp/ai-stt-eca-whisper")
-  (load! "lisp/ai-tts-edge")
-  (load! "lisp/utils-config")
-  (load! "lisp/project-config")
-  (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
-  (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
-  (load! "lisp/keybindings-config")
-  (load! "lisp/keybindings-remap")
-  (load! "lisp/functions")
-  )
+(after! pass
+  (setq pass-username-field "login"
+        password-store-password-length 24))
+
+(use-package! password-store-menu
+  :defer 1
+  :commands (password-store-menu-enable)
+  :custom (password-store-menu-key "C-c C-p")
+  :config
+  (password-store-menu-enable))
+
+;; (setq auth-sources '(password-store "~/.authinfo.gpg"))
+;; (setq auth-sources '("~/.authinfo.gpg")
+;;       auth-source-cache-expiry nil) ; default is 7200 (2h)
 
 ;;; TODO py3status integration (ElleNajit)
 

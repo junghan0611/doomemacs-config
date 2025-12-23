@@ -153,10 +153,14 @@
 ;; Option 2
 (package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
 
-;;;;; Efrit (Steve Yegge's AI Assistant)
+;;;;; Efrit & Beads (Steve Yegge's AI Orchestration)
 
-;; Use junghan0611/efrit-ko fork with OpenRouter backend support
-;; (package! efrit :recipe (:host github :repo "junghan0611/efrit" :files ("lisp/*.el")))
+;; Efrit: Local development (조건부 로딩)
+;; 경로 변경은 아래 한 줄만 수정!
+;; (when (file-directory-p "~/.emacs.d/site-lisp/efrit/")
+;;   (package! efrit :recipe (:local-repo "~/.emacs.d/site-lisp/efrit/" :files ("lisp/*.el"))))
+
+;; Beads: Issue tracker
 (package! beads :recipe (:host github :repo "r0man/beads.el"))
 
 ;;;;; ACP (Agent Client Protocol)
