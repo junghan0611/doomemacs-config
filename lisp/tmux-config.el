@@ -107,6 +107,12 @@
 ;;   SPC 3 t e   Extract response   마지막 Claude 응답 추출
 ;;   SPC 3 t E   Extract input      마지막 사용자 입력 추출
 ;;
+;; 권한 프롬프트 처리:
+;;   SPC 3 t a   Pending prompts    대기 중인 프롬프트 표시
+;;   SPC 3 t y   Approve            에이전트 승인 (y 전송)
+;;   SPC 3 t N   Reject             에이전트 거부 (n 전송)
+;;   SPC 3 t Y   Approve all        모든 에이전트 일괄 승인
+;;
 ;; emamux:
 ;;   SPC 3 t m s   emamux:send-command
 ;;   SPC 3 t m r   emamux:run-command
@@ -367,23 +373,147 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
 ;;;###autoload
 (defun +claude-agent-status (&optional agent-name)
   "AGENT-NAME의 현재 상태 확인.
-반환값: 'waiting (입력 대기), 'thinking (사고 중), 'working (작업 중)"
+반환값:
+  'pending-approval - 권한 승인 대기 중 (y/n 프롬프트)
+  'waiting          - 일반 입력 대기 중 (INSERT 모드)
+  'thinking         - 사고 중
+  'working          - 작업 중"
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
          (target (+claude--get-target agent))
          (output (+claude--capture-raw target 50))
          (status (cond
+                  ;; 권한 프롬프트 패턴 (가장 먼저 체크)
+                  ((+claude--has-permission-prompt-p output) 'pending-approval)
                   ((string-match "-- INSERT --" output) 'waiting)
                   ((string-match "∴ Thinking" output) 'thinking)
                   (t 'working))))
     (when (called-interactively-p 'any)
       (message "Agent %s: %s" agent
                (pcase status
+                 ('pending-approval "🔐 권한 승인 대기 중!")
                  ('waiting "⏳ 입력 대기 중")
                  ('thinking "🤔 사고 중")
                  ('working "⚙️ 작업 중"))))
     status))
+
+;;;; Permission Prompt Handling
+;;
+;; Claude Code 권한 프롬프트 패턴:
+;;   "Allow ..."          도구 사용 허가
+;;   "Proceed? [y/n]"     진행 확인
+;;   "Do you want to ..." 작업 확인
+;;   "[y/n]"              일반 확인
+;;
+;; 사용법:
+;;   SPC 3 t a   모든 에이전트의 대기 중인 프롬프트 표시
+;;   SPC 3 t y   에이전트 승인 (y 전송)
+;;   SPC 3 t N   에이전트 거부 (n 전송)
+
+(defvar +claude-permission-patterns
+  '("Allow"                           ; 도구 사용 허가
+    "Proceed\\?"                      ; 진행 확인
+    "Do you want to"                  ; 작업 확인
+    "\\[y/n\\]"                       ; 일반 y/n
+    "\\[Y/n\\]"                       ; 대문자 Y (기본 yes)
+    "\\[yes/no\\]"                    ; 명시적 yes/no
+    "approve"                         ; 승인 요청
+    "continue\\?")                    ; 계속 확인
+  "Claude Code 권한 프롬프트 감지 패턴 목록.")
+
+(defun +claude--has-permission-prompt-p (output)
+  "OUTPUT에 권한 프롬프트가 있는지 확인."
+  (cl-some (lambda (pattern)
+             (string-match-p pattern output))
+           +claude-permission-patterns))
+
+(defun +claude--extract-permission-context (output)
+  "OUTPUT에서 권한 프롬프트 컨텍스트 추출."
+  (let ((lines (split-string output "\n"))
+        (result nil))
+    (dolist (line lines)
+      (when (+claude--has-permission-prompt-p line)
+        (push (string-trim line) result)))
+    (nreverse result)))
+
+;;;###autoload
+(defun +claude-pending-prompts (&optional agent-name)
+  "AGENT-NAME의 대기 중인 권한 프롬프트 반환.
+AGENT-NAME이 nil이면 모든 에이전트 확인."
+  (interactive
+   (list (when current-prefix-arg
+           (completing-read "Agent: " (mapcar #'car +claude-agents) nil t))))
+  (let ((agents (if agent-name
+                    (list (cons agent-name (+claude--get-target agent-name)))
+                  +claude-agents))
+        (pending '()))
+    (dolist (agent agents)
+      (let* ((name (car agent))
+             (target (cdr agent))
+             (output (+claude--capture-raw target 30))
+             (prompts (+claude--extract-permission-context output)))
+        (when prompts
+          (push (cons name prompts) pending))))
+    (if (called-interactively-p 'any)
+        (if pending
+            (let ((buf (get-buffer-create "*claude-pending-prompts*")))
+              (with-current-buffer buf
+                (erase-buffer)
+                (insert "=== 대기 중인 권한 프롬프트 ===\n\n")
+                (dolist (item pending)
+                  (insert (format "🔐 [%s]\n" (car item)))
+                  (dolist (prompt (cdr item))
+                    (insert (format "   %s\n" prompt)))
+                  (insert "\n"))
+                (insert "───────────────────────────────\n")
+                (insert "SPC 3 t y  승인 (y)\n")
+                (insert "SPC 3 t N  거부 (n)\n")
+                (goto-char (point-min)))
+              (pop-to-buffer buf))
+          (message "대기 중인 프롬프트 없음"))
+      pending)))
+
+;;;###autoload
+(defun +claude-approve (&optional agent-name)
+  "AGENT-NAME의 권한 프롬프트 승인 (y 전송)."
+  (interactive
+   (list (completing-read "Approve agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
+  (let* ((agent (or agent-name +claude-default-agent))
+         (target (+claude--get-target agent))
+         (status (+claude-agent-status agent)))
+    (if (eq status 'pending-approval)
+        (progn
+          (+claude--send-keys target "y")
+          (message "✅ Approved: %s" agent))
+      (message "⚠️ %s: 대기 중인 프롬프트 없음 (status: %s)" agent status))))
+
+;;;###autoload
+(defun +claude-reject (&optional agent-name)
+  "AGENT-NAME의 권한 프롬프트 거부 (n 전송)."
+  (interactive
+   (list (completing-read "Reject agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
+  (let* ((agent (or agent-name +claude-default-agent))
+         (target (+claude--get-target agent))
+         (status (+claude-agent-status agent)))
+    (if (eq status 'pending-approval)
+        (progn
+          (+claude--send-keys target "n")
+          (message "❌ Rejected: %s" agent))
+      (message "⚠️ %s: 대기 중인 프롬프트 없음 (status: %s)" agent status))))
+
+;;;###autoload
+(defun +claude-approve-all ()
+  "모든 에이전트의 대기 중인 프롬프트 일괄 승인."
+  (interactive)
+  (let ((approved 0))
+    (dolist (agent +claude-agents)
+      (let* ((name (car agent))
+             (status (+claude-agent-status name)))
+        (when (eq status 'pending-approval)
+          (+claude--send-keys (cdr agent) "y")
+          (cl-incf approved))))
+    (message "✅ Approved %d agent(s)" approved)))
 
 ;;;###autoload
 (defun +claude-show-conversation (&optional agent-name)
@@ -467,6 +597,11 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
         ;; Extract
         :desc "Extract response"    "e" #'+claude-extract-last-response
         :desc "Extract input"       "E" #'+claude-extract-last-input
+        ;; Permission handling
+        :desc "Pending prompts"     "a" #'+claude-pending-prompts
+        :desc "Approve (y)"         "y" #'+claude-approve
+        :desc "Reject (n)"          "N" #'+claude-reject
+        :desc "Approve all"         "Y" #'+claude-approve-all
         ;; emamux
         (:prefix ("m" . "emamux")
          :desc "Send command"       "s" #'emamux:send-command
