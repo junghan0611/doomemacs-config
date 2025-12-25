@@ -136,6 +136,10 @@
 (package! casual)
 (package! password-store-menu)
 
+;;;; tmux/zellij orchestration
+
+(package! emamux)  ; tmux manipulation from Emacs
+
 ;;;; AI AGENT
 
 (package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))

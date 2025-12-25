@@ -162,6 +162,7 @@
   (load! "lisp/project-config")
   (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
   (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
+  (load! "lisp/tmux-config")          ; tmux + claude code orchestration
   (load! "lisp/keybindings-config")
   (load! "lisp/keybindings-remap")
   (load! "lisp/functions")

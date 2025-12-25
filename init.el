@@ -113,7 +113,7 @@
        (pass +auth)              ; password manager for nerds
        (:unless IS-TERMUX (pdf)) ; pdf enhancements
        ;;terraform         ; infrastructure as code
-       ;;tmux              ; an API for interacting with tmux
+       tmux              ; an API for interacting with tmux
        tree-sitter ;; syntax and parsing, sitting in a tree...
        upload            ; map local to remote projects via ssh/ftp
 
