@@ -288,15 +288,18 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
 ;; 하위 호환성: 기존 korean-nfc-mode 호출 시 글로벌 모드로 리다이렉트
 (defalias 'korean-nfc-mode 'global-korean-nfc-mode)
 
-;;; 7. 자동 활성화 (터미널 Emacs에서만)
+;;; 7. 자동 활성화
 
-;; 터미널 Emacs (-nw)에서만 글로벌 모드 활성화
-;; GUI Emacs에서는 시스템 IME가 NFC로 정상 입력됨
-(unless (display-graphic-p)
-  (global-korean-nfc-mode 1))
+;; Termux/Android에서는 항상 활성화 (IME가 NFD로 입력하는 경우가 많음)
+(when IS-TERMUX
+  (global-korean-nfc-mode 1)
+  (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
 
-;; 파일 열기 시 기존 NFD 문자 정리 (터미널에서만, 안전망)
-(unless (display-graphic-p)
+;; 터미널 Emacs (-nw)에서도 활성화
+;; GUI Emacs에서는 시스템 IME가 NFC로 정상 입력되므로 조건부
+(when (and (not IS-TERMUX)
+           (not (display-graphic-p)))
+  (global-korean-nfc-mode 1)
   (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
 
 ;;; 8. 키바인딩 (옵션)

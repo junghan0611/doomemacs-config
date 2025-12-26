@@ -159,6 +159,41 @@ TMUX-TARGET은 'session:window.pane' 형식.
 
 ;;;; Core Functions
 
+(defun +claude--pane-exists-p (target)
+  "TARGET pane이 존재하는지 확인."
+  (= 0 (call-process "tmux" nil nil nil
+                     "has-session" "-t" target)))
+
+(defun +claude--ensure-pane (agent-name)
+  "AGENT-NAME의 pane이 없으면 생성하고 claude 실행.
+반환값: tmux target 문자열"
+  (let* ((target (cdr (assoc agent-name +claude-agents)))
+         (session (car (split-string target ":")))
+         (window-pane (cadr (split-string target ":"))))
+    (unless target
+      (error "Unknown agent: %s" agent-name))
+
+    ;; 1. 세션 확인/생성
+    (unless (+claude--pane-exists-p session)
+      (call-process "tmux" nil nil nil "new-session" "-d" "-s" session)
+      (message "Created tmux session: %s" session))
+
+    ;; 2. pane 확인/생성
+    (unless (+claude--pane-exists-p target)
+      (call-process "tmux" nil nil nil "split-window" "-t" session)
+      (message "Created pane: %s" target))
+
+    ;; 3. claude 실행 여부 확인
+    (let ((cmd (shell-command-to-string
+                (format "tmux display-message -p -t %s '#{pane_current_command}'"
+                        target))))
+      (unless (string-match-p "claude" cmd)
+        (call-process "tmux" nil nil nil "send-keys" "-t" target "claude" "Enter")
+        (message "Started claude in %s" target)
+        (sleep-for 1))) ; claude 시작 대기
+
+    target))
+
 (defun +claude--get-target (agent-name)
   "AGENT-NAME에 해당하는 tmux target 반환."
   (or (cdr (assoc agent-name +claude-agents))
@@ -176,11 +211,12 @@ TMUX-TARGET은 'session:window.pane' 형식.
 
 ;;;###autoload
 (defun +claude-send-to-agent (agent-name text)
-  "AGENT-NAME에게 TEXT 전송."
+  "AGENT-NAME에게 TEXT 전송.
+pane이 없으면 자동으로 생성하고 claude 실행."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)
          (read-string "Message: ")))
-  (let ((target (+claude--get-target agent-name)))
+  (let ((target (+claude--ensure-pane agent-name)))
     (+claude--send-keys target text)
     (message "Sent to %s: %s" agent-name (truncate-string-to-width text 50))))
 
