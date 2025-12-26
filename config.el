@@ -163,7 +163,6 @@
   (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
   (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
   (load! "lisp/tmux-config")          ; tmux + claude code orchestration
-  (load! "lisp/zellij-config")        ; zellij terminal multiplexer
   (load! "lisp/keybindings-config")
   (load! "lisp/keybindings-remap")
   (load! "lisp/functions")
