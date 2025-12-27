@@ -47,7 +47,10 @@
 
       ;; Winner
       "C-c <left>" #'winner-undo
-      "C-c <right>" #'winner-redo)
+      "C-c <right>" #'winner-redo
+
+      ;; Minibuffer access
+      "M-0" #'switch-to-minibuffer)
 
 ;;;; Function Keys
 
