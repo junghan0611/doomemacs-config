@@ -102,6 +102,7 @@
 
 (package! denote-search)
 (package! denote-regexp)
+
 (package! citar-denote)
 
 (package! consult-notes)
@@ -126,6 +127,10 @@
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
 (package! aggressive-indent)
 (package! clipetty) ; osc52 support
+
+;;;; editing-config.el
+
+(package! olivetti)
 
 ;;;; project-config.el
 
@@ -178,12 +183,6 @@
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
 ;; (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 
-;;;;; MCP (Model Context Protocol)
-
-;; (package! mcp-server-lib :recipe (:host github :repo "laurynas-biveinis/mcp-server-lib.el"))
-;; (package! elisp-dev-mcp :recipe (:host github :repo "laurynas-biveinis/elisp-dev-mcp"))
-;; (package! org-mcp :recipe (:host github :repo "laurynas-biveinis/org-mcp"))
-
 ;;;; elfeed-config.el
 
 (package! org-web-tools)
@@ -192,6 +191,11 @@
 
 (package! celestial-mode-line)
 ;; (package! keycast)
+
+;;;; search-config.el
+
+(package! recent-rgrep :recipe (:host github :repo "kickingvegas/recent-rgrep"))
+
 
 ;;; DEPRECATED
 

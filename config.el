@@ -52,7 +52,6 @@
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
 
-;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
@@ -199,6 +198,7 @@
 (require 'denote-export-config)
 (require 'denote-functions)
 (require 'unicode-config)
+(require 'editing-config)
 (require 'ai-gptel)
 (require 'ai-agent-shell)            ; acp 설정
 ;; (require 'ai-gptel-acp)           ; gptel + ACP 통합 (doom-md7)
@@ -216,7 +216,7 @@
 (require 'tmux-config)               ; tmux + claude code orchestration
 (require 'zellij-config)             ; zellij terminal multiplexer
 (require 'keybindings-config)
-(require 'keybindings-remap)
+(require 'keybindings-denote-config)
 (require 'functions)
 
 

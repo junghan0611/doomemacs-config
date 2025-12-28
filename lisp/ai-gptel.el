@@ -26,6 +26,10 @@
   :init
   (require 'password-store)  ; API 키 접근을 위해 미리 로드
   :config
+
+  (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
+  (add-hook 'gptel-post-response-functions 'gptel-end-of-response)
+
   (setq gptel-default-mode 'org-mode)
   (setq gptel-temperature 0.3) ; gptel 1.0
   (set-popup-rule! "^\\*ChatGPT\\*$" :side 'right :size 84 :vslot 100 :quit t)
@@ -56,11 +60,11 @@
         :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
 
 ;; DeepSeek를 기본 백엔드로 설정 (reasoner 모델 - chain of thought 지원)
-(setq gptel-backend gptel-deepseek-backend)
-(setq gptel-model 'deepseek-chat)
+;; (setq gptel-backend gptel-deepseek-backend)
+;; (setq gptel-model 'deepseek-chat)
 
-(setq gptel-magit-backend gptel-deepseek-backend)
-(setq gptel-magit-model 'deepseek-chat);
+;; (setq gptel-magit-backend gptel-deepseek-backend)
+;; (setq gptel-magit-model 'deepseek-chat);
 
 ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
 (setq gptel--system-message user-llm-system-prompt)
@@ -69,12 +73,6 @@
 
 (defconst gptel--openrouter-models
   '(
-    (deepseek/deepseek-v3.2
-     :capabilities (tool reasoning)
-     :context-window 131
-     :input-cost 0.25
-     :output-cost 0.38)
-
     ;; https://openrouter.ai/google/gemini-2.5-pro
     (google/gemini-2.5-pro
      :capabilities (media tool-use cache reasoning)
@@ -91,7 +89,7 @@
      :input-cost 0.30
      :output-cost 2.5)
 
-    (openai/gpt-5-chat
+    (openai/gpt-5-1
      :description "Flagship model for coding, reasoning, and agentic tasks across domains"
      :capabilities (media json url)
      :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
@@ -111,10 +109,9 @@
         :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
         :models gptel--openrouter-models))
 
-;; OpenRouter를 대체 백엔드로 유지 (gptel-menu에서 전환 가능)
-;; (setq gptel-backend gptel-openrouter-backend)
-;; (setq gptel-model 'deepseek/deepseek-v3.2)
-
+;; OpenRouter를 기본 백엔드로
+(setq gptel-backend gptel-openrouter-backend)
+(setq gptel-model 'google/gemini-2.5-flash)
 
 ;;;;;;; 03 - gptel-save-as-org-with-denote-metadata
 

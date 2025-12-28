@@ -66,7 +66,6 @@
   ;; (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/"))
 
   (use-package! consult-notes
-    :defer 2
     :commands (consult-notes consult-notes-search-in-all-notes)
     :config
     (setq consult-notes-denote-display-id t)
@@ -76,18 +75,13 @@
     )
 
   (use-package! consult-denote
-    :defer 2
-    :hook (org-mode . consult-denote-mode)
     :config
     ;; Prefer `ripgrep' and `fd' variants when available
     (when (executable-find "fd")
       (setopt consult-denote-find-command #'consult-fd))
     (when (executable-find "rg")
       (setopt consult-denote-grep-command #'consult-ripgrep))
-    ;; (consult-customize
-    ;;  consult-denote-find
-    ;;  consult-denote-grep
-    ;;  :preview-key '("M-m" :debounce 0.3 "<up>" "<down>" "C-j" "C-k"))
+    (consult-denote-mode 1)
     )
 
   (use-package! citar-denote
