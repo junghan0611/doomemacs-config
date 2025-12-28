@@ -375,23 +375,7 @@
 
 (use-package! magit-todos
   :after magit
-  :hook (magit-mode . magit-todos-mode)
-  :config
-  ;; 특정 디렉토리에서만 magit-todos 비활성화 (org 파일 많은 곳)
-  (defvar my/magit-todos-disabled-directories
-    '("~/sync/org" "~/org")
-    "Directories where magit-todos should be disabled.")
-
-  (defun my/magit-todos-maybe-disable ()
-    "Disable magit-todos in directories with many org files."
-    (when (cl-some (lambda (dir)
-                     (and default-directory
-                          (file-in-directory-p default-directory
-                                               (expand-file-name dir))))
-                   my/magit-todos-disabled-directories)
-      (magit-todos-mode -1)))
-
-  (add-hook 'magit-status-mode-hook #'my/magit-todos-maybe-disable 90))
+  :hook (magit-mode . magit-todos-mode))
 
 ;;;; tramp
 
