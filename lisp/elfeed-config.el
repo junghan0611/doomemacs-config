@@ -14,9 +14,15 @@
 
 ;;; Code:
 
-;;;; org-web-tools
+;;;; Elfeed
 
-(use-package! org-web-tools)
+(after! elfeed
+  ;; +rss-enable-sliced-images ;  default t
+  (setq rmh-elfeed-org-files (list (my/org-elfeed-file))) ; default ~/org/elfeed.org
+  (setq elfeed-search-filter "@1-year-ago") ; "@6-months-ago" "@1-month-ago +unread"
+  ;; (setq elfeed-search-title-max-width 90) ; default 70
+  ;; (add-hook 'elfeed-search-mode-hook #'elfeed-update)
+  )
 
 ;;;; 본문 검색 (elfeed-deref 기반 - archive.gz 호환)
 
@@ -57,6 +63,10 @@ elfeed-deref를 사용하여 archive.gz에서도 컨텐츠를 읽음."
   (interactive)
   (elfeed-search-update :force)
   (message "Filter cleared"))
+
+;;;; org-web-tools
+
+(use-package! org-web-tools)
 
 ;;;; Keybindings
 
