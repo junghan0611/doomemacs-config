@@ -279,16 +279,6 @@
 
 (remove-hook! (prog-mode text-mode) #'flymake-mode)
 
-;;;; Elfeed
-
-(after! elfeed
-  ;; +rss-enable-sliced-images ;  default t
-  (setq rmh-elfeed-org-files (list (my/org-elfeed-file))) ; default ~/org/elfeed.org
-  (setq elfeed-search-filter "@6-months-ago") ; "" "@1-month-ago +unread"
-  ;; (setq elfeed-search-title-max-width 90) ; default 70
-  ;; (add-hook 'elfeed-search-mode-hook #'elfeed-update)
-  )
-
 ;;;; eglot configuration
 
 (progn
