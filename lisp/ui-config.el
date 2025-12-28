@@ -193,6 +193,20 @@
   (load-theme doom-theme t))
 (add-hook 'doom-first-input-hook #'my/doom-themes-toggle)
 
+;;;; popup
+
+(progn
+  ;; Completely disable management of the mode-line in popups:
+  (remove-hook '+popup-buffer-mode-hook #'+popup-set-modeline-on-enable-h) ; important
+
+  (set-popup-rules!
+    '(
+      ("*Ilist*" :size 40 :side left :modeline t :select nil :quit nil) ; imenu-list 40
+      ("^\\*eww.*" :size 82 :side left :modeline t :select t :quit nil :ttl t) ; jh
+      )
+    )
+  )
+
 ;;; provide
 
 (provide 'ui-config)

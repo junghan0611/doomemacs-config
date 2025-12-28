@@ -183,6 +183,10 @@
 ;; (package! elisp-dev-mcp :recipe (:host github :repo "laurynas-biveinis/elisp-dev-mcp"))
 ;; (package! org-mcp :recipe (:host github :repo "laurynas-biveinis/org-mcp"))
 
+;;;; elfeed-config.el
+
+(package! org-web-tools)
+
 ;;; DEPRECATED
 
 ;; (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))

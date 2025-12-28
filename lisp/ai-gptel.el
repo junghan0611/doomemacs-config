@@ -23,9 +23,11 @@
 ;;;; gptel
 
 (use-package! gptel
+  :init
+  (require 'password-store)  ; API 키 접근을 위해 미리 로드
   :config
   (setq gptel-default-mode 'org-mode)
-  (setq gptel-temperature 0.3) ; gptel 1.0, Perplexity 0.2
+  (setq gptel-temperature 0.3) ; gptel 1.0
   (set-popup-rule! "^\\*ChatGPT\\*$" :side 'right :size 84 :vslot 100 :quit t)
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
@@ -39,22 +41,34 @@
             (message "Context: whole doc"))
         (setq-local gptel-org-branching-context t)
         (message "Context: subheading")))
-    (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@user: "
-          (alist-get 'org-mode gptel-response-prefix-alist) "@assistant:\n"
-          (alist-get 'markdown-mode gptel-prompt-prefix-alist) "#### ")
+    (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@user "
+          (alist-get 'org-mode gptel-response-prefix-alist) "@assistant\n"
+          (alist-get 'markdown-mode gptel-prompt-prefix-alist) "@user "
+          (alist-get 'markdown-mode gptel-response-prefix-alist) "@assistant\n"
+          )
     (setq-default gptel-org-branching-context t))
+
+;;;;; gptel Deepseek (기본 백엔드)
+
+(setq gptel-deepseek-backend
+      (gptel-make-deepseek "DeepSeek"
+        :stream t
+        :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
+
+;; DeepSeek를 기본 백엔드로 설정 (reasoner 모델 - chain of thought 지원)
+(setq gptel-backend gptel-deepseek-backend)
+(setq gptel-model 'deepseek-chat)
+
+(setq gptel-magit-backend gptel-deepseek-backend)
+(setq gptel-magit-model 'deepseek-chat);
+
+;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
+(setq gptel--system-message user-llm-system-prompt)
 
 ;;;;; gptel openrouter models
 
 (defconst gptel--openrouter-models
   '(
-    ;; https://openrouter.ai/provider/deepseek
-    (deepseek/deepseek-v3.2-speciale
-     :capabilities (tool reasoning)
-     :context-window 131
-     :input-cost 0.28
-     :output-cost 0.42)
-
     (deepseek/deepseek-v3.2
      :capabilities (tool reasoning)
      :context-window 131
@@ -85,25 +99,6 @@
      :input-cost 1.25
      :output-cost 10
      :cutoff-date "2024-09")
-
-    ;; https://openrouter.ai/anthropic/claude-sonnet-4
-    ;; (anthropic/claude-sonnet-4.5
-    ;;  :description "Hybrid model capable of standard thinking and extended thinking modes"
-    ;;  :capabilities (media tool-use cache)
-    ;;  :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-    ;;  :context-window 200
-    ;;  :input-cost 3
-    ;;  :output-cost 15
-    ;;  :cutoff-date "2025-05")
-
-    ;; (anthropic/claude-opus-4.5
-    ;;  :description "Hybrid model capable of standard thinking and extended thinking modes"
-    ;;  :capabilities (media tool-use cache)
-    ;;  :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-    ;;  :context-window 200
-    ;;  :input-cost 15
-    ;;  :output-cost 25
-    ;;  :cutoff-date "2025-12")
     )
   )
 
@@ -112,16 +107,57 @@
         :host "openrouter.ai"
         :endpoint "/api/v1/chat/completions"
         :stream t
-        :key #'gptel-api-key
+        ;; :key #'gptel-api-key
+        :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
         :models gptel--openrouter-models))
 
-(setq gptel-backend gptel-openrouter-backend)
-(setq gptel-model 'deepseek/deepseek-v3.2)
-;; (setq gptel-model 'google/gemini-2.5-flash)
+;; OpenRouter를 대체 백엔드로 유지 (gptel-menu에서 전환 가능)
+;; (setq gptel-backend gptel-openrouter-backend)
+;; (setq gptel-model 'deepseek/deepseek-v3.2)
 
-(gptel-make-deepseek "DeepSeek"       ;Any name you want
-  :stream t                           ;for streaming responses
-  :key #'gptel-api-key)               ;can be a function that returns the key
+
+;;;;;;; 03 - gptel-save-as-org-with-denote-metadata
+
+;;;###autoload
+  (defun gptel-save-as-org-with-denote-metadata ()
+    "Save buffer to disk when starting gptel with metadata."
+    (interactive)
+    (unless (buffer-file-name (current-buffer))
+      (let* ((suffix (format-time-string "%Y%m%dT%H%M%S"))
+             (chat-dir (concat org-directory "/llmlog"))
+             (ext (replace-regexp-in-string "-mode$" "" (symbol-name gptel-default-mode)))
+             (filename (concat suffix "__llmlog" "." ext))
+             (full-path (expand-file-name filename chat-dir)))
+        (unless (file-directory-p chat-dir)
+          (make-directory chat-dir :parents))
+        (write-file full-path)
+
+        ;; Add metadata to the file
+        (goto-char 0) (search-forward ":END:") (end-of-line)
+        (insert (format "\n#+title: #LLM: %s\n" suffix))
+        (insert "#+filetags: :llmlog:\n")
+        (insert (format "#+hugo_lastmod: %s\n" (format-time-string "[%Y-%m-%d]")))
+        (insert (format "#+date: %s\n" (format-time-string "[%Y-%m-%d %a %H:%M]")))
+        (insert (format "#+identifier: %s\n" suffix))
+        (insert (format "#+export_file_name: %s.md\n" suffix))
+        (insert (format "#+description: %s\n" suffix))
+        (insert (format "#+hugo_categories: Noname\n#+OPTIONS: toc:1\n"))
+
+        (insert (format "\n* 히스토리\n- %s Created!" (format-time-string "[%Y-%m-%d %a %H:%M]")))
+        (insert (format "\n* 관련메타\n- \n#+print_bibliography:\n\n"))
+
+        ;; heading-1 add backlink to today
+        (insert (format "* 로그 :LLMLOG:\n** [[denote:%s::#%s][%s]]\n"
+                        ;; (format-time-string "%Y%m%dT000000")
+                        (format-time-string "%Y%m%dT000000"
+                                            (org-journal--convert-time-to-file-type-time
+                                             (time-subtract (current-time)
+                                                            (* 3600 org-extend-today-until))))
+                        (downcase (format-time-string "%Y-%m-%d-%a"))
+                        (format-time-string "|%Y-%m-%d %a %H:%M|")))
+        ;; heading-2 [SUM]:
+        ;; (insert (format "** TODO [SUM]: \n"))
+        (insert "\n"))))
 
 ;;;;; gptel-mode-hook
 
@@ -132,11 +168,11 @@
           :iv "M-RET" #'gptel-send
           (:localleader
            :desc "gptel/default" "5" #'gptel-menu ;; TODO fixme
-           ;; "M-s" #'gptel-save-as-org-with-denote-metadata
+           "M-s" #'gptel-save-as-org-with-denote-metadata
            "0" #'cashpw/gptel-send
            (:prefix ("s" . "session")
             :desc "clear" "l" #'gptel-clear-buffer+
-            ;; "p" #'gptel-save-as-org-with-denote-metadata
+            "p" #'gptel-save-as-org-with-denote-metadata
             )))))
 
 (add-hook! 'gptel-mode-hook
@@ -145,198 +181,224 @@
     (auto-fill-mode -1)
     (doom-mark-buffer-as-real-h)))
 
+  ) ; end of use-package! gptel
+
+
 ;;;;; gptel-buffer: 범용 버퍼 요약/번역
 
-(defvar +gptel-buffer-name "*gptel-buffer*"
-  "gptel 버퍼 요약/번역용 사이드 버퍼 이름.")
+(after! gptel
+  (defvar +gptel-buffer-name "*gptel-buffer*"
+    "gptel 버퍼 요약/번역용 사이드 버퍼 이름.")
 
-(defvar +gptel-summarize-system-message
-  "You are a helpful reading assistant. Generate a concise TLDR summary.
+  (defvar +gptel-summarize-system-message
+    "You are a helpful reading assistant. Generate a concise TLDR summary.
 - Cover the main points clearly
 - Use bullet points for key takeaways
 - Respond in Korean"
-  "버퍼 요약용 시스템 프롬프트.")
+    "버퍼 요약용 시스템 프롬프트.")
 
-(defvar +gptel-translate-system-message
-  "You are a professional translator. Translate the following text naturally to Korean.
+  (defvar +gptel-translate-system-message
+    "You are a professional translator. Translate the following text naturally to Korean.
 - Maintain the original meaning and tone
 - Use natural Korean expressions
 - Preserve technical terms when appropriate"
-  "버퍼 번역용 시스템 프롬프트.")
+    "버퍼 번역용 시스템 프롬프트.")
 
-;; Content Extractors - 각 모드별 컨텐츠 추출
+  ;; Temperature 가이드:
+  ;; | 작업 | 권장 온도 | 이유                      |
+  ;; |------|----------|---------------------------|
+  ;; | 번역 | 0.1-0.2  | 원문 충실, 일관성          |
+  ;; | 요약 | 0.3-0.5  | 핵심 추출 + 약간 재구성    |
+  ;; | 창작 | 0.7-1.0  | 다양성, 창의성             |
 
-(defun +gptel--extract-eww-content ()
-  "eww 버퍼에서 컨텐츠 추출."
-  (when (derived-mode-p 'eww-mode)
-    (list :title (plist-get eww-data :title)
-          :url (plist-get eww-data :url)
-          :text (buffer-string))))
+  (defvar +gptel-translate-temperature 0.1
+    "번역용 낮은 temperature - 정확성과 일관성 우선.")
 
-(defun +gptel--extract-elfeed-content ()
-  "elfeed-show 버퍼에서 컨텐츠 추출."
-  (when (derived-mode-p 'elfeed-show-mode)
-    (let* ((entry elfeed-show-entry)
-           (feed (elfeed-entry-feed entry))
-           (authors (elfeed-meta entry :authors)))
-      (list :title (elfeed-entry-title entry)
-            :url (elfeed-entry-link entry)
-            :feed (elfeed-feed-title feed)
-            :date (format-time-string "%Y-%m-%d %H:%M"
-                                      (seconds-to-time (elfeed-entry-date entry)))
-            :authors (when authors
-                       (mapconcat (lambda (a) (plist-get a :name)) authors ", "))
-            :text (buffer-string)))))
+  (defvar +gptel-summarize-temperature 0.4
+    "요약용 중간 temperature - 핵심 추출 + 약간의 재구성 허용.")
 
-(defun +gptel--extract-pdf-content ()
-  "pdf-view 버퍼에서 선택 영역 또는 현재 페이지 텍스트 추출."
-  (when (derived-mode-p 'pdf-view-mode)
-    (list :title (file-name-nondirectory (buffer-file-name))
-          :url (buffer-file-name)
-          :text (if (pdf-view-active-region-p)
-                    (mapconcat #'identity (pdf-view-active-region-text) "\n\n")
-                  (pdf-info-gettext (pdf-view-current-page))))))
+  ;; Content Extractors - 각 모드별 컨텐츠 추출
 
-(defun +gptel--extract-nov-content ()
-  "nov.el (epub) 버퍼에서 컨텐츠 추출."
-  (when (derived-mode-p 'nov-mode)
-    (list :title (or (alist-get 'title nov-metadata) "Unknown")
-          :url (nov-content-unique-identifier)
-          :text (buffer-string))))
+  (defun +gptel--extract-eww-content ()
+    "eww 버퍼에서 컨텐츠 추출."
+    (when (derived-mode-p 'eww-mode)
+      (list :title (plist-get eww-data :title)
+            :url (plist-get eww-data :url)
+            :text (buffer-string))))
 
-(defun +gptel--extract-buffer-content ()
-  "현재 버퍼에서 LLM용 컨텐츠 추출. plist 반환."
-  (or (+gptel--extract-eww-content)
-      (+gptel--extract-elfeed-content)
-      (+gptel--extract-pdf-content)
-      (+gptel--extract-nov-content)
-      ;; 기본: 일반 버퍼
-      (list :title (buffer-name)
-            :url (or (buffer-file-name) default-directory)
-            :text (if (use-region-p)
-                      (buffer-substring-no-properties (region-beginning) (region-end))
-                    (buffer-string)))))
+  (defun +gptel--extract-elfeed-content ()
+    "elfeed-show 버퍼에서 컨텐츠 추출."
+    (when (derived-mode-p 'elfeed-show-mode)
+      (let* ((entry elfeed-show-entry)
+             (feed (elfeed-entry-feed entry))
+             (authors (elfeed-meta entry :authors)))
+        (list :title (elfeed-entry-title entry)
+              :url (elfeed-entry-link entry)
+              :feed (elfeed-feed-title feed)
+              :date (format-time-string "%Y-%m-%d %H:%M"
+                                        (seconds-to-time (elfeed-entry-date entry)))
+              :authors (when authors
+                         (mapconcat (lambda (a) (plist-get a :name)) authors ", "))
+              :text (buffer-string)))))
 
-(defun +gptel--format-content-for-llm (content)
-  "CONTENT plist를 LLM 프롬프트 형식으로 변환."
-  (let ((title (plist-get content :title))
-        (url (plist-get content :url))
-        (feed (plist-get content :feed))
-        (date (plist-get content :date))
-        (authors (plist-get content :authors))
-        (text (plist-get content :text)))
-    (concat
-     "Article Metadata:\n"
-     (when title (format "- Title: %s\n" title))
-     (when url (format "- URL: %s\n" url))
-     (when feed (format "- Feed: %s\n" feed))
-     (when date (format "- Date: %s\n" date))
-     (when authors (format "- Authors: %s\n" authors))
-     "\nContent:\n"
-     "```\n"
-     (string-trim text)
-     "\n```")))
+  (defun +gptel--extract-pdf-content ()
+    "pdf-view 버퍼에서 선택 영역 또는 현재 페이지 텍스트 추출."
+    (when (derived-mode-p 'pdf-view-mode)
+      (list :title (file-name-nondirectory (buffer-file-name))
+            :url (buffer-file-name)
+            :text (if (pdf-view-active-region-p)
+                      (mapconcat #'identity (pdf-view-active-region-text) "\n\n")
+                    (pdf-info-gettext (pdf-view-current-page))))))
 
-;; 핵심 함수
+  (defun +gptel--extract-nov-content ()
+    "nov.el (epub) 버퍼에서 컨텐츠 추출."
+    (when (derived-mode-p 'nov-mode)
+      (list :title (or (alist-get 'title nov-metadata) "Unknown")
+            :url (nov-content-unique-identifier)
+            :text (buffer-string))))
 
-(defun +gptel--send-to-buffer (content system-message action-name)
-  "CONTENT를 gptel 사이드 버퍼로 보내고 SYSTEM-MESSAGE로 요청.
-ACTION-NAME은 표시용 (예: \"요약\", \"번역\")."
-  (let* ((formatted (+gptel--format-content-for-llm content))
-         (buf (get-buffer-create +gptel-buffer-name)))
-    ;; 사이드 버퍼 설정
-    (with-current-buffer buf
-      (unless (derived-mode-p 'org-mode)
-        (org-mode))
-      (unless gptel-mode
-        (gptel-mode 1))
-      ;; 시스템 메시지 설정
-      (setq-local gptel--system-message system-message)
-      ;; 이전 내용 아래에 새 요청 추가
-      (goto-char (point-max))
-      (unless (bobp)
-        (insert "\n\n"))
-      (insert (format "@user: [%s 요청]\n\n%s" action-name formatted))
-      (insert "\n\n@assistant:\n"))
-    ;; 사이드 윈도우로 표시
-    (display-buffer buf '((display-buffer-in-side-window)
-                          (side . right)
-                          (window-width . 0.4)))
-    ;; gptel-send 호출
-    (with-current-buffer buf
-      (goto-char (point-max))
-      (gptel-send))
-    (message "%s 요청을 보냈습니다. 결과는 %s 버퍼에서 확인하세요."
-             action-name +gptel-buffer-name)))
+  (defun +gptel--extract-buffer-content ()
+    "현재 버퍼에서 LLM용 컨텐츠 추출. plist 반환."
+    (or (+gptel--extract-eww-content)
+        (+gptel--extract-elfeed-content)
+        (+gptel--extract-pdf-content)
+        (+gptel--extract-nov-content)
+        ;; 기본: 일반 버퍼
+        (list :title (buffer-name)
+              :url (or (buffer-file-name) default-directory)
+              :text (if (use-region-p)
+                        (buffer-substring-no-properties (region-beginning) (region-end))
+                      (buffer-string)))))
+
+  (defun +gptel--format-content-for-llm (content)
+    "CONTENT plist를 LLM 프롬프트 형식으로 변환."
+    (let ((title (plist-get content :title))
+          (url (plist-get content :url))
+          (feed (plist-get content :feed))
+          (date (plist-get content :date))
+          (authors (plist-get content :authors))
+          (text (plist-get content :text)))
+      (concat
+       "Article Metadata:\n"
+       (when title (format "- Title: %s\n" title))
+       (when url (format "- URL: %s\n" url))
+       (when feed (format "- Feed: %s\n" feed))
+       (when date (format "- Date: %s\n" date))
+       (when authors (format "- Authors: %s\n" authors))
+       "\nContent:\n"
+       "```\n"
+       (string-trim text)
+       "\n```")))
+
+  ;; 핵심 함수
+
+  (defun +gptel--send-to-buffer (content system-message action-name &optional temperature)
+    "CONTENT를 gptel 사이드 버퍼로 보내고 SYSTEM-MESSAGE로 요청.
+ACTION-NAME은 표시용 (예: \"요약\", \"번역\").
+TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용)."
+    (let* ((formatted (+gptel--format-content-for-llm content))
+           (buf (get-buffer-create +gptel-buffer-name)))
+      ;; 사이드 버퍼 설정
+      (with-current-buffer buf
+        (unless (derived-mode-p 'org-mode)
+          (org-mode))
+        (unless gptel-mode
+          (gptel-mode 1))
+        ;; 시스템 메시지 설정
+        (setq-local gptel--system-message system-message)
+        ;; 로컬 온도 설정 (작업별 최적화)
+        (when temperature
+          (setq-local gptel-temperature temperature))
+        ;; 이전 내용 아래에 새 요청 추가
+        (goto-char (point-max))
+        (unless (bobp)
+          (insert "\n\n"))
+        (insert (format "@user: [%s 요청]\n\n%s" action-name formatted))
+        (insert "\n\n@assistant:\n"))
+      ;; 사이드 윈도우로 표시
+      (display-buffer buf '((display-buffer-in-side-window)
+                            (side . right)
+                            (window-width . 0.4)))
+      ;; gptel-send 호출
+      (with-current-buffer buf
+        (goto-char (point-max))
+        (gptel-send))
+      (message "%s 요청을 보냈습니다. (temp=%.1f) 결과는 %s 버퍼에서 확인하세요."
+               action-name (or temperature gptel-temperature) +gptel-buffer-name)))
 
 ;;;###autoload
-(defun +gptel-summarize-buffer ()
-  "현재 버퍼 내용을 요약하여 gptel 사이드 버퍼에 표시.
+  (defun +gptel-summarize-buffer ()
+    "현재 버퍼 내용을 요약하여 gptel 사이드 버퍼에 표시.
 eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
-  (interactive)
-  (let ((content (+gptel--extract-buffer-content)))
-    (+gptel--send-to-buffer content +gptel-summarize-system-message "요약")))
+    (interactive)
+    (let ((content (+gptel--extract-buffer-content)))
+      (+gptel--send-to-buffer content +gptel-summarize-system-message
+                              "요약" +gptel-summarize-temperature)))
 
 ;;;###autoload
-(defun +gptel-translate-buffer ()
-  "현재 버퍼 내용을 번역하여 gptel 사이드 버퍼에 표시.
+  (defun +gptel-translate-buffer ()
+    "현재 버퍼 내용을 번역하여 gptel 사이드 버퍼에 표시.
 eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
-  (interactive)
-  (let ((content (+gptel--extract-buffer-content)))
-    (+gptel--send-to-buffer content +gptel-translate-system-message "번역")))
+    (interactive)
+    (let ((content (+gptel--extract-buffer-content)))
+      (+gptel--send-to-buffer content +gptel-translate-system-message
+                              "번역" +gptel-translate-temperature)))
 
 ;;;###autoload
-(defun +gptel-buffer-dwim ()
-  "현재 버퍼에 대해 gptel 액션 선택 (요약/번역)."
-  (interactive)
-  (let ((action (completing-read "Action: " '("요약 (Summarize)" "번역 (Translate)"))))
-    (pcase action
-      ("요약 (Summarize)" (+gptel-summarize-buffer))
-      ("번역 (Translate)" (+gptel-translate-buffer)))))
+  (defun +gptel-buffer-dwim ()
+    "현재 버퍼에 대해 gptel 액션 선택 (요약/번역)."
+    (interactive)
+    (let ((action (completing-read "Action: " '("요약 (Summarize)" "번역 (Translate)"))))
+      (pcase action
+        ("요약 (Summarize)" (+gptel-summarize-buffer))
+        ("번역 (Translate)" (+gptel-translate-buffer)))))
 
 ;;;;; gptel-buffer 키바인딩
 
-;; 전역 키바인딩 (SPC a G 접두어) - SPC a 충돌로 비활성화
-;; (map! :leader
-;;       (:prefix ("a" . "AI")
-;;        (:prefix ("G" . "gptel-buffer")
-;;         :desc "Summarize buffer" "s" #'+gptel-summarize-buffer
-;;         :desc "Translate buffer" "t" #'+gptel-translate-buffer
-;;         :desc "DWIM (choose action)" "g" #'+gptel-buffer-dwim)))
+  ;; 전역 키바인딩 (SPC a G 접두어) - SPC a 충돌로 비활성화
+  ;; (map! :leader
+  ;;       (:prefix ("a" . "AI")
+  ;;        (:prefix ("G" . "gptel-buffer")
+  ;;         :desc "Summarize buffer" "s" #'+gptel-summarize-buffer
+  ;;         :desc "Translate buffer" "t" #'+gptel-translate-buffer
+  ;;         :desc "DWIM (choose action)" "g" #'+gptel-buffer-dwim)))
 
-;; eww 모드 키바인딩
-(after! eww
-  (map! :map eww-mode-map
-        :localleader
-        (:prefix ("G" . "gptel")
-         :desc "Summarize" "s" #'+gptel-summarize-buffer
-         :desc "Translate" "t" #'+gptel-translate-buffer)))
+  ;; eww 모드 키바인딩
+  (after! eww
+    (map! :map eww-mode-map
+          :localleader
+          (:prefix ("G" . "gptel")
+           :desc "Summarize" "s" #'+gptel-summarize-buffer
+           :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-;; elfeed 모드 키바인딩
-(after! elfeed
-  (map! :map elfeed-show-mode-map
-        :localleader
-        (:prefix ("G" . "gptel")
-         :desc "Summarize" "s" #'+gptel-summarize-buffer
-         :desc "Translate" "t" #'+gptel-translate-buffer)))
+  ;; elfeed 모드 키바인딩
+  (after! elfeed
+    (map! :map elfeed-show-mode-map
+          :localleader
+          (:prefix ("G" . "gptel")
+           :desc "Summarize" "s" #'+gptel-summarize-buffer
+           :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-;; pdf-view 모드 키바인딩
-(after! pdf-tools
-  (map! :map pdf-view-mode-map
-        :localleader
-        (:prefix ("G" . "gptel")
-         :desc "Summarize" "s" #'+gptel-summarize-buffer
-         :desc "Translate" "t" #'+gptel-translate-buffer)))
+  ;; pdf-view 모드 키바인딩
+  (after! pdf-tools
+    (map! :map pdf-view-mode-map
+          :localleader
+          (:prefix ("G" . "gptel")
+           :desc "Summarize" "s" #'+gptel-summarize-buffer
+           :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-;; nov 모드 키바인딩
-(after! nov
-  (map! :map nov-mode-map
-        :localleader
-        (:prefix ("G" . "gptel")
-         :desc "Summarize" "s" #'+gptel-summarize-buffer
-         :desc "Translate" "t" #'+gptel-translate-buffer)))
+  ;; nov 모드 키바인딩
+  (after! nov
+    (map! :map nov-mode-map
+          :localleader
+          (:prefix ("G" . "gptel")
+           :desc "Summarize" "s" #'+gptel-summarize-buffer
+           :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-  ) ; end of use-package! gptel
+  ) ; end of after! gptel
+
+
+;;; Provide
 
 (provide 'ai-gptel)
 

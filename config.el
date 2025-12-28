@@ -124,8 +124,25 @@
 ;; Stop asking abount following symlinks to version controlled files
 (setq vc-follow-symlinks t)
 
-(global-auto-revert-mode 1) ; doom nil
-(setq auto-revert-interval 10)
+(progn
+  (global-auto-revert-mode 1) ;; 기본 활성화 (필수)
+  (setq auto-revert-verbose nil)
+  ;; VC 정보도 업데이트 (magit 상태 반영)
+  (setq auto-revert-check-vc-info t)
+  ;; 간격 (notify 사용시 fallback용)
+  (setq auto-revert-interval 5)
+
+  (let ((device (string-trim
+                 (shell-command-to-string "cat ~/.current-device 2>/dev/null"))))
+    (cond
+     ((string-equal-ignore-case device "termux")
+      (setq auto-revert-use-notify nil
+            auto-revert-avoid-polling nil))
+     ((cl-member device '("nuc" "laptop" "thinkpad") :test #'string-equal-ignore-case)
+      ;; OS 파일 알림 사용 (polling보다 빠르고 효율적)
+      (setq auto-revert-use-notify t
+            auto-revert-avoid-polling t))))
+  )
 
 ;; default 120 emacs-29, 60 emacs-28
 (setq kill-ring-max 30) ; keep it small
@@ -138,6 +155,22 @@
 (setq xref-search-program
       (cond ((or (executable-find "ripgrep") (executable-find "rg")) 'ripgrep)
             ((executable-find "ugrep") 'ugrep) (t 'grep)))
+
+;;; pass + auth (gptel 등에서 API 키 접근을 위해 즉시 로드)
+
+(require 'password-store)
+(setq pass-username-field "login"
+      password-store-password-length 24)
+
+(use-package! password-store-menu
+  :after password-store
+  :custom (password-store-menu-key "C-c C-p")
+  :config
+  (password-store-menu-enable))
+
+;; (setq auth-sources '(password-store "~/.authinfo.gpg"))
+;; (setq auth-sources '("~/.authinfo.gpg")
+;;       auth-source-cache-expiry nil) ; default is 7200 (2h)
 
 ;;; Load libraries
 
@@ -161,6 +194,7 @@
   (load! "lisp/utils-config")
   (load! "lisp/project-config")
   (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
+  (load! "lisp/elfeed-config")        ; elfeed + elfeed-tube
   (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
   (load! "lisp/tmux-config")          ; tmux + claude code orchestration
   (load! "lisp/zellij-config")        ; zellij terminal multiplexer
@@ -191,6 +225,8 @@
         delete-by-moving-to-trash t) ; doom nil
 
   (setq dired-use-ls-dired t)  ; doom t
+
+  (require 'dired-aux)
   (setq dired-do-revert-buffer t) ; doom nil
   ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
 
@@ -215,20 +251,9 @@
 (use-package! imenu-list
   :init
   (add-hook 'imenu-list-major-mode-hook #'toggle-truncate-lines)
-  (setq imenu-list-focus-after-activation nil)
-  (setq imenu-list-auto-resize nil)
-  (setq imenu-list-position 'left)
-  (setq imenu-list-idle-update-delay 1.0) ; default 1.0
-  (setq imenu-list-size 45) ; default 0.3
-  :config
-  ;;;###autoload
-  (defun spacemacs/imenu-list-smart-focus ()
-    "Focus the `imenu-list' buffer, creating as necessary.
-If the imenu-list buffer is displayed in any window, focus it, otherwise create and focus."
-    (interactive)
-    (if (get-buffer-window imenu-list-buffer-name t)
-        (imenu-list-show)
-      (imenu-list-smart-toggle))))
+  ;; (setq imenu-list-focus-after-activation nil)
+  (setq imenu-list-size 40)
+  (setq imenu-list-auto-resize nil))
 
 ;;;; bookmark
 
@@ -460,22 +485,6 @@ Returns t on success, nil if notify-send is not available."
       t)))
 ;;   )
 
-;;;; pass + auth
-
-(after! pass
-  (setq pass-username-field "login"
-        password-store-password-length 24))
-
-(use-package! password-store-menu
-  :defer 1
-  :commands (password-store-menu-enable)
-  :custom (password-store-menu-key "C-c C-p")
-  :config
-  (password-store-menu-enable))
-
-;; (setq auth-sources '(password-store "~/.authinfo.gpg"))
-;; (setq auth-sources '("~/.authinfo.gpg")
-;;       auth-source-cache-expiry nil) ; default is 7200 (2h)
 
 ;;; TODO py3status integration (ElleNajit)
 

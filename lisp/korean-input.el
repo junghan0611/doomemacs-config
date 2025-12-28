@@ -309,8 +309,8 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
   (when (featurep 'evil)
     ;; SPC m k로 korean 네임스페이스
     (map! :localleader
-          :desc "한글 자모 → 음절 변환" "k n" #'korean/convert-jamo-to-syllable
-          :desc "한글 NFC 모드 토글" "k t" #'korean-nfc-mode)))
+          :desc "한글 자모 → 음절 변환" "7 n" #'korean/convert-jamo-to-syllable
+          :desc "한글 NFC 모드 토글" "7 t" #'korean-nfc-mode)))
 
 (with-eval-after-load 'doom-keybinds
   (korean/setup-keybindings))

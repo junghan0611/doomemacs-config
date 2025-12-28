@@ -55,8 +55,7 @@
 ;;;; Function Keys
 
 (map! :after imenu-list
-      "<f8>" #'imenu-list-smart-toggle
-      "M-<f8>" #'spacemacs/imenu-list-smart-focus)
+      "<f8>" #'imenu-list-smart-toggle)
 
 ;;;; Denote Keymap (C-c n, M-e)
 
