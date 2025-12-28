@@ -215,6 +215,7 @@
 (require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
 (require 'tmux-config)               ; tmux + claude code orchestration
 (require 'zellij-config)             ; zellij terminal multiplexer
+(require 'search-config)             ; recent-rgrep 등 검색 도구
 (require 'keybindings-config)
 (require 'keybindings-denote-config)
 (require 'functions)

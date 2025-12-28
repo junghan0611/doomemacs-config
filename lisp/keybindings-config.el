@@ -297,6 +297,8 @@
 (add-hook! emacs-lisp-mode
   (setq-local comment-column 0))
 
+;;; provide
+
 (provide 'keybindings-config)
 
 ;;; keybindings-config.el ends here
