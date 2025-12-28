@@ -34,7 +34,7 @@
 ;;    $ claude
 ;;
 ;; 4. Emacs에서 에이전트에 메시지 전송:
-;;    SPC 3 t s  →  에이전트 선택 → 메시지 입력
+;;    SPC \ t s  →  에이전트 선택 → 메시지 입력
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; tmux target 형식
@@ -88,37 +88,37 @@
 ;;   (emamux:close-panes)           모든 다른 pane 닫기
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 키바인딩 (SPC 3 t ...)
+;; 키바인딩 (SPC \ t ...)
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;;
 ;; Claude 에이전트:
-;;   SPC 3 t s   Send to agent      에이전트에 텍스트 전송
-;;   SPC 3 t r   Send region        선택 영역 전송
-;;   SPC 3 t b   Send buffer        버퍼 전체 전송
-;;   SPC 3 t d   Send defun         현재 함수 전송
-;;   SPC 3 t i   Assign issue       bd 이슈 할당
-;;   SPC 3 t n   Assign next        다음 ready 이슈 할당
-;;   SPC 3 t l   List panes         pane 목록
-;;   SPC 3 t f   Focus agent        에이전트로 포커스
-;;   SPC 3 t c   Capture pane       pane 출력 캡처 (raw)
-;;   SPC 3 t p   Select pane        pane 선택 (completing-read)
-;;   SPC 3 t v   Show conversation  대화 내용 정리 표시
-;;   SPC 3 t ?   Agent status       에이전트 상태 확인
-;;   SPC 3 t e   Extract response   마지막 Claude 응답 추출
-;;   SPC 3 t E   Extract input      마지막 사용자 입력 추출
+;;   SPC \ t s   Send to agent      에이전트에 텍스트 전송
+;;   SPC \ t r   Send region        선택 영역 전송
+;;   SPC \ t b   Send buffer        버퍼 전체 전송
+;;   SPC \ t d   Send defun         현재 함수 전송
+;;   SPC \ t i   Assign issue       bd 이슈 할당
+;;   SPC \ t n   Assign next        다음 ready 이슈 할당
+;;   SPC \ t l   List panes         pane 목록
+;;   SPC \ t f   Focus agent        에이전트로 포커스
+;;   SPC \ t c   Capture pane       pane 출력 캡처 (raw)
+;;   SPC \ t p   Select pane        pane 선택 (completing-read)
+;;   SPC \ t v   Show conversation  대화 내용 정리 표시
+;;   SPC \ t ?   Agent status       에이전트 상태 확인
+;;   SPC \ t e   Extract response   마지막 Claude 응답 추출
+;;   SPC \ t E   Extract input      마지막 사용자 입력 추출
 ;;
 ;; 권한 프롬프트 처리:
-;;   SPC 3 t a   Pending prompts    대기 중인 프롬프트 표시
-;;   SPC 3 t y   Approve            에이전트 승인 (y 전송)
-;;   SPC 3 t N   Reject             에이전트 거부 (n 전송)
-;;   SPC 3 t Y   Approve all        모든 에이전트 일괄 승인
+;;   SPC \ t a   Pending prompts    대기 중인 프롬프트 표시
+;;   SPC \ t y   Approve            에이전트 승인 (y 전송)
+;;   SPC \ t N   Reject             에이전트 거부 (n 전송)
+;;   SPC \ t Y   Approve all        모든 에이전트 일괄 승인
 ;;
 ;; emamux:
-;;   SPC 3 t m s   emamux:send-command
-;;   SPC 3 t m r   emamux:run-command
-;;   SPC 3 t m l   emamux:run-last-command
-;;   SPC 3 t m y   emamux:yank-from-list-buffers
-;;   SPC 3 t m c   emamux:copy-kill-ring
+;;   SPC \ t m s   emamux:send-command
+;;   SPC \ t m r   emamux:run-command
+;;   SPC \ t m l   emamux:run-last-command
+;;   SPC \ t m y   emamux:yank-from-list-buffers
+;;   SPC \ t m c   emamux:copy-kill-ring
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 한계 (Phase 2에서 해결 예정)
@@ -443,9 +443,9 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
 ;;   "[y/n]"              일반 확인
 ;;
 ;; 사용법:
-;;   SPC 3 t a   모든 에이전트의 대기 중인 프롬프트 표시
-;;   SPC 3 t y   에이전트 승인 (y 전송)
-;;   SPC 3 t N   에이전트 거부 (n 전송)
+;;   SPC \ t a   모든 에이전트의 대기 중인 프롬프트 표시
+;;   SPC \ t y   에이전트 승인 (y 전송)
+;;   SPC \ t N   에이전트 거부 (n 전송)
 
 (defvar +claude-permission-patterns
   '("Allow"                           ; 도구 사용 허가
@@ -503,8 +503,8 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
                     (insert (format "   %s\n" prompt)))
                   (insert "\n"))
                 (insert "───────────────────────────────\n")
-                (insert "SPC 3 t y  승인 (y)\n")
-                (insert "SPC 3 t N  거부 (n)\n")
+                (insert "SPC \ t y  승인 (y)\n")
+                (insert "SPC \ t N  거부 (n)\n")
                 (goto-char (point-min)))
               (pop-to-buffer buf))
           (message "대기 중인 프롬프트 없음"))
@@ -612,10 +612,10 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
 
 ;;;; Keybindings
 
-;; SPC 3 t ... (tmux-claude agents)
-;; SPC 3은 efrit/beads 그룹 (ai-orchestration.el)
+;; SPC \ t ... (tmux-claude agents)
+;; SPC \은 efrit/beads 그룹 (ai-orchestration.el)
 (map! :leader
-      (:prefix "3"
+      (:prefix "\\"
        (:prefix ("t" . "tmux-agents")
         ;; Claude 에이전트
         :desc "Send to agent"       "s" #'+claude-send-to-agent
