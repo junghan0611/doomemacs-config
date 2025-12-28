@@ -95,6 +95,14 @@
 (setq undo-limit 80000000) ; Raise undo-limit to 80Mb
 (setq truncate-string-ellipsis "…") ; Unicode ellispis are nicer than "...", and also save /precious/ space
 
+;; When I bring up Doom's scratch buffer with SPC x, it's often to play with
+;; elisp or note something down (that isn't worth an entry in my notes). I can
+;; do both in `lisp-interaction-mode'.
+(setq doom-scratch-initial-major-mode 'emacs-lisp-mode)
+
+;; Set initial buffer to org
+(setq initial-major-mode #'emacs-lisp-mode); text-mode
+
 ;;; Leader key
 
 ;; Over-ride or add to Doom Emacs default key bindings
@@ -174,34 +182,42 @@
 
 ;;; Load libraries
 
-(progn
-  (load! "+user-info")
-  (load! "lisp/ui-config")
-  (load! "lisp/evil-config")
-  (load! "lisp/korean-input")
-  (load! "lisp/time-config")
-  (load! "lisp/completion-config")
-  (load! "lisp/org-config")
-  (load! "lisp/denote-config")
-  (load! "lisp/denote-silo")
-  (load! "lisp/denote-export")
-  (load! "lisp/denote-functions")
-  (load! "lisp/ai-gptel")
-  (load! "lisp/ai-agent-shell")   ; acp 설정
-  ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
-  (load! "lisp/ai-stt-eca-whisper")
-  (load! "lisp/ai-tts-edge")
-  (load! "lisp/utils-config")
-  (load! "lisp/project-config")
-  (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
-  (load! "lisp/elfeed-config")        ; elfeed + elfeed-tube
-  (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
-  (load! "lisp/tmux-config")          ; tmux + claude code orchestration
-  (load! "lisp/zellij-config")        ; zellij terminal multiplexer
-  (load! "lisp/keybindings-config")
-  (load! "lisp/keybindings-remap")
-  (load! "lisp/functions")
-  )
+;;; Load libraries via require (prevents duplicate loading)
+
+(add-load-path! "lisp/")
+
+(load! "+user-info")  ; no provide, keep load!
+
+(require 'ui-config)
+(require 'evil-config)
+(require 'korean-input)
+(require 'time-config)
+(require 'completion-config)
+(require 'org-config)
+(require 'denote-config)
+(require 'denote-silo-config)
+(require 'denote-export-config)
+(require 'denote-functions)
+(require 'unicode-config)
+(require 'ai-gptel)
+(require 'ai-agent-shell)            ; acp 설정
+;; (require 'ai-gptel-acp)           ; gptel + ACP 통합 (doom-md7)
+(require 'ai-stt-eca-whisper)
+(require 'ai-tts-edge)
+
+(require 'modeline-config)
+(require 'tab-bar-config)
+
+(require 'utils-config)
+(require 'project-config)
+(require 'eaf-config)                ; EAF (조건부 로딩)
+(require 'elfeed-config)             ; elfeed + elfeed-tube
+(require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
+(require 'tmux-config)               ; tmux + claude code orchestration
+(require 'zellij-config)             ; zellij terminal multiplexer
+(require 'keybindings-config)
+(require 'keybindings-remap)
+(require 'functions)
 
 
 ;;; overide doomemacs

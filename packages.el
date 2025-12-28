@@ -105,16 +105,17 @@
 (package! citar-denote)
 
 (package! consult-notes)
+(package! consult-denote)
 
 (package! denote-explore :recipe (:host github :repo "pprevos/denote-explore"))
 
 ;;;; UI
 
 (unpin! doom-themes)
+(package! modus-themes)
+(package! doric-themes)
 (package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
 (package! dired-preview)
-
-;; Notification system removed (using dunst/notify-send directly)
 
 ;;;; Editing
 
@@ -186,6 +187,11 @@
 ;;;; elfeed-config.el
 
 (package! org-web-tools)
+
+;;;; tab-bar-config.el
+
+(package! celestial-mode-line)
+;; (package! keycast)
 
 ;;; DEPRECATED
 

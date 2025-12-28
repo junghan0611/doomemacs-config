@@ -18,15 +18,6 @@
 
 ;;; Code:
 
-;;;; startup and dashboard
-
-;; (setq initial-scratch-message user-initial-scratch-message)
-
-;; ;; When I bring up Doom's scratch buffer with SPC x, it's often to play with
-;; ;; elisp or note something down (that isn't worth an entry in my notes). I can
-;; ;; do both in `lisp-interaction-mode'.
-;; (setq doom-scratch-initial-major-mode 'emacs-lisp-mode)
-
 ;;;; Dashboard - Terminal Optimized
 
 (setq +doom-dashboard-ascii-banner-fn nil)
@@ -90,33 +81,6 @@
    ;;  which-key-use-C-h-commands t) ; paging key maps
    ))
 
-;;;; doom-modeline
-
-(setq doom-modeline-time nil)
-(setq doom-modeline-time-icon nil)
-(setq doom-modeline-minor-modes nil)
-(setq doom-modeline-support-imenu t)
-(setq doom-modeline-enable-word-count nil)
-(setq doom-modeline-continuous-word-count-modes '(markdown-mode gfm-mod)) ; org-mode
-
-(after! doom-modeline
-  (setq doom-modeline-icon nil)
-  (setq doom-modeline-modal-icon nil)
-  (setq doom-modeline-major-mode-icon nil)
-  (setq doom-modeline-buffer-modification-icon nil)
-
-  (setq doom-modeline-height 35)
-  (setq doom-modeline-bar-width 4)
-
-  (setq doom-modeline-persp-name t) ; doom nil
-  (setq doom-modeline-buffer-file-name-style 'truncate-upto-project) ; default 'auto
-
-  (setq doom-modeline-repl t)
-  (setq doom-modeline-github t)
-  (setq doom-modeline-lsp t)
-  (setq doom-modeline-indent-info t)
-  (setq doom-modeline-hud nil))
-
 ;;;; outli
 
 (use-package! outli
@@ -152,12 +116,10 @@
 (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
       doom-themes-enable-italic nil) ; if nil, italics is universally disabled
 
-;; 터미널에서 테마 색상 충돌 방지
+;; TODO 터미널에서 테마 색상 충돌 방지가 되는거야?
 (unless (display-graphic-p)
   ;; 터미널에서 배경색 투명도 유지
   (setq-default frame-background-mode 'dark)
-  ;; 터미널 색상 팔레트 활용
-  (setq xterm-color-preserve-properties t)
 
   ;; Ghostty 터미널 전용 설정
   (cond
@@ -186,12 +148,22 @@
           ["#2E3440" "#BF616A" "#A3BE8C" "#EBCB8B"
            "#81A1C1" "#B48EAD" "#88C0D0" "#D8DEE9"]))))
 
-(defun my/doom-themes-toggle ()
+;;;; modus-themes
+
+(use-package! doric-themes)
+
+(use-package! modus-themes
+  :init
+  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi)))
+
+(defun my/themes-toggle ()
   (interactive)
-  (setq doom-theme 'doom-dracula)
-  (doom-themes-visual-bell-config)
-  (load-theme doom-theme t))
-(add-hook 'doom-first-input-hook #'my/doom-themes-toggle)
+  ;; Finally, load your theme of choice (or a random one with
+  ;; `modus-themes-load-random', `modus-themes-load-random-dark',
+  ;; `modus-themes-load-random-light').
+  (modus-themes-load-theme 'modus-vivendi-tinted))
+
+(add-hook 'doom-first-input-hook #'my/themes-toggle)
 
 ;;;; popup
 

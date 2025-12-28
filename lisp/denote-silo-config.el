@@ -1,4 +1,4 @@
-;;; +denote-silo-dynamic.el --- Dynamic Denote Silo Management -*- lexical-binding: t; -*-
+;;; +denote-silo-config.el --- Dynamic Denote Silo Management -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Junghan Kim
 
@@ -205,6 +205,6 @@ Emacs 시작 시 또는 수동으로 호출하여 Silo 목록을 업데이트합
 
 ;;; Provide
 
-(provide '+denote-silo-dynamic)
+(provide 'denote-silo-config)
 
-;;; +denote-silo-dynamic.el ends here
+;;; +denote-silo-config.el ends here

@@ -1,4 +1,4 @@
-;;; +denote-export.el --- Denote to Hugo Export System -*- lexical-binding: t; -*-
+;;; +denote-export-config.el --- Denote to Hugo Export System -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Junghan Kim
 ;; Author: Junghan Kim <junghanacs@gmail.com>
@@ -564,5 +564,6 @@ Export File Name is the denote identifier."
 ;; Future enhancement: Integrate password-store for secret validation
 ;; (defun my/validate-secrets-before-export () ...)
 
-(provide '+denote-export)
-;;; +denote-export.el ends here
+(provide 'denote-export-config)
+
+;;; +denote-export-config.el ends here

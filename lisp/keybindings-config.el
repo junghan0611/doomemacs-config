@@ -327,6 +327,9 @@
         :i "TAB" #'completion-at-point
         "M-\\" #'other-window
         "M--" #'denote-find-backlink
+        "M-s ," #'denote-rename-file-using-front-matter
+        "M-g 1" #'bh/insert-inactive-timestamp
+        "M-g 2" #'org-cite-insert
         ;; Localleader
         :localleader
         ";" #'my/clear-nbsp-and-ascii-punctuations

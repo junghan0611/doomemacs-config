@@ -218,7 +218,7 @@
   (setq org-hugo-base-dir (expand-file-name org-hugo-base-dir)))
 
 ;; Load export configuration
-(let ((export-config (expand-file-name "lisp/denote-export.el" original-doom-user-dir)))
+(let ((export-config (expand-file-name "lisp/denote-export-config.el" original-doom-user-dir)))
   (if (file-exists-p export-config)
       (load export-config)
     (error "[Server] Export config not found: %s" export-config)))
@@ -226,7 +226,7 @@
 (message "[Server] Loaded export configuration")
 
 ;;;; Bibliography/Citation Setup
-;; NOTE: org-cite settings are in lisp/denote-export.el (loaded above)
+;; NOTE: org-cite settings are in lisp/denote-export-config.el (loaded above)
 ;; - org-cite-csl-link-cites t
 ;; - org-cite-export-processors
 
