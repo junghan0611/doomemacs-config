@@ -40,12 +40,12 @@ def convert_text_to_mp3(
     text = Path(input_file).read_text(encoding="utf-8").strip()
     text_len = len(text)
 
-    # 예상 시간 계산 (1글자당 약 0.4초, 실제로는 변동있음)
-    estimated_seconds = text_len * 0.4
+    # 예상 시간 계산 (1글자당 약 0.04초, 실측: 23001자→918초)
+    estimated_seconds = text_len * 0.04
     estimated_minutes = estimated_seconds / 60
 
-    # 예상 파일 크기 (1글자당 약 250바이트)
-    estimated_size_mb = text_len * 250 / 1024 / 1024
+    # 예상 파일 크기 (1글자당 약 700바이트, 실측: 23001자→15.3MB)
+    estimated_size_mb = text_len * 700 / 1024 / 1024
 
     print(f"변환 시작: {text_len:,}자", file=sys.stderr)
     print(f"음성: {voice}, 속도: {rate}", file=sys.stderr)
