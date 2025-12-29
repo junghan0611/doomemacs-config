@@ -11,11 +11,14 @@
 ;; External tools required to make projectile fly! fd, ag, rg
 ;; evil-dot-doom/modules/custom/projects/config.el
 
-(after! projectile
+(progn
+  (require' projectile)
   ;; Disable projectile cache - saves requirement to invalidate cache when moving files
   (setq projectile-enable-caching nil) ; very IMPORTANT
+  (setq projectile-auto-update-cache nil)
+  (setq projectile-file-exists-remote-cache-expire nil)
+
   (setq projectile-sort-order 'recentf)
-   ;; projectile-verbose nil
 
   ;; create missing test files
   (setq projectile-create-missing-test-files t)
@@ -48,7 +51,6 @@
   ;; (setq projectile-project-root-files-bottom-up
   ;;       (remove ".git" projectile-project-root-files-bottom-up))
   )
-
 
 ;;;; majutsu jj-mode
 

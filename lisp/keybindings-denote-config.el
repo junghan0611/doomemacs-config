@@ -201,10 +201,6 @@
       (:prefix ("T" . "themes")
        :desc "Modus toggle"         "m" #'modus-themes-toggle
        :desc "Modus select"         "M" #'modus-themes-select
-       :desc "Ef toggle"            "e" #'ef-themes-toggle
-       :desc "Ef select"            "E" #'ef-themes-select
-       :desc "Ef random light"      "," #'ef-themes-load-random-light
-       :desc "Ef random dark"       "." #'ef-themes-load-random-dark
        :desc "Doric random"         "r" #'doric-themes-load-random
        :desc "Doric select"         "R" #'doric-themes-select))
 
@@ -213,7 +209,7 @@
 (map! :map my/denote-map
       :desc "Backlinks for heading" "B" #'denote-org-backlinks-for-heading
       :desc "Create note"           "d" #'denote-create-note
-      :desc "Find file"             "f" #'my/denote-find-file
+      :desc "Find file"             "f" #'+default/find-in-notes ;; my/denote-find-file
       :desc "Find by modified"      "F" #'my/denote-find-file-by-modified
       :desc "Grep"                  "g" #'my/denote-grep
       :desc "Consult grep"          "SPC" #'consult-denote-grep
