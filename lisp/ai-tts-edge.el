@@ -543,6 +543,29 @@ SHOW-PROGRESS가 non-nil이면 진행 상황 버퍼를 표시."
 ;; 설정 커스터마이징:
 ;;   M-x customize-group RET edge-tts RET
 ;;
+;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; TTS 워크플로우 가이드 (긴 텍스트용)
+;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;
+;; 1. Org 파일에 :TTS: 태그 헤딩 작성:
+;;    * 대본 :TTS:
+;;    [0:00] - [0:30]: 안녕하세요...
+;;    [0:30] - [1:00]: 오늘 주제는...
+;;
+;; 2. 전체 워크플로우 실행:
+;;    SPC - w  또는  M-x edge-tts-org-tts-full-workflow
+;;
+;; 3. 진행 상황 확인:
+;;    - compile 버퍼에서 실시간 진행률 표시
+;;    - C-g 로 취소 가능
+;;
+;; 출력 파일:
+;;   ~/sync/org/transcript/새ID--원본DenoteID__tts.txt
+;;   ~/sync/org/transcript/새ID--원본DenoteID__tts.mp3
+;;
+;; 터미널에서 직접 실행:
+;;   python3 ~/.config/doom/bin/edge-tts-convert.py input.txt output.mp3
+;;
 
 (provide 'ai-tts-edge)
 ;;; ai-tts-edge.el ends here
