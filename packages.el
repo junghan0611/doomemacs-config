@@ -128,9 +128,15 @@
 (package! aggressive-indent)
 (package! clipetty) ; osc52 support
 
+;;;; org-config.el
+
+(package! org-download)
+(package! org-rich-yank)
+
 ;;;; editing-config.el
 
 (package! olivetti)
+(package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 
 ;;;; project-config.el
 

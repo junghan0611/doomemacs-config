@@ -456,6 +456,30 @@ The link will contain DESCRIPTION as text."
       (olivetti-mode 0)
       (text-scale-set 0))))
 
+;;;; Split and Indirect orgtree
+
+;; copy from writers-dot-spacemaccs
+(defun my/split-and-indirect-orgtree ()
+  "Splits window to the right and opens an org tree section in it"
+  (interactive)
+  (split-window-right)
+  (org-tree-to-indirect-buffer)
+  (windmove-right))
+
+(defun my/kill-and-unsplit-orgtree ()
+  "Kills the cloned buffer and deletes the window."
+  (interactive)
+  (kill-this-buffer)
+  (delete-window))
+
+;;;; TODO 정리 대기중
+;;;;; org-toggle-emphasis-markers
+
+(defun my/org-toggle-emphasis-markers ()
+  (interactive)
+  (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))
+  (font-lock-fontify-buffer :interactively))
+
 ;;;; Provide
 
 (provide 'denote-functions)
