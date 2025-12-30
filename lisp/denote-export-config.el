@@ -118,10 +118,10 @@
   (after! oc
     (require 'citar-citeproc)
     (setq bibtex-files config-bibfiles)
-    (setq citar-format-reference-function 'citar-citeproc-format-reference)
+    (setq citar-format-reference-function 'citar-format-reference)
     (setq citar-citeproc-csl-style "apa.csl")
     ;; org-cite-csl-link-cites t = generate #citeproc_bib_item_N anchor links
-    (setq org-cite-csl-link-cites t)
+    (setq org-cite-csl-link-cites t) ; important
     (setq org-cite-export-processors '((latex biblatex) (t csl))))
   )
 
