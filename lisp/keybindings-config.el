@@ -52,6 +52,23 @@
       ;; Minibuffer access
       "M-0" #'switch-to-minibuffer)
 
+(map! :i "M-l" #'sp-forward-slurp-sexp
+      :i "M-\\" #'sp-forward-barf-sexp
+      :n "] p" (cmd! (evil-forward-paragraph) (recenter))
+      :n "[ p" (cmd! (evil-backward-paragraph) (recenter))
+      :n "DEL" #'evil-switch-to-windows-last-buffer
+      :i "M-/" #'hippie-expand
+      :n "g SPC" #'evil-jump-to-tag
+      :i "C-v" #'evil-paste-after
+      :n "[ g" #'+vc-gutter/previous-hunk
+      :n "] g" #'+vc-gutter/next-hunk
+      :m "8" #'evil-ex-search-word-forward
+      :m "3" #'evil-ex-search-word-backward
+      :m "4" #'evil-end-of-line
+      :m "0" #'evil-beginning-of-line
+      :n "g ]" #'evil-jump-forward
+      :n "g [" #'evil-jump-backward)
+
 ;;;; F1-12: Function Keys
 
 (map! :after imenu-list
@@ -135,28 +152,17 @@
        :desc "6th workspace" "6" #'+workspace/switch-to-5
        :desc "7th workspace" "7" #'+workspace/switch-to-6))
 
-;;;; Evil Keys
+;;;; Key Functions
+
+;;;;; +default/search-buffer : consult-line
 
 (map! :after evil
       :map evil-normal-state-map
-      "." #'+default/search-buffer)
-
-(map! :i "M-l" #'sp-forward-slurp-sexp
-      :i "M-\\" #'sp-forward-barf-sexp
-      :n "] p" (cmd! (evil-forward-paragraph) (recenter))
-      :n "[ p" (cmd! (evil-backward-paragraph) (recenter))
-      :n "DEL" #'evil-switch-to-windows-last-buffer
-      :i "M-/" #'hippie-expand
-      :n "g SPC" #'evil-jump-to-tag
-      :i "C-v" #'evil-paste-after
-      :n "[ g" #'+vc-gutter/previous-hunk
-      :n "] g" #'+vc-gutter/next-hunk
-      :m "8" #'evil-ex-search-word-forward
-      :m "3" #'evil-ex-search-word-backward
-      :m "4" #'evil-end-of-line
-      :m "0" #'evil-beginning-of-line
-      :n "g ]" #'evil-jump-forward
-      :n "g [" #'evil-jump-backward)
+      "." #'+default/search-buffer
+      :map ibuffer-mode-map
+      :nv "." #'+default/search-buffer
+      :map dired-mode-map
+      :nv "." #'+default/search-buffer)
 
 ;;;; Mode-specific Keymaps
 
@@ -210,7 +216,7 @@
         :n "C-c C-e" #'wdired-change-to-wdired-mode
         :n "C-c l" #'org-store-link
         :n "C-x /" #'dired-narrow-regexp
-        :n "." #'consult-line
+        :n "." #'+default/search-buffer ; 'consult-line
         :n "K" #'dired-do-kill-lines
         :n "h" #'dired-up-directory
         :n "l" #'dired-find-file
@@ -317,6 +323,7 @@
         :nv "M-p" #'outline-previous-heading
         :nv "C-S-p" #'outline-up-heading
         :nv "z u" #'outline-up-heading))
+
 
 ;;; provide
 

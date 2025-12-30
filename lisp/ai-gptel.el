@@ -52,6 +52,49 @@
           )
     (setq-default gptel-org-branching-context t))
 
+;;;;; gptel Claude-Code (정액제 via wrapper)
+;;
+;; [사전 준비 - 최초 1회]
+;; cd ~/repos/3rd/claude-code-openai-wrapper
+;; docker build -t claude-wrapper:latest .
+;;
+;; [서비스 시작]
+;; cd ~/sync/emacs/doomemacs-config/docker/claude-wrapper
+;; docker-compose up -d
+;;
+;; [상태 확인]
+;; curl http://localhost:8000/health
+;; docker logs claude-wrapper
+;;
+;; [서비스 중지]
+;; docker-compose down
+;;
+;; [gptel에서 사용]
+;; M-x gptel → 백엔드 메뉴에서 "Claude-Code" 선택
+;; 또는: (setq gptel-backend gptel-claude-code-backend)
+
+(setq gptel-claude-code-backend
+      (gptel-make-openai "Claude-Code"
+        :host "localhost:8000"
+        :endpoint "/v1/chat/completions"
+        :stream t
+        :key "not-needed"
+        :models '((claude-sonnet-4-5-20250929
+                   :capabilities (media tool-use)
+                   :context-window 200
+                   :input-cost 3
+                   :output-cost 15)
+                  (claude-opus-4-5-20251101
+                   :capabilities (media tool-use)
+                   :context-window 200
+                   :input-cost 5
+                   :output-cost 25)
+                  (claude-haiku-4-5-20251001
+                   :capabilities (media tool-use)
+                   :context-window 200
+                   :input-cost 1
+                   :output-cost 5))))
+
 ;;;;; gptel Deepseek (기본 백엔드)
 
 (setq gptel-deepseek-backend
