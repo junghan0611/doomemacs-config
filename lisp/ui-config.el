@@ -81,35 +81,6 @@
    ;;  which-key-use-C-h-commands t) ; paging key maps
    ))
 
-;;;; outli
-
-(use-package! outli
-  :defer 1
-  :init
-  (setq outli-speed-commands nil)
-  (add-hook 'prog-mode-hook #'outli-mode)
-  (add-hook 'conf-mode-hook #'outli-mode)
-  :config
-  ;; (add-to-list 'outli-heading-config '(tex-mode "%%" ?% t))
-  (add-to-list 'outli-heading-config '(js2-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(js-ts-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(zig-ts-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(typescript-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(typescript-ts-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(python-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(python-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(yaml-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(yaml-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(awk-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(awk-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(elixir-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(elixir-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(sh-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(bash-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(clojure-mode ";;" ?\; t))
-  (add-to-list 'outli-heading-config '(clojurescript-mode ";;" ?\; t))
-  )
-
 ;;;; themes
 
 ;; doom-themes
@@ -164,6 +135,33 @@
   (modus-themes-load-theme 'modus-vivendi-tinted))
 
 (add-hook 'doom-first-input-hook #'my/themes-toggle)
+
+
+;;;; spacious-padding
+
+(use-package! spacious-padding
+  :if window-system ; important
+  :hook (server-after-make-frame . spacious-padding-mode)
+  :init
+  (setq spacious-padding-subtle-mode-line
+        '( :mode-line-active spacious-padding-subtle-mode-line-active
+           :mode-line-inactive spacious-padding-subtle-mode-line-inactive))
+  (setq spacious-padding-widths
+        '(:header-line-width 4
+          :mode-line-width 4 ; 6
+          :tab-width 4 ; sync mode-line-width for keycast-tab-bar
+          :internal-border-width 20 ; 15
+          :right-divider-width 30 ; 30
+          :scroll-bar-width 8
+          :fringe-width 8
+          ))
+  (add-hook! 'doom-load-theme-hook #'spacious-padding-mode)
+  :config
+  ;; (when (fboundp 'tooltip-mode) (tooltip-mode 1))
+  ;; (when (fboundp 'tool-bar-mode) (tool-bar-mode 1))
+  ;; (when (display-graphic-p) ; gui
+  ;;   (menu-bar-mode +1)) ; disable <f10>
+  (spacious-padding-mode +1))
 
 ;;;; popup
 

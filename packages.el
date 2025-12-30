@@ -110,17 +110,16 @@
 
 (package! denote-explore :recipe (:host github :repo "pprevos/denote-explore"))
 
-;;;; UI
+;;;; ui-config.el
 
 (unpin! doom-themes)
 (package! modus-themes)
 (package! doric-themes)
 (package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
 (package! dired-preview)
+(package! spacious-padding)
 
 ;;;; Editing
-
-(package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 
 (package! tempel)
 (package! tempel-collection)
@@ -138,6 +137,7 @@
 
 ;;;; editing-config.el
 
+(package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 (package! olivetti)
 (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 
