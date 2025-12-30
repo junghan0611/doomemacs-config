@@ -367,34 +367,6 @@
   (show-paren-mode -1)
   )
 
-;;;; git / magit
-
-;; Enforce git commit conventions.
-;; See: http://chris.beams.io/posts/git-commit
-(setq git-commit-summary-max-length 72) ; defaults to Github's max commit message length
-
-(use-package! magit-todos
-  :after magit
-  :hook (magit-mode . magit-todos-mode))
-
-;;;; tramp
-
-;; Host *
-;;     ControlMaster auto
-;;     ControlPath ~/.ssh/sockets/%r@%h-%p
-;;     ControlPersist 600
-(after! tramp
-  (setq tramp-default-method "ssh")
-
-  ;; 소켓 디렉토리 자동 생성
-  (let ((socket-dir "~/.ssh/sockets"))
-    (unless (file-exists-p socket-dir)
-      (make-directory socket-dir t)
-      (set-file-modes socket-dir #o700)))  ;; 권한 700
-
-  (setq tramp-ssh-controlmaster-options
-        "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
-
 ;;;; termux-fixes
 ;; Fix async issues in Termux/Android
 
