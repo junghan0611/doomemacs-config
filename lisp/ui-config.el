@@ -87,28 +87,35 @@
 (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
       doom-themes-enable-italic nil) ; if nil, italics is universally disabled
 
-;; TODO 터미널에서 테마 색상 충돌 방지가 되는거야?
+;; 터미널 배경 투명화 함수
+(defun my/terminal-transparent-background (&optional _theme)
+  "터미널에서 Emacs 배경을 투명하게 설정.
+Ghostty 등 터미널의 배경색/투명도를 그대로 사용하게 함.
+_THEME 인자는 `enable-theme-functions' 호환용."
+  (unless (display-graphic-p)
+    ;; 모든 터미널 프레임에 적용
+    (dolist (frame (frame-list))
+      (unless (display-graphic-p frame)
+        (set-face-background 'default "unspecified-bg" frame)
+        (set-face-background 'line-number "unspecified-bg" frame)
+        (set-face-background 'line-number-current-line "unspecified-bg" frame)
+        (set-face-background 'fringe "unspecified-bg" frame)))))
+
+;; 터미널 기본 설정
 (unless (display-graphic-p)
-  ;; 터미널에서 배경색 투명도 유지
+  ;; 터미널에서 dark 테마 기본 사용
   (setq-default frame-background-mode 'dark)
 
   ;; Ghostty 터미널 전용 설정
   (cond
    ;; xterm-ghostty terminfo 사용시
    ((string-match "ghostty" (or (getenv "TERM") ""))
-    ;; Ghostty는 24비트 트루컬러 지원 (이미 terminfo에 정의됨)
+    ;; Ghostty는 24비트 트루컬러 지원
     (setenv "COLORTERM" "truecolor")
-    ;; 배경 투명도 유지
-    (set-face-background 'default "unspecified-bg" nil)
-    ;; 터미널 자체 색상 테마 우선
-    (setq-default terminal-ansi-color-vector
-                  [unspecified "#282a36" "#ff5555" "#50fa7b" "#f1fa8c"
-                               "#6272a4" "#ff79c6" "#8be9fd" "#f8f8f2"])
-    ;; Ghostty는 256색상 이상 지원 (terminfo pairs=0x7fff)
+    ;; Ghostty는 256색상 이상 지원
     (setq xterm-color-use-bold-for-bright nil)
     ;; Ghostty 최적화 설정
-    (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-direct"))
-    )
+    (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-direct")))
 
    ;; 일반 256color 터미널
    ((string-match "256color" (or (getenv "TERM") ""))
@@ -117,7 +124,17 @@
            "#81A1C1" "#B48EAD" "#88C0D0" "#E5E9F0"])
     (setq xterm-color-names
           ["#2E3440" "#BF616A" "#A3BE8C" "#EBCB8B"
-           "#81A1C1" "#B48EAD" "#88C0D0" "#D8DEE9"]))))
+           "#81A1C1" "#B48EAD" "#88C0D0" "#D8DEE9"])))
+
+  ;; enable-theme-functions 사용 (Emacs 29+, doom-load-theme-hook보다 확실)
+  ;; depth 100 = 테마 로드 완료 후 가장 마지막에 실행
+  (add-hook 'enable-theme-functions #'my/terminal-transparent-background 100)
+
+  ;; 새 프레임 생성시에도 적용
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (unless (display-graphic-p frame)
+                (run-with-timer 0.1 nil #'my/terminal-transparent-background)))))
 
 ;;;; modus-themes
 
@@ -132,7 +149,10 @@
   ;; Finally, load your theme of choice (or a random one with
   ;; `modus-themes-load-random', `modus-themes-load-random-dark',
   ;; `modus-themes-load-random-light').
-  (modus-themes-load-theme 'modus-vivendi-tinted))
+  (modus-themes-load-theme 'modus-vivendi-tinted)
+  ;; 터미널에서 테마 로드 후 배경 투명화 (확실한 적용)
+  (unless (display-graphic-p)
+    (run-with-timer 0.05 nil #'my/terminal-transparent-background)))
 
 (add-hook 'doom-first-input-hook #'my/themes-toggle)
 
