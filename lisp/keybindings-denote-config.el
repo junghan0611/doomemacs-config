@@ -244,30 +244,6 @@
       :desc "Find link"             "M-f" #'denote-find-link
       :desc "Find backlink"         "M-b" #'denote-find-backlink)
 
-;;;; Org-mode specific bindings
-
-(after! org
-  (map! :map org-mode-map
-        "C-x n b" #'org-cite-insert
-        "C-x n -" #'bh/insert-inactive-timestamp
-        "M-s ,"   #'denote-rename-file-using-front-matter
-        "M-s <"   #'denote-rename-file-title
-        "C-x n 0" #'my/org-insert-notes-drawer
-        "C-x n m" #'my/split-and-indirect-orgtree
-        "C-x n M" #'my/kill-and-unsplit-orgtree
-        "C-x n 9" #'my/org-count-words
-        "C-x n l" #'my/denote-org-store-link-to-heading
-        ;; Link & clipboard
-        "<f3>"    #'org-toggle-link-display
-        "C-c M-y" #'org-download-clipboard
-        "C-c o"   #'consult-org-heading
-        "C-c y"   #'org-cliplink
-        "C-c I"   #'org-insert-link-dwim)
-
-  ;; Evil 키바인딩 (normal, insert, visual 모드)
-  (evil-define-key '(normal insert visual) org-mode-map
-    (kbd "C-c M-i") #'org-cliplink))
-
 ;;;; Provide
 
 (provide 'keybindings-denote-config)

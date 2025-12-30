@@ -52,7 +52,7 @@
       ;; Minibuffer access
       "M-0" #'switch-to-minibuffer)
 
-;;;; Function Keys
+;;;; F1-12: Function Keys
 
 (map! :after imenu-list
       "<f8>" #'imenu-list-smart-toggle)
@@ -182,27 +182,6 @@
         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
         :inv "M-DEL" #'my/vterm-send-meta-backspace))
 
-;;;;; Outli
-
-(after! outli
-  ;; Outline heading에서만 cycle, 그 외에는 evil-jump-item (%)
-  (defun my/outline-cycle-or-evil-jump-item ()
-    "On outline heading, run `outline-cycle'. Otherwise, run `evil-jump-item'."
-    (interactive)
-    (if (outline-on-heading-p)
-        (outline-cycle)
-      (evil-jump-item)))
-
-  (map! :map outli-mode-map
-        :nv "<tab>" #'my/outline-cycle-or-evil-jump-item
-        :nv "TAB" #'my/outline-cycle-or-evil-jump-item
-        :nv "M-j" #'outline-forward-same-level
-        :nv "M-k" #'outline-backward-same-level
-        :nv "M-n" #'outline-next-heading
-        :nv "M-p" #'outline-previous-heading
-        :nv "C-S-p" #'outline-up-heading
-        :nv "z u" #'outline-up-heading))
-
 ;;;;; Markdown
 
 (after! evil-markdown
@@ -217,6 +196,7 @@
 (after! markdown-mode
   (map! :map markdown-mode-map
         :localleader
+        "y" #'my/yank-as-org
         "RET" #'toc-org-markdown-follow-thing-at-point
         "-" #'markdown-insert-list-item
         ";" #'my/clear-nbsp-and-ascii-punctuations
@@ -237,9 +217,10 @@
         :n "S-<return>" #'dired-find-file-other-window
         :n "S-SPC" #'dired-toggle-marks))
 
-;;;;; Prog Mode
+;;;;; Prog-mode
 
 (map! :map prog-mode-map
+      "C-M-y" #'evil-yank
       :inv "M-\\" #'other-window)
 
 ;;;;; Org Mode
@@ -256,18 +237,48 @@
         :n "C-n" #'org-next-visible-heading
         :n "C-p" #'org-previous-visible-heading
         :n "zu" #'outline-up-heading
-        "C-c d" #'cape-dict
+        )
+
+  (map! :map org-mode-map
         :i "<tab>" #'completion-at-point
         :i "TAB" #'completion-at-point
+        "M-g 1" #'bh/insert-inactive-timestamp
+        "M-g 2" #'org-cite-insert
+        "M-s ,"   #'denote-rename-file-using-front-matter
+        "M-s <"   #'denote-rename-file-title
+        ;; Link & clipboard
+        "<f3>"    #'org-toggle-link-display
+        "C-c M-y" #'org-download-clipboard
+        "C-c o"   #'consult-org-heading
+        "C-c y"   #'org-cliplink
+        "C-c I"   #'org-insert-link-dwim
+        :nvi "C-c M-i" #'org-cliplink
+        )
+
+  (map! :map org-mode-map
+        ;; "C-c d" #'cape-dict
         "M-\\" #'other-window
         "M--" #'denote-find-backlink
         "M-s ," #'denote-rename-file-using-front-matter
-        "M-g 1" #'bh/insert-inactive-timestamp
-        "M-g 2" #'org-cite-insert
-        ;; Localleader
+        )
+
+  (map! :map org-mode-map
+        "C-x n b" #'org-cite-insert
+        "C-x n -" #'bh/insert-inactive-timestamp
+        "C-x n 0" #'my/org-insert-notes-drawer
+        "C-x n m" #'my/split-and-indirect-orgtree
+        "C-x n M" #'my/kill-and-unsplit-orgtree
+        "C-x n 9" #'my/org-count-words
+        "C-x n l" #'my/denote-org-store-link-to-heading
+        )
+
+  (map! :map org-mode-map
         :localleader
+        "y" #'my/yank-as-markdown
         ";" #'my/clear-nbsp-and-ascii-punctuations
-        ":" #'my/insert-nbsp-simple-all))
+        ":" #'my/insert-nbsp-simple-all
+        )
+  )
 
 ;;;;; Org Journal
 
@@ -281,21 +292,31 @@
         "C-n" #'org-journal-search-next
         "C-p" #'org-journal-search-previous))
 
-;;;;; Outline Mode
 
-(after! outline
-  (map! :map outline-mode-map
-        :n "C-n" #'outline-next-heading
-        :n "C-p" #'outline-previous-heading
+;;;;; Outli and Outline Mode
+
+(after! outli
+  ;; Outline heading에서만 cycle, 그 외에는 evil-jump-item (%)
+  (defun my/outline-cycle-or-evil-jump-item ()
+    "On outline heading, run `outline-cycle'. Otherwise, run `evil-jump-item'."
+    (interactive)
+    (if (outline-on-heading-p)
+        (outline-cycle)
+      (evil-jump-item)))
+
+  (map! :map outli-mode-map
         :i "C-n" #'next-line
         :i "C-p" #'previous-line
-        :n "C-S-p" #'outline-up-heading
-        :n "zu" #'outline-up-heading))
-
-;;;; Emacs Lisp Mode
-
-(add-hook! emacs-lisp-mode
-  (setq-local comment-column 0))
+        :n "C-n" #'outline-next-heading
+        :n "C-p" #'outline-previous-heading
+        :nv "<tab>" #'my/outline-cycle-or-evil-jump-item
+        :nv "TAB" #'my/outline-cycle-or-evil-jump-item
+        :nv "M-j" #'outline-forward-same-level
+        :nv "M-k" #'outline-backward-same-level
+        :nv "M-n" #'outline-next-heading
+        :nv "M-p" #'outline-previous-heading
+        :nv "C-S-p" #'outline-up-heading
+        :nv "z u" #'outline-up-heading))
 
 ;;; provide
 

@@ -179,8 +179,6 @@
 ;; (setq auth-sources '("~/.authinfo.gpg")
 ;;       auth-source-cache-expiry nil) ; default is 7200 (2h)
 
-;;; Load libraries
-
 ;;; Load libraries via require (prevents duplicate loading)
 
 (add-load-path! "lisp/")
@@ -196,6 +194,7 @@
 (require 'denote-config)
 (require 'denote-silo-config)
 (require 'denote-export-config)
+(require 'org-functions)
 (require 'denote-functions)
 (require 'unicode-config)
 (require 'editing-config)
@@ -208,6 +207,7 @@
 (require 'modeline-config)
 (require 'tab-bar-config)
 
+(require 'prog-mode-config)
 (require 'utils-config)
 (require 'project-config)
 (require 'eaf-config)                ; EAF (조건부 로딩)
@@ -218,8 +218,8 @@
 (require 'search-config)             ; recent-rgrep 등 검색 도구
 (require 'keybindings-config)
 (require 'keybindings-denote-config)
+(require 'termux-config)
 (require 'functions)
-
 
 ;;; overide doomemacs
 
@@ -292,34 +292,6 @@
 
 
 
-;;;; flymake
-
-(remove-hook! (prog-mode text-mode) #'flymake-mode)
-
-;;;; eglot configuration
-
-(progn
-  (map! (:map eglot-mode-map
-         :after eglot
-         "C-c r" 'eglot-rename
-         "C-c d" 'eldoc
-         "C-c f" 'flymake-show-buffer-diagnostics
-         "C-c 0" 'eglot-inlay-hints-mode
-         "M-RET" 'eglot-code-actions)
-
-        ;; FIXME need new keybindings
-        ;; (:map 'flymake-mode-map
-        ;;       "C-n" #'flymake-goto-next-error
-        ;;       "C-p" #'flymake-goto-prev-error)
-        )
-
-  ;; (setq eglot-send-changes-idle-time 0.5)
-  (setq flymake-no-changes-timeout nil)
-
-  (add-hook! 'eglot-managed-mode-hook
-    (eglot-inlay-hints-mode -1))
-  )
-
 ;;;; fortune
 
 ;; not work on termux
@@ -340,17 +312,6 @@
 ;;       (setq xclip-method 'termux-clipboard-get)))
 ;;     (xclip-mode 1)))
 
-;;;; TERMUX
-
-(when IS-TERMUX
-
-  (global-set-key (kbd "<M-SPC>") 'toggle-input-method)
-  (global-set-key
-   (kbd "M-<backtab>")
-   (lambda ()
-     (interactive)
-     (other-window -1))))
-
 ;;;; term-keys
 
 (use-package! clipetty
@@ -366,28 +327,6 @@
   (setq hscroll-step 0)
   (show-paren-mode -1)
   )
-
-;;;; termux-fixes
-;; Fix async issues in Termux/Android
-
-(when IS-TERMUX
-  (setq native-comp-async-report-warnings-errors nil)
-  (setq native-comp-warning-on-missing-source nil)
-  (setq async-bytecomp-allowed-packages nil)
-  (setq process-connection-type nil)
-  (setq gc-cons-threshold 100000000)
-  (setq gc-cons-percentage 0.6))
-
-;;;; bugfix treesit
-
-(after! treesit
-  (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
-
-;;;; denote-silo
-
-;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
-;; (after! denote
-;;   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
 
 ;;; TODO Custom Integration
 
@@ -559,67 +498,6 @@ Returns t on success, nil if notify-send is not available."
 
 ;;; TODO MIGRATIONS
 
-;;;; ~/sync/emacs/emacs-fulllab-config/dotdoomemacs/+markdown.el
-
-(progn
-
-;;;###autoload
-(defun yank-as-org ()
-  "Convert region of markdown text to org while yanking."
-  (interactive)
-  (let* ((_ (unless (executable-find "pandoc")
-              (user-error "pandoc not found")))
-         (beg (if evil-mode
-                  (marker-position evil-visual-beginning)
-                (region-beginning)))
-         (end (if evil-mode
-                  (marker-position evil-visual-end)
-                (region-end)))
-         (region-content (buffer-substring-no-properties beg end))
-         (_ (print region-content))
-         (converted-content
-          (with-temp-buffer
-            (insert region-content)
-            (shell-command-on-region
-             (point-min)
-             (point-max)
-             "pandoc --wrap=none -f markdown -t org" nil t)
-            (buffer-string))))
-    (kill-new converted-content)
-    (message "yanked Markdown as Org")))
-
-;;;###autoload
-(defun yank-as-markdown ()
-  "Convert region of Org-mode to markdown while yanking."
-  (interactive)
-  (let* ((_ (unless (executable-find "pandoc")
-              (user-error "pandoc not found")))
-         (beg (if evil-mode
-                  (marker-position evil-visual-beginning)
-                (region-beginning)))
-         (end (if evil-mode
-                  (marker-position evil-visual-end)
-                (region-end)))
-         (region-content (buffer-substring-no-properties beg end))
-         (_ (print region-content))
-         (converted-content
-          (with-temp-buffer
-            (insert region-content)
-            (shell-command-on-region
-             (point-min)
-             (point-max)
-             "pandoc --wrap=none -f org -t gfm" nil t)
-            (buffer-string))))
-    (kill-new converted-content)
-    (message "yanked Org as Markdown")))
-)
-
-;;;; bh/insert-inactive-timestamp
-
-(defun bh/insert-inactive-timestamp ()
-  (interactive)
-  (org-insert-time-stamp nil t t nil nil nil))
-
 ;;;; my/enable-alice-keyboard-toggle-input-method
 
 (defun my/enable-alice-keyboard-toggle-input-method ()
@@ -643,12 +521,5 @@ Returns t on success, nil if notify-send is not available."
          :i "`" #'toggle-input-method))
   )
 
-;;; TODO
-
-;;;; KEYBINDINGS
-
-;; org-mode-map 키바인딩은 keybindings-denote-config.el로 이동됨
-
-(define-key prog-mode-map (kbd "C-M-y") 'evil-yank)
 
 ;;; END

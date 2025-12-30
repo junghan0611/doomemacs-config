@@ -23,6 +23,13 @@
 
 (require 'denote-silo)
 
+;;;; denote-silo
+
+;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
+;; (after! denote
+;;   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
+
+
 ;;;; Core Functions
 
 (defcustom denote-silo-repos-roots

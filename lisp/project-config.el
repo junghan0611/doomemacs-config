@@ -59,6 +59,17 @@
   ;; defaults to Github's max commit message length
   (setq git-commit-summary-max-length 72))
 
+;;;; git-link
+
+;; 현재 git repo의 homepage link를 clipboard에 넣어준다
+(use-package! git-link
+  :commands (git-link-commit git-link-homepage git-link)
+  :init
+  ;; default is to open the generated link
+  (setq git-link-open-in-browser t)
+  )
+
+
 ;;;; magit
 
 (use-package! magit-todos

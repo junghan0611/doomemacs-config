@@ -125,8 +125,11 @@
 (package! tempel)
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
-(package! aggressive-indent)
 (package! clipetty) ; osc52 support
+
+;;;; prog-mode-config.el
+
+(package! aggressive-indent)
 
 ;;;; org-config.el
 
@@ -140,6 +143,7 @@
 
 ;;;; project-config.el
 
+(package! git-link)
 (package! magit-todos)
 (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 
