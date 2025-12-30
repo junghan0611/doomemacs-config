@@ -648,10 +648,6 @@ Returns t on success, nil if notify-send is not available."
   (interactive)
   (org-insert-time-stamp nil t t nil nil nil))
 
-(after! org
-  (define-key org-mode-map (kbd "<f3>") 'org-toggle-link-display)
-  )
-
 ;;;; my/enable-alice-keyboard-toggle-input-method
 
 (defun my/enable-alice-keyboard-toggle-input-method ()
@@ -674,5 +670,13 @@ Returns t on success, nil if notify-send is not available."
         (:map org-mode-map
          :i "`" #'toggle-input-method))
   )
+
+;;; TODO
+
+;;;; KEYBINDINGS
+
+;; org-mode-map 키바인딩은 keybindings-denote-config.el로 이동됨
+
+(define-key prog-mode-map (kbd "C-M-y") 'evil-yank)
 
 ;;; END
