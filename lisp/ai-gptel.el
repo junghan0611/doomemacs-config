@@ -20,7 +20,38 @@
 
 ;;; Code:
 
+
+;;;; macher
+
+(use-package! macher
+  :custom
+  ;; The org UI has structured navigation and nice content folding.
+  (macher-action-buffer-ui 'org)
+
+  :config
+  ;; Recommended - register macher tools and presets with gptel.
+  (macher-install)
+
+  ;; Recommended - enable macher infrastructure for tools/prompts in
+  ;; any buffer.  (Actions and presets will still work without this.)
+  (macher-enable)
+
+  ;; Adjust buffer positioning to taste.
+  ;; (add-to-list
+  ;;  'display-buffer-alist
+  ;;  '("\\*macher:.*\\*"
+  ;;    (display-buffer-in-side-window)
+  ;;    (side . bottom)))
+  ;; (add-to-list
+  ;;  'display-buffer-alist
+  ;;  '("\\*macher-patch:.*\\*"
+  ;;    (display-buffer-in-side-window)
+  ;;    (side . right)))
+  )
+
 ;;;; gptel
+
+;;;;; load
 
 (use-package! gptel
   :init
@@ -52,6 +83,54 @@
           (alist-get 'markdown-mode gptel-response-prefix-alist) "@assistant\n"
           )
     (setq-default gptel-org-branching-context t))
+
+;;;;; gptel deepseek
+
+  (setq gptel-deepseek-backend
+        (gptel-make-deepseek "DeepSeek"
+          :stream t
+          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
+  ;; (setq gptel-model 'deepseek-chat)
+
+;;;;; gptel openrouter models
+
+  (defconst gptel--openrouter-models
+    '(
+      ;; https://openrouter.ai/google/gemini-2.5-pro
+      (google/gemini-2.5-pro
+       :capabilities (media tool-use cache reasoning)
+       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
+       :context-window 1048
+       :input-cost 1.25
+       :output-cost 10)
+
+      ;; https://openrouter.ai/google/gemini-2.5-flash
+      (google/gemini-2.5-flash
+       :capabilities (media tool-use cache)
+       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
+       :context-window 1048
+       :input-cost 0.30
+       :output-cost 2.5)
+
+      (openai/gpt-5.1
+       :description "Flagship model for coding, reasoning, and agentic tasks across domains"
+       :capabilities (media json url)
+       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
+       :context-window 400
+       :input-cost 1.25
+       :output-cost 10
+       :cutoff-date "2024-09")
+      )
+    )
+
+  (setq gptel-openrouter-backend
+        (gptel-make-openai "OpenRouter"
+          :host "openrouter.ai"
+          :endpoint "/api/v1/chat/completions"
+          :stream t
+          ;; :key #'gptel-api-key
+          :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
+          :models gptel--openrouter-models))
 
 ;;;;; gptel Claude-Code (정액제 via wrapper)
   ;;
@@ -109,54 +188,6 @@
       result))
 
   (advice-add 'gptel--request-data :around #'gptel--claude-code-add-enable-tools)
-
-;;;;; gptel deepseek
-
-  (setq gptel-deepseek-backend
-        (gptel-make-deepseek "DeepSeek"
-          :stream t
-          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
-  ;; (setq gptel-model 'deepseek-chat)
-
-;;;;; gptel openrouter models
-
-  (defconst gptel--openrouter-models
-    '(
-      ;; https://openrouter.ai/google/gemini-2.5-pro
-      (google/gemini-2.5-pro
-       :capabilities (media tool-use cache reasoning)
-       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-       :context-window 1048
-       :input-cost 1.25
-       :output-cost 10)
-
-      ;; https://openrouter.ai/google/gemini-2.5-flash
-      (google/gemini-2.5-flash
-       :capabilities (media tool-use cache)
-       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-       :context-window 1048
-       :input-cost 0.30
-       :output-cost 2.5)
-
-      (openai/gpt-5.1
-       :description "Flagship model for coding, reasoning, and agentic tasks across domains"
-       :capabilities (media json url)
-       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
-       :context-window 400
-       :input-cost 1.25
-       :output-cost 10
-       :cutoff-date "2024-09")
-      )
-    )
-
-  (setq gptel-openrouter-backend
-        (gptel-make-openai "OpenRouter"
-          :host "openrouter.ai"
-          :endpoint "/api/v1/chat/completions"
-          :stream t
-          ;; :key #'gptel-api-key
-          :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
-          :models gptel--openrouter-models))
 
 ;;;;; Default Backend and Prompt
 
@@ -251,19 +282,20 @@
 
 ;;;;; gptel-mode-hook
 
-  (add-hook! 'gptel-mode-hook
-    (defun gptel-mode-set-local-keys ()
-      (map! :map gptel-mode-map
-            :iv "M-<return>" #'gptel-send
-            :iv "M-RET" #'gptel-send
-            (:localleader
-             :desc "gptel/default" "5" #'gptel-menu ;; TODO fixme
-             "M-s" #'gptel-save-as-org-with-denote-metadata
-             "0" #'cashpw/gptel-send
-             (:prefix ("s" . "session")
-              :desc "clear" "l" #'gptel-clear-buffer+
-              "p" #'gptel-save-as-org-with-denote-metadata
-              )))))
+  (map! :map gptel-mode-map
+        :inv "RET" #'next-line
+        "M-<return>" #'gptel-send
+        "M-RET" #'gptel-send
+        (:localleader
+         "RET" #'gptel-mode
+         "<return>" #'gptel-mode
+         "1" #'gptel-menu
+         "TAB" #'gptel-menu
+         "M-s" #'gptel-save-as-org-with-denote-metadata
+         (:prefix ("s" . "session")
+          :desc "clear" "l" #'gptel-clear-buffer+
+          "p" #'gptel-save-as-org-with-denote-metadata
+          )))
 
   (add-hook! 'gptel-mode-hook
     (defun cae-gptel-mode-setup-h ()
@@ -271,9 +303,14 @@
       (auto-fill-mode -1)
       (doom-mark-buffer-as-real-h)))
 
+  ;; Optional - set up macher as soon as gptel is loaded.
+  ;; (require 'macher)
+
   ) ; end of use-package! gptel
 
 ;;;; gptel-buffer: 범용 버퍼 요약/번역
+
+;;;;; after gptel
 
 (after! gptel
   (defvar +gptel-buffer-name "*gptel-buffer*"
@@ -469,12 +506,12 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
 ;;;;; gptel-buffer 키바인딩
 
   ;; 전역 키바인딩 (SPC a G 접두어) - SPC a 충돌로 비활성화
-  ;; (map! :leader
-  ;;       (:prefix ("a" . "AI")
-  ;;        (:prefix ("G" . "gptel-buffer")
-  ;;         :desc "Summarize buffer" "s" #'+gptel-summarize-buffer
-  ;;         :desc "Translate buffer" "t" #'+gptel-translate-buffer
-  ;;         :desc "DWIM (choose action)" "g" #'+gptel-buffer-dwim)))
+  (map! :leader
+        (:prefix ("=" . "AI")
+                 (:prefix ("g" . "gptel-buffer")
+                  :desc "Summarize buffer" "s" #'+gptel-summarize-buffer
+                  :desc "Translate buffer" "t" #'+gptel-translate-buffer
+                  :desc "DWIM (choose action)" "g" #'+gptel-buffer-dwim)))
 
   ;; eww 모드 키바인딩
   (after! eww
@@ -508,8 +545,15 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-  ) ; end of after! gptel
+;;;;; gptel org-mode-map
 
+  (after! org
+    (map! :map org-mode-map
+          :localleader
+          "RET" #'gptel-mode
+          "<return>" #'gptel-mode))
+
+  ) ; end of after! gptel
 
 ;;; Provide
 

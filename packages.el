@@ -163,6 +163,7 @@
 ;;;; ai-gptel.el
 
 (unpin! gptel)
+(package! macher)
 
 ;;;;; ClaudeCode
 
