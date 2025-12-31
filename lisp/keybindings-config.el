@@ -91,14 +91,24 @@
        :desc "Dashboard" "h" #'+doom-dashboard/open
        :desc "Switch to Scratch" "s" #'scratch-buffer))
 
+;;;;; Files (f)
+
+(map! :leader
+      (:prefix ("f" . "files")
+               "y" #'my/yank-buffer-absolute-path
+               "RET" #'my/yank-buffer-path-with-line
+               "1" #'my/yank-buffer-path-with-line
+               "2" #'my/yank-buffer-path-relative-with-line
+               ))
+
 ;;;;; Notes (n)
 
 (map! :leader
       (:prefix ("n" . "notes")
-       "g" #'+default/org-notes-search
-       "SPC" #'org-journal-open-current-journal-file
-       "L" #'my/org-store-link-id-optional
-      ))
+               "g" #'+default/org-notes-search
+               "SPC" #'org-journal-open-current-journal-file
+               "L" #'my/org-store-link-id-optional
+               ))
 
 ;;;;; Insert (i)
 
@@ -206,12 +216,14 @@
         "RET" #'toc-org-markdown-follow-thing-at-point
         "-" #'markdown-insert-list-item
         ";" #'my/clear-nbsp-and-ascii-punctuations
-        ":" #'my/insert-nbsp-simple-all))
+       ":" #'my/insert-nbsp-simple-all))
 
 ;;;;; Dired
 
 (after! dired
   (map! :map dired-mode-map
+        :n "r" #'revert-buffer
+        :inv "M-\\" #'other-window
         :inv "M-\\" #'other-window
         :n "C-c C-e" #'wdired-change-to-wdired-mode
         :n "C-c l" #'org-store-link
@@ -221,7 +233,34 @@
         :n "h" #'dired-up-directory
         :n "l" #'dired-find-file
         :n "S-<return>" #'dired-find-file-other-window
-        :n "S-SPC" #'dired-toggle-marks))
+        :n "S-SPC" #'dired-toggle-marks)
+
+  (map! :map dired-mode-map
+        :localleader
+        "h" #'dired-omit-mode
+        "SPC" #'dired-hide-details-mode
+        "H" #'dired-hide-details-mode
+        "p" #'dired-preview-mode
+        :desc "sort-modified-date" "o" #'dired-sort-toggle-or-edit
+        ;; "m" #'my/dired-attach-to-mastodon
+        :desc "*denote-insert* marked-notes" "i" #'my/denote-link-dired-marked-notes
+        ;; "g" #'prot-dired-grep-marked-files
+        ;; "l" #'prot-dired-limit-regexp
+        "y" #'+default/yank-buffer-absolute-path
+
+        :desc "*denote-rename* files" "r" #'denote-dired-rename-files
+        :desc "*denote-rename* using front-matter" "R" #'denote-dired-rename-marked-files-using-front-matter
+        :desc "*denote-rename* with keywords" "w" #'denote-dired-rename-marked-files-with-keywords
+        :desc "*denote-rename* add keywords" "k" #'denote-dired-rename-marked-files-add-keywords
+        :desc "*denote-rename* remove keywords" "K" #'denote-dired-rename-marked-files-remove-keywords
+
+        ;; :desc "*casual-dired* menu" ";" #'casual-dired-tmenu
+        ;; "-" #'nerd-icons-dired-mode
+        ;; "P" #'my/dired-hugo-export-wim-to-md
+        ;; "M" #'my/diff-mark-toggle-vc-modified
+        ;; "m" #'my/diff-hl-dired-mark-modified
+        )
+  )
 
 ;;;;; Prog-mode
 

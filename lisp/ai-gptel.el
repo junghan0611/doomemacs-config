@@ -30,8 +30,9 @@
   (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
   (add-hook 'gptel-post-response-functions 'gptel-end-of-response)
 
+  (setq gptel-include-reasoning nil)
   (setq gptel-default-mode 'org-mode)
-  (setq gptel-temperature 0.3) ; gptel 1.0
+  ;; (setq gptel-temperature 0.3) ; gptel 1.0
   (set-popup-rule! "^\\*ChatGPT\\*$" :side 'right :size 84 :vslot 100 :quit t)
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
@@ -53,112 +54,161 @@
     (setq-default gptel-org-branching-context t))
 
 ;;;;; gptel Claude-Code (정액제 via wrapper)
-;;
-;; [사전 준비 - 최초 1회]
-;; cd ~/repos/3rd/claude-code-openai-wrapper
-;; docker build -t claude-wrapper:latest .
-;;
-;; [서비스 시작]
-;; cd ~/sync/emacs/doomemacs-config/docker/claude-wrapper
-;; docker-compose up -d
-;;
-;; [상태 확인]
-;; curl http://localhost:8000/health
-;; docker logs claude-wrapper
-;;
-;; [서비스 중지]
-;; docker-compose down
-;;
-;; [gptel에서 사용]
-;; M-x gptel → 백엔드 메뉴에서 "Claude-Code" 선택
-;; 또는: (setq gptel-backend gptel-claude-code-backend)
+  ;;
+  ;; [사전 준비 - 최초 1회]
+  ;; cd ~/repos/3rd/claude-code-openai-wrapper
+  ;; docker build -t claude-wrapper:latest .
+  ;;
+  ;; [서비스 시작]
+  ;; cd ~/sync/emacs/doomemacs-config/docker/claude-wrapper
+  ;; docker-compose up -d
+  ;;
+  ;; [상태 확인]
+  ;; curl http://localhost:8000/health
+  ;; docker logs claude-wrapper
+  ;;
+  ;; [서비스 중지]
+  ;; docker-compose down
+  ;;
+  ;; [gptel에서 사용]
+  ;; M-x gptel → 백엔드 메뉴에서 "Claude-Code" 선택
+  ;; 또는: (setq gptel-backend gptel-claude-code-backend)
+  (setq gptel-claude-code-backend
+        (gptel-make-openai "Claude-Code"
+          :host "localhost:8000"
+          :endpoint "/v1/chat/completions"
+          :protocol "http"
+          :stream t
+          :key "not-needed"
+          :models '((claude-sonnet-4-5-20250929
+                     :capabilities (media tool-use)
+                     :context-window 200
+                     :input-cost 3
+                     :output-cost 15)
+                    (claude-opus-4-5-20250929
+                     :capabilities (media tool-use)
+                     :context-window 200
+                     :input-cost 5
+                     :output-cost 25)
+                    (claude-haiku-4-5-20251001
+                     :capabilities (media tool-use)
+                     :context-window 200
+                     :input-cost 1
+                     :output-cost 5))))
 
-(setq gptel-claude-code-backend
-      (gptel-make-openai "Claude-Code"
-        :host "localhost:8000"
-        :endpoint "/v1/chat/completions"
-        :stream t
-        :key "not-needed"
-        :models '((claude-sonnet-4-5-20250929
-                   :capabilities (media tool-use)
-                   :context-window 200
-                   :input-cost 3
-                   :output-cost 15)
-                  (claude-opus-4-5-20251101
-                   :capabilities (media tool-use)
-                   :context-window 200
-                   :input-cost 5
-                   :output-cost 25)
-                  (claude-haiku-4-5-20251001
-                   :capabilities (media tool-use)
-                   :context-window 200
-                   :input-cost 1
-                   :output-cost 5))))
+  ;; Claude-Code 백엔드용 enable_tools 자동 추가
+  (defvar gptel-claude-code-enable-tools t
+    "When non-nil, enable Claude Code tools (Read, Write, Bash, etc.).")
 
-;;;;; gptel Deepseek (기본 백엔드)
+  (defun gptel--claude-code-add-enable-tools (orig-fun &rest args)
+    "Advice to add enable_tools to Claude-Code requests."
+    (let ((result (apply orig-fun args)))
+      (when (and gptel-claude-code-enable-tools
+                 (eq gptel-backend gptel-claude-code-backend))
+        (setq result (append result `(:enable_tools t))))
+      result))
 
-(setq gptel-deepseek-backend
-      (gptel-make-deepseek "DeepSeek"
-        :stream t
-        :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
+  (advice-add 'gptel--request-data :around #'gptel--claude-code-add-enable-tools)
 
-;; DeepSeek를 기본 백엔드로 설정 (reasoner 모델 - chain of thought 지원)
-;; (setq gptel-backend gptel-deepseek-backend)
-;; (setq gptel-model 'deepseek-chat)
+;;;;; gptel deepseek
 
-;; (setq gptel-magit-backend gptel-deepseek-backend)
-;; (setq gptel-magit-model 'deepseek-chat);
-
-;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
-(setq gptel--system-message user-llm-system-prompt)
+  (setq gptel-deepseek-backend
+        (gptel-make-deepseek "DeepSeek"
+          :stream t
+          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
+  ;; (setq gptel-model 'deepseek-chat)
 
 ;;;;; gptel openrouter models
 
-(defconst gptel--openrouter-models
-  '(
-    ;; https://openrouter.ai/google/gemini-2.5-pro
-    (google/gemini-2.5-pro
-     :capabilities (media tool-use cache reasoning)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-     :context-window 1048
-     :input-cost 1.25
-     :output-cost 10)
+  (defconst gptel--openrouter-models
+    '(
+      ;; https://openrouter.ai/google/gemini-2.5-pro
+      (google/gemini-2.5-pro
+       :capabilities (media tool-use cache reasoning)
+       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
+       :context-window 1048
+       :input-cost 1.25
+       :output-cost 10)
 
-    ;; https://openrouter.ai/google/gemini-2.5-flash
-    (google/gemini-2.5-flash
-     :capabilities (media tool-use cache)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-     :context-window 1048
-     :input-cost 0.30
-     :output-cost 2.5)
+      ;; https://openrouter.ai/google/gemini-2.5-flash
+      (google/gemini-2.5-flash
+       :capabilities (media tool-use cache)
+       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
+       :context-window 1048
+       :input-cost 0.30
+       :output-cost 2.5)
 
-    (openai/gpt-5-1
-     :description "Flagship model for coding, reasoning, and agentic tasks across domains"
-     :capabilities (media json url)
-     :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
-     :context-window 400
-     :input-cost 1.25
-     :output-cost 10
-     :cutoff-date "2024-09")
+      (openai/gpt-5.1
+       :description "Flagship model for coding, reasoning, and agentic tasks across domains"
+       :capabilities (media json url)
+       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
+       :context-window 400
+       :input-cost 1.25
+       :output-cost 10
+       :cutoff-date "2024-09")
+      )
     )
-  )
 
-(setq gptel-openrouter-backend
-      (gptel-make-openai "OpenRouter"
-        :host "openrouter.ai"
-        :endpoint "/api/v1/chat/completions"
-        :stream t
-        ;; :key #'gptel-api-key
-        :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
-        :models gptel--openrouter-models))
+  (setq gptel-openrouter-backend
+        (gptel-make-openai "OpenRouter"
+          :host "openrouter.ai"
+          :endpoint "/api/v1/chat/completions"
+          :stream t
+          ;; :key #'gptel-api-key
+          :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
+          :models gptel--openrouter-models))
 
-;; OpenRouter를 기본 백엔드로
-(setq gptel-backend gptel-openrouter-backend)
-(setq gptel-model 'google/gemini-2.5-flash)
+;;;;; Default Backend and Prompt
 
-;;;;;;; 03 - gptel-save-as-org-with-denote-metadata
+  ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
+  (setq gptel--system-message user-llm-system-prompt)
 
-;;;###autoload
+  ;; Claude-Code 서버 상태 확인 함수
+  (defun gptel--claude-code-server-available-p ()
+    "Check if Claude-Code wrapper server is running on localhost:8000."
+    (condition-case nil
+        (let ((url-request-method "GET")
+              (url-show-status nil))
+          (with-current-buffer
+              (url-retrieve-synchronously "http://localhost:8000/health" t nil 2)
+            (goto-char (point-min))
+            (and (search-forward "healthy" nil t) t)))
+      (error nil)))
+
+  ;; 기본 백엔드 설정: Claude-Code 서버가 떠있으면 사용, 아니면 OpenRouter
+  (if (gptel--claude-code-server-available-p)
+      (progn
+        (setq gptel-backend gptel-claude-code-backend)
+        (setq gptel-model 'claude-sonnet-4-5-20250929)
+        (message "gptel: Claude-Code 서버 감지 → 기본 백엔드로 설정"))
+    (setq gptel-backend gptel-openrouter-backend)
+    (setq gptel-model 'openai/gpt-5.1)
+    (message "gptel: Claude-Code 서버 없음 → OpenRouter 사용"))
+
+  ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
+  (setq gptel-magit-backend gptel-openrouter-backend)
+  (setq gptel-magit-model 'google/gemini-2.5-flash)
+
+  ;; 수동 백엔드 전환 함수
+  (defun gptel-switch-to-claude-code ()
+    "Switch gptel backend to Claude-Code (requires server running)."
+    (interactive)
+    (if (gptel--claude-code-server-available-p)
+        (progn
+          (setq gptel-backend gptel-claude-code-backend)
+          (setq gptel-model 'claude-sonnet-4-5-20250929)
+          (message "Switched to Claude-Code backend"))
+      (message "Claude-Code server not available! Run: run-claude-wrapper")))
+
+  (defun gptel-switch-to-openrouter ()
+    "Switch gptel backend to OpenRouter."
+    (interactive)
+    (setq gptel-backend gptel-openrouter-backend)
+    (setq gptel-model 'openai/gpt-5.1)
+    (message "Switched to OpenRouter backend"))
+
+;;;;; gptel-save-as-org-with-denote-metadata
+
   (defun gptel-save-as-org-with-denote-metadata ()
     "Save buffer to disk when starting gptel with metadata."
     (interactive)
@@ -201,30 +251,29 @@
 
 ;;;;; gptel-mode-hook
 
-(add-hook! 'gptel-mode-hook
-  (defun gptel-mode-set-local-keys ()
-    (map! :map gptel-mode-map
-          :iv "M-<return>" #'gptel-send
-          :iv "M-RET" #'gptel-send
-          (:localleader
-           :desc "gptel/default" "5" #'gptel-menu ;; TODO fixme
-           "M-s" #'gptel-save-as-org-with-denote-metadata
-           "0" #'cashpw/gptel-send
-           (:prefix ("s" . "session")
-            :desc "clear" "l" #'gptel-clear-buffer+
-            "p" #'gptel-save-as-org-with-denote-metadata
-            )))))
+  (add-hook! 'gptel-mode-hook
+    (defun gptel-mode-set-local-keys ()
+      (map! :map gptel-mode-map
+            :iv "M-<return>" #'gptel-send
+            :iv "M-RET" #'gptel-send
+            (:localleader
+             :desc "gptel/default" "5" #'gptel-menu ;; TODO fixme
+             "M-s" #'gptel-save-as-org-with-denote-metadata
+             "0" #'cashpw/gptel-send
+             (:prefix ("s" . "session")
+              :desc "clear" "l" #'gptel-clear-buffer+
+              "p" #'gptel-save-as-org-with-denote-metadata
+              )))))
 
-(add-hook! 'gptel-mode-hook
-  (defun cae-gptel-mode-setup-h ()
-    ;; (setq-local nobreak-char-display nil) ; 2025-07-26 보는게 좋아
-    (auto-fill-mode -1)
-    (doom-mark-buffer-as-real-h)))
+  (add-hook! 'gptel-mode-hook
+    (defun cae-gptel-mode-setup-h ()
+      ;; (setq-local nobreak-char-display nil) ; 2025-07-26 보는게 좋아
+      (auto-fill-mode -1)
+      (doom-mark-buffer-as-real-h)))
 
   ) ; end of use-package! gptel
 
-
-;;;;; gptel-buffer: 범용 버퍼 요약/번역
+;;;; gptel-buffer: 범용 버퍼 요약/번역
 
 (after! gptel
   (defvar +gptel-buffer-name "*gptel-buffer*"
@@ -330,20 +379,43 @@
        (string-trim text)
        "\n```")))
 
+  ;; 요약/번역 전용 백엔드 및 모델 (긴 컨텍스트용)
+  (defvar +gptel-buffer-backend nil
+    "요약/번역 전용 백엔드. nil이면 gptel-openrouter-backend 사용.")
+
+  (defvar +gptel-buffer-model 'google/gemini-2.5-flash
+    "요약/번역 전용 모델. 긴 컨텍스트 지원 필요.")
+
+  (defun my/gptel-buffer-model-toggle ()
+    "Toggle +gptel-buffer-model between Flash and Pro."
+    (interactive)
+    (setq +gptel-buffer-model
+          (if (eq +gptel-buffer-model 'google/gemini-2.5-flash)
+              'google/gemini-2.5-pro
+            'google/gemini-2.5-flash))
+    (message "gptel-buffer 모델: %s" +gptel-buffer-model))
+
   ;; 핵심 함수
 
   (defun +gptel--send-to-buffer (content system-message action-name &optional temperature)
     "CONTENT를 gptel 사이드 버퍼로 보내고 SYSTEM-MESSAGE로 요청.
 ACTION-NAME은 표시용 (예: \"요약\", \"번역\").
-TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용)."
+TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용).
+항상 OpenRouter/Gemini 모델 사용 (긴 컨텍스트 지원)."
     (let* ((formatted (+gptel--format-content-for-llm content))
-           (buf (get-buffer-create +gptel-buffer-name)))
+           (buf (get-buffer-create +gptel-buffer-name))
+           ;; 요약/번역 전용 백엔드 및 모델
+           (target-backend (or +gptel-buffer-backend gptel-openrouter-backend))
+           (target-model +gptel-buffer-model))
       ;; 사이드 버퍼 설정
       (with-current-buffer buf
         (unless (derived-mode-p 'org-mode)
           (org-mode))
         (unless gptel-mode
           (gptel-mode 1))
+        ;; 백엔드 및 모델 명시적 설정 (긴 컨텍스트용)
+        (setq-local gptel-backend target-backend)
+        (setq-local gptel-model target-model)
         ;; 시스템 메시지 설정
         (setq-local gptel--system-message system-message)
         ;; 로컬 온도 설정 (작업별 최적화)
@@ -363,8 +435,9 @@ TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용)."
       (with-current-buffer buf
         (goto-char (point-max))
         (gptel-send))
-      (message "%s 요청을 보냈습니다. (temp=%.1f) 결과는 %s 버퍼에서 확인하세요."
-               action-name (or temperature gptel-temperature) +gptel-buffer-name)))
+      (message "%s 요청 [%s] (temp=%.1f) → %s"
+               action-name target-model
+               (or temperature gptel-temperature) +gptel-buffer-name)))
 
 ;;;###autoload
   (defun +gptel-summarize-buffer ()

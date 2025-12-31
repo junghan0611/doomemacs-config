@@ -461,4 +461,5 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
   (setq-default text-conversion-style nil))
 
 (provide 'korean-input)
+
 ;;; korean-input.el ends here

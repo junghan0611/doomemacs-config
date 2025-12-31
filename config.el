@@ -190,6 +190,9 @@
 (require 'korean-input)
 (require 'time-config)
 (require 'completion-config)
+
+(require 'module-emacs-config)
+
 (require 'org-config)
 (require 'denote-config)
 (require 'denote-silo-config)
@@ -222,33 +225,6 @@
 (require 'functions)
 
 ;;; overide doomemacs
-
-;;;; dired
-
-(after! dired
-  (setq dired-make-directory-clickable t) ; Emacs 29.1, doom t
-  (setq dired-free-space nil) ; Emacs 29.1, doom first
-
-  ;; Better dired flags:
-  ;; `-l' is mandatory
-  ;; `-a' shows all files
-  ;; `-h' uses human-readable sizes
-  ;; `-F' appends file-type classifiers to file names (for better highlighting)
-  ;; -g     like -l, but do not list owner
-  (setq dired-listing-switches "-AGFhgv --group-directories-first --time-style=long-iso") ;; doom "-ahl -v --group-directories-first"
-  (setq dired-recursive-copies 'always ; doom 'always
-        dired-dwim-target t) ; doom t
-  (setq dired-ls-F-marks-symlinks nil ; doom nil -F marks links with @
-        delete-by-moving-to-trash t) ; doom nil
-
-  (setq dired-use-ls-dired t)  ; doom t
-
-  (require 'dired-aux)
-  (setq dired-do-revert-buffer t) ; doom nil
-  ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
-
-  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
-  )
 
 ;;;; tempel
 

@@ -91,6 +91,10 @@
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
 ;; (package! kkp :disable t) ; conflict on term-keys
 
+;;; module-emacs-config.el
+
+(package! dired-preview)
+
 ;;; additional packages
 
 (package! denote)
@@ -113,10 +117,10 @@
 ;;;; ui-config.el
 
 (unpin! doom-themes)
+(package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
 (package! modus-themes)
 (package! doric-themes)
-(package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
-(package! dired-preview)
+(package! ef-themes)
 (package! spacious-padding)
 
 ;;;; Editing
@@ -149,19 +153,16 @@
 
 ;;;; Transient Menu
 
-(package! casual)
+;; (package! casual)
 (package! password-store-menu)
 
 ;;;; tmux/zellij orchestration
 
 (package! emamux)  ; tmux manipulation from Emacs
 
-;;;; AI AGENT
+;;;; ai-gptel.el
 
-(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
-(package! whisper :recipe (:host github :repo "natrys/whisper.el"))
-(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
-(package! semext :recipe (:host github :repo "ahyatt/semext"))
+(unpin! gptel)
 
 ;;;;; ClaudeCode
 
@@ -192,6 +193,14 @@
 (package! agent-shell-manager :recipe (:host github :repo "ElleNajt/agent-shell-manager"))
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
 ;; (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
+
+
+;;;; AI AGENT
+
+(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
+(package! whisper :recipe (:host github :repo "natrys/whisper.el"))
+(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
+(package! semext :recipe (:host github :repo "ahyatt/semext"))
 
 ;;;; elfeed-config.el
 
