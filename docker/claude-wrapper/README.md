@@ -40,7 +40,7 @@ M-x gptel-switch-to-openrouter    ; OpenRouter로 전환
 | 모델 | 설명 | 가격 (in/out) |
 |------|------|---------------|
 | claude-sonnet-4-5-20250929 | 추천 (코딩/추론) | $3/$15 |
-| claude-opus-4-5-20251101 | 최고 성능 | $5/$25 |
+| claude-opus-4-5-20251101 | **최신 Opus** - 최고 성능 | $5/$25 |
 | claude-haiku-4-5-20251001 | 빠름/저렴 | $1/$5 |
 
 ## 지원 기능

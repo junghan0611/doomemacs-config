@@ -68,7 +68,7 @@
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
   (with-eval-after-load 'gptel-org
-    (defun gptel-org-toggle-branching-context ()
+    (defun my/gptel-org-toggle-branching-context ()
       "Toggle gptel context between doc and subheading."
       (interactive)
       (if gptel-org-branching-context
@@ -161,7 +161,8 @@
                      :context-window 200
                      :input-cost 3
                      :output-cost 15)
-                    (claude-opus-4-5-20250929
+                    (claude-opus-4-5-20251101
+                     :description "Latest Opus 4.5 - Most capable"
                      :capabilities (media tool-use)
                      :context-window 200
                      :input-cost 5
@@ -547,6 +548,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   (after! org
     (map! :map org-mode-map
           :localleader
+          "5" #'my/gptel-org-toggle-branching-context
           "RET" #'gptel-mode
           "<return>" #'gptel-mode))
 
