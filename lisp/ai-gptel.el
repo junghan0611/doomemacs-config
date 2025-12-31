@@ -134,20 +134,17 @@
 
 ;;;;; gptel Claude-Code (정액제 via wrapper)
   ;;
-  ;; [사전 준비 - 최초 1회]
-  ;; cd ~/repos/3rd/claude-code-openai-wrapper
-  ;; docker build -t claude-wrapper:latest .
+  ;; [서비스 관리] - run-claude-wrapper 스크립트 사용
+  ;; run-claude-wrapper              # 서비스 시작
+  ;; run-claude-wrapper --update     # 최신 코드로 재빌드
+  ;; run-claude-wrapper --stop       # 서비스 중지
+  ;; run-claude-wrapper --status     # 상태 확인
   ;;
-  ;; [서비스 시작]
-  ;; cd ~/sync/emacs/doomemacs-config/docker/claude-wrapper
-  ;; docker-compose up -d
-  ;;
-  ;; [상태 확인]
-  ;; curl http://localhost:8000/health
-  ;; docker logs claude-wrapper
-  ;;
-  ;; [서비스 중지]
-  ;; docker-compose down
+  ;; [지원 기능]
+  ;; - 파일 접근: Read, Write, Edit, Glob, Grep
+  ;; - 명령 실행: Bash
+  ;; - 웹검색: WebSearch, WebFetch
+  ;; - 시스템 프롬프트: gptel 메시지 전달
   ;;
   ;; [gptel에서 사용]
   ;; M-x gptel → 백엔드 메뉴에서 "Claude-Code" 선택

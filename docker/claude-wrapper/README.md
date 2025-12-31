@@ -43,12 +43,26 @@ M-x gptel-switch-to-openrouter    ; OpenRouter로 전환
 | claude-opus-4-5-20251101 | 최고 성능 | $5/$25 |
 | claude-haiku-4-5-20251001 | 빠름/저렴 | $1/$5 |
 
-## 제한 사항
+## 지원 기능
 
-- **웹검색 미지원**: Claude Code wrapper는 코딩 도구만 사용 가능
-- 웹검색이 필요하면 OpenRouter 백엔드 사용
+| 기능 | 상태 | 설명 |
+|------|------|------|
+| 파일 접근 | ✅ | Read, Write, Edit, Glob, Grep |
+| 명령 실행 | ✅ | Bash |
+| 웹검색 | ✅ | WebSearch, WebFetch |
+| 시스템 프롬프트 | ✅ | gptel 시스템 메시지 전달 |
+| 도구 결과 | ✅ | 실행 결과가 응답에 포함 |
+
+## 환경변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| MAX_TIMEOUT | 300000 | 요청 타임아웃 (ms) |
+| DEFAULT_MODEL | claude-sonnet-4-5-20250929 | 기본 모델 |
+| RATE_LIMIT_ENABLED | false | Rate limiting |
 
 ## 참고
 
-- https://github.com/RichardAtCT/claude-code-openai-wrapper
+- https://github.com/junghan0611/claude-code-openai-wrapper (포크)
+- https://github.com/RichardAtCT/claude-code-openai-wrapper (원본)
 - https://github.com/karthink/gptel/issues/1175

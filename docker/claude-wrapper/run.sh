@@ -6,8 +6,9 @@ set -e
 
 IMAGE_NAME="claude-wrapper:latest"
 CONTAINER_NAME="claude-wrapper-container"
-SOURCE_DIR="$HOME/repos/3rd/claude-code-openai-wrapper"
-REPO_URL="https://github.com/RichardAtCT/claude-code-openai-wrapper.git"
+# Use forked version with Doom Emacs/gptel integration
+SOURCE_DIR="$HOME/repos/gh/claude-code-openai-wrapper"
+REPO_URL="https://github.com/junghan0611/claude-code-openai-wrapper.git"
 SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 SYMLINK_PATH="$HOME/.local/bin/run-claude-wrapper"
 
@@ -25,6 +26,15 @@ usage() {
     echo "  --stop      컨테이너 중지 및 제거"
     echo "  --status    컨테이너 상태 확인"
     echo "  --help      이 도움말 표시"
+    echo ""
+    echo "Environment Variables:"
+    echo "  MAX_TIMEOUT      요청 타임아웃 ms (default: 300000 = 5분)"
+    echo "  DEFAULT_MODEL    기본 모델 (default: claude-sonnet-4-5-20250929)"
+    echo "  RATE_LIMIT_ENABLED  Rate limiting (default: false)"
+    echo ""
+    echo "Examples:"
+    echo "  MAX_TIMEOUT=600000 run-claude-wrapper  # 10분 타임아웃"
+    echo "  DEFAULT_MODEL=claude-haiku-4-5-20251001 run-claude-wrapper  # 빠른 모델"
     exit 0
 }
 
@@ -76,16 +86,17 @@ update_and_rebuild() {
     if [ ! -d "$SOURCE_DIR" ]; then
         info "소스 디렉토리가 없습니다. Git clone 중..."
         mkdir -p "$(dirname "$SOURCE_DIR")"
-        git clone "$REPO_URL" "$SOURCE_DIR"
+        git clone -b ko "$REPO_URL" "$SOURCE_DIR"
     else
         cd "$SOURCE_DIR"
         git fetch origin
         LOCAL=$(git rev-parse HEAD)
-        REMOTE=$(git rev-parse origin/main 2>/dev/null || git rev-parse origin/master)
+        # Use ko branch for forked version
+        REMOTE=$(git rev-parse origin/ko 2>/dev/null || git rev-parse origin/main 2>/dev/null || git rev-parse origin/master)
 
         if [ "$LOCAL" != "$REMOTE" ]; then
             info "새 커밋 발견. pull 중..."
-            git pull
+            git pull origin ko
         else
             info "이미 최신 버전입니다"
         fi
@@ -124,12 +135,12 @@ main() {
     if [ "$do_update" = true ]; then
         update_and_rebuild
     else
-        # 소스 디렉토리 없으면 clone
+        # 소스 디렉토리 없으면 clone (ko branch)
         if [ ! -d "$SOURCE_DIR" ]; then
             info "소스 디렉토리가 없습니다. Git clone 중..."
             mkdir -p "$(dirname "$SOURCE_DIR")"
-            git clone "$REPO_URL" "$SOURCE_DIR"
-            info "Clone 완료: $SOURCE_DIR"
+            git clone -b ko "$REPO_URL" "$SOURCE_DIR"
+            info "Clone 완료: $SOURCE_DIR (ko branch)"
         fi
 
         # 이미지 없으면 빌드
@@ -152,6 +163,9 @@ main() {
       -v "$HOME/.claude:/root/.claude" \
       -v "$HOME/org:/workspace" \
       -e CLAUDE_CWD=/workspace \
+      -e MAX_TIMEOUT="${MAX_TIMEOUT:-300000}" \
+      -e DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-4-5-20250929}" \
+      -e RATE_LIMIT_ENABLED="${RATE_LIMIT_ENABLED:-false}" \
       --name "$CONTAINER_NAME" \
       "$IMAGE_NAME"
 
