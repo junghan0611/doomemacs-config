@@ -162,6 +162,21 @@
        :desc "6th workspace" "6" #'+workspace/switch-to-5
        :desc "7th workspace" "7" #'+workspace/switch-to-6))
 
+;;;;; Help (h)
+
+(map! :leader
+      (:prefix ("h" . "help")
+               "t" nil
+               (:prefix ("t" . "themes")
+                :desc "Modus toggle"         "m" #'modus-themes-toggle
+                :desc "Modus select"         "M" #'modus-themes-select
+                :desc "Random EF Dark"          "d" #'modus-themes-load-random-dark
+                :desc "Random EF Light"         "l" #'modus-themes-load-random-light
+                :desc "Doric random"         "r" #'doric-themes-load-random
+                :desc "Doric select"         "R" #'doric-themes-select)))
+
+;;;;; TODO Toggle (T)
+
 ;;;; Key Functions
 
 ;;;;; +default/search-buffer : consult-line

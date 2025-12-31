@@ -138,24 +138,29 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 
 ;;;; modus-themes
 
-(use-package! doric-themes)
+(use-package! doric-themes
+  :commands (doric-themes-load-random))
+
+(use-package! ef-themes
+  :init
+  (ef-themes-take-over-modus-themes-mode 1))
 
 (use-package! modus-themes
   :init
-  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi)))
+  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi))
+  :config
+  (setq modus-themes-italic-constructs nil))
 
+;;;###autoload
 (defun my/themes-toggle ()
   (interactive)
   ;; Finally, load your theme of choice (or a random one with
-  ;; `modus-themes-load-random', `modus-themes-load-random-dark',
-  ;; `modus-themes-load-random-light').
-  (modus-themes-load-theme 'modus-vivendi-tinted)
+  (ef-themes-load-random-dark)
   ;; 터미널에서 테마 로드 후 배경 투명화 (확실한 적용)
   (unless (display-graphic-p)
     (run-with-timer 0.05 nil #'my/terminal-transparent-background)))
 
-(add-hook 'doom-first-input-hook #'my/themes-toggle)
-
+(add-hook! 'doom-first-input-hook #'my/themes-toggle)
 
 ;;;; spacious-padding
 

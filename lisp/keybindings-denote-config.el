@@ -42,8 +42,7 @@
     "p"   "publish"
     "s"   "search"
     "M-s" "sequence"
-    "x"   "explore"
-    "T"   "themes")
+    "x"   "explore")
 
   ;; Nested prefixes under explore (x)
   (which-key-add-key-based-replacements
@@ -163,46 +162,37 @@
 
 (map! :map my/denote-map
       (:prefix ("x" . "explore")
-       ;; Statistics
-       (:prefix ("c" . "count")
-        :desc "Count notes"         "n" #'denote-explore-count-notes
-        :desc "Count keywords"      "k" #'denote-explore-count-keywords)
-       ;; Barchart
-       (:prefix ("b" . "barchart")
-        :desc "Filetypes"           "f" #'denote-explore-barchart-filetypes
-        :desc "Keywords"            "k" #'denote-explore-barchart-keywords
-        :desc "Timeline"            "t" #'denote-explore-barchart-timeline
-        :desc "Degree"              "d" #'denote-explore-barchart-degree
-        :desc "Backlinks"           "b" #'denote-explore-barchart-backlinks)
-       ;; Random
-       (:prefix ("r" . "random")
-        :desc "Random note"         "n" #'denote-explore-random-note
-        :desc "Random regex"        "r" #'denote-explore-random-regex
-        :desc "Random link"         "l" #'denote-explore-random-link
-        :desc "Random keyword"      "k" #'denote-explore-random-keyword)
-       ;; Janitor
-       (:prefix ("j" . "janitor")
-        :desc "Duplicate notes"     "d" #'denote-explore-duplicate-notes
-        :desc "Duplicate dired"     "D" #'denote-explore-duplicate-notes-dired
-        :desc "Missing links"       "l" #'denote-explore-missing-links
-        :desc "Zero keywords"       "z" #'denote-explore-zero-keywords
-        :desc "Single keywords"     "s" #'denote-explore-single-keywords
-        :desc "Rename keywords"     "r" #'denote-explore-rename-keywords
-        :desc "Sync metadata"       "y" #'denote-explore-sync-metadata
-        :desc "Isolated files"      "i" #'denote-explore-isolated-files)
-       ;; Network
-       (:prefix ("n" . "network")
-        :desc "Network"             "n" #'denote-explore-network
-        :desc "Regenerate"          "r" #'denote-explore-network-regenerate)))
-
-;;;; Themes (T) - Modus/Ef/Doric
-
-(map! :map my/denote-map
-      (:prefix ("T" . "themes")
-       :desc "Modus toggle"         "m" #'modus-themes-toggle
-       :desc "Modus select"         "M" #'modus-themes-select
-       :desc "Doric random"         "r" #'doric-themes-load-random
-       :desc "Doric select"         "R" #'doric-themes-select))
+               ;; Statistics
+               (:prefix ("c" . "count")
+                :desc "Count notes"         "n" #'denote-explore-count-notes
+                :desc "Count keywords"      "k" #'denote-explore-count-keywords)
+               ;; Barchart
+               (:prefix ("b" . "barchart")
+                :desc "Filetypes"           "f" #'denote-explore-barchart-filetypes
+                :desc "Keywords"            "k" #'denote-explore-barchart-keywords
+                :desc "Timeline"            "t" #'denote-explore-barchart-timeline
+                :desc "Degree"              "d" #'denote-explore-barchart-degree
+                :desc "Backlinks"           "b" #'denote-explore-barchart-backlinks)
+               ;; Random
+               (:prefix ("r" . "random")
+                :desc "Random note"         "n" #'denote-explore-random-note
+                :desc "Random regex"        "r" #'denote-explore-random-regex
+                :desc "Random link"         "l" #'denote-explore-random-link
+                :desc "Random keyword"      "k" #'denote-explore-random-keyword)
+               ;; Janitor
+               (:prefix ("j" . "janitor")
+                :desc "Duplicate notes"     "d" #'denote-explore-duplicate-notes
+                :desc "Duplicate dired"     "D" #'denote-explore-duplicate-notes-dired
+                :desc "Missing links"       "l" #'denote-explore-missing-links
+                :desc "Zero keywords"       "z" #'denote-explore-zero-keywords
+                :desc "Single keywords"     "s" #'denote-explore-single-keywords
+                :desc "Rename keywords"     "r" #'denote-explore-rename-keywords
+                :desc "Sync metadata"       "y" #'denote-explore-sync-metadata
+                :desc "Isolated files"      "i" #'denote-explore-isolated-files)
+               ;; Network
+               (:prefix ("n" . "network")
+                :desc "Network"             "n" #'denote-explore-network
+                :desc "Regenerate"          "r" #'denote-explore-network-regenerate)))
 
 ;;;; Main bindings
 
