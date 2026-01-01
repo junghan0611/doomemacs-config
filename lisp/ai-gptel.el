@@ -67,7 +67,9 @@
   (set-popup-rule! "^\\*ChatGPT\\*$" :side 'right :size 84 :vslot 100 :quit t)
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
-  (with-eval-after-load 'gptel-org
+;;;;; gptel-org
+
+  (after! gptel-org
     (defun my/gptel-org-toggle-branching-context ()
       "Toggle gptel context between doc and subheading."
       (interactive)
@@ -84,39 +86,75 @@
           )
     (setq-default gptel-org-branching-context t))
 
-;;;;; gptel deepseek
+;;;;; gptel backend
+
+;;;;;; gptel deepseek
 
   (setq gptel-deepseek-backend
         (gptel-make-deepseek "DeepSeek"
           :stream t
           :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
-  ;; (setq gptel-model 'deepseek-chat)
 
-;;;;; gptel openrouter models
+;;;;;; gptel openrouter models
 
   (defconst gptel--openrouter-models
     '(
+      (google/gemini-2.5-flash
+       :description "Best in terms of price-performance, with well-rounded capabilities"
+       :capabilities (tool-use json media audio video)
+       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
+                    "application/pdf" "text/plain" "text/csv" "text/html"
+                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
+                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
+       :context-window 1048               ; 65536 output token limit
+       :input-cost 0.3
+       :output-cost 2.50
+       :cutoff-date "2025-01")
+
+      (google/gemini-3-flash-preview
+       :description "Most intelligent Gemini model built for speed"
+       :capabilities (tool-use json media audio video)
+       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
+                    "application/pdf" "text/plain" "text/csv" "text/html"
+                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
+                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
+       :context-window 1048               ; 65536 output token limit
+       :input-cost 0.50
+       :output-cost 3.00
+       :cutoff-date "2025-01")
+
       ;; https://openrouter.ai/google/gemini-2.5-pro
       (google/gemini-2.5-pro
-       :capabilities (media tool-use cache reasoning)
-       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-       :context-window 1048
-       :input-cost 1.25
-       :output-cost 10)
+       :description "Most powerful Gemini thinking model with state-of-the-art performance"
+       :capabilities (tool-use json media audio video)
+       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
+                    "application/pdf" "text/plain" "text/csv" "text/html"
+                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
+                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
+       :context-window 1048               ; 65536 output token limit
+       :input-cost 1.25                   ; 2.50 for >200k tokens
+       :output-cost 10.00                 ; 15 for >200k tokens
+       :cutoff-date "2025-01")
 
-      ;; https://openrouter.ai/google/gemini-2.5-flash
-      (google/gemini-2.5-flash
-       :capabilities (media tool-use cache)
-       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp" "application/pdf")
-       :context-window 1048
-       :input-cost 0.30
-       :output-cost 2.5)
+      (google/gemini-3-pro-preview
+       :description "Most intelligent Gemini model with SOTA reasoning and multimodal understanding"
+       :capabilities (tool-use json media audio video)
+       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
+                    "application/pdf" "text/plain" "text/csv" "text/html"
+                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
+                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
+       :context-window 1048               ; 65536 output token limit
+       :input-cost 2.0                    ; 4.0 for >200k tokens
+       :output-cost 12.00                 ; 18.0 for >200k tokens
+       :cutoff-date "2025-01")
 
-      (openai/gpt-5.1
-       :description "Flagship model for coding, reasoning, and agentic tasks across domains"
-       :capabilities (media json url)
+      ;; openai/gpt-5.1, 400k, "The best model for coding and agentic tasks"
+      (openai/gpt-5.1-chat
+       :description
+       "GPT-5.1 Chat (AKA Instant is the fast, lightweight member of the 5.1 family, optimized for low-latency chat while retaining strong general intelligence. "
+       :capabilities (media tool-use json url)
        :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
-       :context-window 400
+       :context-window 128 ; 400
        :input-cost 1.25
        :output-cost 10
        :cutoff-date "2024-09")
@@ -131,9 +169,12 @@
           ;; :key #'gptel-api-key
           :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
           :models gptel--openrouter-models))
+  (setq gptel-openrouter-chat-model 'openai/gpt-5.1-chat) ; < 1.0s latency
+  (setq gptel-openrouter-flash-model 'google/gemini-2.5-flash) ; < 0.5s latency
+  (setq gptel-openrouter-pro-model 'google/gemini-2.5-pro) ; < 2.5s latency
 
-;;;;; gptel Claude-Code (정액제 via wrapper)
-  ;;
+;;;;;; gptel Claude-Code (via wrapper)
+
   ;; [서비스 관리] - run-claude-wrapper 스크립트 사용
   ;; run-claude-wrapper              # 서비스 시작
   ;; run-claude-wrapper --update     # 최신 코드로 재빌드
@@ -192,6 +233,10 @@
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
   (setq gptel--system-message user-llm-system-prompt)
 
+  ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
+  (setq gptel-magit-backend gptel-openrouter-backend)
+  (setq gptel-magit-model gptel-openrouter-flash-model)
+
   ;; Claude-Code 서버 상태 확인 함수
   (defun gptel--claude-code-server-available-p ()
     "Check if Claude-Code wrapper server is running on localhost:8000."
@@ -211,15 +256,11 @@
         (setq gptel-model 'claude-sonnet-4-5-20250929)
         (message "gptel: Claude-Code 서버 감지 → 기본 백엔드로 설정"))
     (setq gptel-backend gptel-openrouter-backend)
-    (setq gptel-model 'openai/gpt-5.1)
+    (setq gptel-model gptel-openrouter-chat-model)
     (message "gptel: Claude-Code 서버 없음 → OpenRouter 사용"))
 
-  ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
-  (setq gptel-magit-backend gptel-openrouter-backend)
-  (setq gptel-magit-model 'google/gemini-2.5-flash)
-
   ;; 수동 백엔드 전환 함수
-  (defun gptel-switch-to-claude-code ()
+  (defun my/gptel-switch-to-claude-code ()
     "Switch gptel backend to Claude-Code (requires server running)."
     (interactive)
     (if (gptel--claude-code-server-available-p)
@@ -229,11 +270,11 @@
           (message "Switched to Claude-Code backend"))
       (message "Claude-Code server not available! Run: run-claude-wrapper")))
 
-  (defun gptel-switch-to-openrouter ()
+  (defun my/gptel-switch-to-openrouter ()
     "Switch gptel backend to OpenRouter."
     (interactive)
     (setq gptel-backend gptel-openrouter-backend)
-    (setq gptel-model 'openai/gpt-5.1)
+    (setq gptel-model gptel-openrouter-chat-model)
     (message "Switched to OpenRouter backend"))
 
 ;;;;; gptel-save-as-org-with-denote-metadata
@@ -286,10 +327,10 @@
         "M-RET" #'gptel-send
         (:localleader
          "RET" #'gptel-mode
-         "<return>" #'gptel-mode
          "1" #'gptel-menu
          "TAB" #'gptel-menu
          "M-s" #'gptel-save-as-org-with-denote-metadata
+         "M-l" #'gptel-clear-buffer+
          (:prefix ("s" . "session")
           :desc "clear" "l" #'gptel-clear-buffer+
           "p" #'gptel-save-as-org-with-denote-metadata
@@ -302,7 +343,7 @@
       (doom-mark-buffer-as-real-h)))
 
   ;; Optional - set up macher as soon as gptel is loaded.
-  ;; (require 'macher)
+  (require 'macher)
 
   ) ; end of use-package! gptel
 
@@ -418,16 +459,17 @@
   (defvar +gptel-buffer-backend nil
     "요약/번역 전용 백엔드. nil이면 gptel-openrouter-backend 사용.")
 
-  (defvar +gptel-buffer-model 'google/gemini-2.5-flash
+  (defvar +gptel-buffer-model gptel-openrouter-flash-model
     "요약/번역 전용 모델. 긴 컨텍스트 지원 필요.")
 
   (defun my/gptel-buffer-model-toggle ()
     "Toggle +gptel-buffer-model between Flash and Pro."
     (interactive)
     (setq +gptel-buffer-model
-          (if (eq +gptel-buffer-model 'google/gemini-2.5-flash)
-              'google/gemini-2.5-pro
-            'google/gemini-2.5-flash))
+          (if (eq +gptel-buffer-model gptel-openrouter-flash-model)
+              gptel-openrouter-pro-model
+            gptel-openrouter-flash-model
+            ))
     (message "gptel-buffer 모델: %s" +gptel-buffer-model))
 
   ;; 핵심 함수
@@ -501,6 +543,22 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
         ("요약 (Summarize)" (+gptel-summarize-buffer))
         ("번역 (Translate)" (+gptel-translate-buffer)))))
 
+;;;;; gptel functions
+
+  ;; TODO 뭐하는 함수인가?! 다시 검토
+  (defun gptel-clear-buffer+ ()
+    (interactive)
+    (let* ((beg-marker (concat "^" (alist-get gptel-default-mode gptel-prompt-prefix-alist)))
+           (keep-line (save-excursion
+                        (goto-char (point-max))
+                        (when (re-search-backward beg-marker nil t)
+                          (unless (save-excursion
+                                    (forward-line)
+                                    (re-search-forward beg-marker nil t))
+                            (point))))))
+      (delete-region (point-min) keep-line)
+      (evil-insert-state)))
+
 ;;;;; gptel-buffer 키바인딩
 
   ;; 전역 키바인딩 (SPC a G 접두어) - SPC a 충돌로 비활성화
@@ -548,9 +606,13 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   (after! org
     (map! :map org-mode-map
           :localleader
-          "5" #'my/gptel-org-toggle-branching-context
           "RET" #'gptel-mode
-          "<return>" #'gptel-mode))
+          "1" #'gptel-menu
+          "5" #'my/gptel-org-toggle-branching-context
+          "TAB" #'gptel-menu
+          "M-s" #'gptel-save-as-org-with-denote-metadata
+          "M-l" #'gptel-clear-buffer+
+          ))
 
   ) ; end of after! gptel
 

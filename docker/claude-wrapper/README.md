@@ -31,8 +31,8 @@ run-claude-wrapper --help       # 도움말
 ### 수동 전환
 
 ```elisp
-M-x gptel-switch-to-claude-code   ; Claude-Code로 전환
-M-x gptel-switch-to-openrouter    ; OpenRouter로 전환
+M-x my/gptel-switch-to-claude-code   ; Claude-Code로 전환
+M-x my/gptel-switch-to-openrouter    ; OpenRouter로 전환
 ```
 
 ## 모델
