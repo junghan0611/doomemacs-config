@@ -16,6 +16,7 @@
 ;; - Visual effects (pulse-line)
 ;; - Which-key
 
+
 ;;; Code:
 
 ;;;; Dashboard - Terminal Optimized
@@ -200,6 +201,15 @@ _THEME 인자는 `enable-theme-functions' 호환용."
       ("^\\*eww.*" :size 82 :side left :modeline t :select t :quit nil :ttl t) ; jh
       )
     )
+  )
+
+;;;; :ui vc-gutter diff-hl
+
+(after! diff-hl
+  (setq diff-hl-disable-on-remote t) ; default nil
+  (setq diff-hl-flydiff-delay 1.0)  ; doom 0.5, default: 0.3
+  ;; (remove-hook 'diff-hl-mode-hook #'diff-hl-flydiff-mode)
+  ;; (remove-hook 'diff-hl-flydiff-mode-hook #'+vc-gutter-init-flydiff-mode-h)
   )
 
 ;;; provide

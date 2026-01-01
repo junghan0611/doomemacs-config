@@ -41,6 +41,7 @@
   (setq dired-do-revert-buffer t) ; doom nil
   ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
   ;; (add-hook 'dired-mode-hook 'dired-hide-details-mode)
+  (remove-hook 'dired-mode-hook 'dired-omit-mode)
 
   (require 'wdired)
   (setq wdired-allow-to-change-permissions t) ; doom nil
@@ -49,8 +50,9 @@
   (add-hook 'dired-mode-hook
             (lambda ()
               (interactive)
-              (setq-local truncate-lines t) ; Do not wrap lines
               ;; (visual-line-mode -1)
+              (setq-local truncate-lines t) ; Do not wrap lines
+              (display-line-numbers-mode -1)
               (hl-line-mode 1)))
 
   ;; prot-dired-grep-marked-files
