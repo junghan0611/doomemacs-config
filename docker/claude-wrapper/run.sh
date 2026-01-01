@@ -28,9 +28,10 @@ usage() {
     echo "  --help      이 도움말 표시"
     echo ""
     echo "Environment Variables:"
-    echo "  MAX_TIMEOUT      요청 타임아웃 ms (default: 300000 = 5분)"
-    echo "  DEFAULT_MODEL    기본 모델 (default: claude-sonnet-4-5-20250929)"
-    echo "  RATE_LIMIT_ENABLED  Rate limiting (default: false)"
+    echo "  MAX_TIMEOUT              요청 타임아웃 ms (default: 300000 = 5분)"
+    echo "  DEFAULT_MODEL            기본 모델 (default: claude-sonnet-4-5-20250929)"
+    echo "  RATE_LIMIT_ENABLED       Rate limiting (default: false)"
+    echo "  CLAUDE_INDEPENDENT_MODE  MCP/플러그인 비활성화로 빠른 시작 (default: true)"
     echo ""
     echo "Examples:"
     echo "  MAX_TIMEOUT=600000 run-claude-wrapper  # 10분 타임아웃"
@@ -166,6 +167,7 @@ main() {
       -e MAX_TIMEOUT="${MAX_TIMEOUT:-300000}" \
       -e DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-4-5-20250929}" \
       -e RATE_LIMIT_ENABLED="${RATE_LIMIT_ENABLED:-false}" \
+      -e CLAUDE_INDEPENDENT_MODE="${CLAUDE_INDEPENDENT_MODE:-true}" \
       --name "$CONTAINER_NAME" \
       "$IMAGE_NAME"
 
