@@ -21,7 +21,6 @@ user-keys.el
 # Anyone can manage similar private local files alongside their public config
 .agent-shell/
 .claude/
-inbox__human.org
 templates/
 fortune/
 *.dat
@@ -44,3 +43,5 @@ var/sensitive-strings.txt
 
 # QTermWidget build (external project)
 qtermwidget/
+
+NOW.org
