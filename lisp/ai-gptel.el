@@ -490,6 +490,8 @@ TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용).
           (org-mode))
         (unless gptel-mode
           (gptel-mode 1))
+
+        (setq-local gptel-org-branching-context nil)
         ;; 백엔드 및 모델 명시적 설정 (긴 컨텍스트용)
         (setq-local gptel-backend target-backend)
         (setq-local gptel-model target-model)
