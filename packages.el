@@ -143,6 +143,10 @@
 
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 (package! olivetti)
+(package! redacted)
+(package! logos)
+(package! focus)
+(package! centered-cursor-mode)
 (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 
 ;;;; project-config.el
