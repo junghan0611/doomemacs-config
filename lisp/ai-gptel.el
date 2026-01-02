@@ -20,6 +20,11 @@
 
 ;;; Code:
 
+;;;; evil-collection-gptel
+
+(setq evil-collection-gptel-want-ret-to-send nil)
+(setq evil-collection-gptel-want-shift-ret-menu t)
+(setq evil-collection-gptel-want-shift-ret-to-send nil)
 
 ;;;; macher
 
@@ -322,7 +327,6 @@
 ;;;;; gptel-mode-hook
 
   (map! :map gptel-mode-map
-        :inv "RET" #'next-line
         "M-<return>" #'gptel-send
         "M-RET" #'gptel-send
         (:localleader

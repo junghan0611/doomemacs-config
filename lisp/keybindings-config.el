@@ -16,6 +16,10 @@
 
 ;;; Code:
 
+;;;; remap all C-c prefix keys to M-c
+
+(define-key key-translation-map (kbd "M-c") (kbd "C-c"))
+
 ;;;; Global Keys
 
 (map! "C-M-;" #'pp-eval-expression
