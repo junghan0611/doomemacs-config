@@ -134,19 +134,65 @@ Same architecture, different execution layer.
 - [ ] gptel-tools integration: Not started
 - [ ] Orchestration agent definition: Conceptual only
 
-## Next Steps
+## 2026-01-02 Update: Gas Town 발견
 
-1. Complete ai-gptel-acp.el - the foundation
-2. Define tmux-related gptel-tools (tmux-send, tmux-capture)
-3. Create orchestrator preset using gptel-agent pattern
-4. Test the full loop: user → orchestrator → tmux agents → results
+Steve Yegge가 **Gas Town**을 공개했습니다 (2025-12-29 작동 시작, 2026-01-01 공개).
+
+### Gas Town이 해결한 것
+
+우리 4-Layer 중 **Layer 3, 4를 이미 구현**:
+
+| Layer | 우리 계획 | Gas Town |
+|-------|----------|----------|
+| 4: tmux Sessions | claude-pm, claude-code, etc. | ✅ Polecat, Crew, Witness, Refinery |
+| 3: Orchestration | gptel-agent style | ✅ Mayor, Deacon, Convoy 시스템 |
+| 2: gptel-tools | Emacs native tools | ❌ CLI 방식 (gt 명령어) |
+| 1: ai-gptel-acp.el | gptel ↔ ACP | ❌ Emacs 프론트엔드 없음 |
+
+### Gas Town 핵심 개념
+
+```
+GUPP (Gastown Universal Propulsion Principle)
+"Hook에 작업이 있으면 무조건 실행"
+→ Claude Code의 "세션 끝남" 문제 해결
+
+MEOW Stack (Molecular Expression of Work)
+Formula → Protomolecule → Molecule/Wisp → Digest
+→ 워크플로우를 git-backed Beads로 표현
+
+Convoy
+→ 작업 단위 추적 (gt convoy create, gt convoy list)
+```
+
+### 전략 변경
+
+**터미널에서 Gas Town 먼저 익숙해지기 → 그 다음 Emacs 프론트엔드**
+
+```
+Phase 1: Gas Town 터미널 숙달
+  - gt install ~/gt
+  - gt rig add, gt sling, gt convoy
+  - Mayor와 대화, Polecat 관찰
+
+Phase 2: Emacs 프론트엔드 (나중에)
+  - gt.el: Emacs에서 gt 명령어 래핑
+  - gptel과 Mayor 세션 연결
+```
+
+## Next Steps (Updated)
+
+1. ~~Complete ai-gptel-acp.el~~ → Gas Town 터미널 숙달
+2. ~~Define tmux-related gptel-tools~~ → gt 명령어 학습
+3. ~~Create orchestrator preset~~ → Mayor/Deacon 역할 이해
+4. ~~Test full loop~~ → Convoy 생성 → 완료 확인 실습
 
 ## References
 
+- Steve Yegge's Gas Town: `~/repos/3rd/gastown/`
+- Steve Yegge's Beads: `~/repos/3rd/beads/`
 - Steve Yegge's VC: `~/repos/3rd/vc/`
 - yqrashawn's dotfiles: `~/sync/man/dotsamples/dotall/yqrashawn-dot-doom-clj/.doom.d/`
 - karthink's gptel-agent: `~/repos/3rd/gptel-agent/`
-- Efrit analysis: `20251126T120729--efrit-왜-emacs에서-멀티에이전트인가-steve-yegge의-비전`
 
 ## The Question That Drives This
 
@@ -157,9 +203,10 @@ I switch terminals. I copy-paste. I track progress manually.
 
 The vision: **I talk to one agent. It handles the rest.**
 
-That's not over-engineering. That's the whole point.
+Gas Town provides this. Emacs frontend comes after mastering the terminal.
 
 ---
 
 *Captured from conversation on 2026-01-01*
-*Context: tmux orchestration → Steve Yegge's VC → ACP discovery → Four-layer architecture*
+*Updated on 2026-01-02: Gas Town integration*
+*Context: tmux orchestration → Steve Yegge's VC → ACP discovery → Four-layer architecture → Gas Town*
