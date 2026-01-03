@@ -19,8 +19,8 @@
 ;;;; Ignore Focus Events
 
 ;; 포커스 이벤트 무시
-(define-key input-decode-map "\e[I" [ignore])
-(define-key input-decode-map "\e[O" [ignore])
+(define-key input-decode-map "\e[I" (kbd ""))
+(define-key input-decode-map "\e[O" (kbd ""))
 
 ;;;; remap all C-c prefix keys to M-c
 
