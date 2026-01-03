@@ -88,6 +88,8 @@
 (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
       doom-themes-enable-italic nil) ; if nil, italics is universally disabled
 
+;;;; Terminal for THEME
+
 ;; 터미널 배경 투명화 함수
 (defun my/terminal-transparent-background (&optional _theme)
   "터미널에서 Emacs 배경을 투명하게 설정.
@@ -113,8 +115,6 @@ _THEME 인자는 `enable-theme-functions' 호환용."
    ((string-match "ghostty" (or (getenv "TERM") ""))
     ;; Ghostty는 24비트 트루컬러 지원
     (setenv "COLORTERM" "truecolor")
-    ;; Ghostty는 256색상 이상 지원
-    (setq xterm-color-use-bold-for-bright nil)
     ;; Ghostty 최적화 설정
     (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-direct")))
 

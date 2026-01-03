@@ -142,12 +142,8 @@
 ;;;; editing-config.el
 
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
-(package! olivetti)
-(package! redacted)
-(package! logos)
-(package! focus)
-(package! centered-cursor-mode)
 (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
+(package! pinentry)
 
 ;;;; project-config.el
 
@@ -220,10 +216,8 @@
 
 (package! recent-rgrep :recipe (:host github :repo "kickingvegas/recent-rgrep"))
 
-
 ;;; DEPRECATED
 
 ;; (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))
-;; (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 
 ;;; END

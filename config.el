@@ -33,7 +33,7 @@
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type t)
-(remove-hook! (text-mode conf-mode) #'display-line-numbers-mode)
+(remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode)
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -187,7 +187,7 @@
 
 (require 'ui-config)
 (require 'evil-config)
-(require 'korean-input)
+(require 'korean-input-config)
 (require 'time-config)
 (require 'completion-config)
 
@@ -199,10 +199,13 @@
 (require 'denote-export-config)
 (require 'org-functions)
 (require 'denote-functions)
+
 (require 'unicode-config)
 (require 'editing-config)
+
 (require 'ai-gptel)
 (require 'ai-agent-shell)            ; acp 설정
+
 ;; (require 'ai-gptel-acp)           ; gptel + ACP 통합 (doom-md7)
 (require 'ai-stt-eca-whisper)
 (require 'ai-tts-edge)

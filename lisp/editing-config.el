@@ -7,16 +7,13 @@
 
 ;;; Commentary:
 
+;; [2025-01] Terminal Focus Issue - 아래 패키지들이 터미널 모드에서 문제 발생
+;; SSH + Ghostty/터미널에서 창 포커스 전환 시 "I" "O" 문자가 입력되는 현상
+;; 원인: Focus reporting (DECSET 1004) 관련 ESC[I / ESC[O 시퀀스 충돌
+;; 제거된 패키지: olivetti, redacted, logos, focus, centered-cursor-mode
+;; 터미널 Emacs 호환성을 위해 제거 결정 (정확한 원인 패키지는 미확인)
+
 ;;; Code:
-
-;;;; olivetti
-
-(use-package! olivetti
-  :after org
-  :custom
-  ;; (olivetti-body-width 0.7) ; nil
-  (olivetti-minimum-body-width 90) ; for compatibility fill-column 80
-  (olivetti-recall-visual-line-mode-entry-state t))
 
 ;;;; Ten with etags
 
@@ -83,93 +80,12 @@
   (add-to-list 'outli-heading-config '(clojurescript-mode ";;" ?\; t))
   )
 
+;;; pinentry
 
-;;;; centered-cursor-mode
-
-(use-package! centered-cursor-mode
-  :commands (centered-cursor-mode
-             global-centered-cursor-mode)
-  :init
-  (setq ccm-recenter-at-end-of-file t
-        ccm-ignored-commands '(mouse-drag-region
-                               mouse-set-point
-                               mouse-set-region
-                               widget-button-click
-                               scroll-bar-toolkit-scroll
-                               evil-mouse-drag-region))
+(use-package! pinentry
   :config
-  (map! :map ccm-map
-        :inv "M-\\" #'other-window
-        :inv "M-u" #'evil-scroll-up
-        :inv "M-v" #'evil-scroll-down)
-  )
-
-;;;; redacted
-
-(use-package! redacted
-  :defer t
-  :commands (redacted-mode))
-
-;;;; logos
-
-(use-package! logos
-  :defer 2
-  :commands (logos-focus-mode)
-  :init
-  ;; If you want to use outlines instead of page breaks (the ^L):
-  (setq logos-outlines-are-pages t)
-  ;; This is the default value for the outlines:
-  ;; (setq logos-outline-regexp-alist
-  ;;       `((emacs-lisp-mode . "^;;;;+ ")
-  ;;         (org-mode . "^\\*+ +")
-  ;;         (markdown-mode . "^\\#+ +")
-  ;;         (t . ,(if (boundp 'outline-regexp) outline-regexp logos--page-delimiter))))
-
-  (setq logos-outline-regexp-alist `((emacs-lisp-mode . "^;;;;+ ")
-                                     (org-mode . "^\\*+ +")
-                                     (markdown-mode . "^\\#+ +")))
-
-  ;; These apply when `logos-focus-mode' is enabled.  Their value is
-  ;; buffer-local.
-  (setq-default logos-hide-cursor nil)
-  (setq-default logos-hide-mode-line t)
-  (setq-default logos-hide-header-line t)
-  (setq-default logos-hide-buffer-boundaries t)
-  (setq-default logos-hide-fringe t)
-  (setq-default logos-variable-pitch nil) ; see my `fontaine' configurations
-  (setq-default logos-buffer-read-only nil)
-  (setq-default logos-scroll-lock nil)
-  (setq-default logos-olivetti t)
-  (setq logos-outlines-are-pages t)
-  :config
-  ;; I don't need to do `with-eval-after-load' for the `modus-themes' as
-  ;; I always load them before other relevant potentially packages.
-  ;; (add-hook 'modus-themes-after-load-theme-hook #'logos-update-fringe-in-buffers)
-  (let ((map global-map))
-    (define-key map [remap narrow-to-region] #'logos-narrow-dwim)
-    (define-key map [remap forward-page] #'logos-forward-page-dwim)
-    (define-key map [remap backward-page] #'logos-backward-page-dwim)
-    (define-key map (kbd "M-]") #'logos-forward-page-dwim)
-    (define-key map (kbd "M-[") #'logos-backward-page-dwim)
-    )
-  ;; place point at the top when changing pages, but not in `prog-mode'
-  (defun prot/logos--recenter-top ()
-    "Use `recenter' to reposition the view at the top."
-    (unless (derived-mode-p 'prog-mode)
-      (recenter 1))) ; Use 0 for the absolute top
-  (add-hook 'logos-page-motion-hook #'prot/logos--recenter-top)
-
-  ;; Also consider adding keys to `logos-focus-mode-map'.  They will take
-  ;; effect when `logos-focus-mode' is enabled.
-  )
-
-;;;; focus on paragraph
-
-(use-package! focus
-  :after org
-  :config
-  (add-to-list 'focus-mode-to-thing '(org-mode . paragraph)))
-
+  (setq epa-pinentry-mode 'loopback)
+  (pinentry-start))
 
 ;;;; provide
 

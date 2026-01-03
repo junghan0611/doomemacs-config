@@ -82,8 +82,8 @@
 
 ;;;;; vertico-buffer on TOP
 
-;; vertico-buffer on-top
-(progn
+(when (display-graphic-p) ; gui
+  ;; vertico-buffer on-top
   (require 'vertico-buffer)
   (setq vertico-resize 'grow-only) ; doom nil
 
