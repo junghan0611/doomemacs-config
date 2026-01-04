@@ -150,6 +150,7 @@
        (yaml +tree-sitter) ; JSON, but readable
        (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
+       (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
 
        (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
        (scheme +mit) ;; +racket ; a fully conniving family of lisps

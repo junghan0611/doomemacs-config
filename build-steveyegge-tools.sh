@@ -55,7 +55,7 @@ clone_or_update() {
         echo -e "${GREEN}✓ Updated ${name}${NC}"
     else
         echo -e "${YELLOW}Cloning ${name}...${NC}"
-        git clone "git@github.com:junghan0611/${name}.git" "${src_dir}"
+        git clone "git@github.com:steveyegge/${name}.git" "${src_dir}"
         echo -e "${GREEN}✓ Cloned ${name}${NC}"
     fi
 }

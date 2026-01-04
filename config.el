@@ -214,6 +214,7 @@
 (require 'tab-bar-config)
 
 (require 'prog-mode-config)
+(require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
 (require 'project-config)
 (require 'eaf-config)                ; EAF (조건부 로딩)
