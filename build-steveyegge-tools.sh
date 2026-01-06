@@ -133,6 +133,12 @@ build_project "vc" "${VC_DIR}" "vc"
 # gastown
 clone_or_update "gastown" "${GASTOWN_DIR}"
 fix_gastown_gomod
+# gastown requires go generate to embed formula files
+if [ -d "${GASTOWN_DIR}" ]; then
+    echo -e "${YELLOW}Running go generate for gastown...${NC}"
+    cd "${GASTOWN_DIR}"
+    run_go generate ./internal/formula/
+fi
 build_project "gastown" "${GASTOWN_DIR}" "gt"
 
 echo ""
