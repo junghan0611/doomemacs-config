@@ -164,6 +164,22 @@
             ((executable-find "ugrep") 'ugrep) (t 'grep)))
 
 ;;; pass + auth (gptel 등에서 API 키 접근을 위해 즉시 로드)
+;;
+;; GPG 에이전트 캐시 설정 (암호 입력 빈도 줄이기):
+;;   ~/.gnupg/gpg-agent.conf 파일에 다음 추가 후 `gpgconf --kill gpg-agent` 실행
+;;     default-cache-ttl 31536000   ; 1년 (사실상 영구)
+;;     max-cache-ttl 31536000
+;;     allow-preset-passphrase      ; 외부 도구가 암호 프리셋 가능
+;;     pinentry-program /usr/bin/pinentry-gnome3
+;;
+;; auth-sources 선택:
+;;   - password-store: `pass` CLI 기반, 디렉터리 구조 (~/.password-store/)
+;;   - authinfo.gpg: 전통적 Emacs 방식, 단일 파일 (~/.authinfo.gpg)
+;;   - 둘 다 사용 시: (setq auth-sources '(password-store "~/.authinfo.gpg"))
+;;
+;; gptel API 키 접근 방식:
+;;   - password-store-get 함수로 직접 가져옴 (auth-source 우회)
+;;   - 예: (password-store-get "api/anthropic/personal")
 
 (require 'password-store)
 (setq pass-username-field "login"
