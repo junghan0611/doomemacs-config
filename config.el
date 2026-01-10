@@ -230,6 +230,7 @@
 (require 'tab-bar-config)
 
 (require 'prog-mode-config)
+(require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
 (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
 (require 'project-config)

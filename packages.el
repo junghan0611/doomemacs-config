@@ -205,6 +205,7 @@
 
 ;;;; elfeed-config.el
 
+(package! simple-httpd)  ; elfeed-web 의존성
 (package! org-web-tools)
 
 ;;;; tab-bar-config.el
