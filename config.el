@@ -33,7 +33,7 @@
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type t)
-;; (remove-hook! (text-mode conf-mode) #'display-line-numbers-mode)
+(remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode)
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -52,7 +52,6 @@
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
 
-;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
@@ -94,6 +93,14 @@
 (setq-default x-stretch-cursor t) ; make the cursor wide over tabs, etc.
 (setq undo-limit 80000000) ; Raise undo-limit to 80Mb
 (setq truncate-string-ellipsis "…") ; Unicode ellispis are nicer than "...", and also save /precious/ space
+
+;; When I bring up Doom's scratch buffer with SPC x, it's often to play with
+;; elisp or note something down (that isn't worth an entry in my notes). I can
+;; do both in `lisp-interaction-mode'.
+(setq doom-scratch-initial-major-mode 'emacs-lisp-mode)
+
+;; Set initial buffer to org
+(setq initial-major-mode #'emacs-lisp-mode); text-mode
 
 ;;; Leader key
 
@@ -157,6 +164,22 @@
             ((executable-find "ugrep") 'ugrep) (t 'grep)))
 
 ;;; pass + auth (gptel 등에서 API 키 접근을 위해 즉시 로드)
+;;
+;; GPG 에이전트 캐시 설정 (암호 입력 빈도 줄이기):
+;;   ~/.gnupg/gpg-agent.conf 파일에 다음 추가 후 `gpgconf --kill gpg-agent` 실행
+;;     default-cache-ttl 31536000   ; 1년 (사실상 영구)
+;;     max-cache-ttl 31536000
+;;     allow-preset-passphrase      ; 외부 도구가 암호 프리셋 가능
+;;     pinentry-program /usr/bin/pinentry-gnome3
+;;
+;; auth-sources 선택:
+;;   - password-store: `pass` CLI 기반, 디렉터리 구조 (~/.password-store/)
+;;   - authinfo.gpg: 전통적 Emacs 방식, 단일 파일 (~/.authinfo.gpg)
+;;   - 둘 다 사용 시: (setq auth-sources '(password-store "~/.authinfo.gpg"))
+;;
+;; gptel API 키 접근 방식:
+;;   - password-store-get 함수로 직접 가져옴 (auth-source 우회)
+;;   - 예: (password-store-get "api/anthropic/personal")
 
 (require 'password-store)
 (setq pass-username-field "login"
@@ -172,66 +195,57 @@
 ;; (setq auth-sources '("~/.authinfo.gpg")
 ;;       auth-source-cache-expiry nil) ; default is 7200 (2h)
 
-;;; Load libraries
+;;; Load libraries via require (prevents duplicate loading)
 
-(progn
-  (load! "+user-info")
-  (load! "lisp/ui-config")
-  (load! "lisp/evil-config")
-  (load! "lisp/korean-input")
-  (load! "lisp/time-config")
-  (load! "lisp/completion-config")
-  (load! "lisp/org-config")
-  (load! "lisp/denote-config")
-  (load! "lisp/denote-silo")
-  (load! "lisp/denote-export")
-  (load! "lisp/denote-functions")
-  (load! "lisp/ai-gptel")
-  (load! "lisp/ai-agent-shell")   ; acp 설정
-  ;; (load! "lisp/ai-gptel-acp")     ; gptel + ACP 통합 (doom-md7)
-  (load! "lisp/ai-stt-eca-whisper")
-  (load! "lisp/ai-tts-edge")
-  (load! "lisp/utils-config")
-  (load! "lisp/project-config")
-  (load! "lisp/eaf-config")          ; EAF (조건부 로딩)
-  (load! "lisp/elfeed-config")        ; elfeed + elfeed-tube
-  (load! "lisp/ai-orchestration")    ; efrit/beads (조건부 로딩)
-  (load! "lisp/tmux-config")          ; tmux + claude code orchestration
-  (load! "lisp/zellij-config")        ; zellij terminal multiplexer
-  (load! "lisp/keybindings-config")
-  (load! "lisp/keybindings-remap")
-  (load! "lisp/functions")
-  )
+(add-load-path! "lisp/")
 
+(load! "+user-info")  ; no provide, keep load!
+
+(require 'ui-config)
+(require 'evil-config)
+(require 'korean-input-config)
+(require 'time-config)
+(require 'completion-config)
+
+(require 'module-emacs-config)
+
+(require 'org-config)
+(require 'denote-config)
+(require 'denote-silo-config)
+(require 'denote-export-config)
+(require 'org-functions)
+(require 'denote-functions)
+
+(require 'unicode-config)
+(require 'editing-config)
+
+(require 'ai-gptel)
+(require 'ai-agent-shell)            ; acp 설정
+
+;; (require 'ai-gptel-acp)           ; gptel + ACP 통합 (doom-md7)
+(require 'ai-stt-eca-whisper)
+(require 'ai-tts-edge)
+
+(require 'modeline-config)
+(require 'tab-bar-config)
+
+(require 'prog-mode-config)
+(require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
+(require 'android-config)              ; Android/Kotlin 개발 환경
+(require 'utils-config)
+(require 'project-config)
+(require 'eaf-config)                ; EAF (조건부 로딩)
+(require 'elfeed-config)             ; elfeed + elfeed-tube
+(require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
+(require 'tmux-config)               ; tmux + claude code orchestration
+(require 'zellij-config)             ; zellij terminal multiplexer
+(require 'search-config)             ; recent-rgrep 등 검색 도구
+(require 'keybindings-config)
+(require 'keybindings-denote-config)
+(require 'termux-config)
+(require 'functions)
 
 ;;; overide doomemacs
-
-;;;; dired
-
-(after! dired
-  (setq dired-make-directory-clickable t) ; Emacs 29.1, doom t
-  (setq dired-free-space nil) ; Emacs 29.1, doom first
-
-  ;; Better dired flags:
-  ;; `-l' is mandatory
-  ;; `-a' shows all files
-  ;; `-h' uses human-readable sizes
-  ;; `-F' appends file-type classifiers to file names (for better highlighting)
-  ;; -g     like -l, but do not list owner
-  (setq dired-listing-switches "-AGFhgv --group-directories-first --time-style=long-iso") ;; doom "-ahl -v --group-directories-first"
-  (setq dired-recursive-copies 'always ; doom 'always
-        dired-dwim-target t) ; doom t
-  (setq dired-ls-F-marks-symlinks nil ; doom nil -F marks links with @
-        delete-by-moving-to-trash t) ; doom nil
-
-  (setq dired-use-ls-dired t)  ; doom t
-
-  (require 'dired-aux)
-  (setq dired-do-revert-buffer t) ; doom nil
-  ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
-
-  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
-  )
 
 ;;;; tempel
 
@@ -275,34 +289,6 @@
 
 
 
-;;;; flymake
-
-(remove-hook! (prog-mode text-mode) #'flymake-mode)
-
-;;;; eglot configuration
-
-(progn
-  (map! (:map eglot-mode-map
-         :after eglot
-         "C-c r" 'eglot-rename
-         "C-c d" 'eldoc
-         "C-c f" 'flymake-show-buffer-diagnostics
-         "C-c 0" 'eglot-inlay-hints-mode
-         "M-RET" 'eglot-code-actions)
-
-        ;; FIXME need new keybindings
-        ;; (:map 'flymake-mode-map
-        ;;       "C-n" #'flymake-goto-next-error
-        ;;       "C-p" #'flymake-goto-prev-error)
-        )
-
-  ;; (setq eglot-send-changes-idle-time 0.5)
-  (setq flymake-no-changes-timeout nil)
-
-  (add-hook! 'eglot-managed-mode-hook
-    (eglot-inlay-hints-mode -1))
-  )
-
 ;;;; fortune
 
 ;; not work on termux
@@ -323,17 +309,6 @@
 ;;       (setq xclip-method 'termux-clipboard-get)))
 ;;     (xclip-mode 1)))
 
-;;;; TERMUX
-
-(when IS-TERMUX
-
-  (global-set-key (kbd "<M-SPC>") 'toggle-input-method)
-  (global-set-key
-   (kbd "M-<backtab>")
-   (lambda ()
-     (interactive)
-     (other-window -1))))
-
 ;;;; term-keys
 
 (use-package! clipetty
@@ -349,56 +324,6 @@
   (setq hscroll-step 0)
   (show-paren-mode -1)
   )
-
-;;;; git / magit
-
-;; Enforce git commit conventions.
-;; See: http://chris.beams.io/posts/git-commit
-(setq git-commit-summary-max-length 72) ; defaults to Github's max commit message length
-
-(use-package! magit-todos
-  :after magit
-  :hook (magit-mode . magit-todos-mode))
-
-;;;; tramp
-
-;; Host *
-;;     ControlMaster auto
-;;     ControlPath ~/.ssh/sockets/%r@%h-%p
-;;     ControlPersist 600
-(after! tramp
-  (setq tramp-default-method "ssh")
-
-  ;; 소켓 디렉토리 자동 생성
-  (let ((socket-dir "~/.ssh/sockets"))
-    (unless (file-exists-p socket-dir)
-      (make-directory socket-dir t)
-      (set-file-modes socket-dir #o700)))  ;; 권한 700
-
-  (setq tramp-ssh-controlmaster-options
-        "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
-
-;;;; termux-fixes
-;; Fix async issues in Termux/Android
-
-(when IS-TERMUX
-  (setq native-comp-async-report-warnings-errors nil)
-  (setq native-comp-warning-on-missing-source nil)
-  (setq async-bytecomp-allowed-packages nil)
-  (setq process-connection-type nil)
-  (setq gc-cons-threshold 100000000)
-  (setq gc-cons-percentage 0.6))
-
-;;;; bugfix treesit
-
-(after! treesit
-  (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
-
-;;;; denote-silo
-
-;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
-;; (after! denote
-;;   (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/")))
 
 ;;; TODO Custom Integration
 
@@ -487,153 +412,7 @@ Returns t on success, nil if notify-send is not available."
 ;;   (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
 
 
-;;; TODO TERMUX
-
-(when IS-TERMUX
-  ;; 7. GUI 폰트 설정 (Sarasa Term K Nerd)
-
-  ;; Termux X11 GUI에서 Nerd Font 아이콘 제대로 표시
-  ;; Fold4 7.6" 2176x1812 (373 PPI, DPI 180 기준) 최적화
-  ;; (setq doom-font (font-spec :family "Sarasa Term K Nerd Font" :size 14)
-  ;;       doom-variable-pitch-font (font-spec :family "Sarasa Term K Nerd Font" :size 14))
-
-  ;; 8. 배터리 효율 최적화 설정 (Termux X11 GUI)
-  ;; 작성: 2025-11-08
-
-  ;; Auto-save 간격 늘리기 (디스크 I/O 감소)
-  (setq auto-save-interval 300)        ; 300 타이핑마다
-  (setq auto-save-timeout 30)          ; 30초마다
-
-  ;; GC 임계값 증가 (가비지 컬렉션 빈도 감소)
-  (setq gc-cons-threshold (* 50 1024 1024))  ; 50MB
-
-  ;; 스크롤 최적화
-  (setq scroll-conservatively 101)
-  (setq scroll-margin 0)
-  (setq scroll-preserve-screen-position t)
-
-  ;; 폰트 렌더링 최적화
-  (setq inhibit-compacting-font-caches t)
-
-  ;; 파일 변경 감지 간격 늘리기
-  (setq auto-revert-interval 5)  ; 5초
-
-  ;; 알람/비프음 비활성화 (하드웨어 절전)
-  (setq ring-bell-function 'ignore)
-
-  ;; Termux extra-keys 방향키 설정
-  ;; Termux 환경에서 방향키가 제대로 동작하도록 보장
-  (when (and (not (display-graphic-p))
-             (or (getenv "TERMUX_VERSION")
-                 (string-match-p "termux" (or (getenv "PREFIX") ""))))
-
-    ;; Termux는 ESC O 시퀀스를 전송 (Application Keypad Mode)
-    ;; input-decode-map과 function-key-map 모두에 매핑 (더 강력)
-    (defun termux-fix-arrow-keys ()
-      "Fix arrow keys for Termux extra-keys."
-      ;; input-decode-map (우선순위 높음)
-      (define-key input-decode-map "\eOA" [up])
-      (define-key input-decode-map "\eOB" [down])
-      (define-key input-decode-map "\eOC" [right])
-      (define-key input-decode-map "\eOD" [left])
-      (define-key input-decode-map "\e[A" [up])
-      (define-key input-decode-map "\e[B" [down])
-      (define-key input-decode-map "\e[C" [right])
-      (define-key input-decode-map "\e[D" [left])
-      ;; function-key-map (호환성)
-      (define-key function-key-map "\eOA" [up])
-      (define-key function-key-map "\eOB" [down])
-      (define-key function-key-map "\eOC" [right])
-      (define-key function-key-map "\eOD" [left])
-      (define-key function-key-map "\e[A" [up])
-      (define-key function-key-map "\e[B" [down])
-      (define-key function-key-map "\e[C" [right])
-      (define-key function-key-map "\e[D" [left])
-      ;; local-function-key-map (로컬)
-      (define-key local-function-key-map "\eOA" [up])
-      (define-key local-function-key-map "\eOB" [down])
-      (define-key local-function-key-map "\eOC" [right])
-      (define-key local-function-key-map "\eOD" [left]))
-
-    ;; 즉시 적용
-    (termux-fix-arrow-keys)
-
-    ;; 터미널 초기화 후에도 적용 (tty-setup-hook)
-    (add-hook 'tty-setup-hook #'termux-fix-arrow-keys)
-
-    ;; evil-mode 로드 후에도 적용 (evil이 키를 오버라이드할 수 있음)
-    (after! evil
-      (termux-fix-arrow-keys))
-
-    (message "Termux 방향키 ESC O 시퀀스 매핑 완료 ✓"))
-  )
-
 ;;; TODO MIGRATIONS
-
-;;;; ~/sync/emacs/emacs-fulllab-config/dotdoomemacs/+markdown.el
-
-(progn
-
-;;;###autoload
-(defun yank-as-org ()
-  "Convert region of markdown text to org while yanking."
-  (interactive)
-  (let* ((_ (unless (executable-find "pandoc")
-              (user-error "pandoc not found")))
-         (beg (if evil-mode
-                  (marker-position evil-visual-beginning)
-                (region-beginning)))
-         (end (if evil-mode
-                  (marker-position evil-visual-end)
-                (region-end)))
-         (region-content (buffer-substring-no-properties beg end))
-         (_ (print region-content))
-         (converted-content
-          (with-temp-buffer
-            (insert region-content)
-            (shell-command-on-region
-             (point-min)
-             (point-max)
-             "pandoc --wrap=none -f markdown -t org" nil t)
-            (buffer-string))))
-    (kill-new converted-content)
-    (message "yanked Markdown as Org")))
-
-;;;###autoload
-(defun yank-as-markdown ()
-  "Convert region of Org-mode to markdown while yanking."
-  (interactive)
-  (let* ((_ (unless (executable-find "pandoc")
-              (user-error "pandoc not found")))
-         (beg (if evil-mode
-                  (marker-position evil-visual-beginning)
-                (region-beginning)))
-         (end (if evil-mode
-                  (marker-position evil-visual-end)
-                (region-end)))
-         (region-content (buffer-substring-no-properties beg end))
-         (_ (print region-content))
-         (converted-content
-          (with-temp-buffer
-            (insert region-content)
-            (shell-command-on-region
-             (point-min)
-             (point-max)
-             "pandoc --wrap=none -f org -t gfm" nil t)
-            (buffer-string))))
-    (kill-new converted-content)
-    (message "yanked Org as Markdown")))
-)
-
-;;;; bh/insert-inactive-timestamp
-
-(defun bh/insert-inactive-timestamp ()
-  (interactive)
-  (org-insert-time-stamp nil t t nil nil nil))
-
-(after! org
-  (define-key org-mode-map (kbd "<f3>") 'org-toggle-link-display)
-  )
 
 ;;;; my/enable-alice-keyboard-toggle-input-method
 

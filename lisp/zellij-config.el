@@ -177,21 +177,21 @@
 ;;   4. tmux-config.el의 모든 기능 Zellij로 이식
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 키바인딩 (SPC 3 z ...)
+;; 키바인딩 (SPC \ z ...)
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;;
 ;; 세션/레이아웃:
-;;   SPC 3 z o   Open layout       레이아웃으로 세션 시작
-;;   SPC 3 z a   Attach session    세션 연결
-;;   SPC 3 z l   List sessions     세션 목록
-;;   SPC 3 z k   Kill session      세션 종료
+;;   SPC \ z o   Open layout       레이아웃으로 세션 시작
+;;   SPC \ z a   Attach session    세션 연결
+;;   SPC \ z l   List sessions     세션 목록
+;;   SPC \ z k   Kill session      세션 종료
 ;;
 ;; 패인 제어:
-;;   SPC 3 z n   New pane          새 패인
-;;   SPC 3 z f   Floating pane     플로팅 패인
-;;   SPC 3 z r   Run command       명령 실행
-;;   SPC 3 z s   Send text         텍스트 전송
-;;   SPC 3 z d   Dump screen       출력 캡처
+;;   SPC \ z n   New pane          새 패인
+;;   SPC \ z f   Floating pane     플로팅 패인
+;;   SPC \ z r   Run command       명령 실행
+;;   SPC \ z s   Send text         텍스트 전송
+;;   SPC \ z d   Dump screen       출력 캡처
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 현재 제약 및 tmux와의 차이
@@ -439,7 +439,7 @@ AGENTS는 ((name1 . cmd1) (name2 . cmd2) ...) 형식."
 ;;;; Keybindings
 
 (map! :leader
-      (:prefix "3"
+      (:prefix "\\"
        (:prefix ("z" . "zellij")
         ;; Session
         :desc "Open layout"       "o" #'+zellij-open-layout

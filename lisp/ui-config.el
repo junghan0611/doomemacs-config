@@ -16,16 +16,8 @@
 ;; - Visual effects (pulse-line)
 ;; - Which-key
 
+
 ;;; Code:
-
-;;;; startup and dashboard
-
-;; (setq initial-scratch-message user-initial-scratch-message)
-
-;; ;; When I bring up Doom's scratch buffer with SPC x, it's often to play with
-;; ;; elisp or note something down (that isn't worth an entry in my notes). I can
-;; ;; do both in `lisp-interaction-mode'.
-;; (setq doom-scratch-initial-major-mode 'emacs-lisp-mode)
 
 ;;;; Dashboard - Terminal Optimized
 
@@ -90,92 +82,41 @@
    ;;  which-key-use-C-h-commands t) ; paging key maps
    ))
 
-;;;; doom-modeline
-
-(setq doom-modeline-time nil)
-(setq doom-modeline-time-icon nil)
-(setq doom-modeline-minor-modes nil)
-(setq doom-modeline-support-imenu t)
-(setq doom-modeline-enable-word-count nil)
-(setq doom-modeline-continuous-word-count-modes '(markdown-mode gfm-mod)) ; org-mode
-
-(after! doom-modeline
-  (setq doom-modeline-icon nil)
-  (setq doom-modeline-modal-icon nil)
-  (setq doom-modeline-major-mode-icon nil)
-  (setq doom-modeline-buffer-modification-icon nil)
-
-  (setq doom-modeline-height 35)
-  (setq doom-modeline-bar-width 4)
-
-  (setq doom-modeline-persp-name t) ; doom nil
-  (setq doom-modeline-buffer-file-name-style 'truncate-upto-project) ; default 'auto
-
-  (setq doom-modeline-repl t)
-  (setq doom-modeline-github t)
-  (setq doom-modeline-lsp t)
-  (setq doom-modeline-indent-info t)
-  (setq doom-modeline-hud nil))
-
-;;;; outli
-
-(use-package! outli
-  :defer 1
-  :init
-  (setq outli-speed-commands nil)
-  (add-hook 'prog-mode-hook #'outli-mode)
-  (add-hook 'conf-mode-hook #'outli-mode)
-  :config
-  ;; (add-to-list 'outli-heading-config '(tex-mode "%%" ?% t))
-  (add-to-list 'outli-heading-config '(js2-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(js-ts-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(zig-ts-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(typescript-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(typescript-ts-mode "//" ?\/ t))
-  (add-to-list 'outli-heading-config '(python-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(python-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(yaml-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(yaml-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(awk-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(awk-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(elixir-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(elixir-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(sh-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(bash-ts-mode "##" ?# t))
-  (add-to-list 'outli-heading-config '(clojure-mode ";;" ?\; t))
-  (add-to-list 'outli-heading-config '(clojurescript-mode ";;" ?\; t))
-  )
-
 ;;;; themes
 
 ;; doom-themes
 (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
       doom-themes-enable-italic nil) ; if nil, italics is universally disabled
 
-;; 터미널에서 테마 색상 충돌 방지
+;;;; Terminal for THEME
+
+;; 터미널 배경 투명화 함수
+(defun my/terminal-transparent-background (&optional _theme)
+  "터미널에서 Emacs 배경을 투명하게 설정.
+Ghostty 등 터미널의 배경색/투명도를 그대로 사용하게 함.
+_THEME 인자는 `enable-theme-functions' 호환용."
+  (unless (display-graphic-p)
+    ;; 모든 터미널 프레임에 적용
+    (dolist (frame (frame-list))
+      (unless (display-graphic-p frame)
+        (set-face-background 'default "unspecified-bg" frame)
+        (set-face-background 'line-number "unspecified-bg" frame)
+        (set-face-background 'line-number-current-line "unspecified-bg" frame)
+        (set-face-background 'fringe "unspecified-bg" frame)))))
+
+;; 터미널 기본 설정
 (unless (display-graphic-p)
-  ;; 터미널에서 배경색 투명도 유지
+  ;; 터미널에서 dark 테마 기본 사용
   (setq-default frame-background-mode 'dark)
-  ;; 터미널 색상 팔레트 활용
-  (setq xterm-color-preserve-properties t)
 
   ;; Ghostty 터미널 전용 설정
   (cond
    ;; xterm-ghostty terminfo 사용시
    ((string-match "ghostty" (or (getenv "TERM") ""))
-    ;; Ghostty는 24비트 트루컬러 지원 (이미 terminfo에 정의됨)
+    ;; Ghostty는 24비트 트루컬러 지원
     (setenv "COLORTERM" "truecolor")
-    ;; 배경 투명도 유지
-    (set-face-background 'default "unspecified-bg" nil)
-    ;; 터미널 자체 색상 테마 우선
-    (setq-default terminal-ansi-color-vector
-                  [unspecified "#282a36" "#ff5555" "#50fa7b" "#f1fa8c"
-                               "#6272a4" "#ff79c6" "#8be9fd" "#f8f8f2"])
-    ;; Ghostty는 256색상 이상 지원 (terminfo pairs=0x7fff)
-    (setq xterm-color-use-bold-for-bright nil)
     ;; Ghostty 최적화 설정
-    (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-direct"))
-    )
+    (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-direct")))
 
    ;; 일반 256color 터미널
    ((string-match "256color" (or (getenv "TERM") ""))
@@ -184,14 +125,69 @@
            "#81A1C1" "#B48EAD" "#88C0D0" "#E5E9F0"])
     (setq xterm-color-names
           ["#2E3440" "#BF616A" "#A3BE8C" "#EBCB8B"
-           "#81A1C1" "#B48EAD" "#88C0D0" "#D8DEE9"]))))
+           "#81A1C1" "#B48EAD" "#88C0D0" "#D8DEE9"])))
 
-(defun my/doom-themes-toggle ()
+  ;; enable-theme-functions 사용 (Emacs 29+, doom-load-theme-hook보다 확실)
+  ;; depth 100 = 테마 로드 완료 후 가장 마지막에 실행
+  (add-hook 'enable-theme-functions #'my/terminal-transparent-background 100)
+
+  ;; 새 프레임 생성시에도 적용
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (unless (display-graphic-p frame)
+                (run-with-timer 0.1 nil #'my/terminal-transparent-background)))))
+
+;;;; modus-themes
+
+(use-package! doric-themes
+  :commands (doric-themes-load-random))
+
+(use-package! ef-themes
+  :init
+  (ef-themes-take-over-modus-themes-mode 1))
+
+(use-package! modus-themes
+  :init
+  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi))
+  :config
+  (setq modus-themes-italic-constructs nil))
+
+;;;###autoload
+(defun my/themes-toggle ()
   (interactive)
-  (setq doom-theme 'doom-dracula)
-  (doom-themes-visual-bell-config)
-  (load-theme doom-theme t))
-(add-hook 'doom-first-input-hook #'my/doom-themes-toggle)
+  ;; Finally, load your theme of choice (or a random one with
+  (ef-themes-load-random-dark)
+  ;; 터미널에서 테마 로드 후 배경 투명화 (확실한 적용)
+  (unless (display-graphic-p)
+    (run-with-timer 0.05 nil #'my/terminal-transparent-background)))
+
+(add-hook! 'doom-first-input-hook #'my/themes-toggle)
+
+;;;; spacious-padding
+
+(use-package! spacious-padding
+  :if window-system ; important
+  :hook (server-after-make-frame . spacious-padding-mode)
+  :init
+  (setq spacious-padding-subtle-mode-line
+        '( :mode-line-active spacious-padding-subtle-mode-line-active
+           :mode-line-inactive spacious-padding-subtle-mode-line-inactive))
+  (setq spacious-padding-widths
+        '(:header-line-width 4
+          :mode-line-width 4 ; 6
+          :tab-width 4 ; sync mode-line-width for keycast-tab-bar
+          :internal-border-width 20 ; 15
+          :right-divider-width 30 ; 30
+          :scroll-bar-width 8
+          :fringe-width 8
+          ))
+  (add-hook! 'doom-load-theme-hook #'spacious-padding-mode)
+  :config
+  ;; (when (fboundp 'tooltip-mode) (tooltip-mode 1))
+  ;; (when (fboundp 'tool-bar-mode) (tool-bar-mode 1))
+  ;; (when (display-graphic-p) ; gui
+  ;;   (menu-bar-mode +1)) ; disable <f10>
+  (spacious-padding-mode +1))
 
 ;;;; popup
 
@@ -205,6 +201,15 @@
       ("^\\*eww.*" :size 82 :side left :modeline t :select t :quit nil :ttl t) ; jh
       )
     )
+  )
+
+;;;; :ui vc-gutter diff-hl
+
+(after! diff-hl
+  (setq diff-hl-disable-on-remote t) ; default nil
+  (setq diff-hl-flydiff-delay 1.0)  ; doom 0.5, default: 0.3
+  ;; (remove-hook 'diff-hl-mode-hook #'diff-hl-flydiff-mode)
+  ;; (remove-hook 'diff-hl-flydiff-mode-hook #'+vc-gutter-init-flydiff-mode-h)
   )
 
 ;;; provide

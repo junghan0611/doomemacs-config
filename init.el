@@ -63,10 +63,10 @@
        ;;tabs            ; a tab bar for Emacs
        ;;treemacs        ; a project drawer, like neotree but cooler
        vc-gutter         ; +pretty - vcs diff in the fringe
-       vi-tilde-fringe   ; fringe tildes to mark beyond EOB
+       ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB
        (window-select +numbers) ; visually switch windows
        workspaces        ; tab emulation, persistence & separate workspaces
-       zen            ; distraction-free coding or writing
+       ;; zen            ; distraction-free coding or writing
 
        :editor
        (evil +everywhere); come to the dark side, we have cookies
@@ -150,6 +150,7 @@
        (yaml +tree-sitter) ; JSON, but readable
        (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
+       (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
 
        (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
        (scheme +mit) ;; +racket ; a fully conniving family of lisps

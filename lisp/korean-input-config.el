@@ -1,4 +1,4 @@
-;;; $DOOMDIR/lisp/korean-input.el --- Korean Input NFD to NFC Normalization -*- lexical-binding: t; -*-
+;;; $DOOMDIR/lisp/korean-input-config.el --- Korean Input NFD to NFC Normalization -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -302,18 +302,23 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
   (global-korean-nfc-mode 1)
   (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
 
+(add-hook 'after-make-frame-functions
+          (lambda (frame)
+            (unless (display-graphic-p frame)
+              (korean-nfc-mode 1))))
+
 ;;; 8. 키바인딩 (옵션)
 
-(defun korean/setup-keybindings ()
-  "한글 변환 관련 키바인딩 설정"
-  (when (featurep 'evil)
-    ;; SPC m k로 korean 네임스페이스
-    (map! :localleader
-          :desc "한글 자모 → 음절 변환" "7 n" #'korean/convert-jamo-to-syllable
-          :desc "한글 NFC 모드 토글" "7 t" #'korean-nfc-mode)))
+;; (defun korean/setup-keybindings ()
+;;   "한글 변환 관련 키바인딩 설정"
+;;   (when (featurep 'evil)
+;;     ;; SPC m k로 korean 네임스페이스
+;;     (map! :localleader
+;;           :desc "한글 자모 → 음절 변환" "7 n" #'korean/convert-jamo-to-syllable
+;;           :desc "한글 NFC 모드 토글" "7 t" #'korean-nfc-mode)))
 
-(with-eval-after-load 'doom-keybinds
-  (korean/setup-keybindings))
+;; (with-eval-after-load 'doom-keybinds
+;;   (korean/setup-keybindings))
 
 ;;; 9. KKP (Kitty Keyboard Protocol) 한영 키 지원
 ;;
@@ -326,139 +331,140 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
 ;;   M-x korean/test-raw-input → 키 누르면 hex 시퀀스 확인
 ;;   M-x kkp-status → KKP 활성화 상태 확인
 
-(defun korean/test-raw-input ()
-  "터미널에서 raw 키 입력 확인 (input-decode-map 우회).
-새 키 추가 시 이 함수로 hex 시퀀스를 확인한 후 아래에 매핑 추가."
-  (interactive)
-  (let ((input-decode-map (make-sparse-keymap))
-        (events nil)
-        (key (read-event "Press a key (raw mode): "))
-        (timeout 0.5)
-        evt)
-    (push key events)
-    (while (setq evt (read-event nil nil timeout))
-      (push evt events)
-      (setq timeout 0.1))
-    (setq events (nreverse events))
-    (message "RAW events: %s\nHex: %s"
-             events
-             (mapconcat (lambda (e) (format "0x%x" e)) events " "))))
+;; (defun korean/test-raw-input ()
+;;   "터미널에서 raw 키 입력 확인 (input-decode-map 우회).
+;; 새 키 추가 시 이 함수로 hex 시퀀스를 확인한 후 아래에 매핑 추가."
+;;   (interactive)
+;;   (let ((input-decode-map (make-sparse-keymap))
+;;         (events nil)
+;;         (key (read-event "Press a key (raw mode): "))
+;;         (timeout 0.5)
+;;         evt)
+;;     (push key events)
+;;     (while (setq evt (read-event nil nil timeout))
+;;       (push evt events)
+;;       (setq timeout 0.1))
+;;     (setq events (nreverse events))
+;;     (message "RAW events: %s\nHex: %s"
+;;              events
+;;              (mapconcat (lambda (e) (format "0x%x" e)) events " "))))
 
-(defun korean/setup-kkp-hangul-key ()
-  "KKP 키 매핑 설정: S-SPC, Alt_R (한글 키), M-v.
+;; (defun korean/setup-kkp-hangul-key ()
+;;   "KKP 키 매핑 설정: S-SPC, Alt_R (한글 키), M-v.
 
-주의:
-  - report-all-keys-as-escape-codes 플래그 사용 금지!
-    (a-z 키가 escape code로 전송되면 한글 입력 불가)
-  - modifyOtherKeys 호환 시퀀스만 사용
-  - 시스템 언어 en일 때 한글 키는 Alt_R로 전송됨"
-  (when (and (featurep 'kkp)
-             (not (display-graphic-p)))
+;; 주의:
+;;   - report-all-keys-as-escape-codes 플래그 사용 금지!
+;;     (a-z 키가 escape code로 전송되면 한글 입력 불가)
+;;   - modifyOtherKeys 호환 시퀀스만 사용
+;;   - 시스템 언어 en일 때 한글 키는 Alt_R로 전송됨"
+;;   (when (and (featurep 'kkp)
+;;              (not (display-graphic-p)))
 
-    ;; ========================================
-    ;; Kitty term-keys 시퀀스 매핑 (함수 방식)
-    ;; ========================================
+;;     ;; ========================================
+;;     ;; Kitty term-keys 시퀀스 매핑 (함수 방식)
+;;     ;; ========================================
 
-    ;; ESC 뒤에 오는 시퀀스를 읽어서 처리하는 함수
-    (define-key input-decode-map [?\e ?\x1f]
-      (lambda (&optional _prompt)
-        (let ((char (read-event nil nil 0.01)))
-          (cond
-           ;; P! 시퀀스 시작: S-SPC 또는 Hangul
-           ((eq char ?P)
-            (let ((next (read-event nil nil 0.01)))
-              (cond
-               ;; S-SPC: \x1b\x1fP!\x1f
-               ((eq next ?!)
-                (let ((end (read-event nil nil 0.01)))
-                  (if (eq end ?\x1f)
-                      (kbd "S-SPC")
-                    [?\e ?\x1f ?P ?! end])))
-               ;; Hangul: \x1b\x1fP`\x1f (96 = 백틱)
-               ((eq next 96)
-                (let ((end (read-event nil nil 0.01)))
-                  (if (eq end ?\x1f)
-                      (kbd "<Hangul>")
-                    [?\e ?\x1f ?P 96 end])))
-               ;; 다른 시퀀스
-               (t [?\e ?\x1f ?P next]))))
-           ;; 다른 시퀀스는 그대로 전달
-           (t [?\e ?\x1f char])))))
+;;     ;; ESC 뒤에 오는 시퀀스를 읽어서 처리하는 함수
+;;     (define-key input-decode-map [?\e ?\x1f]
+;;                 (lambda (&optional _prompt)
+;;                   (let ((char (read-event nil nil 0.01)))
+;;                     (cond
+;;                      ;; P! 시퀀스 시작: S-SPC 또는 Hangul
+;;                      ((eq char ?P)
+;;                       (let ((next (read-event nil nil 0.01)))
+;;                         (cond
+;;                          ;; S-SPC: \x1b\x1fP!\x1f
+;;                          ((eq next ?!)
+;;                           (let ((end (read-event nil nil 0.01)))
+;;                             (if (eq end ?\x1f)
+;;                                 (kbd "S-SPC")
+;;                               [?\e ?\x1f ?P ?! end])))
+;;                          ;; Hangul: \x1b\x1fP`\x1f (96 = 백틱)
+;;                          ((eq next 96)
+;;                           (let ((end (read-event nil nil 0.01)))
+;;                             (if (eq end ?\x1f)
+;;                                 (kbd "<Hangul>")
+;;                               [?\e ?\x1f ?P 96 end])))
+;;                          ;; 다른 시퀀스
+;;                          (t [?\e ?\x1f ?P next]))))
+;;                      ;; 다른 시퀀스는 그대로 전달
+;;                      (t [?\e ?\x1f char])))))
 
-    ;; M-v: Meta+v (필요 시 추가)
-    ;; 대부분 터미널에서 M-v는 이미 작동하므로 명시적 매핑 불필요
-    ;; 작동 안 하면 아래 주석 해제:
-    ;; (define-key input-decode-map "\e[27;3;118~" (kbd "M-v"))  ; modifyOtherKeys
+;;     ;; M-v: Meta+v (필요 시 추가)
+;;     ;; 대부분 터미널에서 M-v는 이미 작동하므로 명시적 매핑 불필요
+;;     ;; 작동 안 하면 아래 주석 해제:
+;;     ;; (define-key input-decode-map "\e[27;3;118~" (kbd "M-v"))  ; modifyOtherKeys
 
-    ;; Modifier 키 단독 입력 무시 (undefined 메시지 방지)
-    ;; (global-set-key (kbd "<SHIFT_L>") 'ignore)
-    ;; (global-set-key (kbd "<SHIFT_R>") 'ignore)
-    ;; (global-set-key (kbd "<Control_L>") 'ignore)
-    ;; (global-set-key (kbd "<Control_R>") 'ignore)
-    ;; (global-set-key (kbd "<Alt_L>") 'ignore)
+;;     ;; Modifier 키 단독 입력 무시 (undefined 메시지 방지)
+;;     ;; (global-set-key (kbd "<SHIFT_L>") 'ignore)
+;;     ;; (global-set-key (kbd "<SHIFT_R>") 'ignore)
+;;     ;; (global-set-key (kbd "<Control_L>") 'ignore)
+;;     ;; (global-set-key (kbd "<Control_R>") 'ignore)
+;;     ;; (global-set-key (kbd "<Alt_L>") 'ignore)
 
-    (message "✅ KKP: S-SPC, Alt_R (Hangul) 매핑 완료")))
+;;     (message "✅ KKP: S-SPC, Alt_R (Hangul) 매핑 완료")))
 
 ;; KKP 로드 후 자동 실행
-(with-eval-after-load 'kkp
-  (korean/setup-kkp-hangul-key))
+;; (with-eval-after-load 'kkp
+;;   (korean/setup-kkp-hangul-key))
 
-(add-hook 'tty-setup-hook #'korean/setup-kkp-hangul-key)
+;; (add-hook 'tty-setup-hook #'korean/setup-kkp-hangul-key)
 
 ;;;; evil + hangul
 
 ;; 4. Evil 모드 연동: 자동 한영 전환
-(after! evil
-  ;; 버퍼별 입력 메서드 상태 저장
-  (defvar-local my/saved-input-method nil
-    "Normal 모드 진입 전 입력 메서드 상태")
+;; (after! evil
+;;   ;; 버퍼별 입력 메서드 상태 저장
+;;   (defvar-local my/saved-input-method nil
+;;     "Normal 모드 진입 전 입력 메서드 상태")
 
-  (defun my/evil-normal-state-korean-off (&rest _)
-    "Normal 모드 진입: 한글 OFF, 상태 저장"
-    (when (and (boundp 'current-input-method) current-input-method)
-      (setq my/saved-input-method current-input-method)
-      (deactivate-input-method)))
+;;   (defun my/evil-normal-state-korean-off (&rest _)
+;;     "Normal 모드 진입: 한글 OFF, 상태 저장"
+;;     (when (and (boundp 'current-input-method) current-input-method)
+;;       (setq my/saved-input-method current-input-method)
+;;       (deactivate-input-method)))
 
-  (defun my/evil-insert-state-korean-restore ()
-    "Insert 모드 진입: 이전 한글 상태 복원"
-    (when (and my/saved-input-method
-               (not current-input-method))
-      (activate-input-method my/saved-input-method)))
+;;   (defun my/evil-insert-state-korean-restore ()
+;;     "Insert 모드 진입: 이전 한글 상태 복원"
+;;     (when (and my/saved-input-method
+;;                (not current-input-method))
+;;       (activate-input-method my/saved-input-method)))
 
-  ;; Hook 등록
-  (add-hook 'evil-normal-state-entry-hook #'my/evil-normal-state-korean-off)
-  (add-hook 'evil-insert-state-entry-hook #'my/evil-insert-state-korean-restore)
+;;   ;; Hook 등록
+;;   (add-hook 'evil-normal-state-entry-hook #'my/evil-normal-state-korean-off)
+;;   (add-hook 'evil-insert-state-entry-hook #'my/evil-insert-state-korean-restore)
 
-  ;; Evil escape 후에도 확실히 끄기
-  (advice-add 'evil-normal-state :after #'my/evil-normal-state-korean-off)
+;;   ;; Evil escape 후에도 확실히 끄기
+;;   (advice-add 'evil-normal-state :after #'my/evil-normal-state-korean-off)
 
-  ;; Shift+Space 메시지 (motion/normal/visual 모드에서)
-  (mapc (lambda (mode)
-          (let ((keymap (intern (format "evil-%s-state-map" mode))))
-            (define-key (symbol-value keymap) [?\S- ]
-                        #'(lambda () (interactive)
-                            (message
-                             (format "Input method is disabled in %s state." evil-state))))))
-        '(motion normal visual))
-  )
+;;   ;; Shift+Space 메시지 (motion/normal/visual 모드에서)
+;;   (mapc (lambda (mode)
+;;           (let ((keymap (intern (format "evil-%s-state-map" mode))))
+;;             (define-key (symbol-value keymap) [?\S- ]
+;;                         #'(lambda () (interactive)
+;;                             (message
+;;                              (format "Input method is disabled in %s state." evil-state))))))
+;;         '(motion normal visual))
+;;   )
 
 ;; 5. Emacs 입력 메서드 추가 최적화
-(with-eval-after-load 'quail
-  ;; 한글 입력 모드 표시 (모드라인)
-  (setq-default mode-line-mule-info
-    '((:eval (if current-input-method
-                 (propertize " [한] " 'face '(:foreground "green"))
-               " [En] "))))
+;; (with-eval-after-load 'quail
+;;   ;; 한글 입력 모드 표시 (모드라인)
+;;   (setq-default mode-line-mule-info
+;;                 '((:eval (if current-input-method
+;;                              (propertize " [한] " 'face '(:foreground "green"))
+;;                            " [En] "))))
 
-  ;; 2벌식 기본 사용 (3벌식 원하면 변경)
-  ;; (setq default-korean-keyboard "390") ; 3벌식 최종
-  )
+;;   ;; 2벌식 기본 사용 (3벌식 원하면 변경)
+;;   ;; (setq default-korean-keyboard "390") ; 3벌식 최종
+;;   )
 
 ;; 6. 안드로이드 Emacs 특화 설정 (해당시)
-(when (string-equal system-type "android")
-  ;; Android Emacs의 IME 간섭 차단
-  (setq overriding-text-conversion-style nil)
-  (setq-default text-conversion-style nil))
+;; (when (string-equal system-type "android")
+;;   ;; Android Emacs의 IME 간섭 차단
+;;   (setq overriding-text-conversion-style nil)
+;;   (setq-default text-conversion-style nil))
 
-(provide 'korean-input)
-;;; korean-input.el ends here
+(provide 'korean-input-config)
+
+;;; korean-input-config.el ends here

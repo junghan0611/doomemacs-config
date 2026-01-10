@@ -7,217 +7,145 @@
 
 ;;; Commentary:
 
-;; Claude Code 멀티에이전트 오케스트레이션
+;; Claude Code 멀티에이전트 오케스트레이션 (별도 세션 방식)
 ;;
 ;; ┌─────────────────────────────────────────────────────────────────┐
-;; │ Phase 1: tmux 기반 (현재)                                       │
-;; │   - Doom +tmux 함수 + emamux 패키지                             │
-;; │   - 에이전트 레지스트리로 타겟팅                                │
-;; │   - 단방향: Emacs → tmux pane (send-keys)                       │
+;; │ 아키텍처: 완전 격리된 별도 세션                                 │
 ;; │                                                                  │
-;; │ Phase 2: Zellij 마이그레이션 (예정)                             │
-;; │   - zellij pipe + Plugin API (양방향)                           │
-;; │   - Orchestrator 서버                                           │
+;; │   tmux attach -t claude-pm    ← PM 에이전트                     │
+;; │   tmux attach -t claude-code  ← 코딩 에이전트                   │
+;; │   tmux attach -t claude-test  ← 테스트 에이전트                 │
+;; │                                                                  │
+;; │ 장점:                                                           │
+;; │   - Claude Code 하나 멈춰도 다른 세션에 영향 없음               │
+;; │   - 각 터미널 창에서 독립적으로 attach 가능                     │
+;; │   - 간단한 세션 이름으로 관리                                   │
 ;; └─────────────────────────────────────────────────────────────────┘
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 사용법
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;;
-;; 1. tmux 세션 생성:
-;;    $ tmux new-session -s agents
+;; 1. Emacs에서 세션 생성:
+;;    SPC \ t c  →  에이전트 선택 (pm, code, test, debug)
 ;;
-;; 2. pane 분할 (예: 4개):
-;;    Ctrl-b %  (수직) 또는 Ctrl-b " (수평)
-;;
-;; 3. 각 pane에서 claude 실행:
+;; 2. 터미널에서 attach 후 프로젝트로 이동:
+;;    $ tmux attach -t claude-pm
+;;    $ cd ~/repos/work/sks-hub-zig
 ;;    $ claude
 ;;
-;; 4. Emacs에서 에이전트에 메시지 전송:
-;;    SPC 3 t s  →  에이전트 선택 → 메시지 입력
+;; 3. Emacs에서 에이전트에 메시지 전송:
+;;    SPC \ t s  →  에이전트 선택 → 메시지 입력
 ;;
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; tmux target 형식
+;; 키바인딩 (SPC \ t ...)
 ;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;;
-;; 형식: session:window.pane
-;;
-;; 예시:
-;;   agents:0.0  → 세션 "agents", 윈도우 0, pane 0
-;;   0:1.1       → 세션 "0", 윈도우 1, pane 1
-;;
-;; 확인 명령:
-;;   $ tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}'
-;;
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; Doom +tmux 함수 (tools/tmux 모듈)
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;
-;; 핵심 함수:
-;;   (+tmux COMMAND &rest ARGS)     tmux 명령 실행
-;;   (+tmux/run COMMAND)            focused pane에 명령 전송
-;;   (+tmux/send-region BEG END)    선택 영역 전송
-;;   (+tmux/rerun)                  마지막 명령 재실행
-;;   (+tmux/cd DIRECTORY)           pane의 pwd 변경
-;;   (+tmux/cd-to-here)             현재 버퍼 디렉토리로 cd
-;;   (+tmux/cd-to-project)          프로젝트 루트로 cd
-;;
-;; 조회 함수:
-;;   (+tmux-list-sessions)          세션 목록
-;;   (+tmux-list-windows SESSION)   윈도우 목록
-;;   (+tmux-list-panes WINDOW)      pane 목록
-;;
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; emamux 패키지 함수
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;
-;; 명령 전송:
-;;   (emamux:send-command)          특정 target에 명령 전송 (C-u로 target 변경)
-;;   (emamux:run-command)           runner pane에서 명령 실행
-;;   (emamux:run-last-command)      마지막 명령 재실행
-;;
-;; 클립보드:
-;;   (emamux:copy-kill-ring)        Emacs kill-ring → tmux 버퍼
-;;   (emamux:yank-from-list-buffers) tmux 버퍼 → Emacs
-;;
-;; Runner pane 관리:
-;;   (emamux:zoom-runner)           runner pane 확대
-;;   (emamux:inspect-runner)        runner pane 진입 (copy mode)
-;;   (emamux:interrupt-runner)      실행 중인 명령 중단 (C-c)
-;;   (emamux:close-runner-pane)     runner pane 닫기
-;;   (emamux:close-panes)           모든 다른 pane 닫기
-;;
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 키바인딩 (SPC 3 t ...)
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; 세션 관리:
+;;   SPC \ t c   Create session     세션 생성 (detached)
+;;   SPC \ t l   List sessions      세션 목록
+;;   SPC \ t a   Attach (copy)      attach 명령 복사
+;;   SPC \ t +   Add agent          새 에이전트 추가
 ;;
 ;; Claude 에이전트:
-;;   SPC 3 t s   Send to agent      에이전트에 텍스트 전송
-;;   SPC 3 t r   Send region        선택 영역 전송
-;;   SPC 3 t b   Send buffer        버퍼 전체 전송
-;;   SPC 3 t d   Send defun         현재 함수 전송
-;;   SPC 3 t i   Assign issue       bd 이슈 할당
-;;   SPC 3 t n   Assign next        다음 ready 이슈 할당
-;;   SPC 3 t l   List panes         pane 목록
-;;   SPC 3 t f   Focus agent        에이전트로 포커스
-;;   SPC 3 t c   Capture pane       pane 출력 캡처 (raw)
-;;   SPC 3 t p   Select pane        pane 선택 (completing-read)
-;;   SPC 3 t v   Show conversation  대화 내용 정리 표시
-;;   SPC 3 t ?   Agent status       에이전트 상태 확인
-;;   SPC 3 t e   Extract response   마지막 Claude 응답 추출
-;;   SPC 3 t E   Extract input      마지막 사용자 입력 추출
+;;   SPC \ t s   Send to agent      에이전트에 텍스트 전송
+;;   SPC \ t r   Send region        선택 영역 전송
+;;   SPC \ t b   Send buffer        버퍼 전체 전송
+;;   SPC \ t d   Send defun         현재 함수 전송
+;;   SPC \ t i   Assign issue       bd 이슈 할당
+;;   SPC \ t n   Assign next        다음 ready 이슈 할당
+;;   SPC \ t o   Capture output     세션 출력 캡처
+;;   SPC \ t v   Show conversation  대화 내용 정리 표시
+;;   SPC \ t ?   Agent status       에이전트 상태 확인
+;;
+;; 추출:
+;;   SPC \ t e   Extract response   마지막 Claude 응답 추출
+;;   SPC \ t E   Extract input      마지막 사용자 입력 추출
 ;;
 ;; 권한 프롬프트 처리:
-;;   SPC 3 t a   Pending prompts    대기 중인 프롬프트 표시
-;;   SPC 3 t y   Approve            에이전트 승인 (y 전송)
-;;   SPC 3 t N   Reject             에이전트 거부 (n 전송)
-;;   SPC 3 t Y   Approve all        모든 에이전트 일괄 승인
+;;   SPC \ t p   Pending prompts    대기 중인 프롬프트 표시
+;;   SPC \ t y   Approve            에이전트 승인 (y 전송)
+;;   SPC \ t N   Reject             에이전트 거부 (n 전송)
+;;   SPC \ t Y   Approve all        모든 에이전트 일괄 승인
 ;;
 ;; emamux:
-;;   SPC 3 t m s   emamux:send-command
-;;   SPC 3 t m r   emamux:run-command
-;;   SPC 3 t m l   emamux:run-last-command
-;;   SPC 3 t m y   emamux:yank-from-list-buffers
-;;   SPC 3 t m c   emamux:copy-kill-ring
-;;
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 한계 (Phase 2에서 해결 예정)
-;; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;
-;; - 단방향 통신만 가능 (Emacs → tmux)
-;; - pane 출력 실시간 수신 불가 (capture-pane은 스냅샷)
-;; - 에이전트 상태 모니터링 수동
-;;
-;; Zellij로 마이그레이션 시:
-;; - zellij pipe로 양방향 통신
-;; - Plugin API로 pane 출력 스트리밍
-;; - Orchestrator 서버로 에이전트 상태 관리
+;;   SPC \ t m s   emamux:send-command
+;;   SPC \ t m r   emamux:run-command
+;;   SPC \ t m l   emamux:run-last-command
 
 ;;; Code:
 
 ;;;; Variables
 
 (defvar +claude-agents
-  '(("pm"    . "agents:0.0")   ; PM 에이전트
-    ("code"  . "agents:0.1")   ; 코딩 에이전트
-    ("test"  . "agents:0.2")   ; 테스트 에이전트
-    ("debug" . "agents:0.3"))  ; 디버그 에이전트
+  '(("pm"    . "claude-pm")    ; PM 에이전트 (별도 세션)
+    ("code"  . "claude-code")  ; 코딩 에이전트 (별도 세션)
+    ("test"  . "claude-test")  ; 테스트 에이전트 (별도 세션)
+    ("debug" . "claude-debug"));; 디버그 에이전트 (별도 세션)
   "Claude Code 에이전트 레지스트리.
-각 에이전트는 (NAME . TMUX-TARGET) 형식.
-TMUX-TARGET은 'session:window.pane' 형식.
+각 에이전트는 (NAME . SESSION-NAME) 형식.
+완전 격리된 별도 세션으로 운영.
 
-현재 세션에 맞게 수정:
-  (setq +claude-agents
-        \\='((\"pm\" . \"0:1.0\")
-          (\"code\" . \"0:1.1\")))")
+사용법:
+  tmux attach -t claude-pm    ; PM 세션 연결
+  tmux attach -t claude-code  ; Code 세션 연결
+
+동적 추가:
+  (add-to-list '+claude-agents '(\"review\" . \"claude-review\"))")
 
 (defvar +claude-default-agent "pm"
   "기본 에이전트 이름.")
 
-(defvar +claude-session-name "agents"
-  "Claude Code 에이전트용 tmux 세션 이름.")
+(defvar +claude-session-prefix "claude-"
+  "Claude Code 에이전트 세션 이름 접두사.")
 
 ;;;; Core Functions
 
-(defun +claude--pane-exists-p (target)
-  "TARGET pane이 존재하는지 확인."
+(defun +claude--session-exists-p (session)
+  "SESSION이 존재하는지 확인."
   (= 0 (call-process "tmux" nil nil nil
-                     "has-session" "-t" target)))
+                     "has-session" "-t" session)))
 
-(defun +claude--ensure-pane (agent-name)
-  "AGENT-NAME의 pane이 없으면 생성하고 claude 실행.
-반환값: tmux target 문자열"
-  (let* ((target (cdr (assoc agent-name +claude-agents)))
-         (session (car (split-string target ":")))
-         (window-pane (cadr (split-string target ":"))))
-    (unless target
+(defun +claude--ensure-session (agent-name)
+  "AGENT-NAME의 세션이 없으면 생성 (detached).
+Claude 실행은 하지 않음 - 사용자가 직접 cd 후 실행.
+반환값: 세션 이름"
+  (let ((session (cdr (assoc agent-name +claude-agents))))
+    (unless session
       (error "Unknown agent: %s" agent-name))
 
-    ;; 1. 세션 확인/생성
-    (unless (+claude--pane-exists-p session)
+    ;; 세션 확인/생성
+    (unless (+claude--session-exists-p session)
       (call-process "tmux" nil nil nil "new-session" "-d" "-s" session)
-      (message "Created tmux session: %s" session))
+      (message "Created tmux session: %s (attach with: tmux attach -t %s)"
+               session session))
+    session))
 
-    ;; 2. pane 확인/생성
-    (unless (+claude--pane-exists-p target)
-      (call-process "tmux" nil nil nil "split-window" "-t" session)
-      (message "Created pane: %s" target))
-
-    ;; 3. claude 실행 여부 확인
-    (let ((cmd (shell-command-to-string
-                (format "tmux display-message -p -t %s '#{pane_current_command}'"
-                        target))))
-      (unless (string-match-p "claude" cmd)
-        (call-process "tmux" nil nil nil "send-keys" "-t" target "claude" "Enter")
-        (message "Started claude in %s" target)
-        (sleep-for 1))) ; claude 시작 대기
-
-    target))
-
-(defun +claude--get-target (agent-name)
-  "AGENT-NAME에 해당하는 tmux target 반환."
+(defun +claude--get-session (agent-name)
+  "AGENT-NAME에 해당하는 세션 이름 반환."
   (or (cdr (assoc agent-name +claude-agents))
       (error "Unknown agent: %s" agent-name)))
 
-(defun +claude--send-keys (target text &optional no-enter)
-  "TARGET pane에 TEXT 전송. NO-ENTER가 nil이면 Enter도 전송."
-  (let ((cmd (format "send-keys -t %s %s %s"
-                     (shell-quote-argument target)
-                     (shell-quote-argument text)
-                     (if no-enter "" "Enter"))))
-    (+tmux cmd)))
+
+
+(defun +claude--send-keys (session text &optional no-enter)
+  "SESSION에 TEXT 전송. NO-ENTER가 nil이면 Enter도 전송."
+  (let ((args (list "send-keys" "-t" session text)))
+    (unless no-enter
+      (setq args (append args '("Enter"))))
+    (apply #'call-process "tmux" nil nil nil args)))
 
 ;;;; Interactive Commands - Send
 
 ;;;###autoload
 (defun +claude-send-to-agent (agent-name text)
   "AGENT-NAME에게 TEXT 전송.
-pane이 없으면 자동으로 생성하고 claude 실행."
+세션이 없으면 자동 생성 (detached)."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)
          (read-string "Message: ")))
-  (let ((target (+claude--ensure-pane agent-name)))
-    (+claude--send-keys target text)
+  (let ((session (+claude--ensure-session agent-name)))
+    (+claude--send-keys session text)
     (message "Sent to %s: %s" agent-name (truncate-string-to-width text 50))))
 
 ;;;###autoload
@@ -231,8 +159,8 @@ prefix arg로 에이전트 선택."
            (completing-read "Agent: " (mapcar #'car +claude-agents) nil t))))
   (let* ((agent (or agent-name +claude-default-agent))
          (text (buffer-substring-no-properties beg end))
-         (target (+claude--get-target agent)))
-    (+claude--send-keys target text)
+         (session (+claude--get-session agent)))
+    (+claude--send-keys session text)
     (message "Region sent to %s (%d chars)" agent (length text))))
 
 ;;;###autoload
@@ -294,53 +222,61 @@ prefix arg로 에이전트 선택."
 ;;;; Interactive Commands - Session Management
 
 ;;;###autoload
-(defun +claude-list-panes ()
-  "모든 tmux pane 목록을 미니버퍼에 표시."
+(defun +claude-list-sessions ()
+  "Claude 에이전트 세션 목록 표시."
   (interactive)
   (let ((output (shell-command-to-string
-                 "tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} - #{pane_current_command}'")))
-    (message "Panes:\n%s" output)))
+                 "tmux list-sessions -F '#{session_name} - #{session_created_string}' 2>/dev/null")))
+    (if (string-empty-p output)
+        (message "No tmux sessions")
+      (message "Sessions:\n%s" output))))
 
 ;;;###autoload
-(defun +claude-focus-agent (agent-name)
-  "AGENT-NAME의 pane으로 포커스 이동."
+(defun +claude-create-session (agent-name)
+  "AGENT-NAME 세션 생성 (detached)."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t)))
-  (let ((target (+claude--get-target agent-name)))
-    (+tmux (format "select-pane -t %s" target))
-    (+tmux (format "select-window -t %s" target))
-    (message "Focused on %s" agent-name)))
+  (+claude--ensure-session agent-name))
+
+;;;###autoload
+(defun +claude-attach-session (agent-name)
+  "AGENT-NAME 세션에 attach하는 명령 표시."
+  (interactive
+   (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t)))
+  (let ((session (+claude--get-session agent-name)))
+    (if (+claude--session-exists-p session)
+        (progn
+          (kill-new (format "tmux attach -t %s" session))
+          (message "Copied: tmux attach -t %s (paste in terminal)" session))
+      (message "Session %s does not exist. Create with SPC \\ t c" session))))
 
 ;;;###autoload
 (defun +claude-capture-pane (&optional agent-name)
-  "AGENT-NAME pane의 출력을 캡처하여 새 버퍼에 표시.
-tmux capture-pane 사용 (스냅샷, 실시간 아님)."
+  "AGENT-NAME 세션의 출력을 캡처하여 새 버퍼에 표시."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
+         (session (+claude--get-session agent))
          (output (shell-command-to-string
-                  (format "tmux capture-pane -t %s -p" target)))
+                  (format "tmux capture-pane -t %s -p 2>/dev/null" session)))
          (buf (get-buffer-create (format "*tmux-capture: %s*" agent))))
-    (with-current-buffer buf
-      (erase-buffer)
-      (insert output)
-      (goto-char (point-min)))
-    (pop-to-buffer buf)
-    (message "Captured %s pane output" agent)))
+    (if (string-empty-p output)
+        (message "Session %s not found or empty" session)
+      (with-current-buffer buf
+        (erase-buffer)
+        (insert output)
+        (goto-char (point-min)))
+      (pop-to-buffer buf)
+      (message "Captured %s session output" agent))))
 
 ;;;###autoload
-(defun +claude-select-pane ()
-  "completing-read로 pane 선택 후 에이전트로 등록."
+(defun +claude-add-session ()
+  "새 에이전트 세션을 동적으로 추가."
   (interactive)
-  (let* ((panes (split-string
-                 (shell-command-to-string
-                  "tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}'")
-                 "\n" t))
-         (selected (completing-read "Select pane: " panes nil t))
-         (name (read-string "Agent name: ")))
-    (add-to-list '+claude-agents (cons name selected))
-    (message "Added agent '%s' -> %s" name selected)))
+  (let* ((name (read-string "Agent name: "))
+         (session (read-string "Session name: " (concat +claude-session-prefix name))))
+    (add-to-list '+claude-agents (cons name session))
+    (message "Added agent '%s' -> %s" name session)))
 
 ;;;; Claude Code Output Parsing
 ;;
@@ -351,11 +287,11 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
 ;;   ───────────           (구분선)
 ;;   -- INSERT --          (입력 대기)
 
-(defun +claude--capture-raw (target &optional scrollback)
-  "TARGET pane의 원시 출력 캡처. SCROLLBACK은 히스토리 줄 수."
+(defun +claude--capture-raw (session &optional scrollback)
+  "SESSION의 원시 출력 캡처. SCROLLBACK은 히스토리 줄 수."
   (let ((scroll-opt (if scrollback (format "-S -%d" scrollback) "-S -200")))
     (shell-command-to-string
-     (format "tmux capture-pane -t %s %s -p" target scroll-opt))))
+     (format "tmux capture-pane -t %s %s -p 2>/dev/null" session scroll-opt))))
 
 ;;;###autoload
 (defun +claude-extract-last-response (&optional agent-name)
@@ -363,8 +299,8 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
-         (output (+claude--capture-raw target 200))
+         (session (+claude--get-session agent))
+         (output (+claude--capture-raw session 200))
          (response nil))
     ;; ● 로 시작하는 마지막 응답 블록 찾기
     (when (string-match "● \\([^─]+\\)" output)
@@ -388,8 +324,8 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
-         (output (+claude--capture-raw target 200))
+         (session (+claude--get-session agent))
+         (output (+claude--capture-raw session 200))
          (input nil))
     ;; > 로 시작하는 마지막 입력 찾기
     (when (string-match "^> \\(.+\\)$" output)
@@ -413,13 +349,15 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
   'pending-approval - 권한 승인 대기 중 (y/n 프롬프트)
   'waiting          - 일반 입력 대기 중 (INSERT 모드)
   'thinking         - 사고 중
-  'working          - 작업 중"
+  'working          - 작업 중
+  'not-found        - 세션 없음"
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
-         (output (+claude--capture-raw target 50))
+         (session (+claude--get-session agent))
+         (output (+claude--capture-raw session 50))
          (status (cond
+                  ((string-empty-p output) 'not-found)
                   ;; 권한 프롬프트 패턴 (가장 먼저 체크)
                   ((+claude--has-permission-prompt-p output) 'pending-approval)
                   ((string-match "-- INSERT --" output) 'waiting)
@@ -428,6 +366,7 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
     (when (called-interactively-p 'any)
       (message "Agent %s: %s" agent
                (pcase status
+                 ('not-found "❌ 세션 없음")
                  ('pending-approval "🔐 권한 승인 대기 중!")
                  ('waiting "⏳ 입력 대기 중")
                  ('thinking "🤔 사고 중")
@@ -443,9 +382,9 @@ tmux capture-pane 사용 (스냅샷, 실시간 아님)."
 ;;   "[y/n]"              일반 확인
 ;;
 ;; 사용법:
-;;   SPC 3 t a   모든 에이전트의 대기 중인 프롬프트 표시
-;;   SPC 3 t y   에이전트 승인 (y 전송)
-;;   SPC 3 t N   에이전트 거부 (n 전송)
+;;   SPC \ t a   모든 에이전트의 대기 중인 프롬프트 표시
+;;   SPC \ t y   에이전트 승인 (y 전송)
+;;   SPC \ t N   에이전트 거부 (n 전송)
 
 (defvar +claude-permission-patterns
   '("Allow"                           ; 도구 사용 허가
@@ -481,13 +420,13 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
    (list (when current-prefix-arg
            (completing-read "Agent: " (mapcar #'car +claude-agents) nil t))))
   (let ((agents (if agent-name
-                    (list (cons agent-name (+claude--get-target agent-name)))
+                    (list (cons agent-name (+claude--get-session agent-name)))
                   +claude-agents))
         (pending '()))
     (dolist (agent agents)
       (let* ((name (car agent))
-             (target (cdr agent))
-             (output (+claude--capture-raw target 30))
+             (session (cdr agent))
+             (output (+claude--capture-raw session 30))
              (prompts (+claude--extract-permission-context output)))
         (when prompts
           (push (cons name prompts) pending))))
@@ -503,8 +442,8 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
                     (insert (format "   %s\n" prompt)))
                   (insert "\n"))
                 (insert "───────────────────────────────\n")
-                (insert "SPC 3 t y  승인 (y)\n")
-                (insert "SPC 3 t N  거부 (n)\n")
+                (insert "SPC \ t y  승인 (y)\n")
+                (insert "SPC \ t N  거부 (n)\n")
                 (goto-char (point-min)))
               (pop-to-buffer buf))
           (message "대기 중인 프롬프트 없음"))
@@ -516,11 +455,11 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
   (interactive
    (list (completing-read "Approve agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
+         (session (+claude--get-session agent))
          (status (+claude-agent-status agent)))
     (if (eq status 'pending-approval)
         (progn
-          (+claude--send-keys target "y")
+          (+claude--send-keys session "y")
           (message "✅ Approved: %s" agent))
       (message "⚠️ %s: 대기 중인 프롬프트 없음 (status: %s)" agent status))))
 
@@ -530,11 +469,11 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
   (interactive
    (list (completing-read "Reject agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
+         (session (+claude--get-session agent))
          (status (+claude-agent-status agent)))
     (if (eq status 'pending-approval)
         (progn
-          (+claude--send-keys target "n")
+          (+claude--send-keys session "n")
           (message "❌ Rejected: %s" agent))
       (message "⚠️ %s: 대기 중인 프롬프트 없음 (status: %s)" agent status))))
 
@@ -558,8 +497,8 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
   (interactive
    (list (completing-read "Agent: " (mapcar #'car +claude-agents) nil t nil nil +claude-default-agent)))
   (let* ((agent (or agent-name +claude-default-agent))
-         (target (+claude--get-target agent))
-         (output (+claude--capture-raw target 500))
+         (session (+claude--get-session agent))
+         (output (+claude--capture-raw session 500))
          (buf (get-buffer-create (format "*claude-conversation: %s*" agent)))
          (lines (split-string output "\n"))
          (in-response nil)
@@ -612,42 +551,44 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
 
 ;;;; Keybindings
 
-;; SPC 3 t ... (tmux-claude agents)
-;; SPC 3은 efrit/beads 그룹 (ai-orchestration.el)
+;; SPC \ t ... (tmux-claude agents)
+;; SPC \은 efrit/beads 그룹 (ai-orchestration.el)
 (map! :leader
-      (:prefix "3"
-       (:prefix ("t" . "tmux-agents")
-        ;; Claude 에이전트
-        :desc "Send to agent"       "s" #'+claude-send-to-agent
-        :desc "Send region"         "r" #'+claude-send-region
-        :desc "Send buffer"         "b" #'+claude-send-buffer
-        :desc "Send defun"          "d" #'+claude-send-defun
-        :desc "Assign issue"        "i" #'+claude-assign-issue
-        :desc "Assign ready issue"  "n" #'+claude-assign-ready-issue
-        :desc "List panes"          "l" #'+claude-list-panes
-        :desc "Focus agent"         "f" #'+claude-focus-agent
-        :desc "Capture pane"        "c" #'+claude-capture-pane
-        :desc "Select pane"         "p" #'+claude-select-pane
-        :desc "Show conversation"   "v" #'+claude-show-conversation
-        :desc "Agent status"        "?" #'+claude-agent-status
-        ;; Extract
-        :desc "Extract response"    "e" #'+claude-extract-last-response
-        :desc "Extract input"       "E" #'+claude-extract-last-input
-        ;; Permission handling
-        :desc "Pending prompts"     "a" #'+claude-pending-prompts
-        :desc "Approve (y)"         "y" #'+claude-approve
-        :desc "Reject (n)"          "N" #'+claude-reject
-        :desc "Approve all"         "Y" #'+claude-approve-all
-        ;; emamux
-        (:prefix ("m" . "emamux")
-         :desc "Send command"       "s" #'emamux:send-command
-         :desc "Run command"        "r" #'emamux:run-command
-         :desc "Run last command"   "l" #'emamux:run-last-command
-         :desc "Yank from tmux"     "y" #'emamux:yank-from-list-buffers
-         :desc "Copy kill-ring"     "c" #'emamux:copy-kill-ring
-         :desc "Zoom runner"        "z" #'emamux:zoom-runner
-         :desc "Inspect runner"     "i" #'emamux:inspect-runner
-         :desc "Interrupt runner"   "x" #'emamux:interrupt-runner))))
+      (:prefix "\\"
+               (:prefix ("t" . "tmux-agents")
+                ;; 세션 관리
+                :desc "Create session"      "c" #'+claude-create-session
+                :desc "List sessions"       "l" #'+claude-list-sessions
+                :desc "Attach (copy cmd)"   "a" #'+claude-attach-session
+                :desc "Add new agent"       "+" #'+claude-add-session
+                ;; Claude 에이전트
+                :desc "Send to agent"       "s" #'+claude-send-to-agent
+                :desc "Send region"         "r" #'+claude-send-region
+                :desc "Send buffer"         "b" #'+claude-send-buffer
+                :desc "Send defun"          "d" #'+claude-send-defun
+                :desc "Assign issue"        "i" #'+claude-assign-issue
+                :desc "Assign ready issue"  "n" #'+claude-assign-ready-issue
+                :desc "Capture output"      "o" #'+claude-capture-pane
+                :desc "Show conversation"   "v" #'+claude-show-conversation
+                :desc "Agent status"        "?" #'+claude-agent-status
+                ;; Extract
+                :desc "Extract response"    "e" #'+claude-extract-last-response
+                :desc "Extract input"       "E" #'+claude-extract-last-input
+                ;; Permission handling
+                :desc "Pending prompts"     "p" #'+claude-pending-prompts
+                :desc "Approve (y)"         "y" #'+claude-approve
+                :desc "Reject (n)"          "N" #'+claude-reject
+                :desc "Approve all"         "Y" #'+claude-approve-all
+                ;; emamux
+                (:prefix ("m" . "emamux")
+                 :desc "Send command"       "s" #'emamux:send-command
+                 :desc "Run command"        "r" #'emamux:run-command
+                 :desc "Run last command"   "l" #'emamux:run-last-command
+                 :desc "Yank from tmux"     "y" #'emamux:yank-from-list-buffers
+                 :desc "Copy kill-ring"     "c" #'emamux:copy-kill-ring
+                 :desc "Zoom runner"        "z" #'emamux:zoom-runner
+                 :desc "Inspect runner"     "i" #'emamux:inspect-runner
+                 :desc "Interrupt runner"   "x" #'emamux:interrupt-runner))))
 
 (provide 'tmux-config)
 ;;; tmux-config.el ends here
