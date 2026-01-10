@@ -24,7 +24,7 @@
   :init
   (setq denote-directory org-directory)
   (require 'denote-org)
-  ;; (require 'denote-silo)
+  (require 'denote-silo)
   (require 'denote-sequence)
   ;; (require 'denote-journal)
   (require 'denote-org)
@@ -65,24 +65,15 @@
   ;; 동적 Silo 관리는 +denote-silo-dynamic.el에서 처리됨
   ;; (add-to-list 'denote-silo-directories (expand-file-name "~/claude-memory/"))
 
-  (use-package! consult-notes
-    :commands (consult-notes consult-notes-search-in-all-notes)
-    :config
-    (setq consult-notes-denote-display-id t)
-    (setq consult-notes-denote-dir t)
-    (setq consult-notes-denote-title-margin 2) ; 24
-    (consult-notes-denote-mode 1)
-    )
-
-  (use-package! consult-denote
-    :config
-    ;; Prefer `ripgrep' and `fd' variants when available
-    (when (executable-find "fd")
-      (setopt consult-denote-find-command #'consult-fd))
-    (when (executable-find "rg")
-      (setopt consult-denote-grep-command #'consult-ripgrep))
-    (consult-denote-mode 1)
-    )
+  ;; (use-package! consult-notes
+  ;;   :defer 2
+  ;;   :commands (consult-notes consult-notes-search-in-all-notes)
+  ;;   :config
+  ;;   (setq consult-notes-denote-display-id t)
+  ;;   (setq consult-notes-denote-dir t)
+  ;;   (setq consult-notes-denote-title-margin 2) ; 24
+  ;;   (consult-notes-denote-mode 1)
+  ;;   )
 
   (use-package! citar-denote
     :demand t ;; Ensure minor mode is loaded

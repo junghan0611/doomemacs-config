@@ -91,10 +91,6 @@
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
 ;; (package! kkp :disable t) ; conflict on term-keys
 
-;;; module-emacs-config.el
-
-(package! dired-preview)
-
 ;;; additional packages
 
 (package! denote)
@@ -106,64 +102,50 @@
 
 (package! denote-search)
 (package! denote-regexp)
-
 (package! citar-denote)
 
 (package! consult-notes)
-(package! consult-denote)
 
 (package! denote-explore :recipe (:host github :repo "pprevos/denote-explore"))
 
-;;;; ui-config.el
+;;;; UI
 
 (unpin! doom-themes)
 (package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
-(package! modus-themes)
-(package! doric-themes)
-(package! ef-themes)
-(package! spacious-padding)
+(package! dired-preview)
+
+;; Notification system removed (using dunst/notify-send directly)
 
 ;;;; Editing
+
+(package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 
 (package! tempel)
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
-(package! clipetty) ; osc52 support
-
-;;;; prog-mode-config.el
-
 (package! aggressive-indent)
-
-;;;; org-config.el
-
-(package! org-download)
-(package! org-rich-yank)
-
-;;;; editing-config.el
-
-(package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
-(package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
-(package! pinentry)
+(package! clipetty) ; osc52 support
 
 ;;;; project-config.el
 
-(package! git-link)
 (package! magit-todos)
 (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 
 ;;;; Transient Menu
 
-;; (package! casual)
+(package! casual)
 (package! password-store-menu)
 
 ;;;; tmux/zellij orchestration
 
 (package! emamux)  ; tmux manipulation from Emacs
 
-;;;; ai-gptel.el
+;;;; AI AGENT
 
-(unpin! gptel)
-(package! macher)
+(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
+(package! whisper :recipe (:host github :repo "natrys/whisper.el"))
+(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
+(package! semext :recipe (:host github :repo "ahyatt/semext"))
 
 ;;;;; ClaudeCode
 
@@ -195,30 +177,19 @@
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
 ;; (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 
+;;;;; MCP (Model Context Protocol)
 
-;;;; AI AGENT
-
-(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
-(package! whisper :recipe (:host github :repo "natrys/whisper.el"))
-(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
-(package! semext :recipe (:host github :repo "ahyatt/semext"))
+;; (package! mcp-server-lib :recipe (:host github :repo "laurynas-biveinis/mcp-server-lib.el"))
+;; (package! elisp-dev-mcp :recipe (:host github :repo "laurynas-biveinis/elisp-dev-mcp"))
+;; (package! org-mcp :recipe (:host github :repo "laurynas-biveinis/org-mcp"))
 
 ;;;; elfeed-config.el
 
-(package! simple-httpd)  ; elfeed-web 의존성
 (package! org-web-tools)
-
-;;;; tab-bar-config.el
-
-(package! celestial-mode-line)
-;; (package! keycast)
-
-;;;; search-config.el
-
-(package! recent-rgrep :recipe (:host github :repo "kickingvegas/recent-rgrep"))
 
 ;;; DEPRECATED
 
 ;; (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))
+;; (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 
 ;;; END

@@ -48,20 +48,9 @@
 
 ;;;; consult
 
-;;;;; Preview 최적화: org-indent-mode 건너뛰기
-
-;; Preview 버퍼에서 org-indent-mode 비활성화 (성능 개선)
-;; consult-preview-variables에 org-startup-indented 추가
-;; - Doom은 org-startup-indented t 설정 (modules/lang/org/config.el:122)
-;; - 이 변수가 t이면 org-mode 초기화 시 직접 org-indent-mode 호출
-;; - delay-mode-hooks는 훅만 지연시키므로 직접 호출은 막지 못함
 (after! consult
-  (add-to-list 'consult-preview-variables '(org-startup-indented . nil))
-  (add-to-list 'consult-preview-variables '(org-startup-folded . nil)))
+  ;; (setq consult--customize-alist nil)
 
-;;;;; consult-customize
-
-(after! consult
   (consult-customize
    +default/search-project +default/search-other-project
    +default/search-project-for-symbol-at-point
@@ -82,8 +71,8 @@
 
 ;;;;; vertico-buffer on TOP
 
-(when (display-graphic-p) ; gui
-  ;; vertico-buffer on-top
+;; vertico-buffer on-top
+(progn
   (require 'vertico-buffer)
   (setq vertico-resize 'grow-only) ; doom nil
 
@@ -101,8 +90,9 @@
         "M-j" #'vertico-next
         "M-k" #'vertico-previous
 
-        ;; C-d 문자 하나씩 삭제 (DEL은 기본 동작 유지: 디렉토리 단위 삭제)
+        ;; C-d M-d: 문자 하나씩 삭제 (DEL은 기본 동작 유지: 디렉토리 단위 삭제)
         "C-d" #'delete-backward-char
+        "M-d" #'delete-backward-char
         ))
 
 ;;;;; marginalia with vertico-sort
@@ -111,7 +101,7 @@
 
 (after! vertico
   (require 'marginalia)
-  (defun my/marginalia--annotate-local-file (cand)
+  (defun gr/marginalia--annotate-local-file (cand)
     "Annotate local file CAND.
 Removes modes, which I've never needed or wanted."
     (marginalia--in-minibuffer
@@ -127,7 +117,7 @@ Removes modes, which I've never needed or wanted."
          ;; File owner at the right
          ((marginalia--file-owner attrs) :face 'marginalia-file-owner)))))
 
-  (defun my/marginalia-annotate-file (cand)
+  (defun gr/marginalia-annotate-file (cand)
     "Annotate file CAND with its size, modification time and other attributes.
 These annotations are skipped for remote paths."
     (if-let (remote (or (marginalia--remote-file-p cand)
@@ -135,11 +125,11 @@ These annotations are skipped for remote paths."
                           (with-current-buffer (window-buffer win)
                             (marginalia--remote-file-p (minibuffer-contents-no-properties))))))
         (marginalia--fields (remote :format "*%s*" :face 'marginalia-documentation))
-      (my/marginalia--annotate-local-file cand)))
+      (gr/marginalia--annotate-local-file cand)))
 
   ;; M-A 순서를 바꾸면 된다.
   (add-to-list 'marginalia-annotators
-               '(file my/marginalia-annotate-file marginalia-annotate-file builtin none))
+               '(file gr/marginalia-annotate-file marginalia-annotate-file builtin none))
 
 ;;;;;; vertico sort modified
 
@@ -147,7 +137,7 @@ These annotations are skipped for remote paths."
   ;; (setq vertico-multiform-categories
   ;;       '(
   ;;         ;; (file (vertico-sort-function . sort-directories-first))
-  ;;         ;; (file (vertico-sort-function . my/sort-modified))
+  ;;         ;; (file (vertico-sort-function . gr/sort-modified))
   ;;         (file (+vertico-transform-functions . +vertico-highlight-directory)) ; doom default
   ;;         ))
 
@@ -157,48 +147,24 @@ These annotations are skipped for remote paths."
     (nconc (seq-filter (lambda (x) (string-suffix-p "/" x)) files)
            (seq-remove (lambda (x) (string-suffix-p "/" x)) files)))
 
-  (defun my/sort-modified (list)
-    "Sort LIST of files for latest modified.
-Handles both absolute paths and relative paths (for denote-file-prompt).
-For relative paths, tries `default-directory' and `denote-directory'."
+  (defun gr/sort-modified (list)
+    "Sort LIST of files for latest modified."
     (let ((ht (make-hash-table :test #'equal :size 5000)))
       (dolist (x list)
-        (let* ((path (cond
-                      ;; Already absolute
-                      ((file-name-absolute-p x) x)
-                      ;; Try default-directory first
-                      ((file-exists-p (expand-file-name x default-directory))
-                       (expand-file-name x default-directory))
-                      ;; Try denote-directory if available
-                      ((and (boundp 'denote-directory)
-                            (file-exists-p (expand-file-name x denote-directory)))
-                       (expand-file-name x denote-directory))
-                      ;; Fallback: just use as-is
-                      (t x)))
-               (attrs (ignore-errors (file-attributes path))))
-          (puthash x (if attrs
-                         (file-attribute-modification-time attrs)
-                       0)  ; fallback for non-existent files
-                   ht)))
+        (puthash x (file-attribute-modification-time (file-attributes x)) ht))
       (sort list
             (lambda (a b)
-              (let ((one (gethash a ht))
-                    (two (gethash b ht)))
-                (cond
-                 ;; Both are times
-                 ((and (consp one) (consp two))
-                  (time-less-p two one))
-                 ;; Only one is a time
-                 ((consp one) t)
-                 ((consp two) nil)
-                 ;; Neither is a time, keep original order
-                 (t nil)))))))
+              (let ((one
+                     (gethash a ht))
+                    (two
+                     (gethash b ht)))
+                (time-less-p two one))))))
 
   (defun vertico-sort-modified ()
     (interactive)
     (setq-local vertico-sort-override-function
                 (and (not vertico-sort-override-function)
-                     #'my/sort-modified)
+                     #'gr/sort-modified)
                 vertico--input t))
 
   (keymap-set vertico-map "M-," #'vertico-sort-modified))

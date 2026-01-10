@@ -24,13 +24,6 @@
   ;; (add-hook 'elfeed-search-mode-hook #'elfeed-update)
   )
 
-;;;;; Elfeed-web (웹 인터페이스)
-
-(require 'simple-httpd)
-(load! "elfeed-web/elfeed-web")
-;; 외부 기기에서 접속 허용
-;; (setq httpd-host "0.0.0.0")
-
 ;;;; 본문 검색 (elfeed-deref 기반 - archive.gz 호환)
 
 ;; Doom Emacs는 elfeed 컨텐츠를 archive.gz로 압축 저장

@@ -83,7 +83,7 @@
 ;;;;; Keybindings
 
   (map! :leader
-        (:prefix ("\\" . "efrit/beads")
+        (:prefix ("3" . "efrit/beads")
          :desc "Efrit REPL" "e" #'efrit
          :desc "Chat" "c" #'efrit-chat
          :desc "Do (async)" "d" #'efrit-do
@@ -106,8 +106,8 @@
   :hook (doom-after-init . beads-eldoc-mode)
   :config
   (map! :leader
-        (:prefix ("\\" . "efrit/beads")
-         :desc "Beads" "\\" #'beads
+        (:prefix ("3" . "efrit/beads")
+         :desc "Beads" "3" #'beads
          :desc "List issues" "l" #'beads-list
          :desc "Ready issues" "r" #'beads-ready
          :desc "Create issue" "n" #'beads-create)))

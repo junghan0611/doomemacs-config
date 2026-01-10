@@ -48,9 +48,9 @@
   :config
   ;; Groq API 모드 (로컬 whisper.cpp 설치 불필요!)
   (setq whisper-server-mode 'openai
-        ;; whisper-openai-api-key (auth-info-password (car (auth-source-search :host "api.groq.com" :user "apikey")))
+        ;; whisper-openai-api-key (auth-info-password (car (auth-source-search :host "api.openai.com" :user "apikey")))
         whisper-openai-api-baseurl "https://api.groq.com/openai/"
-        whisper-openai-api-key (password-store-get "api/groq/junghanacs")
+        whisper-openai-api-key (auth-info-password (car (auth-source-search :host "api.groq.com" :user "apikey")))
         whisper-openai-model "whisper-large-v3"
         whisper-language "ko"
         whisper-insert-text-at-point t

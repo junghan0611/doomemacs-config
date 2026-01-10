@@ -11,14 +11,11 @@
 ;; External tools required to make projectile fly! fd, ag, rg
 ;; evil-dot-doom/modules/custom/projects/config.el
 
-(progn
-  (require' projectile)
+(after! projectile
   ;; Disable projectile cache - saves requirement to invalidate cache when moving files
   (setq projectile-enable-caching nil) ; very IMPORTANT
-  (setq projectile-auto-update-cache nil)
-  (setq projectile-file-exists-remote-cache-expire nil)
-
   (setq projectile-sort-order 'recentf)
+   ;; projectile-verbose nil
 
   ;; create missing test files
   (setq projectile-create-missing-test-files t)
@@ -51,48 +48,6 @@
   ;; (setq projectile-project-root-files-bottom-up
   ;;       (remove ".git" projectile-project-root-files-bottom-up))
   )
-
-;;;; git-commit
-
-(after! git-commit
-  ;; doom default 50
-  ;; defaults to Github's max commit message length
-  (setq git-commit-summary-max-length 72))
-
-;;;; git-link
-
-;; 현재 git repo의 homepage link를 clipboard에 넣어준다
-(use-package! git-link
-  :commands (git-link-commit git-link-homepage git-link)
-  :init
-  ;; default is to open the generated link
-  (setq git-link-open-in-browser t)
-  )
-
-
-;;;; magit
-
-(use-package! magit-todos
-  :after magit
-  :hook (magit-mode . magit-todos-mode))
-
-;;;; tramp
-
-;; Host *
-;;     ControlMaster auto
-;;     ControlPath ~/.ssh/sockets/%r@%h-%p
-;;     ControlPersist 600
-(after! tramp
-  (setq tramp-default-method "ssh")
-
-  ;; 소켓 디렉토리 자동 생성
-  (let ((socket-dir "~/.ssh/sockets"))
-    (unless (file-exists-p socket-dir)
-      (make-directory socket-dir t)
-      (set-file-modes socket-dir #o700)))  ;; 권한 700
-
-  (setq tramp-ssh-controlmaster-options
-        "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
 
 ;;;; majutsu jj-mode

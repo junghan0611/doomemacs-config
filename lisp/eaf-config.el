@@ -98,10 +98,10 @@
   (set-popup-rule! "^\\*eaf" :modeline t :quit nil)
 
   ;; EAF 로드 시점에 mode-line-format이 nil일 수 있으므로 명시적 설정
-  ;; (after! doom-modeline
-  ;;   (setq eaf-mode-line-format (default-value 'mode-line-format))
-  ;;   (require 'tab-bar)
-  ;;   (tab-bar-mode 1))
+  (after! doom-modeline
+    (setq eaf-mode-line-format (default-value 'mode-line-format))
+    (require 'tab-bar)
+    (tab-bar-mode 1))
   ) ; end when
 
 (provide 'eaf-config)

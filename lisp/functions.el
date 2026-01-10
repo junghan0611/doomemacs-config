@@ -2,59 +2,6 @@
 
 ;;; Autoloaded functions for junghan's config
 
-;;;; yank path with line-number
-
-;; +default/yank-buffer-path
-
-;;;###autoload
-(defun my/yank-buffer-absolute-path (&optional root)
-  "Copy the current buffer's absolute path to the kill ring."
-  (interactive)
-  (if-let* ((filename (or (buffer-file-name (buffer-base-buffer))
-                          (bound-and-true-p list-buffers-directory))))
-      (let ((path (expand-file-name  ; abbreviate-file-name 대신 expand-file-name 사용
-                   (if root
-                       (file-relative-name filename root)
-                     filename))))
-        (kill-new path)
-        (if (string= path (car kill-ring))
-            (message "Copied absolute path: %s" path)
-          (user-error "Couldn't copy filename in current buffer")))
-    (error "Couldn't find filename in current buffer")))
-
-;;;###autoload
-(defun my/yank-buffer-path-with-line ()
-  "Copy the current buffer's path with line number to the kill ring.
-Format: `path:line-number` (e.g., `lisp/ai-gptel.el:42`)"
-  (interactive)
-  (if-let* ((filename (or (buffer-file-name (buffer-base-buffer))
-                          (bound-and-true-p list-buffers-directory))))
-      (let* ((line-num (line-number-at-pos))
-             (path (abbreviate-file-name filename))
-             (path-with-line (format "%s:%d" path line-num)))
-        (kill-new path-with-line)
-        (message "Copied: %s" path-with-line))
-    (error "Couldn't find filename in current buffer")))
-
-;;;###autoload
-(defun my/yank-buffer-path-relative-with-line (&optional include-root)
-  "Copy the current buffer's project-relative path with line number.
-With non-nil prefix INCLUDE-ROOT, also include the project's root.
-Format: `relative/path:line-number`"
-  (interactive "P")
-  (if-let* ((filename (or (buffer-file-name (buffer-base-buffer))
-                          (bound-and-true-p list-buffers-directory))))
-      (let* ((root (if include-root
-                       (file-name-directory (directory-file-name (doom-project-root)))
-                     (doom-project-root)))
-             (line-num (line-number-at-pos))
-             (relative-path (file-relative-name filename root))
-             (path-with-line (format "%s:%d" relative-path line-num)))
-        (kill-new path-with-line)
-        (message "Copied: %s" path-with-line))
-    (error "Couldn't find filename in current buffer")))
-
-
 ;;;; my/consult-fd
 
 ;;;###autoload

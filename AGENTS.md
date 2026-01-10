@@ -206,43 +206,28 @@ feat: add EAF pyqterminal configuration
 
 **중요**: "Generated with Claude" 또는 "Co-Authored-By" 제외! (깔끔한 커밋 로그 유지)
 
-## Issue Tracking
+## 이슈 트래킹: bd (beads)
 
-This project uses **bd** (beads) for issue tracking with prefix `doom-`. Run `bd onboard` to get started.
+**중요**: 이 프로젝트는 **bd (beads)** 로 모든 이슈를 관리합니다.
 
-## Quick Reference
+### 필수 명령어
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
+# 작업 찾기
+bd ready --json              # 블로커 없는 작업 가능 이슈
+bd list --json               # 전체 이슈 목록
+bd show <id>                 # 상세 보기
+
+# 이슈 생성
+bd create "제목" -t bug|feature|task -p 0-4 --json
+
+# 작업 시작/완료
+bd update <id> --status in_progress --json
+bd close <id> --reason "완료" --json
 ```
 
-## Landing the Plane (Session Completion)
+### 규칙
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-
+- 모든 작업은 bd 이슈로 관리
+- 항상 `--json` 플래그 사용
+- `.beads/issues.jsonl` 파일은 코드와 함께 커밋

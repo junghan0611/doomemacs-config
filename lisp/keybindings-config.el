@@ -16,10 +16,6 @@
 
 ;;; Code:
 
-;;;; remap all C-c prefix keys to M-c
-
-(define-key key-translation-map (kbd "M-c") (kbd "C-c"))
-
 ;;;; Global Keys
 
 (map! "C-M-;" #'pp-eval-expression
@@ -56,27 +52,75 @@
       ;; Minibuffer access
       "M-0" #'switch-to-minibuffer)
 
-(map! :i "M-l" #'sp-forward-slurp-sexp
-      :i "M-\\" #'sp-forward-barf-sexp
-      :n "] p" (cmd! (evil-forward-paragraph) (recenter))
-      :n "[ p" (cmd! (evil-backward-paragraph) (recenter))
-      :n "DEL" #'evil-switch-to-windows-last-buffer
-      :i "M-/" #'hippie-expand
-      :n "g SPC" #'evil-jump-to-tag
-      :i "C-v" #'evil-paste-after
-      :n "[ g" #'+vc-gutter/previous-hunk
-      :n "] g" #'+vc-gutter/next-hunk
-      :m "8" #'evil-ex-search-word-forward
-      :m "3" #'evil-ex-search-word-backward
-      :m "4" #'evil-end-of-line
-      :m "0" #'evil-beginning-of-line
-      :n "g ]" #'evil-jump-forward
-      :n "g [" #'evil-jump-backward)
-
-;;;; F1-12: Function Keys
+;;;; Function Keys
 
 (map! :after imenu-list
       "<f8>" #'imenu-list-smart-toggle)
+
+;;;; Denote Keymap (C-c n, M-e)
+
+;; Bibliography submenu (requires citar-denote)
+(after! citar-denote
+  (map! :prefix ("C-c n b" . "bibliography")
+        "b" #'org-cite-insert
+        "c" #'citar-open
+        "d" #'citar-denote-dwim
+        "e" #'citar-denote-open-reference-entry
+        "a" #'citar-denote-add-reference
+        "1" #'citar-denote-find-citation
+        "i" #'citar-insert-citation
+        "n" #'citar-create-note
+        "o" #'citar-denote-open-note
+        "O" #'citar-open-links
+        "f" #'citar-denote-find-reference
+        "l" #'citar-denote-link-reference
+        "s" #'citar-denote-create-silo-note
+        "k" #'citar-denote-remove-reference))
+
+;; Main Denote keymap (C-c n)
+(after! denote
+  (map! :prefix ("C-c n" . "denote")
+        "B" #'denote-org-backlinks-for-heading
+        "d" #'denote
+        "f" #'+default/find-in-notes
+        "i" #'denote-org-dblock-insert-links
+        "I" #'denote-org-dblock-insert-backlinks
+        "l" #'denote-link-or-create
+        "L" #'denote-link-after-creating-with-command
+        "n" #'consult-notes
+        "G" #'consult-notes-search-in-all-notes
+        "s" #'denote-silo-open-or-create
+        "S" #'denote-silo-select-silo-then-command
+        "M-f" #'denote-silo-find-file-all
+        "M-0" #'denote-silo-list-all
+        "M-9" #'denote-silo-count-files
+        "M-8" #'denote-silo-refresh
+        "t" #'denote-type
+        "r" #'denote-region
+        "," #'denote-rename-file-using-front-matter
+        "-" #'denote-show-backlinks-buffer
+        "SPC" #'org-journal-open-current-journal-file
+        "j" #'org-journal-new-entry
+        "u" #'org-transclusion-mode
+        "k" #'denote-rename-file-keywords
+        "z" #'denote-rename-file-signature
+        "M-l" #'denote-find-link
+        "M-b" #'denote-find-backlink)
+
+  ;; M-e as alternative prefix for denote (quick access)
+  (map! :prefix ("M-e" . "denote")
+        "B" #'denote-org-backlinks-for-heading
+        "d" #'denote
+        "f" #'+default/find-in-notes
+        "i" #'denote-org-dblock-insert-links
+        "l" #'denote-link-or-create
+        "n" #'consult-notes
+        "G" #'consult-notes-search-in-all-notes
+        "s" #'denote-silo-open-or-create
+        "," #'denote-rename-file-using-front-matter
+        "-" #'denote-show-backlinks-buffer
+        "SPC" #'org-journal-open-current-journal-file
+        "j" #'org-journal-new-entry))
 
 ;;;; Doom Leader Keys
 
@@ -95,24 +139,23 @@
        :desc "Dashboard" "h" #'+doom-dashboard/open
        :desc "Switch to Scratch" "s" #'scratch-buffer))
 
-;;;;; Files (f)
-
-(map! :leader
-      (:prefix ("f" . "files")
-               "y" #'my/yank-buffer-absolute-path
-               "RET" #'my/yank-buffer-path-with-line
-               "1" #'my/yank-buffer-path-with-line
-               "2" #'my/yank-buffer-path-relative-with-line
-               ))
-
 ;;;;; Notes (n)
 
 (map! :leader
       (:prefix ("n" . "notes")
-               "g" #'+default/org-notes-search
-               "SPC" #'org-journal-open-current-journal-file
-               "L" #'my/org-store-link-id-optional
-               ))
+       "g" #'+default/org-notes-search
+       "SPC" #'org-journal-open-current-journal-file
+       "L" #'my/org-store-link-id-optional
+       "u" #'org-transclusion-mode
+       ;; Denote submenu
+       (:prefix ("d" . "denote")
+        "d" #'denote
+        "f" #'+default/find-in-notes
+        "l" #'denote-link-or-create
+        "n" #'consult-notes
+        "s" #'denote-silo-open-or-create
+        "," #'denote-rename-file-using-front-matter
+        "-" #'denote-show-backlinks-buffer)))
 
 ;;;;; Insert (i)
 
@@ -166,32 +209,28 @@
        :desc "6th workspace" "6" #'+workspace/switch-to-5
        :desc "7th workspace" "7" #'+workspace/switch-to-6))
 
-;;;;; Help (h)
-
-(map! :leader
-      (:prefix ("h" . "help")
-               "t" nil
-               (:prefix ("t" . "themes")
-                :desc "Modus toggle"         "m" #'modus-themes-toggle
-                :desc "Modus select"         "M" #'modus-themes-select
-                :desc "Random EF Dark"          "d" #'modus-themes-load-random-dark
-                :desc "Random EF Light"         "l" #'modus-themes-load-random-light
-                :desc "Doric random"         "r" #'doric-themes-load-random
-                :desc "Doric select"         "R" #'doric-themes-select)))
-
-;;;;; TODO Toggle (T)
-
-;;;; Key Functions
-
-;;;;; +default/search-buffer : consult-line
+;;;; Evil Keys
 
 (map! :after evil
       :map evil-normal-state-map
-      "." #'+default/search-buffer
-      :map ibuffer-mode-map
-      :nv "." #'+default/search-buffer
-      :map dired-mode-map
-      :nv "." #'+default/search-buffer)
+      "." #'+default/search-buffer)
+
+(map! :i "M-l" #'sp-forward-slurp-sexp
+      :i "M-\\" #'sp-forward-barf-sexp
+      :n "] p" (cmd! (evil-forward-paragraph) (recenter))
+      :n "[ p" (cmd! (evil-backward-paragraph) (recenter))
+      :n "DEL" #'evil-switch-to-windows-last-buffer
+      :i "M-/" #'hippie-expand
+      :n "g SPC" #'evil-jump-to-tag
+      :i "C-v" #'evil-paste-after
+      :n "[ g" #'+vc-gutter/previous-hunk
+      :n "] g" #'+vc-gutter/next-hunk
+      :m "8" #'evil-ex-search-word-forward
+      :m "3" #'evil-ex-search-word-backward
+      :m "4" #'evil-end-of-line
+      :m "0" #'evil-beginning-of-line
+      :n "g ]" #'evil-jump-forward
+      :n "g [" #'evil-jump-backward)
 
 ;;;; Mode-specific Keymaps
 
@@ -217,6 +256,19 @@
         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
         :inv "M-DEL" #'my/vterm-send-meta-backspace))
 
+;;;;; Outli
+
+(after! outli
+  (map! :map outli-mode-map
+        :nv "<tab>" #'outline-cycle
+        :nv "TAB" #'outline-cycle
+        :nv "M-j" #'outline-forward-same-level
+        :nv "M-k" #'outline-backward-same-level
+        :nv "M-n" #'outline-next-heading
+        :nv "M-p" #'outline-previous-heading
+        :nv "C-S-p" #'outline-up-heading
+        :nv "z u" #'outline-up-heading))
+
 ;;;;; Markdown
 
 (after! evil-markdown
@@ -231,60 +283,29 @@
 (after! markdown-mode
   (map! :map markdown-mode-map
         :localleader
-        "y" #'my/yank-as-org
         "RET" #'toc-org-markdown-follow-thing-at-point
         "-" #'markdown-insert-list-item
         ";" #'my/clear-nbsp-and-ascii-punctuations
-       ":" #'my/insert-nbsp-simple-all))
+        ":" #'my/insert-nbsp-simple-all))
 
 ;;;;; Dired
 
 (after! dired
   (map! :map dired-mode-map
-        :n "r" #'revert-buffer
-        :inv "M-\\" #'other-window
         :inv "M-\\" #'other-window
         :n "C-c C-e" #'wdired-change-to-wdired-mode
         :n "C-c l" #'org-store-link
         :n "C-x /" #'dired-narrow-regexp
-        :n "." #'+default/search-buffer ; 'consult-line
+        :n "." #'consult-line
         :n "K" #'dired-do-kill-lines
         :n "h" #'dired-up-directory
         :n "l" #'dired-find-file
         :n "S-<return>" #'dired-find-file-other-window
-        :n "S-SPC" #'dired-toggle-marks)
+        :n "S-SPC" #'dired-toggle-marks))
 
-  (map! :map dired-mode-map
-        :localleader
-        "h" #'dired-omit-mode
-        "SPC" #'dired-hide-details-mode
-        "H" #'dired-hide-details-mode
-        "p" #'dired-preview-mode
-        :desc "sort-modified-date" "o" #'dired-sort-toggle-or-edit
-        ;; "m" #'my/dired-attach-to-mastodon
-        :desc "*denote-insert* marked-notes" "i" #'my/denote-link-dired-marked-notes
-        ;; "g" #'prot-dired-grep-marked-files
-        ;; "l" #'prot-dired-limit-regexp
-        "y" #'+default/yank-buffer-absolute-path
-
-        :desc "*denote-rename* files" "r" #'denote-dired-rename-files
-        :desc "*denote-rename* using front-matter" "R" #'denote-dired-rename-marked-files-using-front-matter
-        :desc "*denote-rename* with keywords" "w" #'denote-dired-rename-marked-files-with-keywords
-        :desc "*denote-rename* add keywords" "k" #'denote-dired-rename-marked-files-add-keywords
-        :desc "*denote-rename* remove keywords" "K" #'denote-dired-rename-marked-files-remove-keywords
-
-        ;; :desc "*casual-dired* menu" ";" #'casual-dired-tmenu
-        ;; "-" #'nerd-icons-dired-mode
-        ;; "P" #'my/dired-hugo-export-wim-to-md
-        ;; "M" #'my/diff-mark-toggle-vc-modified
-        ;; "m" #'my/diff-hl-dired-mark-modified
-        )
-  )
-
-;;;;; Prog-mode
+;;;;; Prog Mode
 
 (map! :map prog-mode-map
-      "C-M-y" #'evil-yank
       :inv "M-\\" #'other-window)
 
 ;;;;; Org Mode
@@ -301,48 +322,15 @@
         :n "C-n" #'org-next-visible-heading
         :n "C-p" #'org-previous-visible-heading
         :n "zu" #'outline-up-heading
-        )
-
-  (map! :map org-mode-map
+        "C-c d" #'cape-dict
         :i "<tab>" #'completion-at-point
         :i "TAB" #'completion-at-point
-        "M-g 1" #'bh/insert-inactive-timestamp
-        "M-g 2" #'org-cite-insert
-        "M-s ,"   #'denote-rename-file-using-front-matter
-        "M-s <"   #'denote-rename-file-title
-        ;; Link & clipboard
-        "<f3>"    #'org-toggle-link-display
-        "C-c M-y" #'org-download-clipboard
-        "C-c o"   #'consult-org-heading
-        "C-c y"   #'org-cliplink
-        "C-c I"   #'org-insert-link-dwim
-        :nvi "C-c M-i" #'org-cliplink
-        )
-
-  (map! :map org-mode-map
-        ;; "C-c d" #'cape-dict
         "M-\\" #'other-window
         "M--" #'denote-find-backlink
-        "M-s ," #'denote-rename-file-using-front-matter
-        )
-
-  (map! :map org-mode-map
-        "C-x n b" #'org-cite-insert
-        "C-x n -" #'bh/insert-inactive-timestamp
-        "C-x n 0" #'my/org-insert-notes-drawer
-        "C-x n m" #'my/split-and-indirect-orgtree
-        "C-x n M" #'my/kill-and-unsplit-orgtree
-        "C-x n 9" #'my/org-count-words
-        "C-x n l" #'my/denote-org-store-link-to-heading
-        )
-
-  (map! :map org-mode-map
+        ;; Localleader
         :localleader
-        "y" #'my/yank-as-markdown
         ";" #'my/clear-nbsp-and-ascii-punctuations
-        ":" #'my/insert-nbsp-simple-all
-        )
-  )
+        ":" #'my/insert-nbsp-simple-all))
 
 ;;;;; Org Journal
 
@@ -356,35 +344,21 @@
         "C-n" #'org-journal-search-next
         "C-p" #'org-journal-search-previous))
 
+;;;;; Outline Mode
 
-;;;;; Outli and Outline Mode
-
-(after! outli
-  ;; Outline heading에서만 cycle, 그 외에는 evil-jump-item (%)
-  (defun my/outline-cycle-or-evil-jump-item ()
-    "On outline heading, run `outline-cycle'. Otherwise, run `evil-jump-item'."
-    (interactive)
-    (if (outline-on-heading-p)
-        (outline-cycle)
-      (evil-jump-item)))
-
-  (map! :map outli-mode-map
-        :i "C-n" #'next-line
-        :i "C-p" #'previous-line
+(after! outline
+  (map! :map outline-mode-map
         :n "C-n" #'outline-next-heading
         :n "C-p" #'outline-previous-heading
-        :nv "<tab>" #'my/outline-cycle-or-evil-jump-item
-        :nv "TAB" #'my/outline-cycle-or-evil-jump-item
-        :nv "M-j" #'outline-forward-same-level
-        :nv "M-k" #'outline-backward-same-level
-        :nv "M-n" #'outline-next-heading
-        :nv "M-p" #'outline-previous-heading
-        :nv "C-S-p" #'outline-up-heading
-        :nv "z u" #'outline-up-heading))
+        :i "C-n" #'next-line
+        :i "C-p" #'previous-line
+        :n "C-S-p" #'outline-up-heading
+        :n "zu" #'outline-up-heading))
 
+;;;; Emacs Lisp Mode
 
-;;; provide
+(add-hook! emacs-lisp-mode
+  (setq-local comment-column 0))
 
 (provide 'keybindings-config)
-
 ;;; keybindings-config.el ends here

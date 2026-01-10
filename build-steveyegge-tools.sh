@@ -1,27 +1,38 @@
 #!/usr/bin/env bash
 # build-steveyegge-tools.sh
-# Steve Yegge's AI agent tools (Beads, VC, Gas Town) build script for NixOS
+# Steve Yegge's AI agent tools (Beads, VC) build script for NixOS
+# Usage: ./build-steveyegge-tools.sh
+#
+# Note: vc depends on beads, so beads must be built first.
+#       vc/go.mod uses local replace directive pointing to beads.
+#       Repos will be auto-cloned from junghan0611 fork if not present.
 
 set -e
 
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
+# Paths
 BEADS_DIR="${HOME}/repos/3rd/beads"
 VC_DIR="${HOME}/repos/3rd/vc"
-GASTOWN_DIR="${HOME}/repos/3rd/gastown"
 INSTALL_DIR="${HOME}/.local/bin"
 
+# Go version requirement
 GO_VERSION="1.24"
+
+# Go command - will be set by ensure_go()
 GO_CMD="go"
 
 echo -e "${YELLOW}=== Steve Yegge AI Tools Builder (NixOS) ===${NC}"
 echo ""
 
+# Ensure install directory exists
 mkdir -p "${INSTALL_DIR}"
 
+# Ensure Go is available (NixOS compatible)
 ensure_go() {
     if command -v go &> /dev/null; then
         GO_CMD="go"
@@ -33,10 +44,12 @@ ensure_go() {
         GO_CMD="nix-shell -p go --run"
     else
         echo -e "${RED}Error: Go not found and nix-shell not available${NC}"
+        echo "Install Go or use NixOS/nix-shell"
         exit 1
     fi
 }
 
+# Run go command (handles both direct and nix-shell modes)
 run_go() {
     if [[ "$GO_CMD" == "go" ]]; then
         go "$@"
@@ -45,73 +58,55 @@ run_go() {
     fi
 }
 
-clone_or_update() {
-    local name="$1"
-    local src_dir="$2"
-
-    if [ -d "${src_dir}/.git" ]; then
-        echo -e "${YELLOW}Updating ${name} (git pull)...${NC}"
-        git -C "${src_dir}" pull --rebase --autostash || true
-        echo -e "${GREEN}✓ Updated ${name}${NC}"
-    else
-        echo -e "${YELLOW}Cloning ${name}...${NC}"
-        git clone "git@github.com:steveyegge/${name}.git" "${src_dir}"
-        echo -e "${GREEN}✓ Cloned ${name}${NC}"
-    fi
-}
-
+# Fix vc go.mod replace directive for local environment
 fix_vc_gomod() {
     local gomod="${VC_DIR}/go.mod"
-    if [ -f "${gomod}" ] && grep -q "/Users/stevey/src/beads" "${gomod}"; then
-        echo -e "${YELLOW}Fixing vc/go.mod replace directive...${NC}"
-        sed -i 's|=> /Users/stevey/src/beads|=> '"${BEADS_DIR}"'|g' "${gomod}"
-        echo -e "${GREEN}✓ Updated vc go.mod${NC}"
+    
+    if [ -f "${gomod}" ]; then
+        # Check if it points to Steve's Mac path
+        if grep -q "/Users/stevey/src/beads" "${gomod}"; then
+            echo -e "${YELLOW}Fixing vc/go.mod replace directive...${NC}"
+            sed -i 's|=> /Users/stevey/src/beads|=> '"${BEADS_DIR}"'|g' "${gomod}"
+            echo -e "${GREEN}✓ Updated replace directive to ${BEADS_DIR}${NC}"
+        fi
     fi
 }
 
-fix_gastown_gomod() {
-    local gomod="${GASTOWN_DIR}/go.mod"
-    if [ -f "${gomod}" ] && grep -q "/Users/stevey/src/beads" "${gomod}"; then
-        echo -e "${YELLOW}Fixing gastown/go.mod replace directive...${NC}"
-        sed -i 's|=> /Users/stevey/src/beads|=> '"${BEADS_DIR}"'|g' "${gomod}"
-        echo -e "${GREEN}✓ Updated gastown go.mod${NC}"
+# Function to clone repo if not exists
+clone_if_needed() {
+    local name="$1"
+    local src_dir="$2"
+    
+    if [ ! -d "${src_dir}" ]; then
+        echo -e "${YELLOW}Cloning ${name}...${NC}"
+        git clone "git@github.com:junghan0611/${name}.git" "${src_dir}"
+        echo -e "${GREEN}✓ Cloned ${name} to ${src_dir}${NC}"
     fi
 }
 
-ask() {
-    local prompt="$1"
-    while true; do
-        read -rp "${prompt} [y/N]: " ans
-        case "$ans" in
-            [Yy]*) return 0 ;;
-            [Nn]*|"") return 1 ;;
-        esac
-    done
-}
-
+# Function to build a Go project
 build_project() {
     local name="$1"
     local src_dir="$2"
     local binary="$3"
-
-    echo ""
-    if ! ask "Install/update ${name}?"; then
-        echo -e "${YELLOW}Skipping ${name}${NC}"
-        return 0
-    fi
-
-    echo -e "${YELLOW}Preparing ${name}...${NC}"
-    clone_or_update "${name}" "${src_dir}"
-
+    
+    echo -e "${YELLOW}Building ${name}...${NC}"
+    
+    # Clone if not exists
+    clone_if_needed "${name}" "${src_dir}"
+    
     cd "${src_dir}"
+    
+    # Run go mod tidy first to ensure dependencies are correct
     echo "  Running go mod tidy..."
     run_go mod tidy 2>&1 | grep -v "^go: downloading" || true
-
+    
+    # Build
     echo "  Building..."
     run_go build -o "${binary}" "./cmd/${binary}"
-
+    
     if [ -f "${binary}" ]; then
-        cp -f "${binary}" "${INSTALL_DIR}/"
+        cp "${binary}" "${INSTALL_DIR}/"
         rm "${binary}"
         echo -e "${GREEN}✓ ${name} installed to ${INSTALL_DIR}/${binary}${NC}"
     else
@@ -120,26 +115,55 @@ build_project() {
     fi
 }
 
+# Ensure Go is available
 ensure_go
 
-# beads
+echo ""
+
+# Build Beads (bd) first - vc depends on it
 build_project "beads" "${BEADS_DIR}" "bd"
 
-# vc
-clone_or_update "vc" "${VC_DIR}"
+echo ""
+
+# Clone vc if needed, then fix go.mod, then build
+clone_if_needed "vc" "${VC_DIR}"
 fix_vc_gomod
+
+# Build VC
 build_project "vc" "${VC_DIR}" "vc"
 
-# gastown
-clone_or_update "gastown" "${GASTOWN_DIR}"
-fix_gastown_gomod
-# gastown requires go generate to embed formula files
-if [ -d "${GASTOWN_DIR}" ]; then
-    echo -e "${YELLOW}Running go generate for gastown...${NC}"
-    cd "${GASTOWN_DIR}"
-    run_go generate ./internal/formula/
+echo ""
+echo -e "${YELLOW}=== Verifying installations ===${NC}"
+
+# Verify bd
+if command -v bd &> /dev/null; then
+    echo -e "${GREEN}✓ bd:${NC} $(bd version 2>&1 | head -1)"
+else
+    echo -e "${RED}✗ bd not found in PATH${NC}"
+    echo "  Add to PATH: export PATH=\"\${HOME}/.local/bin:\${PATH}\""
 fi
-build_project "gastown" "${GASTOWN_DIR}" "gt"
+
+# Verify vc
+if command -v vc &> /dev/null; then
+    # vc doesn't have version command, check with --help
+    echo -e "${GREEN}✓ vc:${NC} VibeCoder v2 ($(vc --help 2>&1 | head -1))"
+else
+    echo -e "${RED}✗ vc not found in PATH${NC}"
+    echo "  Add to PATH: export PATH=\"\${HOME}/.local/bin:\${PATH}\""
+fi
 
 echo ""
 echo -e "${GREEN}=== Done ===${NC}"
+echo ""
+echo "Quick start (Beads):"
+echo "  cd your-project"
+echo "  bd init --quiet"
+echo "  bd create \"First task\" -t task -p 2"
+echo "  bd ready"
+echo ""
+echo "Quick start (VibeCoder):"
+echo "  cd your-project"
+echo "  vc init"
+echo "  vc doctor"
+echo "  vc create \"First issue\""
+echo "  vc list"

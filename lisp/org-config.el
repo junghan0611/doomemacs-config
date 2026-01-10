@@ -345,6 +345,7 @@
   (require 'bibtex)
   (setq citar-bibliography config-bibfiles)
   (setq org-cite-global-bibliography config-bibfiles)
+
   (setq citar-templates
         '((main
            .
@@ -356,6 +357,7 @@
            .
            "*** ${title}\n${shorttitle}\n${author} ${translator} ${namea} ${year issued date:4}\n\n${abstract}\n") ; citar-copy-reference
           (note . "#+title: ${author translator:10}, ${title}")))
+
 
   (add-hook 'bibtex-mode-hook 'display-line-numbers-mode)
   (add-hook 'bibtex-mode-hook 'visual-line-mode)
