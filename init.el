@@ -61,7 +61,7 @@
        (:unless IS-TERMUX (smooth-scroll)) ; So smooth you won't believe it's not butter
 
        ;;tabs            ; a tab bar for Emacs
-       ;;treemacs        ; a project drawer, like neotree but cooler
+       (treemacs +lsp)   ; a project drawer, like neotree but cooler
        vc-gutter         ; +pretty - vcs diff in the fringe
        ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB
        (window-select +numbers) ; visually switch windows
@@ -92,7 +92,7 @@
        vterm             ; the best terminal emulation in Emacs
 
        :checkers
-       (syntax +flymake) ; tasing you for every semicolon you forget
+       syntax            ; +flymake, tasing you for every semicolon you forget
        ;; (spell +flyspell) ; +hunspell - tasing you for misspelling mispelling
        ;; grammar           ; tasing grammar mistake every you make
 
@@ -105,7 +105,7 @@
        (eval +overlay)     ; run code, run (also, repls)
        lookup
        llm                 ; when I said you needed friends, I didn't mean...
-       (lsp +eglot)
+       (lsp +peek) ; +eglot
 
        magit ; +forge a git porcelain for Emacs
 

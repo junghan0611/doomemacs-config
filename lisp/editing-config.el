@@ -87,6 +87,45 @@
   (setq epa-pinentry-mode 'loopback)
   (pinentry-start))
 
+;;;; imenu-list
+
+;;;###autoload
+(defun spacemacs/imenu-list-smart-focus ()
+  "Focus the `imenu-list' buffer, creating as necessary.
+If the imenu-list buffer is displayed in any window, focus it, otherwise create and focus.
+Note that all the windows in every frame searched, even invisible ones, not
+only those in the selected frame."
+  (interactive)
+  (if (get-buffer-window imenu-list-buffer-name t)
+      (imenu-list-show)
+    (imenu-list-smart-toggle)))
+
+;; Show an outline summary of the current buffer.
+(use-package! imenu-list
+  :init
+  (add-hook 'imenu-list-major-mode-hook #'toggle-truncate-lines)
+  ;; (setq imenu-list-focus-after-activation nil)
+  (setq imenu-list-size 40)
+  (setq imenu-list-auto-resize nil))
+
+;;;; imenu-list-mode-map
+
+(after! imenu-list
+  (map! :map imenu-list-major-mode-map
+        :n "f"      #'hs-toggle-hiding
+        :n "g"      #'imenu-list-refresh
+        :n "r"      #'imenu-list-refresh
+        :n "d"      #'imenu-list-display-dwim
+        :n "RET"    #'imenu-list-ret-dwim
+        :n "u"      #'imenu-list-up-level
+        :n "z u"    #'imenu-list-up-level ; outline-up-heading
+        :n "^"      #'imenu-list-up-level  ; dired style
+        :n "C-S-p"  #'imenu-list-up-level  ; sync org-mode markdown-mode
+        :n "M-j"    #'imenu-list-next-entry-same-level
+        :n "M-k"    #'imenu-list-previous-entry-same-level
+        :n "M-n"    #'evil-next-line
+        :n "M-p"    #'evil-previous-line))
+
 ;;;; provide
 
 (provide 'editing-config)

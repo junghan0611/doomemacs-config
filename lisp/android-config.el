@@ -64,9 +64,9 @@
 
 ;;;; Kotlin LSP (eglot)
 
-(after! eglot
-  (add-to-list 'eglot-server-programs
-               '(kotlin-mode . ("kotlin-language-server"))))
+;; (after! eglot
+;;   (add-to-list 'eglot-server-programs
+;;                '(kotlin-mode . ("kotlin-language-server"))))
 
 ;;;; Provide
 

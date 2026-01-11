@@ -75,8 +75,25 @@
 
 ;;;; F1-12: Function Keys
 
-(map! :after imenu-list
-      "<f8>" #'imenu-list-smart-toggle)
+;;;;; treemacs - f8
+
+(when (modulep! :ui treemacs)
+  (map!
+   "<f8>"   #'+treemacs/toggle
+   "<C-f8>" #'treemacs-find-file
+   "<M-f8>" #'treemacs-select-window
+   (:map treemacs-mode-map
+         "." #'consult-line)
+   (:map evil-treemacs-state-map
+         "." #'consult-line)))
+
+;;;;; imenu-list - f9
+
+(after! imenu-list
+  (map!
+   "<f9>"   #'imenu-list-smart-toggle
+   "<M-f9>" #'spacemacs/imenu-list-smart-focus
+   ))
 
 ;;;; Doom Leader Keys
 
@@ -180,6 +197,16 @@
                 :desc "Doric select"         "R" #'doric-themes-select)))
 
 ;;;;; TODO Toggle (T)
+
+
+;;;;; 'p' project
+
+;; Toggle treemacs project browser from project menu
+(after! projectile
+  (map! :leader
+        (:prefix "p"
+         "t" nil  ; disable project todos key binding
+         :desc "Treemacs browser" "t" #'+treemacs/toggle)))
 
 ;;;; Key Functions
 

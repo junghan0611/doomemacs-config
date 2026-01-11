@@ -259,16 +259,6 @@
 (use-package! tempel-collection
   :after tempel)
 
-;;;; imenu-list
-
-;; Show an outline summary of the current buffer.
-(use-package! imenu-list
-  :init
-  (add-hook 'imenu-list-major-mode-hook #'toggle-truncate-lines)
-  ;; (setq imenu-list-focus-after-activation nil)
-  (setq imenu-list-size 40)
-  (setq imenu-list-auto-resize nil))
-
 ;;;; bookmark
 
 (setq bookmark-default-file "~/emacs-bookmarks.el")
