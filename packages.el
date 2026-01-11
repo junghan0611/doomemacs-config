@@ -165,6 +165,11 @@
 
 (unpin! gptel)
 (package! macher)
+(package! uuidgen) ; for gptel-prompt
+(package! gptel-prompt :recipe (:host github :repo "jwiegley/gptel-prompts"))
+(package! yaml)      ; for .poet templates
+(package! templatel) ; for .poet templates (Jinja2-like)
+(package! gptel-litellm :recipe (:host github :repo "jwiegley/gptel-litellm"))
 
 ;;;;; ClaudeCode
 

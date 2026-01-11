@@ -238,6 +238,19 @@
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
   (setq gptel--system-message user-llm-system-prompt)
 
+;;;;; 프롬프트 선택 함수
+
+  (defun my/gptel-select-prompt ()
+    "현재 gptel 버퍼에서 시스템 프롬프트를 선택하여 변경."
+    (interactive)
+    (let* ((prompts `(("기본 (General)" . ,user-llm-system-prompt)
+                      ("요약 (Summarize)" . ,+gptel-summarize-system-message)
+                      ("번역 (Translate)" . ,+gptel-translate-system-message)))
+           (choice (completing-read "프롬프트: " (mapcar #'car prompts) nil t))
+           (prompt (cdr (assoc choice prompts))))
+      (setq-local gptel--system-message prompt)
+      (message "프롬프트 변경: %s" choice)))
+
   ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
   (setq gptel-magit-backend gptel-openrouter-backend)
   (setq gptel-magit-model gptel-openrouter-flash-model)
@@ -621,6 +634,24 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
           ))
 
   ) ; end of after! gptel
+
+
+;;;; gptel-prompt
+
+(after! gptel
+  ;; git@github.com:character-ai/prompt-poet.git
+  (require 'gptel-prompts)
+  (setq gptel-prompts-directory (concat org-directory "resources/prompts/"))
+
+  (gptel-prompts-update)
+  ;; Ensure prompts are updated if prompt files change
+  (gptel-prompts-add-update-watchers)
+
+  (use-package! uuidgen)
+
+  ;; (require 'gptel-litellm)
+  ;; (gptel-litellm-install-sessions)
+  )
 
 ;;; Provide
 

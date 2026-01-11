@@ -16,18 +16,26 @@
 
 ;;;; Elfeed
 
+;; gc copy-link
 (after! elfeed
   ;; +rss-enable-sliced-images ;  default t
   (setq rmh-elfeed-org-files (list (my/org-elfeed-file))) ; default ~/org/elfeed.org
-  (setq elfeed-search-filter "@1-year-ago") ; "@6-months-ago" "@1-month-ago +unread"
-  ;; (setq elfeed-search-title-max-width 90) ; default 70
+  (setq elfeed-search-filter "") ; "@1-year-ago" "@6-months-ago" "@1-month-ago +unread"
+  (setq elfeed-search-title-max-width 90) ; default 70
   ;; (add-hook 'elfeed-search-mode-hook #'elfeed-update)
   )
 
+(after! elfeed-tube
+  (require 'elfeed-tube)
+  ;; (setq elfeed-tube-invidious-url "https://vid.puffyan.us")
+  (setq elfeed-tube-captions-languages '("en" "ko" "englsh (auto generated)")))
+
 ;;;;; Elfeed-web (웹 인터페이스)
 
-(require 'simple-httpd)
-(load! "elfeed-web/elfeed-web")
+(let ((elfeed-web-dir (expand-file-name "lisp/elfeed-web" doom-user-dir)))
+  (when (file-directory-p elfeed-web-dir)
+    (require 'simple-httpd)
+    (load! "elfeed-web/elfeed-web")))
 ;; 외부 기기에서 접속 허용
 ;; (setq httpd-host "0.0.0.0")
 
