@@ -210,6 +210,36 @@
 
 ;;;; Key Functions
 
+;;;;; dumb-jump: Direct access (bypass LSP)
+
+;; dumb-jump은 Doom의 tools/lookup 모듈에 포함되어 있으며,
+;; gd (+lookup/definition) 실행 시 다음 우선순위로 작동:
+;; 1. LSP/Eglot backend
+;; 2. xref backend
+;; 3. dumb-jump (ripgrep 기반)
+;; 4. project-wide ripgrep
+;;
+;; LSP가 느린 경우 (특히 에이전트 코딩 시) dumb-jump를 직접 호출하면 빠름
+;; - 백엔드: ripgrep (rg)
+;; - 장점: 언어 무관, 주석 내 심볼도 검색, 1초 이내 결과
+;;
+;; NOTE: Doom 기본 "j" 프리픽스는 org-journal용이므로 "J" 사용
+
+(map! :after dumb-jump
+      :leader
+      (:prefix ("J" . "dumb-jump")
+       :desc "Jump to definition" "j" #'dumb-jump-go
+       :desc "Jump back" "b" #'dumb-jump-back
+       :desc "Quick look (tooltip)" "q" #'dumb-jump-quick-look
+       :desc "Jump other window" "o" #'dumb-jump-go-other-window
+       :desc "Jump prefer external" "e" #'dumb-jump-go-prefer-external
+       :desc "Jump prompt" "p" #'dumb-jump-go-prompt))
+
+;; Alternative: override gd to use dumb-jump first (optional)
+;; (map! :after evil
+;;       :n "gd" #'dumb-jump-go
+;;       :n "gD" #'+lookup/references)
+
 ;;;;; +default/search-buffer : consult-line
 
 (map! :after evil
