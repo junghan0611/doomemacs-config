@@ -82,9 +82,26 @@
 
 ;;; pinentry
 
+;; GPG Pinentry 모드 설정
+;;
+;; IMPORTANT: epa-pinentry-mode는 반드시 nil로 설정해야 함!
+;;
+;; 이유:
+;; - 'loopback: GPG agent를 우회하여 Emacs가 직접 passphrase 처리
+;;   → GPG agent 캐시 무시, Emacs 시작할 때마다 passphrase 입력 필요
+;;   → NixOS gpg-agent.conf의 캐시 설정(1년)이 무효화됨
+;;
+;; - nil: GPG agent와 협력하여 passphrase 처리
+;;   → GPG agent 캐시 활용, 캐시 기간 동안 재입력 불필요
+;;   → Emacs minibuffer에서 입력, 시스템 전체 캐시 공유
+;;
+;; 참고:
+;; - pinentry-start: Emacs를 GPG agent의 pinentry로 등록
+;; - 시스템 gpg-agent.conf 설정을 존중하는 것이 올바른 방식
+
 (use-package! pinentry
   :config
-  (setq epa-pinentry-mode 'loopback)
+  (setq epa-pinentry-mode nil)  ; GPG agent 캐시 활용 (loopback 사용 금지!)
   (pinentry-start))
 
 ;;;; imenu-list
