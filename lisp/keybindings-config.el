@@ -222,18 +222,17 @@
 ;; LSP가 느린 경우 (특히 에이전트 코딩 시) dumb-jump를 직접 호출하면 빠름
 ;; - 백엔드: ripgrep (rg)
 ;; - 장점: 언어 무관, 주석 내 심볼도 검색, 1초 이내 결과
-;;
-;; NOTE: Doom 기본 "j" 프리픽스는 org-journal용이므로 "J" 사용
 
-(map! :after dumb-jump
-      :leader
-      (:prefix ("J" . "dumb-jump")
-       :desc "Jump to definition" "j" #'dumb-jump-go
-       :desc "Jump back" "b" #'dumb-jump-back
-       :desc "Quick look (tooltip)" "q" #'dumb-jump-quick-look
-       :desc "Jump other window" "o" #'dumb-jump-go-other-window
-       :desc "Jump prefer external" "e" #'dumb-jump-go-prefer-external
-       :desc "Jump prompt" "p" #'dumb-jump-go-prompt))
+;;   (require 'dumb-jump)
+;;   (map!
+;;    :leader
+;;    (:prefix ("j" . "jump")
+;;     :desc "Jump to definition" "j" #'dumb-jump-go
+;;     :desc "Jump back" "b" #'dumb-jump-back
+;;     :desc "Jump other window" "o" #'dumb-jump-go-other-window
+;;     :desc "Jump prefer external" "e" #'dumb-jump-go-prefer-external
+;;     :desc "Jump prompt" "p" #'dumb-jump-go-prompt)
+;; )
 
 ;; Alternative: override gd to use dumb-jump first (optional)
 ;; (map! :after evil
@@ -439,6 +438,129 @@
         :nv "C-S-p" #'outline-up-heading
         :nv "z u" #'outline-up-heading))
 
+
+;;;;; Embark
+
+;; ~/sync/man/dotsamples/doom/agzam-dot-doom/modules/custom/completion/config.el
+(after! embark
+
+  ;; (require 'org)
+  ;; (setq embark-cycle-key "C-;"
+  ;;       embark-confirm-act-all nil)
+  ;; (setq embark-help-key "M-h") ;; doom's C-h
+
+  ;; (setq embark-indicators '(embark-which-key-indicator
+  ;;                           embark-highlight-indicator
+  ;;                           embark-isearch-highlight-indicator))
+
+  ;; (advice-add #'embark-completing-read-prompter
+  ;;             :around #'embark-hide-which-key-indicator)
+  (map!
+   (:map embark-org-link-map
+    :desc "open-at-point-other-window" "o" #'my/org-open-at-point-other-window)
+   (:map embark-org-src-block-map "=" #'my/org-indent-src-block))
+
+  (map!
+   :after embark
+   (:map embark-general-map
+         ;; "C-<return>" #'embark-dwim
+         "m" #'embark-select
+         "/" #'+embark-project-search
+         "[" #'gptel-quick
+         "?" #'gptel-quick
+         "C-c C-e" #'+vertico/embark-export-write)
+   ;; (:prefix
+   ;;  ("x" . "text")
+   ;;  "p" #'awesome-switch-to-prev-app-and-type)
+
+   (:map
+    embark-file-map
+    "O" #'consult-outline
+    "x" #'embark-open-externally+
+    "1" #'embark-open-externally+
+    "5" #'embark-dired-merge-action
+    "o" nil
+    (:prefix ("o" . "open")
+             "j" (embark-split-action find-file evil-window-split)
+             "k" (embark-split-action find-file +evil/window-split-and-follow)
+             "h" (embark-split-action find-file evil-window-vsplit)
+             "l" (embark-split-action find-file +evil/window-vsplit-and-follow)
+             "a" (embark-ace-action find-file)))
+
+   (:map
+    embark-buffer-map
+    "o" nil
+    (:prefix ("o" . "open")
+             "j" (embark-split-action switch-to-buffer evil-window-split)
+             "k" (embark-split-action switch-to-buffer +evil/window-split-and-follow)
+             "l" (embark-split-action switch-to-buffer evil-window-vsplit)
+             "h" (embark-split-action switch-to-buffer +evil/window-vsplit-and-follow)
+             "a" (embark-ace-action switch-to-buffer)))
+
+   (:map
+    embark-org-heading-map
+    (:prefix ("9" . "denote") ;; TODO add more denote function
+     :desc "denote add links" "u" #'denote-add-links))
+
+   (:map
+    embark-url-map
+    "E" #'+default-browse-url
+    "e" #'+eww/open-in-other-window ;; +eww-browse-url
+    "v" #'forge-visit-topic-via-url)
+
+   (:map embark-markdown-link-map
+         "E" #'+default-browse-url
+         "b" (cmd! () (browse-url (markdown-link-url)))
+         "v" #'forge-visit-topic-via-url)
+
+   (:map embark-org-link-map
+         "E" #'+default-browse-url
+         "e" #'+eww/open-in-other-window
+         "b" #'org-open-at-point
+         "V" #'+open-link-in-vlc
+         "v" #'forge-visit-topic-via-url
+         "x" #'embark-open-externally)
+
+   (:map
+    embark-collect-mode-map
+    :n "[" #'embark-previous-symbol
+    :n "]" #'embark-next-symbol
+    :n "TAB" #'+embark-collect-outline-cycle
+    :n "m" #'embark-select)
+
+   ;; (:map
+   ;;  (embark-identifier-map
+   ;;   embark-region-map
+   ;;   embark-sentence-map
+   ;;   embark-paragraph-map)
+   ;;  (:desc "txl-translate" "M-t" #'txl-translate-region-or-paragraph)
+   ;;  (:prefix
+   ;;   ("x" . "text")
+   ;;   :desc "txl-translate" "t" #'txl-translate-region-or-paragraph
+   ;;   (:prefix ("g" . "google-translate")
+   ;;    :desc "en->ko" "k" #'google-translate-query-translate-reverse
+   ;;    :desc "en->ko2" "K" #'+google-translate-en->ko
+   ;;    :desc "ko->en" "e" #'google-translate-query-translate
+   ;;    :desc "ko->en2" "E" #'+google-translate-ko->en
+   ;;    :desc "translate-at-point" "g" #'google-translate-at-point)))
+   )
+
+  (add-hook! 'embark-collect-mode-hook
+    (defun visual-line-mode-off-h ()
+      (visual-line-mode -1)))
+
+  ;; don't ask when killing buffers
+  ;; (setq embark-pre-action-hooks
+  ;;       (cl-remove
+  ;;        '(kill-buffer embark--confirm)
+  ;;        embark-pre-action-hooks :test #'equal))
+
+  ;; (defadvice! embark-prev-next-recenter-a ()
+  ;;   :after #'embark-previous-symbol
+  ;;   :after #'embark-next-symbol
+  ;;   (recenter))
+
+  )
 
 ;;; provide
 

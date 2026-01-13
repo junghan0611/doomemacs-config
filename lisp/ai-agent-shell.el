@@ -150,6 +150,7 @@
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
   (map! :n "s-;" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
+        :nv "DEL" 'evil-switch-to-windows-last-buffer ; Backspace
         :inv "M-\\" #'other-window
         :inv "M-RET" #'+default/newline
         :inv "M-<return>" #'+default/newline

@@ -26,6 +26,9 @@
 ;;; TODO TERMUX
 
 (when IS-TERMUX
+  ;; TODO android browse url 설정
+  ;; (setq android-browse-url )
+
   ;; 7. GUI 폰트 설정 (Sarasa Term K Nerd)
 
   ;; Termux X11 GUI에서 Nerd Font 아이콘 제대로 표시
