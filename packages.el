@@ -223,6 +223,10 @@
 
 (package! recent-rgrep :recipe (:host github :repo "kickingvegas/recent-rgrep"))
 
+;;;; completion-config.el
+
+(package! consult-ripfd :recipe (:host github :repo "jdtsmith/consult-ripfd"))
+
 ;;; DEPRECATED
 
 ;; (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))

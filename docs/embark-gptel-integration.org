@@ -1,0 +1,306 @@
+#+title: Embark + GPTel 통합 개선 방안
+#+date: [2026-01-14 Tue]
+
+* Embark 구조 분석 (v1.1)
+
+** embark.el 핵심 keymap
+
+| Keymap | Parent | 용도 |
+|--------|--------|------|
+| embark-general-map | - | 모든 타겟에 적용되는 기본 액션 |
+| embark-region-map | embark-general-map | 선택 영역 (u:upcase, l:downcase, c:capitalize) |
+| embark-identifier-map | embark-general-map | 심볼/식별자 (RET:xref-find-definitions) |
+| embark-heading-map | embark-general-map | 일반 outline heading |
+
+** embark-org.el 핵심 keymap
+
+| Keymap | Parent | 용도 |
+|--------|--------|------|
+| embark-org-heading-map | embark-heading-map | org heading (t:todo, s:schedule, d:deadline) |
+| embark-org-src-block-map | embark-general-map | org src block (RET:execute, ':edit-special) |
+| embark-org-link-map | embark-general-map | org link (RET:open-at-point) |
+| embark-org-table-cell-map | embark-general-map | org table cell |
+
+** embark-keymap-alist 등록 (type → keymap)
+
+#+begin_src elisp
+;; embark.el
+(region embark-region-map)
+(identifier embark-identifier-map)
+(heading embark-heading-map)
+
+;; embark-org.el (transformer로 type 변환)
+(org-heading embark-org-heading-map)
+(org-src-block embark-org-src-block-map)
+(org-link embark-org-link-map)
+#+end_src
+
+** embark-target-finders 순서
+
+1. embark-target-active-region → region type
+2. embark-org-target-element-context → org-* types (embark-org.el)
+3. embark-target-identifier-at-point → identifier type
+
+* 현재 상황 분석
+
+** keybindings-config.el의 embark 설정 (line 442-563)
+
+*** 활성화된 설정
+- embark-general-map: ~gptel-quick~ ([, ?), ~embark-select~ (m), ~+embark-project-search~ (/)
+- embark-file-map: 윈도우 분할 액션 (o j/k/h/l)
+- embark-buffer-map: 윈도우 분할 액션
+- embark-org-heading-map: denote 관련 (denote-add-links)
+- embark-org-link-map: ~my/org-open-at-point-other-window~ (o), ~+default-browse-url~ (E)
+- embark-org-src-block-map: ~my/org-indent-src-block~ (=)
+- embark-url-map, embark-markdown-link-map: 브라우저/forge 액션
+- embark-collect-mode-map: 심볼 네비게이션
+
+*** 주석 처리된 legacy 설정 (문제점)
+- line 446-457: embark-cycle-key, embark-indicators, which-key 설정
+- line 531-546: embark-identifier-map, embark-region-map (텍스트/번역 액션)
+  - 이 부분이 **가장 중요한데 비활성화**되어 있음!
+  - txl-translate, google-translate 등 번역 기능
+  - embark-sentence-map, embark-paragraph-map 등
+
+** ai-gptel.el의 gptel 설정 분석
+
+*** 핵심 기능
+- ~gptel-quick~: 빠른 질의 (embark-general-map에 바인딩됨)
+- ~+gptel-summarize-buffer~, ~+gptel-translate-buffer~: 버퍼 단위 작업
+- ~gptel-prompts~: .poet 템플릿 기반 프롬프팅
+- ~macher~: 구조화된 액션 및 도구 통합
+
+*** gptel 프롬프팅 시나리오
+1. 코드 블록 → 설명/리팩토링/버그 분석
+2. org 헤딩 → 요약/확장/관련 내용 생성
+3. 선택 텍스트 → 번역/요약/질문
+4. 파일/버퍼 → 전체 분석/요약
+5. 링크 → 컨텐츠 가져와서 요약/번역
+
+* 문제점 정리
+
+** 1. Legacy vs Modern Embark
+- 주석 처리된 embark-region-map 등이 현재 embark와 호환되는지 불명확
+- embark 최신 버전의 카테고리 시스템과 맞지 않을 가능성
+
+** 2. 모드별 시나리오 부족
+- org-src-block: gptel 연계 없음 (현재는 indent만)
+- org-heading: denote만 있고 gptel 없음
+- embark-region-map: 완전히 비활성화 (번역/요약 불가)
+- embark-identifier-map: 비활성화 (심볼 설명 불가)
+
+** 3. gptel 연계 불일치
+- embark-general-map에만 ~gptel-quick~ 있음
+- 특정 컨텍스트 (코드, 헤딩, 링크 등)에 맞춤형 gptel 액션 없음
+- ~macher~ 도구와 embark 연계 부족
+
+* 개선 방안
+
+** Phase 1: Legacy 설정 정리 (우선순위: 높음)
+
+*** TODO 주석 처리된 embark 설정 검토
+- [ ] embark-region-map, embark-identifier-map 활성화 여부 결정
+- [ ] 현재 embark 버전과 호환성 확인
+- [ ] which-key-indicator 관련 설정 필요 여부 확인
+
+*** TODO embark 카테고리 확인
+embark 최신 버전의 카테고리 시스템 확인 필요:
+#+begin_src elisp
+;; embark가 인식하는 카테고리 확인
+(describe-variable 'embark-keymap-alist)
+
+;; 현재 포인트의 타겟 확인
+(embark-target-at-point)
+#+end_src
+
+** Phase 2: org-mode 통합 강화 (우선순위: 최고)
+
+*** embark-org-src-block-map 확장
+현재: indent만
+제안: gptel 연계 추가
+
+#+begin_src elisp
+(:map embark-org-src-block-map
+ "=" #'my/org-indent-src-block
+ ;; gptel 연계
+ "[" #'my/gptel-explain-src-block      ; 코드 설명
+ "r" #'my/gptel-refactor-src-block     ; 리팩토링 제안
+ "b" #'my/gptel-find-bugs-src-block    ; 버그 분석
+ "d" #'my/gptel-add-docstring-src-block ; 문서화
+ "t" #'my/gptel-write-test-src-block)   ; 테스트 작성
+#+end_src
+
+*** embark-org-heading-map 확장
+현재: denote 관련만
+제안: gptel 연계 추가
+
+#+begin_src elisp
+(:map embark-org-heading-map
+ (:prefix ("9" . "denote")
+  "u" #'denote-add-links)
+ ;; gptel 연계
+ "[" #'my/gptel-expand-heading         ; 헤딩 내용 확장
+ "s" #'my/gptel-summarize-heading      ; 헤딩 요약
+ "q" #'my/gptel-questions-heading)     ; 헤딩에 대한 질문 생성
+#+end_src
+
+*** embark-org-link-map 확장
+현재: 브라우저 열기, forge 등
+제안: 링크 컨텐츠 분석 추가
+
+#+begin_src elisp
+(:map embark-org-link-map
+ "o" #'my/org-open-at-point-other-window
+ "E" #'+default-browse-url
+ ;; gptel 연계
+ "s" #'my/gptel-summarize-link         ; 링크 내용 요약
+ "t" #'my/gptel-translate-link)        ; 링크 내용 번역
+#+end_src
+
+** Phase 3: 범용 텍스트 액션 (우선순위: 중간)
+
+*** embark-region-map 활성화 및 현대화
+Legacy 번역 기능을 gptel로 재구성:
+
+#+begin_src elisp
+(:map embark-region-map
+ ;; gptel 기본 액션
+ "[" #'gptel-quick                      ; 빠른 질의
+ "s" #'+gptel-summarize-region          ; 요약
+ "t" #'+gptel-translate-region          ; 번역 (한↔영 자동 감지)
+ "e" #'my/gptel-explain-region          ; 설명
+ "r" #'my/gptel-rewrite-region          ; 재작성
+ ;; 프롬프트 템플릿 선택
+ "p" #'my/gptel-apply-prompt-to-region  ; .poet 템플릿 선택
+ ;; macher 액션
+ "m" #'macher-action)                   ; 구조화된 액션 메뉴
+#+end_src
+
+*** embark-identifier-map (심볼/코드)
+#+begin_src elisp
+(:map embark-identifier-map
+ "[" #'my/gptel-explain-identifier      ; 심볼 설명
+ "u" #'my/gptel-usage-identifier        ; 사용법 예제
+ "d" #'my/gptel-doc-identifier)         ; 공식 문서 참조
+#+end_src
+
+** Phase 4: consult-ripfd 통합 (우선순위: 중간)
+
+consult-ripfd 결과에서 embark 액션:
+- 파일: embark-file-map (기존 지원)
+- 라인: embark-consult-map (기존 지원)
+- 추가: 검색 결과 → gptel context로 일괄 추가
+
+#+begin_src elisp
+;; embark-consult-map에 추가
+(:map embark-consult-map
+ "g" #'my/gptel-analyze-search-results  ; 검색 결과 분석
+ "c" #'my/gptel-add-to-context)         ; gptel context에 추가
+#+end_src
+
+** Phase 5: macher 통합 (우선순위: 낮음, 실험적)
+
+~macher~는 구조화된 액션과 도구를 제공:
+- ~macher-action~: 상황별 액션 메뉴
+- ~macher-preset~: 미리 정의된 워크플로우
+
+embark와 macher 통합:
+#+begin_src elisp
+;; embark-general-map에 macher 추가
+(:map embark-general-map
+ "M" #'macher-action     ; 구조화된 액션
+ "P" #'macher-preset)    ; 프리셋 워크플로우
+#+end_src
+
+* 구현 우선순위
+
+1. [A] Phase 2: org-mode 통합 (embark-org-src-block-map, embark-org-heading-map)
+   - 가장 자주 사용하는 시나리오
+   - 코드 블록 → gptel 워크플로우 핵심
+
+2. [B] Phase 3: embark-region-map 활성화
+   - 범용 텍스트 작업에 필수
+   - 번역/요약은 일상 작업
+
+3. [C] Phase 1: Legacy 정리
+   - 혼란 제거
+   - 향후 유지보수성 향상
+
+4. [D] Phase 4: consult-ripfd 통합
+   - 파일 검색 → 분석 워크플로우
+
+5. [E] Phase 5: macher 통합
+   - 실험적 기능
+   - 기존 gptel 워크플로우로 충분하면 보류
+
+* 필요한 함수 구현 (예시)
+
+** org-src-block → gptel
+#+begin_src elisp
+(defun my/gptel-explain-src-block ()
+  "Explain the org src block at point using gptel."
+  (interactive)
+  (let ((code (org-element-property :value (org-element-at-point))))
+    (gptel-request
+     (format "다음 코드를 설명해주세요:\n\n```\n%s\n```" code)
+     :buffer (gptel-get-or-create-buffer))))
+
+(defun my/gptel-refactor-src-block ()
+  "Suggest refactoring for the org src block at point."
+  (interactive)
+  (let ((code (org-element-property :value (org-element-at-point)))
+        (lang (org-element-property :language (org-element-at-point))))
+    (gptel-request
+     (format "다음 %s 코드를 리팩토링해주세요:\n\n```%s\n%s\n```"
+             lang lang code)
+     :buffer (gptel-get-or-create-buffer))))
+#+end_src
+
+** org-heading → gptel
+#+begin_src elisp
+(defun my/gptel-expand-heading ()
+  "Expand the content under the current org heading using gptel."
+  (interactive)
+  (let* ((heading (org-get-heading t t t t))
+         (content (org-get-entry)))
+    (gptel-request
+     (format "다음 헤딩의 내용을 확장해주세요:\n\n# %s\n\n%s"
+             heading content)
+     :buffer (gptel-get-or-create-buffer))))
+#+end_src
+
+** region → gptel
+#+begin_src elisp
+(defun +gptel-translate-region (beg end)
+  "Translate selected region (auto-detect ko↔en direction)."
+  (interactive "r")
+  (let ((text (buffer-substring-no-properties beg end)))
+    (gptel-request
+     (format "다음 텍스트를 번역해주세요 (한↔영 자동):\n\n%s" text)
+     :system +gptel-translate-system-message
+     :temperature +gptel-translate-temperature
+     :buffer (gptel-get-or-create-buffer))))
+
+(defun my/gptel-apply-prompt-to-region (beg end)
+  "Apply selected gptel-prompt template to region."
+  (interactive "r")
+  (let* ((text (buffer-substring-no-properties beg end))
+         (prompt (completing-read "Prompt: " (gptel-prompts-list))))
+    (gptel-request
+     (format "%s\n\n%s" (gptel-prompts-get prompt) text)
+     :buffer (gptel-get-or-create-buffer))))
+#+end_src
+
+* 다음 단계
+
+1. 사용자와 우선순위 합의
+2. Phase 2 (org-mode 통합) 먼저 구현
+3. 실제 사용 후 피드백 반영
+4. 나머지 Phase 순차 진행
+
+* 참고 자료
+
+- [[https://github.com/oantolin/embark][Embark GitHub]]
+- [[https://github.com/karthink/gptel][GPTel GitHub]]
+- [[https://github.com/jdtsmith/consult-ripfd][consult-ripfd GitHub]]
+- [[https://github.com/jwiegley/macher][Macher GitHub]]

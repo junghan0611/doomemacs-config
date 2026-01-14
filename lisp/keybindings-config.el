@@ -485,7 +485,12 @@
              "k" (embark-split-action find-file +evil/window-split-and-follow)
              "h" (embark-split-action find-file evil-window-vsplit)
              "l" (embark-split-action find-file +evil/window-vsplit-and-follow)
-             "a" (embark-ace-action find-file)))
+             "a" (embark-ace-action find-file))
+    ;; gptel 액션 (cx6) - TODO: 테스트 후 활성화
+    ;; :desc "gptel prompt 적용" "p" #'my/gptel-apply-prompt-to-file
+    ;; :desc "번역 (immersive)" "t" #'my/gptel-translate-file
+    ;; :desc "요약" "s" #'my/gptel-summarize-file
+    )
 
    (:map
     embark-buffer-map
@@ -559,6 +564,20 @@
   ;;   :after #'embark-previous-symbol
   ;;   :after #'embark-next-symbol
   ;;   (recenter))
+
+;;;;; embark-region-map + gptel (cx6)
+
+  ;; 영역 선택 → M-o → gptel 액션
+  ;; 기존 Doom 키바인딩 유지, 새 기능만 추가
+  ;; TODO: 테스트 후 활성화
+  ;; (map! :map embark-region-map
+  ;;       ;; gptel 액션
+  ;;       :desc "gptel prompt 적용" "p" #'my/gptel-apply-prompt-to-region
+  ;;       :desc "gptel 빠른 질의" "[" #'my/gptel-quick-region
+  ;;       :desc "번역 (한↔영)" "t" #'my/gptel-translate-region
+  ;;       :desc "요약" "s" #'my/gptel-summarize-region
+  ;;       :desc "설명 (코드)" "e" #'my/gptel-explain-region
+  ;;       :desc "재작성" "r" #'my/gptel-rewrite-region)
 
   )
 
