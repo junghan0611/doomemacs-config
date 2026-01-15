@@ -444,24 +444,21 @@
 ;; ~/sync/man/dotsamples/doom/agzam-dot-doom/modules/custom/completion/config.el
 (after! embark
 
-  ;; (require 'org)
+  (require 'org)
   ;; (setq embark-cycle-key "C-;"
   ;;       embark-confirm-act-all nil)
   ;; (setq embark-help-key "M-h") ;; doom's C-h
-
-  ;; (setq embark-indicators '(embark-which-key-indicator
-  ;;                           embark-highlight-indicator
+  ;; (setq embark-indicators '(+vertico-embark-which-key-indicator embark-highlight-indicator
   ;;                           embark-isearch-highlight-indicator))
-
   ;; (advice-add #'embark-completing-read-prompter
   ;;             :around #'embark-hide-which-key-indicator)
+
   (map!
    (:map embark-org-link-map
     :desc "open-at-point-other-window" "o" #'my/org-open-at-point-other-window)
-   (:map embark-org-src-block-map "=" #'my/org-indent-src-block))
+   (:map embark-org-src-block-map
+         "=" #'my/org-indent-src-block)
 
-  (map!
-   :after embark
    (:map embark-general-map
          ;; "C-<return>" #'embark-dwim
          "m" #'embark-select
@@ -477,7 +474,6 @@
     embark-file-map
     "O" #'consult-outline
     "x" #'embark-open-externally+
-    "1" #'embark-open-externally+
     "5" #'embark-dired-merge-action
     "o" nil
     (:prefix ("o" . "open")
@@ -486,10 +482,11 @@
              "h" (embark-split-action find-file evil-window-vsplit)
              "l" (embark-split-action find-file +evil/window-vsplit-and-follow)
              "a" (embark-ace-action find-file))
-    ;; gptel 액션 (cx6) - TODO: 테스트 후 활성화
-    ;; :desc "gptel prompt 적용" "p" #'my/gptel-apply-prompt-to-file
-    ;; :desc "번역 (immersive)" "t" #'my/gptel-translate-file
-    ;; :desc "요약" "s" #'my/gptel-summarize-file
+    (:prefix
+     ("1" . "gptel")
+     "p" #'my/gptel-apply-prompt-to-file
+     "t" #'my/gptel-translate-file
+     "s" #'my/gptel-summarize-file)
     )
 
    (:map
@@ -513,10 +510,11 @@
     "e" #'+eww/open-in-other-window ;; +eww-browse-url
     "v" #'forge-visit-topic-via-url)
 
-   (:map embark-markdown-link-map
-         "E" #'+default-browse-url
-         "b" (cmd! () (browse-url (markdown-link-url)))
-         "v" #'forge-visit-topic-via-url)
+   ;; TODO agzam-dot-doom/modules/custom/embark/config.el
+   ;; (:map embark-markdown-link-map
+   ;;       "E" #'+default-browse-url
+   ;;       "b" (cmd! () (browse-url (markdown-link-url)))
+   ;;       "v" #'forge-visit-topic-via-url)
 
    (:map embark-org-link-map
          "E" #'+default-browse-url
@@ -533,22 +531,25 @@
     :n "TAB" #'+embark-collect-outline-cycle
     :n "m" #'embark-select)
 
-   ;; (:map
-   ;;  (embark-identifier-map
-   ;;   embark-region-map
-   ;;   embark-sentence-map
-   ;;   embark-paragraph-map)
-   ;;  (:desc "txl-translate" "M-t" #'txl-translate-region-or-paragraph)
-   ;;  (:prefix
-   ;;   ("x" . "text")
-   ;;   :desc "txl-translate" "t" #'txl-translate-region-or-paragraph
-   ;;   (:prefix ("g" . "google-translate")
-   ;;    :desc "en->ko" "k" #'google-translate-query-translate-reverse
-   ;;    :desc "en->ko2" "K" #'+google-translate-en->ko
-   ;;    :desc "ko->en" "e" #'google-translate-query-translate
-   ;;    :desc "ko->en2" "E" #'+google-translate-ko->en
-   ;;    :desc "translate-at-point" "g" #'google-translate-at-point)))
+;;;;;; emba-region-map + gptel (cx6)
+
+   ;; 영역 선택 → M-o → gptel 액션
+   :map
+   (embark-identifier-map
+    embark-region-map
+    embark-sentence-map
+    embark-paragraph-map)
+   (:prefix
+    ("1" . "gptel")
+    "p" #'my/gptel-apply-prompt-to-region
+    "[" #'my/gptel-quick-region
+    "t" #'my/gptel-translate-region
+    "s" #'my/gptel-summarize-region
+    "e" #'my/gptel-explain-region
+    "r" #'my/gptel-rewrite-region)
    )
+
+;;;;;; add-hook
 
   (add-hook! 'embark-collect-mode-hook
     (defun visual-line-mode-off-h ()
@@ -564,20 +565,6 @@
   ;;   :after #'embark-previous-symbol
   ;;   :after #'embark-next-symbol
   ;;   (recenter))
-
-;;;;; embark-region-map + gptel (cx6)
-
-  ;; 영역 선택 → M-o → gptel 액션
-  ;; 기존 Doom 키바인딩 유지, 새 기능만 추가
-  ;; TODO: 테스트 후 활성화
-  ;; (map! :map embark-region-map
-  ;;       ;; gptel 액션
-  ;;       :desc "gptel prompt 적용" "p" #'my/gptel-apply-prompt-to-region
-  ;;       :desc "gptel 빠른 질의" "[" #'my/gptel-quick-region
-  ;;       :desc "번역 (한↔영)" "t" #'my/gptel-translate-region
-  ;;       :desc "요약" "s" #'my/gptel-summarize-region
-  ;;       :desc "설명 (코드)" "e" #'my/gptel-explain-region
-  ;;       :desc "재작성" "r" #'my/gptel-rewrite-region)
 
   )
 
