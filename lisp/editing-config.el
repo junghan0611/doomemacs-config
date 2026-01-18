@@ -57,7 +57,6 @@
   (require 'ten)
   (setq ten-glossary-file-extensions '("org" "md" "txt"))
   (setq ten-glossary-exclude-regexps '("/\\."))
-  (setq ten-tags-file-default user-ten-tags-file)
 
   ;; FIX: "Keep current list of tags tables also?" 프롬프트 제거
   ;;
@@ -80,18 +79,20 @@
   ;; - dumb-jump: 영향 없음 (독립적인 xref 백엔드)
   ;; - Doom lookup (gd): 영향 없음 (LSP → xref → dumb-jump 우선순위 유지)
   (when (file-exists-p user-ten-tags-file)
+    (setq ten-tags-file-default user-ten-tags-file)
     (setq tags-file-name user-ten-tags-file)
-    (setq tags-table-list (list user-ten-tags-file)))
+    (setq tags-table-list (list user-ten-tags-file))
 
-  ;; org-mode에서만 활성화 (text-mode 전체는 너무 광범위)
-  ;; Info-mode는 Emacs 문서 읽을 때 용어 하이라이트에 유용
-  (add-hook 'org-mode-hook 'ten-font-lock-mode)
-  (add-hook 'Info-mode-hook 'ten-font-lock-mode)
+    ;; org-mode에서만 활성화 (text-mode 전체는 너무 광범위)
+    ;; Info-mode는 Emacs 문서 읽을 때 용어 하이라이트에 유용
+    (add-hook 'org-mode-hook 'ten-font-lock-mode)
+    (add-hook 'Info-mode-hook 'ten-font-lock-mode)
 
-  ;; consult-buffer (SPC b b)에서 glossary 항목 접근
-  (with-eval-after-load 'consult
-    (require 'consult-ten)
-    (add-to-list 'consult-buffer-sources 'consult-ten-glossary 'append) ; g
+    ;; consult-buffer (SPC b b)에서 glossary 항목 접근
+    (with-eval-after-load 'consult
+      (require 'consult-ten)
+      (add-to-list 'consult-buffer-sources 'consult-ten-glossary 'append) ; g
+      )
     )
   )
 
