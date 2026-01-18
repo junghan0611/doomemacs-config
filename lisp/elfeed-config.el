@@ -34,8 +34,10 @@
 
 (let ((elfeed-web-dir (expand-file-name "lisp/elfeed-web" doom-user-dir)))
   (when (file-directory-p elfeed-web-dir)
-    (require 'simple-httpd)
-    (load! "elfeed-web/elfeed-web")))
+    (when (locate-library "simple-httpd")
+      (require 'simple-httpd)
+      (load! "elfeed-web/elfeed-web"))))
+
 ;; 외부 기기에서 접속 허용
 ;; (setq httpd-host "0.0.0.0")
 
