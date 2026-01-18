@@ -140,26 +140,31 @@
   (setq agent-shell-anthropic-authentication
         (agent-shell-anthropic-make-authentication :login t))
 
-  ;; (setq agent-shell-google-authentication
-  ;;       (agent-shell-google-make-authentication :login t))
-  ;; (setq agent-shell-openai-authentication
-  ;;       (agent-shell-openai-make-authentication :login t))
-  (setq agent-shell-header-style nil)
+  (unless (display-graphic-p)
+    (setq agent-shell-header-style nil))
 
   (require 'agent-shell-manager)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
   (map! :n "s-;" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
-        :nv "DEL" 'evil-switch-to-windows-last-buffer ; Backspace
-        :inv "M-\\" #'other-window
+        :i "RET" #'+default/newline
         :inv "M-RET" #'+default/newline
         :inv "M-<return>" #'+default/newline
-        :i "DEL" #'evil-delete-backward-char-and-join
-        :n "DEL" #'evil-switch-to-windows-last-buffer
-        ;; :inv "M-<return>" #'+default/newline
+
+        ;; :n "RET" #'comint-send-input
         :in "C-RET" #'shell-maker-submit
         :in "C-<return>" #'shell-maker-submit
+
+        :inv "M-\\" #'other-window
+        :nv "DEL" 'evil-switch-to-windows-last-buffer ; Backspace
+        :i "DEL" #'evil-delete-backward-char-and-join
         )
+
+  ;; Configure *agent-shell-diff* buffers to start in Emacs state
+  (add-hook 'diff-mode-hook
+	    (lambda ()
+	      (when (string-match-p "\\*agent-shell-diff\\*" (buffer-name))
+		(evil-emacs-state))))
 
   (require 'agent-shell-sidebar)
   (setq agent-shell-sidebar-width "25%"
