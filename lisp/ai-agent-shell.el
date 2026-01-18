@@ -145,7 +145,7 @@
 
   (require 'agent-shell-manager)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
-  (map! :n "s-;" #'agent-shell-manager-toggle)
+  (map! :in "s-;" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
         :i "RET" #'+default/newline
         :inv "M-RET" #'+default/newline
@@ -172,7 +172,7 @@
         agent-shell-sidebar-maximum-width "50%"
         agent-shell-sidebar-position 'right
         agent-shell-sidebar-locked t
-        ;; agent-shell-sidebar-default-config (agent-shell-anthropic-make-claude-code-config)
+        agent-shell-sidebar-default-config (agent-shell-anthropic-make-claude-code-config)
         )
 
   ;; agent-shell 버퍼를 실제 버퍼로 표시 (버퍼 목록에서 보이게)
