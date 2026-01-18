@@ -193,7 +193,7 @@
 
 ;;;;; ACP (Agent Client Protocol)
 
-;; (package! minuet)
+(package! minuet :recipe (:host github :repo "ElleNajt/minuet-ai.el"))
 (package! shell-maker)
 (package! acp :recipe (:host github :repo "xenodium/acp.el"))
 (package! agent-shell :recipe (:host github :repo "xenodium/agent-shell"))

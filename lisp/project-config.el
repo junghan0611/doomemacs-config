@@ -12,6 +12,8 @@
 ;; evil-dot-doom/modules/custom/projects/config.el
 
 (progn
+  (setq magit-show-long-lines-warning nil) ; default nil
+
   (require' projectile)
   ;; Disable projectile cache - saves requirement to invalidate cache when moving files
   (setq projectile-enable-caching nil) ; very IMPORTANT
