@@ -356,6 +356,8 @@
         :n "C-k" #'org-backward-heading-same-level
         :n "C-n" #'org-next-visible-heading
         :n "C-p" #'org-previous-visible-heading
+        :n "M-n" #'org-next-visible-heading
+        :n "M-p" #'org-previous-visible-heading
         :n "zu" #'outline-up-heading
         )
 
