@@ -26,34 +26,6 @@
 (setq evil-collection-gptel-want-shift-ret-menu t)
 (setq evil-collection-gptel-want-shift-ret-to-send nil)
 
-;;;; macher
-
-(use-package! macher
-  :custom
-  ;; The org UI has structured navigation and nice content folding.
-  (macher-action-buffer-ui 'org)
-
-  :config
-  ;; Recommended - register macher tools and presets with gptel.
-  (macher-install)
-
-  ;; Recommended - enable macher infrastructure for tools/prompts in
-  ;; any buffer.  (Actions and presets will still work without this.)
-  (macher-enable)
-
-  ;; Adjust buffer positioning to taste.
-  ;; (add-to-list
-  ;;  'display-buffer-alist
-  ;;  '("\\*macher:.*\\*"
-  ;;    (display-buffer-in-side-window)
-  ;;    (side . bottom)))
-  ;; (add-to-list
-  ;;  'display-buffer-alist
-  ;;  '("\\*macher-patch:.*\\*"
-  ;;    (display-buffer-in-side-window)
-  ;;    (side . right)))
-  )
-
 ;;;; gptel
 
 ;;;;; load
@@ -69,7 +41,7 @@
   (setq gptel-include-reasoning nil)
   (setq gptel-default-mode 'org-mode)
   ;; (setq gptel-temperature 0.3) ; gptel 1.0
-  (set-popup-rule! "^\\*ChatGPT\\*$" :side 'right :size 84 :vslot 100 :quit t)
+  (set-popup-rule! "^\\*OpenRouter\\*$" :side 'right :size 84 :vslot 100 :quit t)
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
 ;;;;; gptel-org
@@ -360,8 +332,23 @@
       (doom-mark-buffer-as-real-h)))
 
   ;; Optional - set up macher as soon as gptel is loaded.
-  (require 'macher)
+  ;; (require 'macher)
 
+;;;;; gptel-prompt
+
+  ;; git@github.com:character-ai/prompt-poet.git
+  (when (locate-library "gptel-prompt")
+    (require 'gptel-prompts)
+    (use-package! uuidgen)
+    (when (file-exists-p (concat org-directory "resources/prompts/"))
+      (setq gptel-prompts-directory (concat org-directory "resources/prompts/"))
+      (gptel-prompts-update)
+      ;; Ensure prompts are updated if prompt files change
+      (gptel-prompts-add-update-watchers))
+
+    ;; (require 'gptel-litellm)
+    ;; (gptel-litellm-install-sessions)
+    )
   ) ; end of use-package! gptel
 
 ;;;; gptel-buffer: 범용 버퍼 요약/번역
@@ -632,7 +619,6 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
           "M-s" #'gptel-save-as-org-with-denote-metadata
           "M-l" #'gptel-clear-buffer+
           ))
-
   ) ; end of after! gptel
 
 ;;;; embark-region + gptel 통합
@@ -668,10 +654,9 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
 ;;
 ;; [TODO] 테스트 후 keybindings-config.el 바인딩 활성화
 
-(after! gptel
-
 ;;;;; 프롬프트 선택 함수
 
+(after! gptel
   (defun my/gptel--list-prompts ()
     "gptel-prompts-directory에서 프롬프트 파일 목록 반환."
     (when (and (boundp 'gptel-prompts-directory)
@@ -689,7 +674,6 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
 
 ;;;;; embark-region용 gptel 함수들
 
-;;;###autoload
   (defun my/gptel-apply-prompt-to-region (beg end)
     "선택 영역에 gptel prompt 적용.
 프롬프트 파일 선택 후 선택된 텍스트와 함께 gptel에 전달."
@@ -705,78 +689,72 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
             (message "gptel에 전달: %s" prompt-file))
         (user-error "프롬프트 파일을 읽을 수 없습니다: %s" prompt-file))))
 
-;;;###autoload
   (defun my/gptel-quick-region (beg end)
     "선택 영역으로 gptel-quick 호출."
     (interactive "r")
     (let ((text (buffer-substring-no-properties beg end)))
       (gptel-quick text)))
 
-;;;###autoload
   (defun my/gptel-translate-region (beg end)
     "선택 영역 번역 (한↔영 자동 감지)."
     (interactive "r")
     (let ((text (buffer-substring-no-properties beg end)))
       (gptel-request
-       (format "다음 텍스트를 번역해주세요. 한국어면 영어로, 영어면 한국어로:\n\n%s" text)
-       :system +gptel-translate-system-message
-       :callback (lambda (response info)
-                   (if response
-                       (with-current-buffer (get-buffer-create "*gptel-translate*")
-                         (erase-buffer)
-                         (insert response)
-                         (display-buffer (current-buffer)))
-                     (message "번역 실패: %s" (plist-get info :status)))))))
+          (format "다음 텍스트를 번역해주세요. 한국어면 영어로, 영어면 한국어로:\n\n%s" text)
+        :system +gptel-translate-system-message
+        :callback (lambda (response info)
+                    (if response
+                        (with-current-buffer (get-buffer-create "*gptel-translate*")
+                          (erase-buffer)
+                          (insert response)
+                          (display-buffer (current-buffer)))
+                      (message "번역 실패: %s" (plist-get info :status)))))))
 
-;;;###autoload
   (defun my/gptel-summarize-region (beg end)
     "선택 영역 요약."
     (interactive "r")
     (let ((text (buffer-substring-no-properties beg end)))
       (gptel-request
-       (format "다음 텍스트를 간결하게 요약해주세요:\n\n%s" text)
-       :system +gptel-summarize-system-message
-       :callback (lambda (response info)
-                   (if response
-                       (with-current-buffer (get-buffer-create "*gptel-summary*")
-                         (erase-buffer)
-                         (insert response)
-                         (display-buffer (current-buffer)))
-                     (message "요약 실패: %s" (plist-get info :status)))))))
+          (format "다음 텍스트를 간결하게 요약해주세요:\n\n%s" text)
+        :system +gptel-summarize-system-message
+        :callback (lambda (response info)
+                    (if response
+                        (with-current-buffer (get-buffer-create "*gptel-summary*")
+                          (erase-buffer)
+                          (insert response)
+                          (display-buffer (current-buffer)))
+                      (message "요약 실패: %s" (plist-get info :status)))))))
 
-;;;###autoload
   (defun my/gptel-explain-region (beg end)
     "선택 영역 (코드) 설명."
     (interactive "r")
     (let ((text (buffer-substring-no-properties beg end)))
       (gptel-request
-       (format "다음 코드/텍스트를 설명해주세요:\n\n```\n%s\n```" text)
-       :callback (lambda (response info)
-                   (if response
-                       (with-current-buffer (get-buffer-create "*gptel-explain*")
-                         (erase-buffer)
-                         (insert response)
-                         (display-buffer (current-buffer)))
-                     (message "설명 실패: %s" (plist-get info :status)))))))
+          (format "다음 코드/텍스트를 설명해주세요:\n\n```\n%s\n```" text)
+        :callback (lambda (response info)
+                    (if response
+                        (with-current-buffer (get-buffer-create "*gptel-explain*")
+                          (erase-buffer)
+                          (insert response)
+                          (display-buffer (current-buffer)))
+                      (message "설명 실패: %s" (plist-get info :status)))))))
 
-;;;###autoload
   (defun my/gptel-rewrite-region (beg end)
     "선택 영역 재작성/개선."
     (interactive "r")
     (let ((text (buffer-substring-no-properties beg end)))
       (gptel-request
-       (format "다음 텍스트를 더 명확하고 간결하게 재작성해주세요:\n\n%s" text)
-       :callback (lambda (response info)
-                   (if response
-                       (with-current-buffer (get-buffer-create "*gptel-rewrite*")
-                         (erase-buffer)
-                         (insert response)
-                         (display-buffer (current-buffer)))
-                     (message "재작성 실패: %s" (plist-get info :status)))))))
+          (format "다음 텍스트를 더 명확하고 간결하게 재작성해주세요:\n\n%s" text)
+        :callback (lambda (response info)
+                    (if response
+                        (with-current-buffer (get-buffer-create "*gptel-rewrite*")
+                          (erase-buffer)
+                          (insert response)
+                          (display-buffer (current-buffer)))
+                      (message "재작성 실패: %s" (plist-get info :status)))))))
 
 ;;;;; embark-file-map용 gptel 함수들
 
-;;;###autoload
   (defun my/gptel-apply-prompt-to-file (file)
     "FILE에 gptel prompt 적용.
 프롬프트 파일 선택 후 파일 내용과 함께 gptel에 전달."
@@ -794,7 +772,6 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
             (message "gptel에 전달: %s → %s" (file-name-nondirectory file) prompt-file))
         (user-error "프롬프트 파일을 읽을 수 없습니다: %s" prompt-file))))
 
-;;;###autoload
   (defun my/gptel-translate-file (file)
     "FILE을 immersive-translate 프롬프트로 번역.
 ~/sync/org/resources/prompts/immersive-translate.poet 사용."
@@ -811,31 +788,30 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
           (progn
             (message "번역 중: %s..." (file-name-nondirectory file))
             (gptel-request
-             content
-             :system (with-temp-buffer
-                       (insert-file-contents prompt-file)
-                       ;; .poet 파일에서 system content 추출
-                       (goto-char (point-min))
-                       (if (re-search-forward "role: system\\s-*\n\\s-*content:\\s-*>-?\\s-*\n" nil t)
-                           (let ((start (point)))
-                             (if (re-search-forward "^- name:" nil t)
-                                 (buffer-substring-no-properties start (match-beginning 0))
-                               (buffer-substring-no-properties start (point-max))))
-                         ;; fallback: 전체 내용
-                         (buffer-string)))
-             :callback (lambda (response info)
-                         (if response
-                             (progn
-                               (with-current-buffer output-buffer
-                                 (erase-buffer)
-                                 (insert response)
-                                 (goto-char (point-min)))
-                               (display-buffer output-buffer)
-                               (message "번역 완료: %s" (file-name-nondirectory file)))
-                           (message "번역 실패: %s" (plist-get info :status))))))
+                content
+              :system (with-temp-buffer
+                        (insert-file-contents prompt-file)
+                        ;; .poet 파일에서 system content 추출
+                        (goto-char (point-min))
+                        (if (re-search-forward "role: system\\s-*\n\\s-*content:\\s-*>-?\\s-*\n" nil t)
+                            (let ((start (point)))
+                              (if (re-search-forward "^- name:" nil t)
+                                  (buffer-substring-no-properties start (match-beginning 0))
+                                (buffer-substring-no-properties start (point-max))))
+                          ;; fallback: 전체 내용
+                          (buffer-string)))
+              :callback (lambda (response info)
+                          (if response
+                              (progn
+                                (with-current-buffer output-buffer
+                                  (erase-buffer)
+                                  (insert response)
+                                  (goto-char (point-min)))
+                                (display-buffer output-buffer)
+                                (message "번역 완료: %s" (file-name-nondirectory file)))
+                            (message "번역 실패: %s" (plist-get info :status))))))
         (user-error "immersive-translate.poet 파일이 없습니다: %s" prompt-file))))
 
-;;;###autoload
   (defun my/gptel-summarize-file (file)
     "FILE 내용 요약."
     (interactive "fFile to summarize: ")
@@ -847,36 +823,48 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
                                    (file-name-nondirectory file)))))
       (message "요약 중: %s..." (file-name-nondirectory file))
       (gptel-request
-       (format "다음 파일 내용을 간결하게 요약해주세요:\n\n%s" content)
-       :system +gptel-summarize-system-message
-       :callback (lambda (response info)
-                   (if response
-                       (progn
-                         (with-current-buffer output-buffer
-                           (erase-buffer)
-                           (insert response)
-                           (goto-char (point-min)))
-                         (display-buffer output-buffer)
-                         (message "요약 완료: %s" (file-name-nondirectory file)))
-                     (message "요약 실패: %s" (plist-get info :status)))))))
+          (format "다음 파일 내용을 간결하게 요약해주세요:\n\n%s" content)
+        :system +gptel-summarize-system-message
+        :callback (lambda (response info)
+                    (if response
+                        (progn
+                          (with-current-buffer output-buffer
+                            (erase-buffer)
+                            (insert response)
+                            (goto-char (point-min)))
+                          (display-buffer output-buffer)
+                          (message "요약 완료: %s" (file-name-nondirectory file)))
+                      (message "요약 실패: %s" (plist-get info :status)))))))
+  )
 
-  ) ; end of embark-region + gptel
+;;;; macher
 
-;;;; gptel-prompt
+(use-package! macher
+  :defer 5
+  :after gptel
+  :custom
+  ;; The org UI has structured navigation and nice content folding.
+  (macher-action-buffer-ui 'org)
 
-(after! gptel
-  ;; git@github.com:character-ai/prompt-poet.git
-  (require 'gptel-prompts)
-  (setq gptel-prompts-directory (concat org-directory "resources/prompts/"))
+  :config
+  ;; Recommended - register macher tools and presets with gptel.
+  (macher-install)
 
-  (gptel-prompts-update)
-  ;; Ensure prompts are updated if prompt files change
-  (gptel-prompts-add-update-watchers)
+  ;; Recommended - enable macher infrastructure for tools/prompts in
+  ;; any buffer.  (Actions and presets will still work without this.)
+  (macher-enable)
 
-  (use-package! uuidgen)
-
-  ;; (require 'gptel-litellm)
-  ;; (gptel-litellm-install-sessions)
+  ;; Adjust buffer positioning to taste.
+  ;; (add-to-list
+  ;;  'display-buffer-alist
+  ;;  '("\\*macher:.*\\*"
+  ;;    (display-buffer-in-side-window)
+  ;;    (side . bottom)))
+  ;; (add-to-list
+  ;;  'display-buffer-alist
+  ;;  '("\\*macher-patch:.*\\*"
+  ;;    (display-buffer-in-side-window)
+  ;;    (side . right)))
   )
 
 ;;; Provide

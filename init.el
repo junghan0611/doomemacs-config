@@ -140,7 +140,7 @@
         ;; +noter                      ; enhanced PDF notetaking
         ;; +pomodoro                 ; be fruitful with the tomato technique
         )                     ; wander around notes
-       sh                ; she sells {ba,z,fi}sh shells on the C xor
+       (sh +lsp)                ; she sells {ba,z,fi}sh shells on the C xor
        (python +tree-sitter)
        (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
        (json +tree-sitter)  ; At least it ain't XML
@@ -151,7 +151,7 @@
        (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
        (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
-
+       (go +tree-sitter +lsp)
        (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
        (scheme +mit) ;; +racket ; a fully conniving family of lisps
 

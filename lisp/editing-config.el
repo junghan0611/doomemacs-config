@@ -125,7 +125,7 @@
   (add-to-list 'outli-heading-config '(clojurescript-mode ";;" ?\; t))
   )
 
-;;; pinentry
+;;;; pinentry
 
 ;; GPG Pinentry 모드 설정
 ;;
@@ -187,6 +187,17 @@ only those in the selected frame."
         :n "M-k"    #'imenu-list-previous-entry-same-level
         :n "M-n"    #'evil-next-line
         :n "M-p"    #'evil-previous-line))
+
+
+;;;; remember (builtin annotation)
+
+(use-package! remember
+  :commands remember
+  :init
+  (setq
+   remember-notes-initial-major-mode 'org-mode
+   remember-notes-auto-save-visited-file-name t)
+  :config (setq remember-data-file (my/org-remember-file)))
 
 ;;;; provide
 

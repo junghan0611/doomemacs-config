@@ -143,15 +143,15 @@
   (unless (display-graphic-p)
     (setq agent-shell-header-style nil))
 
+  (setq agent-shell-preferred-agent-config (agent-shell-anthropic-make-claude-code-config))
+
   (require 'agent-shell-manager)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
   (map! :in "s-;" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
         :i "RET" #'+default/newline
-        :inv "M-RET" #'+default/newline
-        :inv "M-<return>" #'+default/newline
-
-        ;; :n "RET" #'comint-send-input
+        :inv "M-RET" #'comint-send-input
+        :inv "M-<return>" #'comint-send-input
         :in "C-RET" #'shell-maker-submit
         :in "C-<return>" #'shell-maker-submit
 
@@ -230,5 +230,8 @@
 ;;     )
 ;;   )
 
+;;; Provide
+
 (provide 'ai-agent-shell)
+
 ;;; ai-agent-shell.el ends here

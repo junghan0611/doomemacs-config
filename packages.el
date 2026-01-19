@@ -197,7 +197,7 @@
 (package! agent-shell :recipe (:host github :repo "xenodium/agent-shell"))
 (package! agent-shell-manager :recipe (:host github :repo "ElleNajt/agent-shell-manager"))
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
-;; (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
+(package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 
 
 ;;;; AI AGENT
