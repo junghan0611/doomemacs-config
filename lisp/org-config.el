@@ -38,7 +38,8 @@
 
   ;; overide here! important
   (setq org-insert-heading-respect-content nil) ; doom t
-  ;; org-indent-mode 사용하면 org-hide-leading-stars 자동 on
+  ;; org-indent-mode 사용하면 org-hide-leading-stars 자동 nil
+  (setq org-startup-indented nil) ; doom t
   (setq org-hide-leading-stars nil) ; doom t
   )
 
