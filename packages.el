@@ -187,9 +187,7 @@
 ;; 경로 변경은 아래 한 줄만 수정!
 ;; (when (file-directory-p "~/.emacs.d/site-lisp/efrit/")
 ;;   (package! efrit :recipe (:local-repo "~/.emacs.d/site-lisp/efrit/" :files ("lisp/*.el"))))
-
-;; Beads: Issue tracker
-(package! beads :recipe (:host github :repo "r0man/beads.el"))
+(package! beads :recipe (:host github :repo "ChristianTietze/beads.el"))
 
 ;;;;; ACP (Agent Client Protocol)
 
