@@ -40,8 +40,8 @@
   (require 'dired-aux)
   (setq dired-do-revert-buffer t) ; doom nil
   ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
-  ;; (add-hook 'dired-mode-hook 'dired-hide-details-mode)
   (remove-hook 'dired-mode-hook 'dired-omit-mode)
+  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
 
   (require 'wdired)
   (setq wdired-allow-to-change-permissions t) ; doom nil

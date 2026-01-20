@@ -16,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_SCRIPT="${SCRIPT_DIR}/denote-export-parallel.py"
 ORG_ROOT="${HOME}/org"
-DEFAULT_DAEMONS=2  # Reduced from 4 to prevent memory exhaustion
+DEFAULT_DAEMONS=4  # Reduced from 4 to prevent memory exhaustion
 
 # Cleanup function for trap
 cleanup_on_exit() {
