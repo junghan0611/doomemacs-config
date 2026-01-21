@@ -152,7 +152,7 @@
 (setq org-export-with-toc nil)                    ; default t - Hugo handles TOC
 (setq org-export-exclude-tags
       '("private" "OFFICE" "FILE" "LOG" "CREDENTIAL"
-        "REFILED" "LOCAL" "noexport" "ignore" "crypt"))
+        "LOCAL" "noexport" "ignore" "crypt")) ;; "REFILED"
 
 (setq org-publish-use-timestamps-flag t)          ; default t
 (setq org-export-with-section-numbers t)          ; default t

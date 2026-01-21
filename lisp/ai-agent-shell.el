@@ -106,23 +106,6 @@
       (setq-local x-gtk-use-native-input t))))
 
 
-
-;;;; AI CODE Interface (AIDER.el)
-
-;; (use-package! ai-code-interface
-;;   :config
-;;   (ai-code-set-backend  'claude-code-ide) ;; use claude-code-ide as backend
-;;   ;; Enable global keybinding for the main menu
-;;   ;; (global-set-key (kbd "C-c a") #'ai-code-menu)
-;;   ;; Optional: Use vterm if you prefer, by default it is eat
-;;   ;; (setq claude-code-terminal-backend 'vterm) ;; for openai codex, github copilot cli, opencode; for claude-code-ide.el and gemini-cli.el, you can check their config
-;;   ;; Optional: Turn on auto-revert buffer, so that the AI code change automatically appears in the buffer
-;;   (global-auto-revert-mode 1)
-;;   (setq auto-revert-interval 1) ;; set to 1 second for faster update
-;;   ;; Optional: Set up Magit integration for AI commands in Magit popups
-;;   (with-eval-after-load 'magit
-;;     (ai-code-magit-setup-transients)))
-
 ;;;; ACP (Agent Client Protocol)
 
 ;; https://agentclientprotocol.com/
@@ -149,7 +132,7 @@
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
   (map! :in "s-;" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
-        :i "RET" #'+default/newline
+        :i "RET" #'+default/newline-below
         :inv "M-RET" #'comint-send-input
         :inv "M-<return>" #'comint-send-input
         :in "C-RET" #'shell-maker-submit

@@ -172,17 +172,9 @@
 (package! templatel) ; for .poet templates (Jinja2-like)
 (package! gptel-litellm :recipe (:host github :repo "jwiegley/gptel-litellm"))
 
-;;;;; ClaudeCode
+(package! minuet :recipe (:host github :repo "ElleNajt/minuet-ai.el"))
 
-;; Option 1
-(package! claude-code :recipe (:host github :repo "stevemolitor/claude-code.el" ))
-(unless IS-TERMUX
-  (package! monet :recipe (:host github :repo "stevemolitor/monet" )))
-
-;; Option 2
-(package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
-
-;;;;; Efrit & Beads (Steve Yegge's AI Orchestration)
+;;;; ai-orchestration.el
 
 ;; Efrit: Local development (조건부 로딩)
 ;; 경로 변경은 아래 한 줄만 수정!
@@ -190,9 +182,8 @@
 ;;   (package! efrit :recipe (:local-repo "~/.emacs.d/site-lisp/efrit/" :files ("lisp/*.el"))))
 (package! beads :recipe (:host github :repo "ChristianTietze/beads.el"))
 
-;;;;; ACP (Agent Client Protocol)
+;;;; ai-agent-shell.el
 
-(package! minuet :recipe (:host github :repo "ElleNajt/minuet-ai.el"))
 (package! shell-maker)
 (package! acp :recipe (:host github :repo "xenodium/acp.el"))
 (package! agent-shell :recipe (:host github :repo "xenodium/agent-shell"))
@@ -201,9 +192,15 @@
 (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 (package! opencode :recipe (:host codeberg :repo "sczi/opencode.el")) ; TODO 체크 agent-shell과 비교. ACP 사용 시와 비교
 
-;;;; AI AGENT
+;;;;; TODO vterm based solutions
 
-(package! ai-code-interface :recipe (:host github :repo "tninja/ai-code-interface.el"))
+(package! claude-code :recipe (:host github :repo "stevemolitor/claude-code.el" ))
+(unless IS-TERMUX
+  (package! monet :recipe (:host github :repo "stevemolitor/monet" )))
+(package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
+
+;;;; ai-stt-eca-whisper.el
+
 (package! whisper :recipe (:host github :repo "natrys/whisper.el"))
 (package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
 (package! semext :recipe (:host github :repo "ahyatt/semext"))
