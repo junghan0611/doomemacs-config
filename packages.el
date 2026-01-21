@@ -221,10 +221,9 @@
 ;;;; search-config.el
 
 (package! recent-rgrep :recipe (:host github :repo "kickingvegas/recent-rgrep"))
+(package! consult-ripfd :recipe (:host github :repo "jdtsmith/consult-ripfd"))
 
 ;;;; completion-config.el
-
-(package! consult-ripfd :recipe (:host github :repo "jdtsmith/consult-ripfd"))
 
 ;;; DEPRECATED
 
