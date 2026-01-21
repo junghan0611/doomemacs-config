@@ -286,12 +286,13 @@
 
 (after! markdown-mode
   (map! :map markdown-mode-map
+        :nvi "C-M-q" #'my/unfill-paragraph-or-region
         :localleader
         "y" #'my/yank-as-org
         "RET" #'toc-org-markdown-follow-thing-at-point
         "-" #'markdown-insert-list-item
         ";" #'my/clear-nbsp-and-ascii-punctuations
-       ":" #'my/insert-nbsp-simple-all))
+        ":" #'my/insert-nbsp-simple-all))
 
 ;;;;; Dired
 
@@ -375,6 +376,7 @@
         "C-c y"   #'org-cliplink
         "C-c I"   #'org-insert-link-dwim
         :nvi "C-c M-i" #'org-cliplink
+        :nvi "C-M-q" #'my/unfill-paragraph-or-region
         )
 
   (map! :map org-mode-map
