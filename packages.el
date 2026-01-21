@@ -151,6 +151,7 @@
 (package! git-link)
 (package! magit-todos)
 (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
+(package! tmr) ;; TODO Time Management
 
 ;;;; Transient Menu
 
@@ -198,7 +199,7 @@
 (package! agent-shell-manager :recipe (:host github :repo "ElleNajt/agent-shell-manager"))
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
 (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
-
+(package! opencode :recipe (:host codeberg :repo "sczi/opencode.el")) ; TODO 체크 agent-shell과 비교. ACP 사용 시와 비교
 
 ;;;; AI AGENT
 
