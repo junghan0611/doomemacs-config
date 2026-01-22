@@ -88,6 +88,25 @@
   (my/indent-buffer)
   (org-edit-src-exit))
 
+;;;;;; org-indent-src-block
+
+(defun my/update-hugo-lastmod ()
+  "Update #+hugo_lastmod on save. Add after #+filetags if missing."
+  (interactive)
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (goto-char (point-min))
+      (let ((lastmod-line (format "#+hugo_lastmod: [%s]"
+                                  (format-time-string "%Y-%m-%d %a"))))
+        (if (re-search-forward "^#\\+hugo_lastmod:.*$" nil t)
+            ;; Exists: update in place
+            (replace-match lastmod-line)
+          ;; Missing: add after #+filetags
+          (goto-char (point-min))
+          (when (re-search-forward "^#\\+filetags:.*$" nil t)
+            (end-of-line)
+            (insert "\n" lastmod-line)))))))
+
 ;;;; Provide
 
 (provide 'org-functions)

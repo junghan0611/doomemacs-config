@@ -400,7 +400,7 @@
 
   (map! :map org-mode-map
         :localleader
-        "1" #'time-stamp ; for '#+hugo_lastmod' update
+        "1" #'my/update-hugo-lastmod
         "2" #'bh/insert-inactive-timestamp
         "y" #'my/yank-as-markdown
         ";" #'my/clear-nbsp-and-ascii-punctuations

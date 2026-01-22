@@ -165,6 +165,7 @@
 ;;;; Minuet AI
 
 (use-package! minuet
+  :defer t
   :config
   ;; Load the ACP extension
   (require 'minuet-acp)

@@ -51,7 +51,6 @@
 ;; (add-hook 'write-file-functions 'time-stamp)
 ;; M-x time-stamp
 ;; Update last modified date for ox-hugo export
-;; (add-hook 'before-save-hook 'time-stamp)
 (setq time-stamp-active t
       time-stamp-start "#\\+hugo_lastmod:[ \t]*"
       time-stamp-end "$"
