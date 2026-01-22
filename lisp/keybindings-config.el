@@ -396,8 +396,12 @@
         "C-x n l" #'my/denote-org-store-link-to-heading
         )
 
+;;;;;; localleader
+
   (map! :map org-mode-map
         :localleader
+        "1" #'time-stamp ; for '#+hugo_lastmod' update
+        "2" #'bh/insert-inactive-timestamp
         "y" #'my/yank-as-markdown
         ";" #'my/clear-nbsp-and-ascii-punctuations
         ":" #'my/insert-nbsp-simple-all
