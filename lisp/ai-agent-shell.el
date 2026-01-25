@@ -164,25 +164,25 @@
 
 ;;;; Minuet AI
 
-(use-package! minuet
-  :defer t
-  :config
-  ;; Load the ACP extension
-  (require 'minuet-acp)
+;; (use-package! minuet
+;;   :defer t
+;;   :config
+;;   ;; Load the ACP extension
+;;   (require 'minuet-acp)
 
-  ;; Use ACP provider (persistent session via claude-code-acp)
-  (setq minuet-provider 'acp)
+;;   ;; Use ACP provider (persistent session via claude-code-acp)
+;;   (setq minuet-provider 'acp)
 
-  ;; Keybindings for overlay ghost text UI (like GitHub Copilot)
-  (map! :in "C-c TAB" #'minuet-show-suggestion      ; Show AI completion as ghost text
-        :in "M-]" #'minuet-next-suggestion          ; Cycle to next suggestion
-        :in "M-[" #'minuet-previous-suggestion      ; Cycle to previous suggestion
-        :in "C-g" #'minuet-dismiss                  ; Dismiss current suggestion
-        :in "C-<return>" #'minuet-accept-suggestion ; Accept and insert full suggestion
-        :in "C-e" #'minuet-accept-suggestion-line)  ; Accept one line of suggestion
+;;   ;; Keybindings for overlay ghost text UI (like GitHub Copilot)
+;;   (map! :in "C-c TAB" #'minuet-show-suggestion      ; Show AI completion as ghost text
+;;         :in "M-]" #'minuet-next-suggestion          ; Cycle to next suggestion
+;;         :in "M-[" #'minuet-previous-suggestion      ; Cycle to previous suggestion
+;;         :in "C-g" #'minuet-dismiss                  ; Dismiss current suggestion
+;;         :in "C-<return>" #'minuet-accept-suggestion ; Accept and insert full suggestion
+;;         :in "C-e" #'minuet-accept-suggestion-line)  ; Accept one line of suggestion
 
-  ;; Alternative: minibuffer-based completion
-  (map! :nvi "C-c C-n" #'minuet-complete-with-minibuffer))
+;;   ;; Alternative: minibuffer-based completion
+;;   (map! :nvi "C-c C-n" #'minuet-complete-with-minibuffer))
 
 ;;;; TODO MCP (Model Context Protocol)
 

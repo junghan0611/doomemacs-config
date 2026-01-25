@@ -316,7 +316,6 @@
         "M-RET" #'gptel-send
         (:localleader
          "RET" #'gptel-mode
-         "1" #'gptel-menu
          "TAB" #'gptel-menu
          "M-s" #'gptel-save-as-org-with-denote-metadata
          "M-l" #'gptel-clear-buffer+

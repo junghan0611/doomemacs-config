@@ -172,7 +172,7 @@
 (package! templatel) ; for .poet templates (Jinja2-like)
 (package! gptel-litellm :recipe (:host github :repo "jwiegley/gptel-litellm"))
 
-(package! minuet :recipe (:host github :repo "ElleNajt/minuet-ai.el"))
+;; (package! minuet :recipe (:host github :repo "ElleNajt/minuet-ai.el"))
 
 ;;;; ai-orchestration.el
 
