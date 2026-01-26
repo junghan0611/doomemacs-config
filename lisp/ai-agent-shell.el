@@ -15,97 +15,6 @@
 
 ;;; Code:
 
-;;;; claude-code (stevemolitor/claude-code.el)
-
-(use-package! claude-code
-  :config
-  (setq claude-code-terminal-backend 'vterm)
-
-  (defun my-claude-notify-with-sound (title message)
-    "Display a Linux notification with sound."
-    (when (executable-find "notify-send")
-      (call-process "notify-send" nil nil nil title message))
-    ;; Play sound if paplay is available
-    (when (executable-find "paplay")
-      (call-process "paplay" nil nil nil "/usr/share/sounds/freedesktop/stereo/complete.oga")))
-
-  (setq claude-code-notification-function #'my-claude-notify-with-sound)
-
-  ;; optional IDE integration with Monet
-  (when (locate-library "monet")
-    (require 'monet)
-    (add-hook 'claude-code-process-environment-functions #'monet-start-server-function)
-    (monet-mode 1))
-
-  (set-popup-rule! "^\\*claude" :vslot -15 :width 90 :side 'right :ttl t :select t :quit nil :modeline t)
-
-  (claude-code-mode)
-
-  (add-hook 'claude-code-start-hook
-            (lambda ()
-              ;; Only increase scrollback for vterm backend
-              (when (eq claude-code-terminal-backend 'vterm)
-                (visual-line-mode -1)
-                (toggle-truncate-lines 1)
-                (setq-local x-gtk-use-native-input t)
-                (define-key claude-code-command-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
-                (define-key vterm-mode-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
-                (setq-local vterm-max-scrollback 100000)))))
-
-;;;; claude-code-ide (manzaltu/claude-code-ide.el)
-
-(use-package! claude-code-ide
-  :init
-  ;; Open Claude at the bottom with custom height
-  (setq claude-code-ide-window-side 'right
-        claude-code-ide-window-width 84
-        claude-code-ide-window-height 50)
-  :config
-  (setq claude-code-ide-terminal-backend 'vterm)
-  (setq claude-code-ide-use-ide-diff nil)
-  (claude-code-ide-emacs-tools-setup)
-
-  (load! "+claude-code-ide-mcp-tools")
-
-  (after! vterm
-    (define-key vterm-mode-map (kbd "M-RET") 'claude-code-ide-insert-newline)
-    (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
-  ) ; optionally enable Emacs MCP tools
-
-(after! vterm
-  ;; sync/code/default/claude-code.el/claude-code.el
-  (defun my/vterm-send-alt-return ()
-    "Send <alt>-<return> to vterm."
-    (interactive)
-    (vterm-send-key "" nil t))
-
-  (setq vterm-always-compile-module t) ;; Compile Vterm without asking.
-  (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0") ;; 2025-07-13 Simpler
-  (map! :map vterm-mode-map
-        :i "M-RET" #'my/vterm-send-alt-return
-        :inv "M-y" #'vterm-yank-pop
-        :inv "M-\\" #'other-window
-        :inv "M-z" #'evil-collection-vterm-toggle-send-escape
-        :inv "M-u" 'evil-scroll-up
-        :inv "M-v" 'evil-scroll-down)
-  )
-
-(after! vterm
-  (setq vterm-max-scrollback 10000)
-  ;; (setq x-gtk-use-native-input nil) ;; 2025-08-10 Important with ibus korean input
-
-  ;; kime 환경변수 설정 (기존 코드 유지)
-  (add-to-list 'vterm-environment "GTK_IM_MODULE=fcitx5")
-  (add-to-list 'vterm-environment "QT_IM_MODULE=fcitx5")
-  (add-to-list 'vterm-environment "XMODIFIERS=@im=fcitx5")
-
-  (defun my/vterm-setup-gtk-use-native-input ()
-    "Setup native input for vterm buffer"
-    (interactive)
-    (when (eq major-mode 'vterm-mode)
-      (setq-local x-gtk-use-native-input t))))
-
-
 ;;;; ACP (Agent Client Protocol)
 
 ;; https://agentclientprotocol.com/
@@ -213,6 +122,95 @@
 ;;       (mcp-server-lib-start))
 ;;     )
 ;;   )
+
+;;;; DONT claude-code (stevemolitor/claude-code.el)
+
+;; (use-package! claude-code
+;;   :config
+;;   (setq claude-code-terminal-backend 'vterm)
+
+;;   (defun my-claude-notify-with-sound (title message)
+;;     "Display a Linux notification with sound."
+;;     (when (executable-find "notify-send")
+;;       (call-process "notify-send" nil nil nil title message))
+;;     ;; Play sound if paplay is available
+;;     (when (executable-find "paplay")
+;;       (call-process "paplay" nil nil nil "/usr/share/sounds/freedesktop/stereo/complete.oga")))
+
+;;   (setq claude-code-notification-function #'my-claude-notify-with-sound)
+
+;;   ;; optional IDE integration with Monet
+;;   (when (locate-library "monet")
+;;     (require 'monet)
+;;     (add-hook 'claude-code-process-environment-functions #'monet-start-server-function)
+;;     (monet-mode 1))
+
+;;   (set-popup-rule! "^\\*claude" :vslot -15 :width 90 :side 'right :ttl t :select t :quit nil :modeline t)
+
+;;   (claude-code-mode)
+
+;;   (add-hook 'claude-code-start-hook
+;;             (lambda ()
+;;               ;; Only increase scrollback for vterm backend
+;;               (when (eq claude-code-terminal-backend 'vterm)
+;;                 (visual-line-mode -1)
+;;                 (toggle-truncate-lines 1)
+;;                 (setq-local x-gtk-use-native-input t)
+;;                 (define-key claude-code-command-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
+;;                 (define-key vterm-mode-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
+;;                 (setq-local vterm-max-scrollback 100000)))))
+
+;;;; DONT claude-code-ide (manzaltu/claude-code-ide.el)
+
+;; (use-package! claude-code-ide
+;;   :init
+;;   ;; Open Claude at the bottom with custom height
+;;   (setq claude-code-ide-window-side 'right
+;;         claude-code-ide-window-width 84
+;;         claude-code-ide-window-height 50)
+;;   :config
+;;   (setq claude-code-ide-terminal-backend 'vterm)
+;;   (setq claude-code-ide-use-ide-diff nil)
+;;   (claude-code-ide-emacs-tools-setup)
+
+;;   ;; (load! "+claude-code-ide-mcp-tools")
+
+;;   (after! vterm
+;;     (define-key vterm-mode-map (kbd "M-RET") 'claude-code-ide-insert-newline)
+;;     (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
+;;   )
+                                        ; optionally enable Emacs MCP tools
+
+;; (after! vterm
+;;   ;; sync/code/default/claude-code.el/claude-code.el
+;;   (defun my/vterm-send-alt-return ()
+;;     "Send <alt>-<return> to vterm."
+;;     (interactive)
+;;     (vterm-send-key "" nil t))
+
+;;   (setq vterm-always-compile-module t) ;; Compile Vterm without asking.
+;;   (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0") ;; 2025-07-13 Simpler
+;;   (map! :map vterm-mode-map
+;;         :i "M-RET" #'my/vterm-send-alt-return
+;;         :inv "M-y" #'vterm-yank-pop
+;;         :inv "M-\\" #'other-window
+;;         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
+;;         :inv "M-u" 'evil-scroll-up
+;;         :inv "M-v" 'evil-scroll-down)
+
+;;   (setq vterm-max-scrollback 10000)
+;;   ;; (setq x-gtk-use-native-input nil) ;; 2025-08-10 Important with ibus korean input
+
+;;   ;; kime 환경변수 설정 (기존 코드 유지)
+;;   (add-to-list 'vterm-environment "GTK_IM_MODULE=fcitx5")
+;;   (add-to-list 'vterm-environment "QT_IM_MODULE=fcitx5")
+;;   (add-to-list 'vterm-environment "XMODIFIERS=@im=fcitx5")
+
+;;   (defun my/vterm-setup-gtk-use-native-input ()
+;;     "Setup native input for vterm buffer"
+;;     (interactive)
+;;     (when (eq major-mode 'vterm-mode)
+;;       (setq-local x-gtk-use-native-input t))))
 
 ;;; Provide
 

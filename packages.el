@@ -192,12 +192,12 @@
 (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 (package! opencode :recipe (:host codeberg :repo "sczi/opencode.el")) ; TODO 체크 agent-shell과 비교. ACP 사용 시와 비교
 
-;;;;; TODO vterm based solutions
+;;;;; DONT vterm based solutions
 
-(package! claude-code :recipe (:host github :repo "stevemolitor/claude-code.el" ))
-(unless IS-TERMUX
-  (package! monet :recipe (:host github :repo "stevemolitor/monet" )))
-(package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
+;; (package! claude-code :recipe (:host github :repo "stevemolitor/claude-code.el" ))
+;; (unless IS-TERMUX
+;;   (package! monet :recipe (:host github :repo "stevemolitor/monet" )))
+;; (package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
 
 ;;;; ai-stt-eca-whisper.el
 
