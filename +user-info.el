@@ -100,13 +100,14 @@
 (defvar org-user-agenda-files (list user-org-directory))
 (defvar org-screenshot-path  "~/screenshot/")
 
-;; bib
-;; (defvar config-bibfiles (list (concat user-org-directory "bib/zotero-biblatex.bib")))
-(defvar config-bibfiles (list
-                         (concat user-org-directory "resources/Slipbox.bib")
-                         (concat user-org-directory "resources/Book.bib")
-                         (concat user-org-directory "resources/Category.bib")
-                         ))
+;; bib - 존재하는 파일만 포함
+(defvar config-bibfiles
+  (let ((candidates (list
+                     (concat user-org-directory "resources/Slipbox.bib")
+                     (concat user-org-directory "resources/Book.bib")
+                     (concat user-org-directory "resources/Category.bib")
+                     (concat user-org-directory "resources/github-starred.bib"))))
+    (seq-filter #'file-exists-p candidates)))
 
 ;; elisp-demos
 (setq elisp-demos-user-files (list (my/org-user-elisp-demo-file)))
