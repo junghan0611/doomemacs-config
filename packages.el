@@ -139,6 +139,7 @@
 
 (package! org-download)
 (package! org-rich-yank)
+(package! org-appear)
 
 ;;;; editing-config.el
 

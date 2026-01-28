@@ -402,6 +402,7 @@
         :localleader
         "1" #'my/update-hugo-lastmod
         "2" #'bh/insert-inactive-timestamp
+        "4" #'org-appear-mode
         "y" #'my/yank-as-markdown
         ";" #'my/clear-nbsp-and-ascii-punctuations
         ":" #'my/insert-nbsp-simple-all

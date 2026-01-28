@@ -359,6 +359,57 @@
     (add-to-list 'savehist-additional-variables 'citar-history))
   )
 
+
+;;;; org-download
+
+(use-package! org-download
+  :after org
+  :hook (;; (dired-mode . org-download-enable)
+         (org-mode . org-download-enable))
+  :commands (org-download-enable
+             org-download-yank
+             org-download-screenshot)
+  :config
+  (setq-default org-download-heading-lvl nil)
+  (setq org-download-method 'directory) ; doom 'attach
+  (setq-default org-download-image-dir "~/screenshot" ) ;; share all devieces
+  (setq org-download-display-inline-images nil)
+  (setq org-download-timestamp"%Y%m%dT%H%M%S-") ;; denote id
+
+  ;; #+caption: "
+  ;; #+name: fig-"
+  ;; #+attr_html: :width 40% :align center"
+  ;; #+attr_latex: :width \\textwidth"
+  (setq org-download-image-attr-list
+        '("#+attr_html: :width 80% :align center"
+          "#+attr_latex: :width \\textwidth"
+          "#+attr_org: :width 800px"))
+
+  ;; (defun kimim/org-download-annotate (link)
+  ;;   "Annotate LINK with the time of download."
+  ;;   (format "#+name: fig:%s\n#+caption: %s\n"
+  ;;           (file-name-base link) (file-name-base link)))
+  ;; (setq org-download-annotate-function #'kimim/org-download-annotate)
+  )
+
+;;;; org-rich-yank
+
+(use-package! org-rich-yank
+  :defer t
+  :commands (org-rich-yank))
+
+;;;; org-appear
+
+(use-package! org-appear
+  :after org
+  :if window-system
+  :init
+  ;; (add-hook 'org-mode-hook 'org-appear-mode)
+  (setq org-appear-autolinks nil ;; default nil
+        org-appear-autoemphasis t
+        org-appear-autosubmarkers t)
+  )
+
 ;;; provide
 
 (provide 'org-config)
