@@ -149,10 +149,10 @@
 ;;   ;; (global-set-key (kbd "M-g F") 'consult-flymake)
 ;;   )
 
-;;;; bugfix treesit
+;;;; DONT bugfix treesit
 
-  (after! treesit
-    (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
+  ;; (after! treesit
+  ;;   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
 
 ;;;; Provide
 
