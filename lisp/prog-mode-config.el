@@ -41,41 +41,40 @@
 ;; (setq lsp-file-watch-threshold (* 1024 1024))
 ;; (setq read-process-output-max (* 1024 1024))
 
-(progn
-  (after! lsp-mode
-    (setq
-     ;; https://emacs-lsp.github.io/lsp-mode/page/settings/headerline/
-     lsp-headerline-breadcrumb-enable t ; doom nil
-     lsp-headerline-breadcrumb-icons-enable nil
-     ;; lsp-headerline-breadcrumb-segments '(symbols) ; namespace & symbols, no file path
+;; (progn
+;;   (after! lsp-mode
+;;     (setq
+;;      ;; https://emacs-lsp.github.io/lsp-mode/page/settings/headerline/
+;;      lsp-headerline-breadcrumb-enable t ; doom nil
+;;      ;; lsp-headerline-breadcrumb-segments '(symbols) ; namespace & symbols, no file path
 
-     lsp-imenu-index-function #'lsp-imenu-create-categorized-index ;; 2025-03-26 doom 'lsp-imenu-create-uncategorized-index
+;;      lsp-imenu-index-function #'lsp-imenu-create-categorized-index ;; 2025-03-26 doom 'lsp-imenu-create-uncategorized-index
 
-     lsp-idle-delay 0.2  ; smooth LSP features response
-     ;; lsp-eldoc-enable-hover nil ; default t - disable all hover actions
-     ;; lsp-modeline-code-actions-segments '(count icon)
-     ;; lsp-navigation 'both ; default 'both ; 'simple or 'peek
-     ;; lsp-modeline-diagnostics-enable nil
-     ;; lsp-modeline-code-actions-enable nil
-     )
-    )
+;;      lsp-idle-delay 0.2  ; smooth LSP features response
+;;      ;; lsp-eldoc-enable-hover nil ; default t - disable all hover actions
+;;      ;; lsp-modeline-code-actions-segments '(count icon)
+;;      ;; lsp-navigation 'both ; default 'both ; 'simple or 'peek
+;;      ;; lsp-modeline-diagnostics-enable nil
+;;      ;; lsp-modeline-code-actions-enable nil
+;;      )
+;;     )
 
-  (after! lsp-ui
-    (setq
-     ;; lsp-ui-doc-use-webkit nil ; default nil
-     ;; lsp-ui-doc-winum-ignore t ; default t
-     lsp-ui-sideline-enable nil ; doom t - disable sideline for less distraction
-     lsp-ui-sideline-diagnostic-max-line-length 20 ; default 100
-     ;; lsp-ui-doc-enable nil ;; doom t - disable all doc popups
-     treemacs-space-between-root-nodes nil  ;; doom nil
-     ;; lsp-log-io t  ; default nil - Log client-server json communication
-     lsp-ui-peek-enable t ; doom t
-     ))
+;;   (after! lsp-ui
+;;     (setq
+;;      ;; lsp-ui-doc-use-webkit nil ; default nil
+;;      ;; lsp-ui-doc-winum-ignore t ; default t
+;;      lsp-ui-sideline-enable nil ; doom t - disable sideline for less distraction
+;;      lsp-ui-sideline-diagnostic-max-line-length 20 ; default 100
+;;      ;; lsp-ui-doc-enable nil ;; doom t - disable all doc popups
+;;      treemacs-space-between-root-nodes nil  ;; doom nil
+;;      ;; lsp-log-io t  ; default nil - Log client-server json communication
+;;      lsp-ui-peek-enable nil ; doom t
+;;      ))
 
-  (when (modulep! :ui treemacs +lsp)
-    (setq lsp-treemacs-error-list-current-project-only t)
-    (lsp-treemacs-sync-mode +1))
-  )
+;;   (when (modulep! :ui treemacs +lsp)
+;;     (setq lsp-treemacs-error-list-current-project-only t)
+;;     (lsp-treemacs-sync-mode +1))
+;;   )
 
 ;;;; Flycheck
 

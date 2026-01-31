@@ -61,7 +61,7 @@
        (:unless IS-TERMUX (smooth-scroll)) ; So smooth you won't believe it's not butter
 
        ;;tabs            ; a tab bar for Emacs
-       (treemacs +lsp)   ; a project drawer, like neotree but cooler
+       treemacs   ; a project drawer, like neotree but cooler
        vc-gutter         ; +pretty - vcs diff in the fringe
        ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB
        (window-select +numbers) ; visually switch windows
@@ -105,7 +105,7 @@
        (eval +overlay)     ; run code, run (also, repls)
        lookup
        llm                 ; when I said you needed friends, I didn't mean...
-       (lsp +peek) ; +eglot
+       (lsp +eglot) ; +peek
 
        magit ; +forge a git porcelain for Emacs
 
@@ -154,6 +154,7 @@
        (go +lsp)
        (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
        (scheme +mit) ;; +racket ; a fully conniving family of lisps
+       ess
 
        :email
        (notmuch +org)
