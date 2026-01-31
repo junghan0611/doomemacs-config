@@ -226,5 +226,6 @@
 ;;; DEPRECATED
 
 ;; (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))
+(package! casual)
 
 ;;; END
