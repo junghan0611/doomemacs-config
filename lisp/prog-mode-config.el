@@ -34,6 +34,10 @@
   (add-hook 'hy-mode-hook 'aggressive-indent-mode)
   )
 
+;;;; flymake
+
+(remove-hook! (prog-mode text-mode) #'flymake-mode)
+
 ;;;; lsp-mode - lsp-ui-mode - lsp-treemacs
 
 ;; lsp 관련 설정 메뉴들. 느리게 만드는 범인중 십중팔구 LSP가 관련되어져 있다고 함.
@@ -76,46 +80,44 @@
 ;;     (lsp-treemacs-sync-mode +1))
 ;;   )
 
-;;;; Flycheck
+;;;; DONT Flycheck
 
-(after! flycheck
-  (setq flycheck-global-modes '(not emacs-lisp-mode org-mode markdown-mode gfm-mode))
-  (setq flycheck-checker-error-threshold 1000) ; need more than default of 400
-  )
+;; (progn
+;;   (after! flycheck
+;;     (setq flycheck-global-modes '(not emacs-lisp-mode org-mode markdown-mode gfm-mode))
+;;     (setq flycheck-checker-error-threshold 1000) ; need more than default of 400
+;;     )
 
-(remove-hook 'doom-first-buffer-hook #'global-flycheck-mode)
+;;   (remove-hook 'doom-first-buffer-hook #'global-flycheck-mode)
 
-(progn
-  (setq flycheck-help-echo-function nil ; default 'flycheck-help-echo-all-error-messages
-        flycheck-display-errors-function nil ; default 'flycheck-display-error-messages
-        )
+;;   (progn
+;;     (setq flycheck-help-echo-function nil ; default 'flycheck-help-echo-all-error-messages
+;;           flycheck-display-errors-function nil ; default 'flycheck-display-error-messages
+;;           )
 
-  (after! flycheck
-    (ignore-errors
-      (define-key flycheck-mode-map flycheck-keymap-prefix nil))
-    (setq flycheck-keymap-prefix nil)
+;;     (after! flycheck
+;;       (ignore-errors
+;;         (define-key flycheck-mode-map flycheck-keymap-prefix nil))
+;;       (setq flycheck-keymap-prefix nil)
 
-    (add-hook! flycheck-mode
-      (defun disable-flycheck-popup-buffer ()
-        (setq flycheck-display-errors-function #'ignore)))
-    (add-to-list 'flycheck-disabled-checkers 'emacs-lisp-package)
-    )
+;;       (add-hook! flycheck-mode
+;;         (defun disable-flycheck-popup-buffer ()
+;;           (setq flycheck-display-errors-function #'ignore)))
+;;       (add-to-list 'flycheck-disabled-checkers 'emacs-lisp-package)
+;;       )
 
-  (after! elisp-mode
-    (add-hook! 'doom-scratch-buffer-created-hook
-      (defun flycheck-off ()
-        (flycheck-mode -1))))
-  )
+;;     (after! elisp-mode
+;;       (add-hook! 'doom-scratch-buffer-created-hook
+;;         (defun flycheck-off ()
+;;           (flycheck-mode -1))))
+;;     )
+;;   )
 
 ;;;; linenote
 
-(use-package! org-linenote
-  :init
-  (setq org-linenote-default-extension ".md"))
-
-;;;; flymake
-
-;; (remove-hook! (prog-mode text-mode) #'flymake-mode)
+;; (use-package! org-linenote
+;;   :init
+;;   (setq org-linenote-default-extension ".md"))
 
 ;;;; eglot configuration
 
@@ -150,8 +152,8 @@
 
 ;;;; DONT bugfix treesit
 
-  ;; (after! treesit
-  ;;   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
+;; (after! treesit
+;;   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
 
 ;;;; Provide
 

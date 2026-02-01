@@ -68,8 +68,8 @@
 (package! flymake-popon :disable t)
 (package! flycheck-popup-tip :disable t) ; conflict
 (package! flycheck-plantuml :disable t)
-;; (package! flycheck :disable t)
-;; (package! lsp-mode :disable t) ; use eglot
+(package! flycheck :disable t)
+(package! lsp-mode :disable t) ; use eglot
 
 (package! nose :disable t) ; python module
 (package! lsp-python-ms :disable t)
@@ -133,7 +133,7 @@
 ;;;; prog-mode-config.el
 
 (package! aggressive-indent)
-(package! org-linenote) ; require lsp-mode
+;; (package! org-linenote) ; require lsp-mode
 
 ;;;; org-config.el
 
