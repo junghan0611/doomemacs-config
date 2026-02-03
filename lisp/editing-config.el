@@ -199,6 +199,27 @@ only those in the selected frame."
    remember-notes-auto-save-visited-file-name t)
   :config (setq remember-data-file (my/org-remember-file)))
 
+;;;; adoc-mode (AsciiDoc)
+
+;; AsciiDoc 편집 모드
+;; - HWPX → AsciiDoc 변환 시 테이블 병합 셀 보존
+;; - Markdown보다 복잡한 문서 구조 지원
+;; - https://github.com/bbatsov/adoc-mode
+
+(use-package! adoc-mode
+  :mode "\\.adoc\\'"
+  :mode "\\.asciidoc\\'"
+  :config
+  ;; face 설정 (doom 테마와 조화)
+  (set-face-attribute 'adoc-title-0-face nil :height 1.4)
+  (set-face-attribute 'adoc-title-1-face nil :height 1.3)
+  (set-face-attribute 'adoc-title-2-face nil :height 1.2)
+  (set-face-attribute 'adoc-title-3-face nil :height 1.1)
+
+  ;; imenu로 문서 구조 탐색
+  (setq adoc-imenu-generic-expression
+        '(("Sections" "^=+ +\\(.+\\)$" 1))))
+
 ;;;; provide
 
 (provide 'editing-config)

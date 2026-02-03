@@ -129,6 +129,7 @@
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
 (package! clipetty) ; osc52 support
+(package! adoc-mode :recipe (:host github :repo "junghan0611/adoc-mode")) ; AsciiDoc editing (테이블 병합 셀 지원)
 
 ;;;; prog-mode-config.el
 
