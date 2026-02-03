@@ -236,6 +236,7 @@
 (require 'project-config)
 (require 'eaf-config)                ; EAF (조건부 로딩)
 (require 'elfeed-config)             ; elfeed + elfeed-tube
+(require 'zotero-config)             ; zotero translation server (조건부 로딩)
 (require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
 (require 'tmux-config)               ; tmux + claude code orchestration
 (require 'zellij-config)             ; zellij terminal multiplexer
