@@ -115,9 +115,9 @@ and if it is set to nil, then it would forcefully create the ID."
         (window-state-put second-window-state (funcall splitter)))
     (error "Can't toggle window layout when the number of windows isn't two.")))
 
-;;; my/open/workspaces
+;;; my/open-workspaces
 
-;;;;###autoload
+;;;###autoload
 (defun my/open-workspaces ()
   (interactive)
 
@@ -136,9 +136,8 @@ and if it is set to nil, then it would forcefully create the ID."
 
   (+workspace/switch-to-0))
 
-;; (unless IS-DEMO
-;;   (when (display-graphic-p) ; gui
-;;     (add-hook 'doom-first-input-hook #'my/open-workspaces)))
+(when (display-graphic-p) ; gui
+  (add-hook! 'doom-first-input-hook #'my/open-workspaces))
 
 ;;; py3status integration
 ;; Based on ElleNajit's org-clock integration for i3status

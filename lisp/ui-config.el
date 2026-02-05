@@ -155,13 +155,13 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 ;;;###autoload
 (defun my/themes-toggle ()
   (interactive)
-  ;; Finally, load your theme of choice (or a random one with
-  (ef-themes-load-random-dark)
+  ;; (ef-themes-load-random-dark)
+  (modus-themes-select 'modus-vivendi-tinted)
   ;; 터미널에서 테마 로드 후 배경 투명화 (확실한 적용)
   (unless (display-graphic-p)
     (run-with-timer 0.05 nil #'my/terminal-transparent-background)))
 
-(add-hook! 'doom-first-input-hook #'my/themes-toggle)
+(add-hook! 'doom-first-buffer-hook #'my/themes-toggle)
 
 ;;;; spacious-padding
 
