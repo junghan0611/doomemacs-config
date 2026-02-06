@@ -76,15 +76,6 @@
 
 ;;; GENERAL SETTINGS
 
-(use-package! server
-  :unless (display-graphic-p)
-  :after-call doom-first-input-hook doom-first-file-hook focus-out-hook
-  :defer 1
-  :config
-  (setq server-name "starter")
-  (unless (server-running-p)
-    (server-start)))
-
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type 'relative)

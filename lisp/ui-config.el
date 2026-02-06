@@ -88,54 +88,53 @@
 (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
       doom-themes-enable-italic nil) ; if nil, italics is universally disabled
 
-;;;; Terminal for THEME
+;;;; Terminal True-color & Theme 설정
+;; 24bit true-color 해결: emacsclient wrapper (shell.nix의 e 함수)에서
+;; TERM을 *-direct terminfo로 전환하여 init_tty가 16M colors 인식.
+;; ref: tecosaur doom config.org "Emacs client wrapper"
+;;
+;; 테마 reload는 여전히 필요:
+;; Emacs daemon은 GUI 프레임으로 시작하므로, emacsclient -nw로
+;; 터미널 프레임 생성 시 테마 face를 터미널 기준으로 재계산해야 함.
+;; (unless (display-graphic-p)) 로 감싸면 안 됨 — daemon 로드 시 graphic-p = t
+(defun my/setup-terminal-frame (&optional frame)
+  "터미널 FRAME의 테마를 재적용하여 face를 재계산."
+  (interactive)
+  (let ((f (or frame (selected-frame))))
+    (unless (display-graphic-p f)
+      (with-selected-frame f
+        (setq frame-background-mode 'dark)
+        (run-with-timer 0.2 nil
+                        (lambda ()
+                          (let ((theme (car custom-enabled-themes)))
+                            (when theme
+                              (load-theme theme t)))))))))
 
-;; 터미널 배경 투명화 함수
+(add-hook 'after-make-frame-functions #'my/setup-terminal-frame)
+(unless (display-graphic-p)
+  (my/setup-terminal-frame (selected-frame)))
+
+;; 터미널 배경 투명화 — 터미널 자체 배경색을 사용하도록 설정
 (defun my/terminal-transparent-background (&optional _theme)
-  "터미널에서 Emacs 배경을 투명하게 설정.
-Ghostty 등 터미널의 배경색/투명도를 그대로 사용하게 함.
+  "터미널에서 Emacs UI 배경을 투명(unspecified)으로 설정.
 _THEME 인자는 `enable-theme-functions' 호환용."
+  (interactive)
   (unless (display-graphic-p)
-    ;; 모든 터미널 프레임에 적용
     (dolist (frame (frame-list))
       (unless (display-graphic-p frame)
-        (set-face-background 'default "unspecified-bg" frame)
-        (set-face-background 'line-number "unspecified-bg" frame)
-        (set-face-background 'line-number-current-line "unspecified-bg" frame)
-        (set-face-background 'fringe "unspecified-bg" frame)))))
-
-;; 터미널 기본 설정
-(unless (display-graphic-p)
-  ;; 터미널에서 dark 테마 기본 사용
-  (setq-default frame-background-mode 'dark)
-
-  ;; Ghostty 터미널 전용 설정
-  (cond
-   ;; xterm-ghostty terminfo 사용시
-   ((string-match "ghostty" (or (getenv "TERM") ""))
-    ;; Ghostty는 24비트 트루컬러 지원
-    (setenv "COLORTERM" "truecolor")
-    ;; Ghostty 최적화 설정
-    (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-direct")))
-
-   ;; 일반 256color 터미널
-   ((string-match "256color" (or (getenv "TERM") ""))
-    (setq xterm-color-names-bright
-          ["#3B4252" "#BF616A" "#A3BE8C" "#EBCB8B"
-           "#81A1C1" "#B48EAD" "#88C0D0" "#E5E9F0"])
-    (setq xterm-color-names
-          ["#2E3440" "#BF616A" "#A3BE8C" "#EBCB8B"
-           "#81A1C1" "#B48EAD" "#88C0D0" "#D8DEE9"])))
-
-  ;; enable-theme-functions 사용 (Emacs 29+, doom-load-theme-hook보다 확실)
-  ;; depth 100 = 테마 로드 완료 후 가장 마지막에 실행
-  (add-hook 'enable-theme-functions #'my/terminal-transparent-background 100)
-
-  ;; 새 프레임 생성시에도 적용
-  (add-hook 'after-make-frame-functions
-            (lambda (frame)
-              (unless (display-graphic-p frame)
-                (run-with-timer 0.1 nil #'my/terminal-transparent-background)))))
+        (dolist (face '(default
+                        fringe
+                        line-number
+                        line-number-current-line
+                        mode-line
+                        mode-line-active
+                        mode-line-inactive
+                        tab-bar
+                        tab-line
+                        tab-bar-tab
+                        header-line))
+          (when (facep face)
+            (set-face-background face "unspecified-bg" frame)))))))
 
 ;;;; modus-themes
 
@@ -211,6 +210,29 @@ _THEME 인자는 `enable-theme-functions' 호환용."
   ;; (remove-hook 'diff-hl-mode-hook #'diff-hl-flydiff-mode)
   ;; (remove-hook 'diff-hl-flydiff-mode-hook #'+vc-gutter-init-flydiff-mode-h)
   )
+
+;;;; Mouse buttons
+
+;; from /tecosaur-dot-doom/config.org
+(map! :n [mouse-8] #'better-jumper-jump-backward
+      :n [mouse-9] #'better-jumper-jump-forward)
+
+;;;; Window title
+
+;; from /tecosaur-dot-doom/config.org
+(setq frame-title-format
+      '(""
+        (:eval
+         (if (string-match-p (regexp-quote (or (bound-and-true-p org-roam-directory) "\u0000"))
+                             (or buffer-file-name ""))
+             (replace-regexp-in-string
+              ".*/[0-9]*-?" "☰ "
+              (subst-char-in-string ?_ ?\s buffer-file-name))
+           "%b"))
+        (:eval
+         (when-let ((project-name (and (featurep 'projectile) (projectile-project-name))))
+           (unless (string= "-" project-name)
+             (format (if (buffer-modified-p)  " ◉ %s" "  ●  %s") project-name))))))
 
 ;;; provide
 

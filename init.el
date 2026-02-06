@@ -2,8 +2,12 @@
 
 ;;; Pre-init
 
-;; This is so that I don't accidentally start Emacs as a daemon.
-;; (when (daemonp) (kill-emacs))
+;;;; Single instance guard
+;; 이미 Emacs 서버가 실행 중이면 새 인스턴스를 시작하지 않음
+(require 'server)
+(when (server-running-p)
+  (message "Emacs server already running! Use emacsclient instead.")
+  (kill-emacs))
 
 ;;;; Termux
 
@@ -58,7 +62,7 @@
        neotree           ; a project drawer, like NERDTree for vim
        ophints           ; highlight the region an operation acts on
        (popup +defaults) ; tame sudden yet inevitable temporary windows
-       (:unless IS-TERMUX (smooth-scroll)) ; So smooth you won't believe it's not butter
+       (:unless IS-TERMUX (smooth-scroll +interpolate)) ; So smooth you won't believe it's not butter
 
        ;;tabs            ; a tab bar for Emacs
        treemacs   ; a project drawer, like neotree but cooler
