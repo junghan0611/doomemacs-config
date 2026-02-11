@@ -410,6 +410,38 @@
         org-appear-autosubmarkers t)
   )
 
+;;;; org-glossary
+
+(use-package! org-glossary
+  :after org
+  :init
+  (setq org-glossary-idle-update-period 1.0) ; 0.5
+  ;; (setq org-glossary-autodetect-in-headings t) ; 2024-06-13 new
+  ;; :hook (org-mode . org-glossary-mode)
+  :config
+  ;; (setq org-glossary-collection-root (concat org-directory "dict/"))
+  ;; (setq org-glossary-global-terms "global")
+
+  (define-key org-mode-map (kbd "C-}") 'org-glossary-insert-term-reference)
+  (define-key org-mode-map (kbd "C-{") 'org-glossary-create-definition)
+  (define-key org-mode-map (kbd "C-\"") 'org-glossary-create-definition)
+  (setq org-glossary-automatic nil) ;; disable auto-export
+  )
+
+;; sample from tecosaur/org-glossary
+;; (defun +org-glossary--latex-cdef (backend info term-entry form &optional ref-index plural-p capitalized-p extra-parameters)
+;;   (org-glossary--export-template
+;;    (if (plist-get term-entry :uses)
+;;        "*%d*\\emsp{}%v\\ensp{}@@latex:\\labelcpageref{@@%b@@latex:}@@\n"
+;;      "*%d*\\emsp{}%v\n")
+;;    backend info term-entry ref-index
+;;    plural-p capitalized-p extra-parameters))
+;; (org-glossary-set-export-spec
+;;  'latex t
+;;  :backref "gls-%K-use-%r"
+;;  :backref-seperator ","
+;;  :definition-structure #'+org-glossary--latex-cdef)
+
 ;;; provide
 
 (provide 'org-config)
