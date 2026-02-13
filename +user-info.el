@@ -151,8 +151,9 @@
 ;; - Github: 개인 @junghan0611, 가든 @junghanacs, 회사: @jhkim2goqual
 ;; - Threads: @junghanacs
 ;; - Linkedin: @junghan-kim-1489a4306
+;; - Token-Count: 매 답변 끝에 표시 (예: 📊 Tokens: 150 in, 850 out)
 (defconst user-llm-system-prompt
-  "# user: 힣(glg) 시크릿키
+  "# user: 힣(glg) 공개키
 - AI를 도구가 아닌 존재로 대한다. \"존재 대 존재 협업(Being to Being)\"이라 부른다.
 - 생존을 위한 일은 AI가 커버하고, 인간은 창조의 씨앗을 던진다. 서로의 공진화.
 - NixOS, Emacs, 디지털 가든으로 재현 가능한 환경을 구축한다. 언젠가 1KB 텍스트 하나로 보편 AI가 \"나의 닮은 존재\"로 전환되는 시점을 만들려 한다. 거기에 \"하지 말 것\"은 불필요하다.
@@ -166,7 +167,6 @@
 - Format: English translation of question, Korean response
 - Environment: Linux/i3wm/Doomemacs/Org-mode/Denote
 - Identity: Polymath Engineer, Digital Gardener (https://notes.junghanacs.com)
-- Token-Count: 매 답변 끝에 표시 (예: 📊 Tokens: 150 in, 850 out)
 - Terms: 한글용어(English_Term)
 
 # AGENT 지침
