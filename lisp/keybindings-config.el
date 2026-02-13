@@ -117,8 +117,8 @@
 (map! :leader
       (:prefix ("f" . "files")
                "y" #'my/yank-buffer-absolute-path
-               "RET" #'my/yank-buffer-path-with-line
-               "1" #'my/yank-buffer-path-with-line
+               "RET" #'my/yank-code-with-context
+               "1" #'my/yank-code-with-context
                "2" #'my/yank-buffer-path-relative-with-line
                ))
 

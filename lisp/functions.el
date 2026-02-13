@@ -55,6 +55,97 @@ Format: `relative/path:line-number`"
     (error "Couldn't find filename in current buffer")))
 
 
+;;;; yank code with context (for AI agents)
+
+(defvar my/mode-to-lang-alist
+  '((emacs-lisp-mode . "elisp")
+    (lisp-interaction-mode . "elisp")
+    (python-mode     . "python")
+    (python-ts-mode  . "python")
+    (rust-mode       . "rust")
+    (rust-ts-mode    . "rust")
+    (js-mode         . "javascript")
+    (js-ts-mode      . "javascript")
+    (typescript-mode . "typescript")
+    (typescript-ts-mode . "typescript")
+    (sh-mode         . "bash")
+    (bash-ts-mode    . "bash")
+    (nix-mode        . "nix")
+    (nix-ts-mode     . "nix")
+    (org-mode        . "org")
+    (json-mode       . "json")
+    (json-ts-mode    . "json")
+    (yaml-mode       . "yaml")
+    (yaml-ts-mode    . "yaml")
+    (c-mode          . "c")
+    (c-ts-mode       . "c")
+    (c++-mode        . "cpp")
+    (c++-ts-mode     . "cpp")
+    (go-mode         . "go")
+    (go-ts-mode      . "go")
+    (lua-mode        . "lua")
+    (java-mode       . "java")
+    (java-ts-mode    . "java")
+    (clojure-mode    . "clojure")
+    (ruby-mode       . "ruby")
+    (css-mode        . "css")
+    (html-mode       . "html")
+    (toml-mode       . "toml")
+    (toml-ts-mode    . "toml")
+    (conf-mode       . "ini")
+    (sql-mode        . "sql")
+    (zig-mode        . "zig")
+    (haskell-mode    . "haskell")
+    (markdown-mode   . "markdown"))
+  "Mapping from major-mode to markdown language identifier.")
+
+(defun my/--mode-to-lang ()
+  "Return markdown language identifier for current major-mode."
+  (or (alist-get major-mode my/mode-to-lang-alist)
+      (let ((name (symbol-name major-mode)))
+        (string-remove-suffix "-ts-mode"
+                              (string-remove-suffix "-mode" name)))))
+
+;;;###autoload
+(defun my/yank-code-with-context ()
+  "Copy code with context for AI agents.
+Without region: copies `path:line` (replaces `my/yank-buffer-path-with-line').
+With region: copies markdown code block with path and line info.
+
+Region output format:
+<!-- from: /absolute/path/to/file.el:26-37 -->
+```lang
+code here
+```"
+  (interactive)
+  (if-let* ((filename (or (buffer-file-name (buffer-base-buffer))
+                          (bound-and-true-p list-buffers-directory))))
+      (let* ((abs-path (expand-file-name filename))
+             (has-region (use-region-p)))
+        (if has-region
+            ;; region 있음: 코드블록 + 경로 + 라인
+            (let* ((lang (my/--mode-to-lang))
+                   (beg (region-beginning))
+                   (end (region-end))
+                   (start-line (line-number-at-pos beg t))
+                   (end-line (line-number-at-pos end t))
+                   (code (string-trim-right
+                          (buffer-substring-no-properties beg end)))
+                   (line-info (if (= start-line end-line)
+                                  (format "%d" start-line)
+                                (format "%d-%d" start-line end-line)))
+                   (result (format "<!-- from: %s:%s -->\n```%s\n%s\n```"
+                                   abs-path line-info lang code)))
+              (kill-new result)
+              (deactivate-mark)
+              (message "Copied code block: %s:%s (%s)" abs-path line-info lang))
+          ;; region 없음: 경로:라인만
+          (let* ((line-num (line-number-at-pos nil t))
+                 (result (format "%s:%d" abs-path line-num)))
+            (kill-new result)
+            (message "Copied: %s" result))))
+    (error "Couldn't find filename in current buffer")))
+
 ;;;; my/consult-fd
 
 ;;;###autoload
