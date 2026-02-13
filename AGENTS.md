@@ -19,28 +19,46 @@ doomemacs-config/
 ├── autoload/            # 자동로드 함수 (;;;###autoload)
 │   └── junghan.el       # 커스텀 함수들
 │
-├── lisp/                # 독립 라이브러리 (5000+ 줄)
-│   ├── korean-input.el      # 한글 입력, 폰트, NFD→NFC
-│   ├── evil-config.el       # Evil 모드
-│   ├── completion-config.el # Corfu, Vertico, Consult
-│   ├── ui-config.el         # Dashboard, Modeline, Themes
-│   ├── org-config.el        # Org-mode
-│   ├── denote-config.el     # Denote 기본
-│   ├── denote-silo.el       # Denote silo 동적 관리
-│   ├── denote-export.el     # Denote export 시스템
-│   ├── denote-functions.el  # Denote 유틸리티
-│   ├── ai-gptel.el          # GPTel (Claude, OpenAI, Gemini)
-│   ├── ai-agent-shell.el    # Agent Shell, ACP, Claude Code
-│   ├── ai-stt-eca-whisper.el # 음성-텍스트 (Whisper)
-│   ├── ai-tts-edge.el       # 텍스트-음성 (Edge TTS)
-│   ├── ai-gptel-acp.el      # GPTel + ACP 통합
-│   ├── eaf-config.el        # EAF 애플리케이션
-│   ├── keybindings-config.el # 키 바인딩
-│   ├── keybindings-remap.el # 키 리맵
-│   ├── project-config.el    # 프로젝트 설정
-│   ├── time-config.el       # 시간/캘린더
-│   ├── utils-config.el      # 유틸리티
-│   └── functions.el         # 일반 함수
+├── lisp/                # 독립 라이브러리 (39 파일)
+│   ├── korean-input-config.el   # 한글 입력, 폰트, NFD→NFC
+│   ├── unicode-config.el        # 유니코드/NBSP 처리
+│   ├── evil-config.el           # Evil 모드
+│   ├── editing-config.el        # 편집 관련 설정
+│   ├── completion-config.el     # Corfu, Vertico, Consult
+│   ├── search-config.el         # 검색 (consult-ripgrep 등)
+│   ├── ui-config.el             # Dashboard, Themes
+│   ├── modeline-config.el       # Modeline 설정
+│   ├── tab-bar-config.el        # Tab-bar 설정
+│   ├── org-config.el            # Org-mode
+│   ├── org-functions.el         # Org 유틸리티 함수
+│   ├── denote-config.el         # Denote 기본
+│   ├── denote-silo-config.el    # Denote silo 동적 관리
+│   ├── denote-export-config.el  # Denote export 시스템
+│   ├── denote-functions.el      # Denote 유틸리티
+│   ├── ai-gptel.el              # GPTel (Claude, OpenAI, Gemini)
+│   ├── ai-agent-shell.el        # Agent Shell, ACP, Claude Code
+│   ├── ai-gptel-acp.el          # GPTel + ACP 통합
+│   ├── ai-gptel-acp-v2.el       # GPTel + ACP v2
+│   ├── ai-orchestration.el      # AI 오케스트레이션
+│   ├── ai-stt-eca-whisper.el    # 음성-텍스트 (Whisper)
+│   ├── ai-tts-edge.el           # 텍스트-음성 (Edge TTS)
+│   ├── +claude-code-ide-mcp-tools.el # Claude Code MCP 도구
+│   ├── eaf-config.el            # EAF 애플리케이션
+│   ├── elfeed-config.el         # RSS 리더 설정
+│   ├── keybindings-config.el    # 전역 키바인딩
+│   ├── keybindings-denote-config.el # Denote 키바인딩
+│   ├── functions.el             # 일반 함수 (yank-code-with-context 등)
+│   ├── project-config.el        # 프로젝트 설정
+│   ├── prog-mode-config.el      # 프로그래밍 모드 설정
+│   ├── module-emacs-config.el   # Emacs 내장 모듈 설정
+│   ├── tmux-config.el           # tmux 통합
+│   ├── zellij-config.el         # Zellij 통합
+│   ├── sks-hub-nav.el           # SKS Hub 상태 머신 네비게이션
+│   ├── zotero-config.el         # Zotero 서지 관리
+│   ├── time-config.el           # 시간/캘린더
+│   ├── android-config.el        # Android 전용 설정
+│   ├── termux-config.el         # Termux 전용 설정
+│   └── utils-config.el          # 유틸리티
 │
 ├── bin/                 # 독립 실행 스크립트
 │   ├── denote-export.el     # 통합 export/dblock 서버 (핵심!)
@@ -99,11 +117,21 @@ doomemacs-config/
 
 | 파일 | 크기 | 설명 |
 |------|------|------|
-| `ai-gptel.el` | 5K | GPTel 기본 설정 (Claude, OpenAI, Gemini) |
-| `ai-agent-shell.el` | 10K | Agent Shell, ACP, Claude Code IDE |
+| `ai-gptel.el` | 36K | GPTel 전체 설정 (Claude, OpenAI, Gemini, 프롬프트) |
+| `ai-agent-shell.el` | 8K | Agent Shell, ACP, Claude Code |
+| `ai-gptel-acp.el` | 20K | GPTel + ACP 통합 |
+| `ai-gptel-acp-v2.el` | 17K | GPTel + ACP v2 |
+| `ai-orchestration.el` | 6K | AI 멀티 에이전트 오케스트레이션 |
 | `ai-stt-eca-whisper.el` | 4K | ECA Whisper 음성-텍스트 |
-| `ai-tts-edge.el` | 11K | Edge TTS 텍스트-음성 |
-| `ai-gptel-acp.el` | 20K | GPTel + ACP 통합 (실험적) |
+| `ai-tts-edge.el` | 22K | Edge TTS 텍스트-음성 |
+| `+claude-code-ide-mcp-tools.el` | 14K | Claude Code MCP 도구 정의 |
+
+### 터미널 멀티플렉서 관련
+
+| 파일 | 크기 | 설명 |
+|------|------|------|
+| `tmux-config.el` | 26K | tmux 세션/에이전트 통합 |
+| `zellij-config.el` | 20K | Zellij 터미널 멀티플렉서 통합 |
 
 ### EAF 관련
 
@@ -111,40 +139,68 @@ doomemacs-config/
 |------|------|------|
 | `eaf-config.el` | 3K | EAF 앱 설정 (browser, pdf, pyqterminal) |
 
-주요 설정:
-- 조건부 로딩 (`file-directory-p`)
-- 한글 입력 (`x-gtk-use-native-input`)
-- Evil 통합 (SPC 키 앱별 분기)
-- Doom popup rule (mode-line 표시)
-
-### 한글/입력 관련
+### 한글/입력/유니코드 관련
 
 | 파일 | 크기 | 설명 |
 |------|------|------|
-| `korean-input.el` | 18K | 한글 입력 전체 (폰트, NFD→NFC, Evil 전환) |
-| `keybindings-config.el` | 12K | 전역 키바인딩 |
-| `keybindings-remap.el` | 0.5K | 키 리맵 |
+| `korean-input-config.el` | 19K | 한글 입력 전체 (폰트, NFD→NFC, Evil 전환) |
+| `unicode-config.el` | 5K | 유니코드 처리, NBSP 관리 |
+| `keybindings-config.el` | 19K | 전역 키바인딩 |
+| `keybindings-denote-config.el` | 12K | Denote 전용 키바인딩 |
 
 ### Denote 관련
 
 | 파일 | 크기 | 설명 |
 |------|------|------|
 | `denote-config.el` | 7K | Denote 기본 설정 |
-| `denote-silo.el` | 8K | 동적 silo 관리 |
-| `denote-export.el` | 22K | Hugo/Markdown export |
-| `denote-functions.el` | 2K | 유틸리티 함수 |
+| `denote-silo-config.el` | 8K | 동적 silo 관리 |
+| `denote-export-config.el` | 23K | Hugo/Markdown export |
+| `denote-functions.el` | 19K | Denote 유틸리티 함수 |
 
-### 기타
+### Org 관련
+
+| 파일 | 크기 | 설명 |
+|------|------|------|
+| `org-config.el` | 16K | Org-mode 전체 |
+| `org-functions.el` | 4K | Org 유틸리티 함수 |
+
+### 편집/완성/검색
 
 | 파일 | 크기 | 설명 |
 |------|------|------|
 | `evil-config.el` | 6K | Evil 모드 (커서, escape, smartparens) |
-| `completion-config.el` | 6K | Corfu, Vertico, Consult |
-| `ui-config.el` | 7K | Dashboard, Modeline, Themes |
-| `org-config.el` | 14K | Org-mode 전체 |
-| `project-config.el` | 2K | 프로젝트 설정 |
+| `editing-config.el` | 8K | 편집 관련 (들여쓰기, 공백 등) |
+| `completion-config.el` | 13K | Corfu, Vertico, Consult |
+| `search-config.el` | 2K | 검색 (consult-ripgrep 등) |
+
+### UI/테마
+
+| 파일 | 크기 | 설명 |
+|------|------|------|
+| `ui-config.el` | 8K | Dashboard, Themes |
+| `modeline-config.el` | 3K | Modeline 설정 |
+| `tab-bar-config.el` | 3K | Tab-bar 설정 |
+
+### 도구/유틸리티
+
+| 파일 | 크기 | 설명 |
+|------|------|------|
+| `functions.el` | 14K | 일반 함수 (yank-code-with-context 등) |
+| `project-config.el` | 3K | 프로젝트 설정 |
+| `prog-mode-config.el` | 5K | 프로그래밍 모드 설정 |
+| `module-emacs-config.el` | 3K | Emacs 내장 모듈 설정 |
+| `sks-hub-nav.el` | 17K | SKS Hub 상태 머신 네비게이션 |
+| `elfeed-config.el` | 4K | RSS 리더 (Elfeed) |
+| `zotero-config.el` | 3K | Zotero 서지 관리 |
 | `time-config.el` | 2K | 시간/캘린더 |
-| `functions.el` | 7K | 일반 함수 |
+| `utils-config.el` | 1K | 기타 유틸리티 |
+
+### 플랫폼별
+
+| 파일 | 크기 | 설명 |
+|------|------|------|
+| `android-config.el` | 2K | Android 전용 설정 |
+| `termux-config.el` | 4K | Termux 전용 설정 |
 
 ## bin/ 스크립트
 
@@ -174,13 +230,22 @@ emacs --batch --load bin/denote-export.el -- dblock ~/org/meta
 1. **어느 파일에 넣을까?**
    - AI 도구 → `lisp/ai-*.el`
    - EAF 관련 → `lisp/eaf-config.el`
-   - Org 관련 → `lisp/org-config.el`
+   - Org 관련 → `lisp/org-config.el` (함수는 `org-functions.el`)
    - Denote 관련 → `lisp/denote-*.el`
    - Evil 관련 → `lisp/evil-config.el`
-   - UI 관련 → `lisp/ui-config.el`
-   - 한글 입력 → `lisp/korean-input.el`
+   - 편집 관련 → `lisp/editing-config.el`
+   - UI/테마 → `lisp/ui-config.el`
+   - Modeline → `lisp/modeline-config.el`
+   - 한글 입력 → `lisp/korean-input-config.el`
+   - 유니코드 → `lisp/unicode-config.el`
    - 완성 시스템 → `lisp/completion-config.el`
+   - 검색 → `lisp/search-config.el`
    - 키바인딩 → `lisp/keybindings-config.el`
+   - tmux → `lisp/tmux-config.el`
+   - Zellij → `lisp/zellij-config.el`
+   - RSS → `lisp/elfeed-config.el`
+   - 프로그래밍 → `lisp/prog-mode-config.el`
+   - Termux/Android → `lisp/termux-config.el`, `lisp/android-config.el`
 
 2. **함수인가?**
    - `;;;###autoload` 필요 → `autoload/junghan.el`
@@ -208,14 +273,15 @@ feat: add EAF pyqterminal configuration
 
 ## Issue Tracking
 
-This project uses **bd** (beads) for issue tracking with prefix `doom-`. Run `bd onboard` to get started.
+This project uses **br** (beads_rust) for issue tracking. Run `br init` to get started.
 
 ## Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
+br ready              # Find available work
+br show <id>          # View issue details
+br update <id> --status in_progress  # Claim work
+br close <id>         # Complete work
+br sync --flush-only  # Export JSONL (git commit separately)
 ```
 

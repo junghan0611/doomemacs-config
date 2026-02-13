@@ -16,15 +16,17 @@ AI 협업 워크플로우를 위한 멀티 에이전트 중심 Doom Emacs 설정
 
 ### 주요 특징
 
-- **멀티 에이전트 통합**: GPTel, Agent Shell (ACP), Claude Code IDE
+- **멀티 에이전트 통합**: GPTel, Agent Shell (ACP), Claude Code MCP 도구, AI 오케스트레이션
+- **터미널 멀티플렉서**: tmux/Zellij 통합으로 멀티 에이전트 워크플로우
 - **음성 인터페이스**: ECA Whisper (STT), Edge TTS (음성 합성)
+- **AI 협업 도구**: `yank-code-with-context` 등 에이전트 친화적 코드 공유
 - **EAF 애플리케이션**: 브라우저, PDF 뷰어, pyqterminal (한글 입력 지원!)
 - **Denote 생태계**: Hugo 내보내기, dblock 자동화, silo 관리
-- **크로스 플랫폼**: Ubuntu 24.04, NixOS 25.11, Termux
+- **크로스 플랫폼**: Ubuntu 24.04, NixOS 25.05, Termux
 
 ### 테스트 환경
 
-- **플랫폼**: Ubuntu 24.04, NixOS 25.11, Termux
+- **플랫폼**: Ubuntu 24.04, NixOS 25.05, Termux
 - **Emacs 버전**: 30.x
 - **터미널**: Ghostty (권장), Kitty, Termux
 
@@ -37,7 +39,7 @@ AI 협업 워크플로우를 위한 멀티 에이전트 중심 Doom Emacs 설정
 snap install emacs --classic
 ```
 
-**NixOS 25.11**
+**NixOS 25.05**
 ```nix
 environment.systemPackages = [ pkgs.emacs ];
 ```
@@ -80,22 +82,22 @@ doomemacs-config/
 ├── packages.el          # 패키지 선언
 ├── custom.el            # Emacs customize (git 제외)
 │
-├── lisp/                # 모듈화된 설정 (5000+ 줄)
-│   ├── korean-input.el      # 한글 입력, 폰트, NFD→NFC
-│   ├── evil-config.el       # Evil 모드 설정
-│   ├── completion-config.el # Corfu, Vertico, Consult
-│   ├── ui-config.el         # Dashboard, Modeline, Themes
-│   ├── org-config.el        # Org-mode 설정
-│   ├── denote-config.el     # Denote 설정
-│   ├── denote-silo.el       # 동적 silo 관리
-│   ├── denote-export.el     # Hugo/Markdown 내보내기
-│   ├── ai-gptel.el          # GPTel (Claude, OpenAI, Gemini)
+├── lisp/                # 모듈화된 설정 (39개 파일)
+│   ├── ai-gptel.el          # GPTel (Claude, OpenAI, Gemini) - 36K
 │   ├── ai-agent-shell.el    # Agent Shell, ACP, Claude Code
-│   ├── ai-stt-eca-whisper.el # 음성-텍스트 변환
+│   ├── ai-orchestration.el  # 멀티 에이전트 오케스트레이션
+│   ├── ai-gptel-acp.el      # GPTel + ACP 통합
+│   ├── ai-stt-eca-whisper.el # 음성-텍스트 변환 (Whisper)
 │   ├── ai-tts-edge.el       # 텍스트-음성 변환 (Edge)
+│   ├── tmux-config.el       # tmux 통합 - 26K
+│   ├── zellij-config.el     # Zellij 통합 - 20K
+│   ├── korean-input-config.el # 한글 입력, 폰트, NFD→NFC
+│   ├── denote-*.el          # Denote 생태계 (4개 파일)
+│   ├── org-config.el        # Org-mode 설정
+│   ├── functions.el         # 유틸리티 함수 (yank-code-with-context)
+│   ├── keybindings-config.el # 키바인딩
 │   ├── eaf-config.el        # EAF 애플리케이션
-│   ├── keybindings-config.el # 키 바인딩
-│   └── ...
+│   └── ...                  # 25+ 설정 모듈
 │
 ├── bin/                 # 독립 스크립트
 │   ├── denote-export.el     # 통합 export/dblock 서버
@@ -113,9 +115,11 @@ doomemacs-config/
 |------|------|------|
 | **GPTel** | LLM 통합 (Claude, OpenAI, Gemini, 로컬) | `ai-gptel.el` |
 | **Agent Shell** | ACP 프로토콜, agent-shell-manager | `ai-agent-shell.el` |
+| **AI 오케스트레이션** | 멀티 에이전트 조율 | `ai-orchestration.el` |
+| **Claude Code MCP** | Claude Code용 MCP 도구 정의 | `+claude-code-ide-mcp-tools.el` |
 | **ECA Whisper** | whisper.cpp 기반 음성-텍스트 | `ai-stt-eca-whisper.el` |
 | **Edge TTS** | Microsoft Edge 텍스트-음성 | `ai-tts-edge.el` |
-| **Claude Code IDE** | Claude Code 연동 | `ai-agent-shell.el` |
+| **tmux/Zellij** | 터미널 멀티플렉서 에이전트 워크플로우 | `tmux-config.el`, `zellij-config.el` |
 
 ### EAF (Emacs Application Framework)
 
@@ -210,6 +214,9 @@ DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom clean
 - AI 도구 통합 (GPTel → Agent Shell → 음성 인터페이스)
 - GUI 기능을 위한 EAF 도입
 - 디지털 가든 퍼블리싱을 위한 Denote export 시스템
+- tmux/Zellij 통합으로 멀티 에이전트 오케스트레이션
+- 에이전트 협업 도구 (yank-code-with-context, MCP 도구)
+- 모듈 아키텍처 확장 (14개 파일 → 39개 파일)
 
 기기 간 재현성을 유지하면서 AI 협업 워크플로우에 집중합니다.
 

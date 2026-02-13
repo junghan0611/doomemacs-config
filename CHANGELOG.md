@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **yank-code-with-context**: AI 에이전트용 코드 복사 함수 (markdown 코드블록 + 경로:라인 메타데이터)
+- **AI/Agent**: AI 오케스트레이션 (`ai-orchestration.el`), GPTel ACP v2, Claude Code MCP 도구
+- **터미널 멀티플렉서**: tmux 통합 (`tmux-config.el`, 26K), Zellij 통합 (`zellij-config.el`, 20K)
+- **모듈 분리**: editing-config, modeline-config, tab-bar-config, search-config, prog-mode-config, module-emacs-config, elfeed-config, unicode-config 등 19개 신규 파일
+- **플랫폼별 설정**: android-config.el, termux-config.el 분리
+- **SKS Hub 네비게이션**: Zig 상태 머신 네비게이션 도구 (`sks-hub-nav.el`)
+- **Zotero 통합**: Zotero Translation Server 연동 (`zotero-config.el`)
+- **Org 확장**: org-glossary, org-download, org-rich-yank, org-appear 추가
+- **패키지**: casual (transient UI), adoc-mode (AsciiDoc), tmr (타이머)
+- **Denote 키바인딩**: 전용 파일 분리 (`keybindings-denote-config.el`)
+- **Embark + GPTel**: region/file 액션에 GPTel 통합
+- **GPTel 프롬프트**: .poet 템플릿 지원, 프롬프트 선택 기능
+
+### Changed
+- **파일명 표준화**: `korean-input.el` → `korean-input-config.el`, `denote-export.el` → `denote-export-config.el`, `denote-silo.el` → `denote-silo-config.el`
+- **GPTel 대폭 확장**: 5K → 36K (프롬프트, 백엔드, 도구 통합)
+- **completion-config**: 6K → 13K 확장
+- **denote-functions**: 2K → 19K 확장
+- **LSP**: lsp-mode 재도입 (eglot과 병행)
+- **Syntax checking**: flycheck 비활성화, flymake으로 전환
+- **터미널 true-color**: 로직 정리 및 개선
+
+### Removed
+- **AI-code-interface**: ClaudeCode 관련 패키지 정리 (deprecation)
+- **beads (bd)**: bd 제거, br (beads_rust)로 마이그레이션
+- **keybindings-remap.el**: 제거
+- **minuet**: 주석 처리
+- **Tree-sitter**: Zig, Go 모듈에서 tree-sitter 제거
+
 ## [0.1.0] - 2025-10-03
 
 ### Project Inception
