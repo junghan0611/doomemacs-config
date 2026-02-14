@@ -162,6 +162,12 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 
 (add-hook! 'doom-first-buffer-hook #'my/themes-toggle)
 
+;;;; winpulse - window focus flash
+
+(use-package! winpulse
+  :config
+  (winpulse-mode +1))
+
 ;;;; spacious-padding
 
 (use-package! spacious-padding

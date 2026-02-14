@@ -96,12 +96,18 @@
   (setq tramp-ssh-controlmaster-options
         "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
+;;;; magit-gh
 
-;;;; majutsu jj-mode
-
-(use-package! majutsu
+(use-package! magit-gh
   :after magit
-  :commands majutsu)
+  :init
+  (setq magit-gh-key ";")) ; Example setting key to ";" instead of the default ","
+
+;;;; TODO majutsu jj-mode
+
+;; (use-package! majutsu
+;;   :after magit
+;;   :commands majutsu)
 
 ;;; provide
 

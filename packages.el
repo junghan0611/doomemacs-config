@@ -122,6 +122,7 @@
 (package! doric-themes)
 (package! ef-themes)
 (package! spacious-padding)
+(package! winpulse :recipe (:host github :repo "xenodium/winpulse"))
 
 ;;;; Editing
 
@@ -152,7 +153,8 @@
 
 (package! git-link)
 (package! magit-todos)
-(package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
+(package! magit-gh)
+;; (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 (package! tmr) ;; TODO Time Management
 
 ;;;; Transient Menu
