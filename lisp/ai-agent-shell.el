@@ -123,6 +123,33 @@
 ;;     )
 ;;   )
 
+;;;; meta-agent-shell
+
+(use-package! meta-agent-shell
+  :after agent-shell
+  :commands (meta-agent-shell-start
+             meta-agent-shell-start-dispatcher
+             meta-agent-shell-jump-to-dispatcher
+             meta-agent-shell-heartbeat-start
+             meta-agent-shell-heartbeat-stop
+             meta-agent-shell-heartbeat-send-now
+             meta-agent-shell-big-red-button)
+  :init
+  (setq meta-agent-shell-heartbeat-file "~/org/meta-agent-heartbeat.org"
+        meta-agent-shell-heartbeat-interval 900
+        meta-agent-shell-heartbeat-cooldown 300
+        meta-agent-shell-start-function #'agent-shell)
+  :config
+  (map! :leader
+        (:prefix ("o m" . "meta-agent")
+         :desc "Meta-agent session" "m" #'meta-agent-shell-start
+         :desc "Project dispatcher" "d" #'meta-agent-shell-start-dispatcher
+         :desc "Jump to dispatcher" "D" #'meta-agent-shell-jump-to-dispatcher
+         :desc "Start heartbeat" "h" #'meta-agent-shell-heartbeat-start
+         :desc "Stop heartbeat" "H" #'meta-agent-shell-heartbeat-stop
+         :desc "Send heartbeat now" "s" #'meta-agent-shell-heartbeat-send-now
+         :desc "STOP ALL AGENTS" "!" #'meta-agent-shell-big-red-button)))
+
 ;;;; DONT claude-code (stevemolitor/claude-code.el)
 
 ;; (use-package! claude-code
