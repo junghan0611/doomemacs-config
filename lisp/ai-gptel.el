@@ -37,6 +37,7 @@
 
   (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
   (add-hook 'gptel-post-response-functions 'gptel-end-of-response)
+  (add-hook 'gptel-post-response-functions #'my/gptel-peon-ping-notify 90)
 
   (setq gptel-include-reasoning nil)
   (setq gptel-default-mode 'org-mode)
@@ -867,6 +868,20 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   ;;    (display-buffer-in-side-window)
   ;;    (side . right)))
   )
+
+;;;; peon-ping 사운드 알림
+
+(defvar my/gptel-peon-ping-script
+  (expand-file-name "~/.claude/hooks/peon-ping/peon.sh")
+  "peon-ping 스크립트 경로.")
+
+(defun my/gptel-peon-ping-notify (_beg _end)
+  "GPTel 응답 완료 시 peon-ping 사운드를 재생한다."
+  (when (file-executable-p my/gptel-peon-ping-script)
+    (let* ((proc (start-process "gptel-peon-ping" nil
+                                my/gptel-peon-ping-script)))
+      (process-send-string proc "{\"hook_event_name\":\"Stop\"}\n")
+      (process-send-eof proc))))
 
 ;;; Provide
 
