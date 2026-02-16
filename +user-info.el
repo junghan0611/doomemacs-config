@@ -100,12 +100,16 @@
 (defvar org-user-agenda-files (list user-org-directory))
 (defvar org-screenshot-path  "~/screenshot/")
 
-;; bib - 존재하는 파일만 포함
+;; bib - 존재하는 파일만 포함 (타입별 분리: Book/Online/Software/Reference/Video/Article/Misc)
 (defvar config-bibfiles
   (let ((candidates (list
-                     (concat user-org-directory "resources/Slipbox.bib")
                      (concat user-org-directory "resources/Book.bib")
-                     (concat user-org-directory "resources/Category.bib")
+                     (concat user-org-directory "resources/Online.bib")
+                     (concat user-org-directory "resources/Software.bib")
+                     (concat user-org-directory "resources/Reference.bib")
+                     (concat user-org-directory "resources/Video.bib")
+                     (concat user-org-directory "resources/Article.bib")
+                     (concat user-org-directory "resources/Misc.bib")
                      (concat user-org-directory "resources/github-starred.bib"))))
     (seq-filter #'file-exists-p candidates)))
 
