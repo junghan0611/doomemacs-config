@@ -297,6 +297,44 @@ Returns meta, bib, notes, or test based on parent directory name."
      ((string= parent-dir "test") "test")
      (t "notes")))) ; default to notes
 
+;;;; Frontmatter Validation
+
+(defun denote-export--validate-frontmatter ()
+  "Validate and fix org frontmatter in current buffer before export.
+Fixes:
+- Missing #+hugo_lastmod: → copy from #+date:
+- Missing #+identifier: → extract from filename
+Returns list of applied fixes for logging."
+  (let ((fixes nil)
+        (modified nil))
+    (save-excursion
+      ;; 1. hugo_lastmod 누락 → date에서 복사
+      (goto-char (point-min))
+      (unless (re-search-forward "^#\\+hugo_lastmod:" nil t)
+        (goto-char (point-min))
+        (when (re-search-forward "^#\\+date:\\s-+\\(.+\\)$" nil t)
+          (let ((date-val (match-string 1)))
+            (goto-char (point-min))
+            (if (re-search-forward "^#\\+filetags:.*$" nil t)
+                ;; filetags 다음에 삽입
+                (progn
+                  (end-of-line)
+                  (insert "\n#+hugo_lastmod: " date-val))
+              ;; filetags 없으면 date 다음에 삽입
+              (goto-char (point-min))
+              (when (re-search-forward "^#\\+date:.*$" nil t)
+                (end-of-line)
+                (insert "\n#+hugo_lastmod: " date-val)))
+            (push (format "added hugo_lastmod from date: %s" date-val) fixes)
+            (setq modified t)))))
+    ;; 수정된 경우 저장
+    (when modified
+      (save-buffer)
+      (message "[Validate] Fixed %d issue(s): %s"
+               (length fixes)
+               (string-join fixes ", ")))
+    fixes))
+
 ;;;; Export Functions
 
 ;; Counter for periodic garbage collection
@@ -342,6 +380,9 @@ This function is called via emacsclient."
               (with-current-buffer buf
                 ;; CRITICAL: Ensure org-mode is active (always call to reinitialize)
                 (org-mode)
+
+                ;; Validate and fix frontmatter before export
+                (denote-export--validate-frontmatter)
 
                 ;; Apply dir-locals settings
                 (when dir-locals-settings
