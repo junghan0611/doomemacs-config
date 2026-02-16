@@ -28,6 +28,7 @@ ccmenu
 CLAUDE.md
 
 # Generated/cache files
+bin/.last-export/
 tempel-templates.eld
 var/tempel-templates.eld
 

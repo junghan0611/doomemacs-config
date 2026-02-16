@@ -69,6 +69,10 @@ ${BLUE}Export 명령 (멀티 데몬):${NC}
   test [daemons]         - ~/org/test 폴더만 (빠른 검증)
   run [dir] [daemons]    - 커스텀 디렉토리 지정
 
+${BLUE}증분 내보내기:${NC}
+  기본 동작은 마지막 내보내기 이후 변경된 파일만 처리합니다.
+  --force                - 타임스탬프 무시, 전체 내보내기 강제
+
 ${BLUE}Dblock 명령 (멀티 데몬):${NC}
   dblock [dir] [daemons] - 디렉토리 내 dblock 업데이트 (기본: ~/org/meta, 재귀)
   --help                 - 이 도움말 표시
@@ -77,11 +81,17 @@ ${BLUE}옵션:${NC}
   daemons  - 병렬 daemon 개수 (기본: 2, 메모리 여유 시 4까지)
 
 ${BLUE}예제:${NC}
-  ${GREEN}# 전체 export (meta, bib, notes 순차)${NC}
+  ${GREEN}# 전체 export - 증분 (변경분만)${NC}
   denote-export.sh all
+
+  ${GREEN}# 전체 export - 전체 강제${NC}
+  denote-export.sh all --force
 
   ${GREEN}# meta 폴더만, 8 daemons${NC}
   denote-export.sh meta 8
+
+  ${GREEN}# meta 폴더만, 전체 강제${NC}
+  denote-export.sh meta --force
 
   ${GREEN}# 테스트 폴더만 (빠른 검증)${NC}
   denote-export.sh test 2
@@ -136,8 +146,19 @@ if [ ! -f "$PYTHON_SCRIPT" ]; then
   exit 1
 fi
 
-# Parse command
-COMMAND="${1:-all}"
+# Detect --force flag from any position
+FORCE_FLAG=""
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--force" ]; then
+    FORCE_FLAG="--force"
+  else
+    ARGS+=("$arg")
+  fi
+done
+
+# Parse command from filtered args
+COMMAND="${ARGS[0]:-all}"
 
 case "$COMMAND" in
   help|--help|-h)
@@ -146,11 +167,14 @@ case "$COMMAND" in
     ;;
 
   all)
-    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    NUM_DAEMONS="${ARGS[1]:-$DEFAULT_DAEMONS}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
+    MODE_DESC="증분"
+    [ -n "$FORCE_FLAG" ] && MODE_DESC="전체 (force)"
+
     log_info "=========================================="
-    log_info "Denote Export - 전체 폴더 순차 처리"
+    log_info "Denote Export - 전체 폴더 순차 처리 ($MODE_DESC)"
     log_info "Daemons per folder: $NUM_DAEMONS"
     log_info "Folders: meta → bib → notes"
     log_info "=========================================="
@@ -173,7 +197,7 @@ case "$COMMAND" in
       log_info "=================================================="
       echo ""
 
-      python3 "$PYTHON_SCRIPT" export "$DIR_PATH" "$NUM_DAEMONS"
+      python3 "$PYTHON_SCRIPT" export "$DIR_PATH" "$NUM_DAEMONS" $FORCE_FLAG
 
       echo ""
       log_info "✓ Folder $DIR_NAME completed"
@@ -189,7 +213,7 @@ case "$COMMAND" in
     ;;
 
   meta)
-    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    NUM_DAEMONS="${ARGS[1]:-$DEFAULT_DAEMONS}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$META_DIR" ]; then
@@ -204,11 +228,11 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" export "$META_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$META_DIR" "$NUM_DAEMONS" $FORCE_FLAG
     ;;
 
   bib)
-    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    NUM_DAEMONS="${ARGS[1]:-$DEFAULT_DAEMONS}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$BIB_DIR" ]; then
@@ -223,11 +247,11 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" export "$BIB_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$BIB_DIR" "$NUM_DAEMONS" $FORCE_FLAG
     ;;
 
   notes)
-    NUM_DAEMONS="${2:-$DEFAULT_DAEMONS}"
+    NUM_DAEMONS="${ARGS[1]:-$DEFAULT_DAEMONS}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$NOTES_DIR" ]; then
@@ -242,11 +266,11 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" export "$NOTES_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$NOTES_DIR" "$NUM_DAEMONS" $FORCE_FLAG
     ;;
 
   test)
-    NUM_DAEMONS="${2:-2}"
+    NUM_DAEMONS="${ARGS[1]:-2}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$TEST_DIR" ]; then
@@ -261,12 +285,12 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" export "$TEST_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$TEST_DIR" "$NUM_DAEMONS" $FORCE_FLAG
     ;;
 
   run)
-    ORG_DIR="${2}"
-    NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+    ORG_DIR="${ARGS[1]}"
+    NUM_DAEMONS="${ARGS[2]:-$DEFAULT_DAEMONS}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ -z "$ORG_DIR" ]; then
@@ -288,12 +312,12 @@ case "$COMMAND" in
     log_info "======================================"
     echo ""
 
-    python3 "$PYTHON_SCRIPT" export "$ORG_DIR" "$NUM_DAEMONS"
+    python3 "$PYTHON_SCRIPT" export "$ORG_DIR" "$NUM_DAEMONS" $FORCE_FLAG
     ;;
 
   dblock)
-    DBLOCK_DIR="${2:-$META_DIR}"
-    NUM_DAEMONS="${3:-$DEFAULT_DAEMONS}"
+    DBLOCK_DIR="${ARGS[1]:-$META_DIR}"
+    NUM_DAEMONS="${ARGS[2]:-$DEFAULT_DAEMONS}"
     CLEANUP_DAEMONS="$NUM_DAEMONS"
 
     if [ ! -d "$DBLOCK_DIR" ]; then

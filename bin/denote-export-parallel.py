@@ -29,6 +29,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 HOME = Path.home()
 SCRIPT_DIR = Path(__file__).parent.resolve()
 SERVER_SCRIPT = SCRIPT_DIR / "denote-export.el"
+TIMESTAMP_DIR = SCRIPT_DIR / ".last-export"
 
 # Global state for cleanup
 _num_daemons = 0
@@ -244,6 +245,45 @@ def process_file_via_daemon(args):
         print(f"✗ [D{daemon_id}] {file_path.name} - Error: {e}")
         return False, file_path.name
 
+def get_last_export_time(source_dir):
+    """디렉토리의 마지막 export 타임스탬프 조회."""
+    ts_file = TIMESTAMP_DIR / f"last-export-{source_dir.name}"
+    if ts_file.exists():
+        return float(ts_file.read_text().strip())
+    return 0
+
+def save_export_time(source_dir):
+    """현재 시각을 마지막 export 타임스탬프로 저장."""
+    TIMESTAMP_DIR.mkdir(parents=True, exist_ok=True)
+    ts_file = TIMESTAMP_DIR / f"last-export-{source_dir.name}"
+    ts_file.write_text(str(time.time()))
+
+def filter_changed_files(org_files, source_dir, force=False):
+    """마지막 export 이후 변경된 파일만 필터링."""
+    if force:
+        print(f"[FILTER] Force mode: 전체 {len(org_files)}개 내보내기", flush=True)
+        return org_files
+
+    last_export = get_last_export_time(source_dir)
+    if last_export == 0:
+        print(f"[FILTER] 첫 실행: 전체 {len(org_files)}개 내보내기", flush=True)
+        return org_files
+
+    from datetime import datetime
+    last_dt = datetime.fromtimestamp(last_export)
+    print(f"[FILTER] 마지막 내보내기: {last_dt.strftime('%Y-%m-%d %H:%M:%S')}", flush=True)
+
+    changed = []
+    skipped = 0
+    for f in org_files:
+        if f.stat().st_mtime > last_export:
+            changed.append(f)
+        else:
+            skipped += 1
+
+    print(f"[FILTER] 전체: {len(org_files)}, 변경: {len(changed)}, 건너뛰기: {skipped}", flush=True)
+    return changed
+
 def get_org_files(directory, mode):
     """Get list of .org files based on mode."""
     if mode == "dblock":
@@ -265,15 +305,17 @@ def main():
     _register_handlers()
 
     if len(sys.argv) < 4:
-        print("Usage: denote-export-parallel.py <mode> <directory> <num_daemons>")
+        print("Usage: denote-export-parallel.py <mode> <directory> <num_daemons> [--force]")
         print("  mode: export | dblock")
         print("  directory: target directory")
         print("  num_daemons: number of parallel daemons")
+        print("  --force: skip incremental check, export all files")
         sys.exit(1)
 
     mode = sys.argv[1]
     directory = Path(sys.argv[2])
     num_daemons = int(sys.argv[3])
+    force = "--force" in sys.argv[4:]
 
     if mode not in ("export", "dblock"):
         print(f"Error: Invalid mode '{mode}'. Use 'export' or 'dblock'")
@@ -288,20 +330,32 @@ def main():
         sys.exit(1)
 
     # Get all .org files (Python handles Unicode perfectly)
-    org_files = get_org_files(directory, mode)
-    total_files = len(org_files)
+    all_org_files = get_org_files(directory, mode)
+    total_all = len(all_org_files)
 
     mode_desc = "Hugo Export" if mode == "export" else "Dblock Update"
     search_type = "non-recursive" if mode == "export" else "recursive"
 
     print(f"[INFO] Mode: {mode_desc}", flush=True)
-    print(f"[INFO] Found {total_files} files in {directory} ({search_type})", flush=True)
+    print(f"[INFO] Found {total_all} files in {directory} ({search_type})", flush=True)
+
+    # Incremental filtering (export mode only)
+    if mode == "export":
+        org_files = filter_changed_files(all_org_files, directory, force=force)
+    else:
+        org_files = all_org_files
+
+    total_files = len(org_files)
+
+    print(f"[INFO] Processing {total_files} files", flush=True)
     print(f"[INFO] Using {num_daemons} parallel daemons", flush=True)
     print(f"[INFO] NBSP(U+00A0) safe: Python handles Unicode correctly", flush=True)
     print(flush=True)
 
     if total_files == 0:
         print("[INFO] No files to process. Exiting.")
+        if mode == "export":
+            save_export_time(directory)
         return 0
 
     # Start daemons
@@ -365,6 +419,11 @@ def main():
             print(f"[INFO] Success: {success_count}, Errors: {error_count}, Total: {total_files}")
         print(f"[INFO] Duration: {duration:.1f}s, Speed: {speed:.2f} files/sec")
         print(f"[INFO] ========================================")
+
+        # Save timestamp on success (export mode only)
+        if mode == "export" and error_count == 0 and not _interrupted:
+            save_export_time(directory)
+            print(f"[INFO] ✓ 타임스탬프 저장 완료", flush=True)
 
         return 0 if error_count == 0 and not _interrupted else 1
 

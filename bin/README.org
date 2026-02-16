@@ -11,23 +11,27 @@ Denote 노트를 Hugo 마크다운으로 변환하고 dblock을 업데이트하�
 
 * Files
 
-| 파일                       | 설명                          |
-|----------------------------+-------------------------------|
-| denote-export.sh           | 통합 wrapper (export + dblock) |
-| denote-export-parallel.py  | Python 병렬 처리               |
-| denote-export.el           | Elisp 서버/배치 로직           |
+| 파일                       | 설명                              |
+|----------------------------+-----------------------------------|
+| denote-export.sh           | 통합 wrapper (export + dblock)     |
+| denote-export-parallel.py  | Python 병렬 처리                   |
+| denote-export.el           | Elisp 서버/배치 로직               |
+| .last-export/              | 증분 내보내기 타임스탬프 (gitignore) |
 
 * Usage
 
 ** Export (멀티 데몬)
 
 #+begin_src bash
-# 전체 폴더 (meta, bib, notes)
+# 전체 폴더 - 증분 (변경분만)
 denote-export.sh all
+
+# 전체 폴더 - 전체 강제
+denote-export.sh all --force
 
 # 특정 폴더
 denote-export.sh meta 4      # 4 daemons
-denote-export.sh notes 2
+denote-export.sh meta --force # 전체 강제
 
 # 커스텀 디렉토리
 denote-export.sh run ~/custom/path 4
@@ -60,6 +64,11 @@ grep "✗" /tmp/denote-export-*.log
 #+end_src
 
 * Changelog
+
+** v2.1.0 (2026-02-17)
+- 증분 내보내기: mtime 기반으로 변경된 파일만 내보내기
+- =--force= 플래그: 타임스탬프 무시 전체 내보내기
+- 타임스탬프 저장: =bin/.last-export/= (gitignore)
 
 ** v2.0.0 (2025-12-21)
 - denote-export-server.el + denote-dblock-batch.el → denote-export.el 통합
