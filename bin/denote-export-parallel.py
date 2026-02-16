@@ -252,11 +252,11 @@ def get_last_export_time(source_dir):
         return float(ts_file.read_text().strip())
     return 0
 
-def save_export_time(source_dir):
-    """현재 시각을 마지막 export 타임스탬프로 저장."""
+def save_export_time(source_dir, timestamp):
+    """지정된 시각을 마지막 export 타임스탬프로 저장."""
     TIMESTAMP_DIR.mkdir(parents=True, exist_ok=True)
     ts_file = TIMESTAMP_DIR / f"last-export-{source_dir.name}"
-    ts_file.write_text(str(time.time()))
+    ts_file.write_text(str(timestamp))
 
 def filter_changed_files(org_files, source_dir, force=False):
     """마지막 export 이후 변경된 파일만 필터링."""
@@ -355,8 +355,12 @@ def main():
     if total_files == 0:
         print("[INFO] No files to process. Exiting.")
         if mode == "export":
-            save_export_time(directory)
+            save_export_time(directory, time.time())
         return 0
+
+    # Record start time BEFORE processing (not end time)
+    # Files modified during export will be caught in the next run
+    export_start_time = time.time()
 
     # Start daemons
     print(f"[INFO] ====================================== Daemon Lifecycle ======================================", flush=True)
@@ -420,10 +424,11 @@ def main():
         print(f"[INFO] Duration: {duration:.1f}s, Speed: {speed:.2f} files/sec")
         print(f"[INFO] ========================================")
 
-        # Save timestamp on success (export mode only)
+        # Save start timestamp on success (export mode only)
+        # Using start time ensures files modified during export are caught next run
         if mode == "export" and error_count == 0 and not _interrupted:
-            save_export_time(directory)
-            print(f"[INFO] ✓ 타임스탬프 저장 완료", flush=True)
+            save_export_time(directory, export_start_time)
+            print(f"[INFO] ✓ 타임스탬프 저장 완료 (시작 시각 기준)", flush=True)
 
         return 0 if error_count == 0 and not _interrupted else 1
 
