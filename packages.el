@@ -195,7 +195,9 @@
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
 (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 (package! meta-agent-shell :recipe (:host github :repo "ElleNajt/meta-agent-shell"))
-(package! opencode :recipe (:host codeberg :repo "sczi/opencode.el")) ; TODO 체크 agent-shell과 비교. ACP 사용 시와 비교
+
+(package! phscroll) ; for pi-coding-agent
+(package! pi-coding-agent :recipe (:host github :repo "junghan0611/pi-coding-agent"))
 
 ;;;;; DONT vterm based solutions
 

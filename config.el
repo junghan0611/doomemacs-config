@@ -212,6 +212,7 @@
 
 (require 'ai-gptel)
 (require 'ai-agent-shell)            ; acp 설정
+(require 'ai-pi-agent)               ; Pi coding agent 설정
 
 ;; (require 'ai-gptel-acp)           ; gptel + ACP 통합 (doom-md7)
 (require 'ai-stt-eca-whisper)

@@ -71,58 +71,6 @@
   (add-hook 'agent-shell-mode-hook #'doom-mark-buffer-as-real-h)
   )
 
-;;;; Minuet AI
-
-;; (use-package! minuet
-;;   :defer t
-;;   :config
-;;   ;; Load the ACP extension
-;;   (require 'minuet-acp)
-
-;;   ;; Use ACP provider (persistent session via claude-code-acp)
-;;   (setq minuet-provider 'acp)
-
-;;   ;; Keybindings for overlay ghost text UI (like GitHub Copilot)
-;;   (map! :in "C-c TAB" #'minuet-show-suggestion      ; Show AI completion as ghost text
-;;         :in "M-]" #'minuet-next-suggestion          ; Cycle to next suggestion
-;;         :in "M-[" #'minuet-previous-suggestion      ; Cycle to previous suggestion
-;;         :in "C-g" #'minuet-dismiss                  ; Dismiss current suggestion
-;;         :in "C-<return>" #'minuet-accept-suggestion ; Accept and insert full suggestion
-;;         :in "C-e" #'minuet-accept-suggestion-line)  ; Accept one line of suggestion
-
-;;   ;; Alternative: minibuffer-based completion
-;;   (map! :nvi "C-c C-n" #'minuet-complete-with-minibuffer))
-
-;;;; TODO MCP (Model Context Protocol)
-
-;; Efrit, Beads → ai-orchestration.el로 이동
-
-;; (unless IS-TERMUX
-;;   (when (display-graphic-p) ; gui
-;;     (use-package! mcp-server-lib
-;;       :after org
-;;       :config
-;;       (mcp-server-lib-install))
-
-;;     (use-package! elisp-dev-mcp
-;;       :after mcp-server-lib
-;;       :commands (elisp-dev-mcp-enable elisp-dev-mcp-disable)
-;;       :config
-;;       (setq mcp-server-lib-log-level 'info))  ;; 필요시 'debug로 변경
-
-;;     (use-package! org-mcp
-;;       :after mcp-server-lib
-;;       :config
-;;       (setq org-mcp-allowed-files
-;;             (append
-;;              (directory-files-recursively "~/org/" "\\.org$")
-;;              (directory-files-recursively "~/claude-memory/" "\\.org$")))
-;;       (org-mcp-enable)
-;;       ;; Start the server automatically when Emacs starts
-;;       (mcp-server-lib-start))
-;;     )
-;;   )
-
 ;;;; meta-agent-shell
 
 (use-package! meta-agent-shell
