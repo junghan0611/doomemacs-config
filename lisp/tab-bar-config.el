@@ -111,6 +111,23 @@
 ;;     (add-to-list 'keycast-substitute-alist `(,event nil)))
 ;;   )
 
+;;;; 탭 네비게이션 키바인딩
+
+(with-eval-after-load 'tab-bar
+  ;; gb / gB
+  (define-key evil-motion-state-map "gb" 'tab-next)
+  (define-key evil-motion-state-map "gB" 'tab-previous)
+  (define-key evil-normal-state-map "gb" 'tab-next)
+  (define-key evil-normal-state-map "gB" 'tab-previous)
+
+  (define-key evil-motion-state-map "gh" 'menu-bar-open)
+  (define-key evil-normal-state-map "gh" 'menu-bar-open)
+
+  ;; Ctrl + Number
+  (global-set-key (kbd "s-\\") 'tab-bar-switch-to-tab)
+  (global-set-key (kbd "s-{") 'tab-bar-switch-to-prev-tab)
+  (global-set-key (kbd "s-}") 'tab-bar-switch-to-next-tab))
+
 ;;; provide
 
 (provide 'tab-bar-config)

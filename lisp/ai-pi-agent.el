@@ -95,8 +95,6 @@
 (defvar my/pi-manager-side 'bottom
   "매니저 윈도우 위치.")
 
-(defvar my/pi-manager-timer nil
-  "매니저 자동 갱신 타이머.")
 
 (defun my/pi--collect-sessions ()
   "모든 Pi chat 버퍼에서 세션 정보를 수집."
@@ -136,7 +134,6 @@
 (defvar my/pi-manager-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'my/pi-manager-goto-session)
-    (define-key map (kbd "g") #'my/pi-manager-refresh)
     (define-key map (kbd "k") #'my/pi-manager-kill-session)
     (define-key map (kbd "c") #'my/pi-manager-create-session)
     (define-key map (kbd "q") #'quit-window)
@@ -151,7 +148,8 @@
          ("Status" 12 t)
          ("Context" 10 t)
          ("Process" 8 t)]
-        tabulated-list-padding 2)
+        tabulated-list-padding 2
+        tabulated-list-entries #'my/pi--collect-sessions)
   (tabulated-list-init-header))
 
 (defun my/pi-manager-refresh ()
@@ -159,18 +157,34 @@
   (when-let ((buf (get-buffer my/pi-manager-buffer-name)))
     (when (buffer-live-p buf)
       (with-current-buffer buf
-        (setq tabulated-list-entries (my/pi--collect-sessions))
-        (tabulated-list-print t)))))
+        (revert-buffer)))))
+
+(defun my/pi--restore-layout (chat-buf)
+  "CHAT-BUF의 Pi 2-윈도우 레이아웃 복원 (chat + input)."
+  (delete-other-windows)
+  (switch-to-buffer chat-buf)
+  (with-current-buffer chat-buf
+    (goto-char (point-max)))
+  (when-let ((input-buf (and (boundp 'pi-coding-agent--input-buffer)
+                             (buffer-local-value 'pi-coding-agent--input-buffer chat-buf))))
+    (when (buffer-live-p input-buf)
+      (let ((input-win (split-window nil (- pi-coding-agent-input-window-height) 'below)))
+        (set-window-buffer input-win input-buf)
+        (select-window input-win)))))
 
 (defun my/pi-manager-goto-session ()
-  "선택한 세션의 탭으로 전환."
+  "선택한 세션의 탭으로 전환하고 레이아웃 복원."
   (interactive)
-  (when-let ((entry (tabulated-list-get-entry)))
+  (when-let ((entry (tabulated-list-get-entry))
+             (chat-buf (tabulated-list-get-id)))
     (let* ((project (aref entry 0))
            (tab-name (my/pi--tab-name project)))
-      (when (my/pi--find-tab tab-name)
-        (quit-window)
-        (tab-bar-select-tab-by-name tab-name)))))
+      (delete-window (get-buffer-window my/pi-manager-buffer-name))
+      (if (my/pi--find-tab tab-name)
+          (progn
+            (tab-bar-select-tab-by-name tab-name)
+            (my/pi--restore-layout chat-buf))
+        (my/pi--restore-layout chat-buf)))))
 
 (defun my/pi-manager-kill-session ()
   "선택한 세션 종료."
@@ -200,11 +214,7 @@
   "Pi 세션 매니저 토글."
   (interactive)
   (if-let ((win (get-buffer-window my/pi-manager-buffer-name)))
-      (progn
-        (when my/pi-manager-timer
-          (cancel-timer my/pi-manager-timer)
-          (setq my/pi-manager-timer nil))
-        (delete-window win))
+      (delete-window win)
     (let ((buf (get-buffer-create my/pi-manager-buffer-name)))
       (with-current-buffer buf
         (unless (derived-mode-p 'my/pi-manager-mode)
@@ -212,9 +222,7 @@
         (my/pi-manager-refresh))
       (display-buffer-in-side-window buf
         `((side . ,my/pi-manager-side)
-          (window-height . 10)))
-      (setq my/pi-manager-timer
-            (run-with-timer 2 2 #'my/pi-manager-refresh)))))
+          (window-height . 10))))))
 
 ;;;; 키바인딩
 
