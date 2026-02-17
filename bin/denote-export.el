@@ -341,8 +341,9 @@ Returns list of applied fixes for logging."
 (defvar denote-export-file-counter 0
   "Counter for tracking number of files processed by this server.")
 
-(defvar denote-export-gc-interval 50
-  "Run garbage collection every N files to prevent memory buildup.")
+(defvar denote-export-gc-interval 25
+  "Run garbage collection every N files to prevent memory buildup.
+With gc-cons-threshold at 64MB, more frequent forced GC keeps peak memory bounded.")
 
 (defun denote-export-file (file)
   "Export single org FILE to Hugo markdown.
@@ -640,8 +641,9 @@ This function handles filenames internally, avoiding shell quoting issues with N
 ;;;; Memory Management
 
 ;; CRITICAL: Reset gc-cons-threshold to reasonable value after initialization
-;; 16MB is a good balance between performance and memory usage
-(setq gc-cons-threshold (* 16 1024 1024))
+;; 64MB reduces auto-GC frequency during org-export heavy allocation
+;; Manual GC every 25 files keeps memory bounded
+(setq gc-cons-threshold (* 64 1024 1024))
 (garbage-collect)  ; Force initial GC
 (message "[Server] gc-cons-threshold reset to 16MB, initial GC done")
 

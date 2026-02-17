@@ -10,10 +10,12 @@ Modes:
 - dblock: Dynamic block update
 
 Features:
-- Automatic daemon management (start/stop)
+- Automatic daemon management (start/stop/reuse)
 - Round-robin file distribution
 - True parallel processing
 - Unicode-safe (NBSP U+00A0)
+- Incremental export (mtime-based)
+- Profiling stats (GC, memory, speed)
 """
 
 import os
@@ -37,13 +39,16 @@ _cleanup_done = False
 _executor = None  # Global executor reference for signal handler
 _interrupted = False  # Flag to stop processing
 _mode = "export"  # Current mode: export or dblock
+_no_cleanup = False  # Skip daemon cleanup on exit
 
 
 def cleanup_daemons():
     """Cleanup function called on exit/signal."""
-    global _cleanup_done, _num_daemons, _is_main_process
+    global _cleanup_done, _num_daemons, _is_main_process, _no_cleanup
     # Only cleanup from main process
     if not _is_main_process or _cleanup_done or _num_daemons == 0:
+        return
+    if _no_cleanup:
         return
     _cleanup_done = True
 
@@ -79,7 +84,7 @@ def cleanup_daemons():
 
 def signal_handler(signum, frame):
     """Handle SIGINT (Ctrl+C) and SIGTERM."""
-    global _executor, _interrupted, _is_main_process
+    global _executor, _interrupted, _is_main_process, _no_cleanup
 
     # Only handle in main process
     if not _is_main_process:
@@ -90,6 +95,9 @@ def signal_handler(signum, frame):
 
     # Set interrupt flag to stop submitting new tasks
     _interrupted = True
+
+    # Force cleanup on signal even if --no-cleanup was set
+    _no_cleanup = False
 
     # Shutdown executor first (cancel pending futures, don't wait for running ones)
     if _executor is not None:
@@ -112,32 +120,40 @@ def _register_handlers():
     signal.signal(signal.SIGTERM, signal_handler)
 
 def is_daemon_running(daemon_name):
-    """Check if daemon is running."""
+    """Check if daemon is running and ready."""
     try:
         result = subprocess.run(
-            ['emacsclient', '-s', daemon_name, '--eval', 't'],
+            ['emacsclient', '-s', daemon_name, '--eval',
+             "(boundp 'denote-export-server-ready)"],
             capture_output=True,
-            timeout=2
+            text=True,
+            timeout=3
         )
-        return result.returncode == 0
+        return result.returncode == 0 and 't' in result.stdout
     except:
         return False
 
 def start_daemons(num_daemons):
-    """Start daemons and wait until they're ready."""
+    """Start daemons or reuse existing ones."""
+    reused = 0
+    started = 0
+
     for i in range(1, num_daemons + 1):
         daemon_name = f"denote-export-daemon-{i}"
 
-        # Stop if already running
+        # Reuse if already running and ready
         if is_daemon_running(daemon_name):
-            print(f"[INFO] Daemon {i} already running, stopping...", flush=True)
+            # Reset file counter for fresh profiling
             subprocess.run(
-                ['emacsclient', '-s', daemon_name, '--eval', '(kill-emacs)'],
-                capture_output=True
+                ['emacsclient', '-s', daemon_name, '--eval',
+                 '(setq denote-export-file-counter 0)'],
+                capture_output=True, timeout=3
             )
-            time.sleep(1)
+            print(f"[INFO]   ♻ Daemon {i} reused (already running)", flush=True)
+            reused += 1
+            continue
 
-        # Start daemon
+        # Start new daemon
         print(f"[INFO] Creating daemon {i}: {daemon_name}", flush=True)
         subprocess.Popen(
             ['emacs', '--quick', f'--daemon={daemon_name}', '--load', str(SERVER_SCRIPT)],
@@ -172,6 +188,11 @@ def start_daemons(num_daemons):
             print(f"[ERROR] Daemon {i} initialization timeout", flush=True)
             sys.exit(1)
 
+        started += 1
+
+    if reused > 0:
+        print(f"[INFO] Daemons: {reused} reused, {started} new (total {num_daemons})", flush=True)
+
 def stop_daemons(num_daemons):
     """Stop all daemons."""
     for i in range(1, num_daemons + 1):
@@ -185,6 +206,87 @@ def stop_daemons(num_daemons):
             print(f"[INFO]   ✓ Daemon {i} stopped successfully", flush=True)
         except Exception as e:
             print(f"[WARN]   ✗ Failed to stop daemon {i}: {e}", flush=True)
+
+def get_daemon_profile(daemon_id):
+    """Query profiling stats from a daemon."""
+    daemon_name = f"denote-export-daemon-{daemon_id}"
+    try:
+        result = subprocess.run(
+            ['emacsclient', '-s', daemon_name, '--eval',
+             '(format "%d %d %.3f %d" (emacs-pid) (gcs-done) gcs-elapsed denote-export-file-counter)'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            # Parse: "PID GC_COUNT GC_ELAPSED FILE_COUNT"
+            raw = result.stdout.strip().strip('"')
+            parts = raw.split()
+            if len(parts) == 4:
+                pid = int(parts[0])
+                gc_count = int(parts[1])
+                gc_elapsed = float(parts[2])
+                file_count = int(parts[3])
+                # Get RSS from /proc
+                rss_mb = 0
+                try:
+                    status = Path(f"/proc/{pid}/status").read_text()
+                    for line in status.split('\n'):
+                        if line.startswith('VmRSS:'):
+                            rss_kb = int(line.split()[1])
+                            rss_mb = rss_kb / 1024
+                            break
+                except:
+                    pass
+                return {
+                    'daemon': daemon_id, 'pid': pid,
+                    'gc_count': gc_count, 'gc_elapsed': gc_elapsed,
+                    'file_count': file_count, 'rss_mb': rss_mb
+                }
+    except:
+        pass
+    return None
+
+def print_profile_summary(num_daemons, duration, success_count, error_count, total_files):
+    """Print profiling summary with per-daemon stats."""
+    print(flush=True)
+    print(f"[PROFILE] ====================================== Performance Summary ======================================", flush=True)
+
+    # Per-daemon stats
+    total_gc = 0
+    total_gc_time = 0
+    total_rss = 0
+    max_rss = 0
+    profiles = []
+
+    for i in range(1, num_daemons + 1):
+        p = get_daemon_profile(i)
+        if p:
+            profiles.append(p)
+            total_gc += p['gc_count']
+            total_gc_time += p['gc_elapsed']
+            total_rss += p['rss_mb']
+            if p['rss_mb'] > max_rss:
+                max_rss = p['rss_mb']
+
+    # Table header
+    print(f"[PROFILE]  Daemon | Files | GC Count | GC Time  | RSS (MB)", flush=True)
+    print(f"[PROFILE]  -------+-------+----------+----------+--------", flush=True)
+    for p in profiles:
+        print(f"[PROFILE]  D{p['daemon']:>4}  | {p['file_count']:>5} | {p['gc_count']:>8} | {p['gc_elapsed']:>6.1f}s  | {p['rss_mb']:>6.0f}", flush=True)
+
+    # Summary
+    processed = success_count + error_count
+    speed = processed / duration if duration > 0 else 0
+
+    print(f"[PROFILE]  -------+-------+----------+----------+--------", flush=True)
+    print(f"[PROFILE]  Total  | {processed:>5} | {total_gc:>8} | {total_gc_time:>6.1f}s  | {total_rss:>6.0f}", flush=True)
+    print(f"[PROFILE]", flush=True)
+    print(f"[PROFILE]  Files:    {success_count} success, {error_count} errors / {total_files} total", flush=True)
+    print(f"[PROFILE]  Duration: {duration:.1f}s ({duration/60:.1f}min)", flush=True)
+    print(f"[PROFILE]  Speed:    {speed:.2f} files/sec", flush=True)
+    print(f"[PROFILE]  Daemons:  {num_daemons} (max RSS: {max_rss:.0f}MB, total: {total_rss:.0f}MB)", flush=True)
+    if total_gc > 0:
+        print(f"[PROFILE]  GC:       {total_gc} runs, {total_gc_time:.1f}s ({total_gc_time/duration*100:.1f}% of wall time)", flush=True)
+    print(f"[PROFILE] =============================================================================================", flush=True)
 
 def process_file_via_daemon(args):
     """Process a single file via emacsclient to a specific daemon."""
@@ -299,23 +401,26 @@ def get_org_files(directory, mode):
         return sorted(directory.glob("*.org"))
 
 def main():
-    global _num_daemons, _mode
+    global _num_daemons, _mode, _no_cleanup
 
     # Register signal handlers in main process
     _register_handlers()
 
     if len(sys.argv) < 4:
-        print("Usage: denote-export-parallel.py <mode> <directory> <num_daemons> [--force]")
+        print("Usage: denote-export-parallel.py <mode> <directory> <num_daemons> [--force] [--no-cleanup]")
         print("  mode: export | dblock")
         print("  directory: target directory")
         print("  num_daemons: number of parallel daemons")
         print("  --force: skip incremental check, export all files")
+        print("  --no-cleanup: keep daemons alive after completion (for reuse)")
         sys.exit(1)
 
     mode = sys.argv[1]
     directory = Path(sys.argv[2])
     num_daemons = int(sys.argv[3])
-    force = "--force" in sys.argv[4:]
+    extra_args = sys.argv[4:]
+    force = "--force" in extra_args
+    _no_cleanup = "--no-cleanup" in extra_args
 
     if mode not in ("export", "dblock"):
         print(f"Error: Invalid mode '{mode}'. Use 'export' or 'dblock'")
@@ -349,7 +454,6 @@ def main():
 
     print(f"[INFO] Processing {total_files} files", flush=True)
     print(f"[INFO] Using {num_daemons} parallel daemons", flush=True)
-    print(f"[INFO] NBSP(U+00A0) safe: Python handles Unicode correctly", flush=True)
     print(flush=True)
 
     if total_files == 0:
@@ -362,10 +466,10 @@ def main():
     # Files modified during export will be caught in the next run
     export_start_time = time.time()
 
-    # Start daemons
+    # Start or reuse daemons
     print(f"[INFO] ====================================== Daemon Lifecycle ======================================", flush=True)
     start_daemons(num_daemons)
-    print(f"[INFO] ✓ All {num_daemons} daemons created and ready!", flush=True)
+    print(f"[INFO] ✓ All {num_daemons} daemons ready!", flush=True)
     print(f"[INFO] =============================================================================================", flush=True)
     print(flush=True)
 
@@ -410,19 +514,9 @@ def main():
             _executor = None
 
         duration = time.time() - start_time
-        processed = success_count + error_count
-        speed = processed / duration if duration > 0 else 0
 
-        print()
-        print(f"[INFO] ========================================")
-        if _interrupted:
-            print(f"[INFO] {mode_desc} interrupted!")
-            print(f"[INFO] Processed: {processed}/{total_files}, Success: {success_count}, Errors: {error_count}")
-        else:
-            print(f"[INFO] {mode_desc} completed!")
-            print(f"[INFO] Success: {success_count}, Errors: {error_count}, Total: {total_files}")
-        print(f"[INFO] Duration: {duration:.1f}s, Speed: {speed:.2f} files/sec")
-        print(f"[INFO] ========================================")
+        # Print profiling summary
+        print_profile_summary(num_daemons, duration, success_count, error_count, total_files)
 
         # Save start timestamp on success (export mode only)
         # Using start time ensures files modified during export are caught next run
@@ -433,12 +527,15 @@ def main():
         return 0 if error_count == 0 and not _interrupted else 1
 
     finally:
-        # ALWAYS cleanup daemons (even on error/interrupt)
-        print()
-        print(f"[INFO] ====================================== Daemon Cleanup ======================================", flush=True)
-        stop_daemons(num_daemons)
-        print(f"[INFO] ✓ All {num_daemons} daemons stopped and cleaned up!", flush=True)
-        print(f"[INFO] =============================================================================================", flush=True)
+        if _no_cleanup:
+            print(f"\n[INFO] --no-cleanup: daemons kept alive for reuse", flush=True)
+        else:
+            # ALWAYS cleanup daemons (even on error/interrupt)
+            print()
+            print(f"[INFO] ====================================== Daemon Cleanup ======================================", flush=True)
+            stop_daemons(num_daemons)
+            print(f"[INFO] ✓ All {num_daemons} daemons stopped and cleaned up!", flush=True)
+            print(f"[INFO] =============================================================================================", flush=True)
 
 if __name__ == '__main__':
     sys.exit(main())

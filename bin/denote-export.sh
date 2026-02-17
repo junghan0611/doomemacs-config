@@ -16,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_SCRIPT="${SCRIPT_DIR}/denote-export-parallel.py"
 ORG_ROOT="${HOME}/org"
-DEFAULT_DAEMONS=4  # Reduced from 4 to prevent memory exhaustion
+DEFAULT_DAEMONS=8  # 16 threads / 2 = 8 daemons (200MB each, ~1.6GB total)
 
 # Cleanup function for trap
 cleanup_on_exit() {
@@ -180,14 +180,18 @@ case "$COMMAND" in
     log_info "=========================================="
     echo ""
 
-    # Process each directory sequentially
+    # Process each directory sequentially, reusing daemons between folders
+    FOLDERS=(meta bib notes)
+    TOTAL_FOLDERS=${#FOLDERS[@]}
     FOLDER_NUM=1
-    TOTAL_FOLDERS=3
-    for DIR_NAME in meta bib notes; do
+    ALL_START=$(date +%s)
+
+    for DIR_NAME in "${FOLDERS[@]}"; do
       DIR_PATH="${ORG_ROOT}/${DIR_NAME}"
 
       if [ ! -d "$DIR_PATH" ]; then
         log_warn "Directory not found: $DIR_PATH (skipping)"
+        FOLDER_NUM=$((FOLDER_NUM + 1))
         continue
       fi
 
@@ -197,7 +201,12 @@ case "$COMMAND" in
       log_info "=================================================="
       echo ""
 
-      python3 "$PYTHON_SCRIPT" export "$DIR_PATH" "$NUM_DAEMONS" $FORCE_FLAG
+      # Keep daemons alive between folders, cleanup only on last folder
+      if [ "$FOLDER_NUM" -lt "$TOTAL_FOLDERS" ]; then
+        python3 "$PYTHON_SCRIPT" export "$DIR_PATH" "$NUM_DAEMONS" $FORCE_FLAG --no-cleanup
+      else
+        python3 "$PYTHON_SCRIPT" export "$DIR_PATH" "$NUM_DAEMONS" $FORCE_FLAG
+      fi
 
       echo ""
       log_info "✓ Folder $DIR_NAME completed"
@@ -206,9 +215,14 @@ case "$COMMAND" in
       FOLDER_NUM=$((FOLDER_NUM + 1))
     done
 
+    ALL_END=$(date +%s)
+    ALL_DURATION=$((ALL_END - ALL_START))
+    ALL_MIN=$((ALL_DURATION / 60))
+    ALL_SEC=$((ALL_DURATION % 60))
+
     echo ""
     log_info "=========================================="
-    log_info "✓ 전체 export 완료!"
+    log_info "✓ 전체 export 완료! (${ALL_MIN}m ${ALL_SEC}s)"
     log_info "=========================================="
     ;;
 
