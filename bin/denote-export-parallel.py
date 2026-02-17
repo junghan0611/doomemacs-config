@@ -213,7 +213,7 @@ def get_daemon_profile(daemon_id):
     try:
         result = subprocess.run(
             ['emacsclient', '-s', daemon_name, '--eval',
-             '(format "%d %d %.3f %d" (emacs-pid) (gcs-done) gcs-elapsed denote-export-file-counter)'],
+             '(format "%d %d %.3f %d" (emacs-pid) gcs-done gc-elapsed denote-export-file-counter)'],
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
@@ -534,6 +534,7 @@ def main():
             print()
             print(f"[INFO] ====================================== Daemon Cleanup ======================================", flush=True)
             stop_daemons(num_daemons)
+            _cleanup_done = True  # Prevent atexit double cleanup
             print(f"[INFO] ✓ All {num_daemons} daemons stopped and cleaned up!", flush=True)
             print(f"[INFO] =============================================================================================", flush=True)
 
