@@ -87,6 +87,19 @@
 (fset 'package-install (lambda (&rest _) (error "ELPA is disabled! Use Doom's straight packages only")))
 (fset 'package-refresh-contents (lambda (&rest _) (error "ELPA is disabled!")))
 
+;;;; Native Compilation Support
+
+;; --quick omits Doom's eln cache path from native-comp-eln-load-path.
+;; Without this, packages like ox-hugo load as bytecode even when .eln exists.
+(when (featurep 'native-compile)
+  (let ((doom-eln-dir (expand-file-name ".local/cache/eln/" doom-emacs-dir)))
+    (when (file-directory-p doom-eln-dir)
+      (let ((eln-subdirs (directory-files doom-eln-dir t "^[0-9]" t)))
+        (dolist (dir eln-subdirs)
+          (when (file-directory-p dir)
+            (add-to-list 'native-comp-eln-load-path dir))))
+      (message "[Server] ✓ native-comp eln paths added from: %s" doom-eln-dir))))
+
 ;;;; Package Loading (straight.el)
 
 ;; Helper function to find straight build directory (version-agnostic)
@@ -94,34 +107,29 @@
   "Find the straight build directory, handling different Emacs versions."
   (let ((straight-build-base (expand-file-name ".local/straight/" doom-emacs-dir)))
     (when (file-directory-p straight-build-base)
-      (let ((build-dirs (directory-files straight-build-base t "^build-")))
+      (let ((build-dirs (seq-filter #'file-directory-p
+                                    (directory-files straight-build-base t "^build-"))))
         (when build-dirs
-          ;; Return the most recent build directory
+          ;; Return the most recent build directory (exclude cache files)
           (car (sort build-dirs #'file-newer-than-file-p)))))))
 
-;; Add Doom's straight paths to load-path AND load autoloads
+;; Add Doom's straight paths to load-path
+;; Build dir first (has .elc → enables native-comp .eln lookup)
+;; Repos dir as fallback (raw .el only, append to end)
 (let ((build-dir (find-straight-build-dir))
       (repos-dir (expand-file-name ".local/straight/repos/" doom-emacs-dir)))
   (when (and build-dir (file-directory-p build-dir))
-    ;; Add all package directories from build dir
     (message "[Server] Loading packages from: %s" build-dir)
     (let ((pkg-dirs (directory-files build-dir t "^[^.]" t)))
       (dolist (pkg-dir pkg-dirs)
         (when (and (file-directory-p pkg-dir)
                    (not (string-suffix-p ".el" pkg-dir)))
-          (add-to-list 'load-path pkg-dir)
-          ;; Load autoloads file if exists
-          (let ((autoload-file (expand-file-name
-                                (concat (file-name-nondirectory pkg-dir) "-autoloads.el")
-                                pkg-dir)))
-            (when (file-exists-p autoload-file)
-              (load autoload-file nil t)))))))
+          (add-to-list 'load-path pkg-dir)))))
   (when (file-directory-p repos-dir)
-    ;; Add all repos as fallback
     (let ((repo-dirs (directory-files repos-dir t "^[^.]" t)))
       (dolist (repo-dir repo-dirs)
         (when (file-directory-p repo-dir)
-          (add-to-list 'load-path repo-dir))))))
+          (add-to-list 'load-path repo-dir t))))))
 
 (message "[Server] Loading essential packages from Doom's straight...")
 
@@ -152,6 +160,21 @@
 (or (require 'ox-hugo nil t) (error "ox-hugo not found in Doom"))
 (or (require 'citar nil t) (error "citar not found in Doom"))
 (or (require 'parsebib nil t) (error "parsebib not found in Doom"))
+
+;; Verify native-comp status for critical export functions
+(when (featurep 'native-compile)
+  (let ((checks '((org-hugo-export-to-md . "ox-hugo")
+                  (org-export-as . "ox")
+                  (org-element-parse-buffer . "org-element")))
+        (native-count 0) (total 0))
+    (dolist (check checks)
+      (setq total (1+ total))
+      (let ((native-p (and (fboundp (car check))
+                           (subr-native-elisp-p (symbol-function (car check))))))
+        (when native-p (setq native-count (1+ native-count)))
+        (message "[Server] native-comp %s: %s"
+                 (cdr check) (if native-p "✓ native" "✗ bytecode"))))
+    (message "[Server] native-comp: %d/%d critical functions" native-count total)))
 
 ;; CRITICAL: Load org-cite and citar for bibliography support
 (require 'oc)           ;; org-cite
@@ -341,9 +364,9 @@ Returns list of applied fixes for logging."
 (defvar denote-export-file-counter 0
   "Counter for tracking number of files processed by this server.")
 
-(defvar denote-export-gc-interval 25
+(defvar denote-export-gc-interval 50
   "Run garbage collection every N files to prevent memory buildup.
-With gc-cons-threshold at 64MB, more frequent forced GC keeps peak memory bounded.")
+With gc-cons-threshold at 256MB, manual GC is a safety net for RSS bounds.")
 
 (defun denote-export-file (file)
   "Export single org FILE to Hugo markdown.
@@ -641,11 +664,11 @@ This function handles filenames internally, avoiding shell quoting issues with N
 ;;;; Memory Management
 
 ;; CRITICAL: Reset gc-cons-threshold to reasonable value after initialization
-;; 64MB reduces auto-GC frequency during org-export heavy allocation
-;; Manual GC every 25 files keeps memory bounded
-(setq gc-cons-threshold (* 64 1024 1024))
+;; 256MB reduces auto-GC frequency during org-export heavy allocation
+;; Manual GC every 50 files keeps memory bounded
+(setq gc-cons-threshold (* 256 1024 1024))
 (garbage-collect)  ; Force initial GC
-(message "[Server] gc-cons-threshold reset to 16MB, initial GC done")
+(message "[Server] gc-cons-threshold reset to 256MB, initial GC done")
 
 ;;;; Server Startup (for daemon mode)
 

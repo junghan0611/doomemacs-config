@@ -401,7 +401,7 @@ def get_org_files(directory, mode):
         return sorted(directory.glob("*.org"))
 
 def main():
-    global _num_daemons, _mode, _no_cleanup
+    global _num_daemons, _mode, _no_cleanup, _cleanup_done
 
     # Register signal handlers in main process
     _register_handlers()
