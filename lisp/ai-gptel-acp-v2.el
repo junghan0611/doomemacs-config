@@ -25,7 +25,7 @@
 ;; gptel--known-backends  ; "Claude-ACP" 있어야 함
 ;; ;; 3. 백엔드 선택
 ;; (setq gptel-backend (gptel-get-backend "Claude-ACP"))
-;; (setq gptel-model 'claude-sonnet-4-5)
+;; (setq gptel-model 'claude-sonnet-4-6)
 ;; ;; 4. 테스트
 ;; M-x gptel-send
 ;; ;; 5. 문제 시 리셋
@@ -421,7 +421,7 @@ Call this if session becomes stale or on errors."
 (when (gptel-acp--available-p)
   (gptel-make-acp "Claude-ACP"
     :command "claude-code-acp"
-    :models '(claude-sonnet-4-5 claude-opus-4-5 claude-haiku-4-5)
+    :models '(claude-sonnet-4-6 claude-opus-4-6 claude-haiku-4-5)
     :host "Claude Code (ACP)"
     :stream t)
   (message "[gptel-acp] Backend registered"))

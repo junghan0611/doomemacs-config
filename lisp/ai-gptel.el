@@ -175,14 +175,20 @@
           :protocol "http"
           :stream t
           :key "not-needed"
-          :models '((claude-opus-4-6
+          :models '((claude-sonnet-4-6
+                     :description "Fast + intelligent, agentic search - Sonnet 4.6"
+                     :capabilities (media tool-use)
+                     :context-window 200
+                     :input-cost 3
+                     :output-cost 15)
+                    (claude-opus-4-6
                      :description "Most intelligent - Opus 4.6"
                      :capabilities (media tool-use)
                      :context-window 200
                      :input-cost 5
                      :output-cost 25)
                     (claude-sonnet-4-5-20250929
-                     :description "Best coding model"
+                     :description "Sonnet 4.5 legacy"
                      :capabilities (media tool-use)
                      :context-window 200
                      :input-cost 3
@@ -246,7 +252,7 @@
   (if (gptel--claude-code-server-available-p)
       (progn
         (setq gptel-backend gptel-claude-code-backend)
-        (setq gptel-model 'claude-opus-4-6)
+        (setq gptel-model 'claude-sonnet-4-6)
         (message "gptel: Claude-Code 서버 감지 → 기본 백엔드로 설정"))
     (setq gptel-backend gptel-openrouter-backend)
     (setq gptel-model gptel-openrouter-chat-model)
@@ -259,7 +265,7 @@
     (if (gptel--claude-code-server-available-p)
         (progn
           (setq gptel-backend gptel-claude-code-backend)
-          (setq gptel-model 'claude-opus-4-6)
+          (setq gptel-model 'claude-sonnet-4-6)
           (message "Switched to Claude-Code backend"))
       (message "Claude-Code server not available! Run: run-claude-wrapper")))
 

@@ -437,7 +437,7 @@ Example:
 
   (gptel-make-acp \"Claude-ACP\"
     :command \"/usr/local/bin/claude-code-acp\"
-    :models \\='(claude-sonnet-4-5)
+    :models \\='(claude-sonnet-4-6)
     :host \"Claude via ACP\")"
   (declare (indent 1))
   (unless command
@@ -490,7 +490,7 @@ Example:
   (setq gptel-claude-code-acp
         (gptel-make-acp "Claude-Code-ACP"
           :command (executable-find "claude-code-acp")
-          :models '(claude-sonnet-4-5 claude-opus-4-5)
+          :models '(claude-sonnet-4-6 claude-opus-4-6)
           :host "Claude Code via ACP"
           :stream t))
   (message "[gptel-acp] Claude Code ACP backend registered"))
