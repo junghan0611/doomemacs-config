@@ -206,6 +206,10 @@
 ;;   (package! monet :recipe (:host github :repo "stevemolitor/monet" )))
 ;; (package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
 
+;;;; ai-bot-config.el
+
+(package! telega)
+
 ;;;; ai-stt-eca-whisper.el
 
 (package! whisper :recipe (:host github :repo "natrys/whisper.el"))
