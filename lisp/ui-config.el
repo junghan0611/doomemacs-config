@@ -239,7 +239,7 @@ _THEME 인자는 `enable-theme-functions' 호환용."
         (:eval
          (when-let ((project-name (and (featurep 'projectile) (projectile-project-name))))
            (unless (string= "-" project-name)
-             (format (if (buffer-modified-p)  " ◉ %s" "  ●  %s") project-name))))))
+             (format (if (buffer-modified-p)  " ◈ %s" "  ◇  %s") project-name))))))
 
 ;;; provide
 

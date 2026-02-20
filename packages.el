@@ -197,7 +197,8 @@
 (package! meta-agent-shell :recipe (:host github :repo "ElleNajt/meta-agent-shell"))
 
 (package! phscroll) ; for pi-coding-agent
-(package! pi-coding-agent :recipe (:host github :repo "junghan0611/pi-coding-agent"))
+(package! pi-coding-agent)
+;; (package! pi-coding-agent :recipe (:host github :repo "junghan0611/pi-coding-agent"))
 
 ;;;;; DONT vterm based solutions
 
