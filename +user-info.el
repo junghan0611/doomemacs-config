@@ -103,13 +103,13 @@
 ;; bib - 존재하는 파일만 포함 (타입별 분리: Book/Online/Software/Reference/Video/Article/Misc)
 (defvar config-bibfiles
   (let ((candidates (list
-                     (concat user-org-directory "resources/zotero/Book.bib")
-                     (concat user-org-directory "resources/zotero/Online.bib")
-                     (concat user-org-directory "resources/zotero/Software.bib")
-                     (concat user-org-directory "resources/zotero/Reference.bib")
-                     (concat user-org-directory "resources/zotero/Video.bib")
-                     (concat user-org-directory "resources/zotero/Article.bib")
-                     (concat user-org-directory "resources/zotero/Misc.bib")
+                     (concat user-org-directory "resources/Book.bib")
+                     (concat user-org-directory "resources/Online.bib")
+                     (concat user-org-directory "resources/Software.bib")
+                     (concat user-org-directory "resources/Reference.bib")
+                     (concat user-org-directory "resources/Video.bib")
+                     (concat user-org-directory "resources/Article.bib")
+                     (concat user-org-directory "resources/Misc.bib")
                      (concat user-org-directory "resources/github-starred.bib"))))
     (seq-filter #'file-exists-p candidates)))
 
