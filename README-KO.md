@@ -16,7 +16,8 @@ AI 협업 워크플로우를 위한 멀티 에이전트 중심 Doom Emacs 설정
 
 ### 주요 특징
 
-- **멀티 에이전트 통합**: GPTel, Agent Shell (ACP), Claude Code MCP 도구, AI 오케스트레이션
+- **멀티 에이전트 통합**: GPTel, Agent Shell (ACP), Pi Coding Agent, Claude Code MCP 도구, AI 오케스트레이션
+- **원격 개발**: tramp-rpc로 고성능 원격 파일/프로세스 제어 (기존 TRAMP 대비 2-38배 빠름)
 - **터미널 멀티플렉서**: tmux/Zellij 통합으로 멀티 에이전트 워크플로우
 - **음성 인터페이스**: ECA Whisper (STT), Edge TTS (음성 합성)
 - **AI 협업 도구**: `yank-code-with-context` 등 에이전트 친화적 코드 공유
@@ -85,6 +86,7 @@ doomemacs-config/
 ├── lisp/                # 모듈화된 설정 (39개 파일)
 │   ├── ai-gptel.el          # GPTel (Claude, OpenAI, Gemini) - 36K
 │   ├── ai-agent-shell.el    # Agent Shell, ACP, Claude Code
+│   ├── ai-pi-agent.el       # Pi Coding Agent (stdio RPC, 한글 OK)
 │   ├── ai-orchestration.el  # 멀티 에이전트 오케스트레이션
 │   ├── ai-gptel-acp.el      # GPTel + ACP 통합
 │   ├── ai-stt-eca-whisper.el # 음성-텍스트 변환 (Whisper)
@@ -96,6 +98,7 @@ doomemacs-config/
 │   ├── org-config.el        # Org-mode 설정
 │   ├── functions.el         # 유틸리티 함수 (yank-code-with-context)
 │   ├── keybindings-config.el # 키바인딩
+│   ├── tramp-rpc-config.el   # 고성능 TRAMP 백엔드 (RPC over SSH)
 │   ├── eaf-config.el        # EAF 애플리케이션
 │   └── ...                  # 25+ 설정 모듈
 │
@@ -115,11 +118,13 @@ doomemacs-config/
 |------|------|------|
 | **GPTel** | LLM 통합 (Claude, OpenAI, Gemini, 로컬) | `ai-gptel.el` |
 | **Agent Shell** | ACP 프로토콜, agent-shell-manager | `ai-agent-shell.el` |
+| **Pi Coding Agent** | stdio RPC 경량 AI 에이전트 (한글 입력 OK) | `ai-pi-agent.el` |
 | **AI 오케스트레이션** | 멀티 에이전트 조율 | `ai-orchestration.el` |
 | **Claude Code MCP** | Claude Code용 MCP 도구 정의 | `+claude-code-ide-mcp-tools.el` |
 | **ECA Whisper** | whisper.cpp 기반 음성-텍스트 | `ai-stt-eca-whisper.el` |
 | **Edge TTS** | Microsoft Edge 텍스트-음성 | `ai-tts-edge.el` |
 | **tmux/Zellij** | 터미널 멀티플렉서 에이전트 워크플로우 | `tmux-config.el`, `zellij-config.el` |
+| **tramp-rpc** | 고성능 원격 제어 (기존 TRAMP 대비 2-38배) | `tramp-rpc-config.el` |
 
 ### EAF (Emacs Application Framework)
 
@@ -216,7 +221,9 @@ DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom clean
 - 디지털 가든 퍼블리싱을 위한 Denote export 시스템
 - tmux/Zellij 통합으로 멀티 에이전트 오케스트레이션
 - 에이전트 협업 도구 (yank-code-with-context, MCP 도구)
-- 모듈 아키텍처 확장 (14개 파일 → 39개 파일)
+- Pi Coding Agent: 터미널 없이 stdio RPC로 동작하는 AI 에이전트 (한글 입력 완벽 지원)
+- tramp-rpc: VS Code Remote 수준의 고성능 원격 개발 환경
+- 모듈 아키텍처 확장 (14개 파일 → 40+ 파일)
 
 기기 간 재현성을 유지하면서 AI 협업 워크플로우에 집중합니다.
 
@@ -227,6 +234,8 @@ MIT License
 ## 관련 링크
 
 - [Doom Emacs](https://github.com/doomemacs/doomemacs)
+- [Pi Coding Agent](https://github.com/dnouri/pi-coding-agent)
+- [tramp-rpc](https://github.com/ArthurHeymans/emacs-tramp-rpc)
 - [EAF](https://github.com/emacs-eaf/emacs-application-framework)
 - [GLG-Mono Font](https://github.com/junghan0611/GLG-Mono)
 - [힣's 디지털가든](https://notes.junghanacs.com)

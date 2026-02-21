@@ -16,7 +16,8 @@ This configuration supports the workflow where AI handles routine tasks while hu
 
 ### Key Features
 
-- **Multi-agent integration**: GPTel, Agent Shell (ACP), Claude Code MCP tools, AI orchestration
+- **Multi-agent integration**: GPTel, Agent Shell (ACP), Pi Coding Agent, Claude Code MCP tools, AI orchestration
+- **Remote development**: tramp-rpc for high-performance remote file/process operations (2-38x faster than TRAMP)
 - **Terminal multiplexer**: tmux/Zellij integration for multi-agent workflows
 - **Voice interfaces**: ECA Whisper (STT), Edge TTS (text-to-speech)
 - **AI collaboration**: `yank-code-with-context` for agent-friendly code sharing
@@ -85,6 +86,7 @@ doomemacs-config/
 ├── lisp/                # Modular configuration (39 files)
 │   ├── ai-gptel.el          # GPTel (Claude, OpenAI, Gemini) - 36K
 │   ├── ai-agent-shell.el    # Agent Shell, ACP, Claude Code
+│   ├── ai-pi-agent.el       # Pi Coding Agent (stdio RPC, Korean OK)
 │   ├── ai-orchestration.el  # Multi-agent orchestration
 │   ├── ai-gptel-acp.el      # GPTel + ACP integration
 │   ├── ai-stt-eca-whisper.el # Speech-to-text (Whisper)
@@ -96,6 +98,7 @@ doomemacs-config/
 │   ├── org-config.el        # Org-mode settings
 │   ├── functions.el         # Utility functions (yank-code-with-context)
 │   ├── keybindings-config.el # Key bindings
+│   ├── tramp-rpc-config.el   # High-perf TRAMP backend (RPC over SSH)
 │   ├── eaf-config.el        # EAF applications
 │   └── ...                  # 25+ more config modules
 │
@@ -115,11 +118,13 @@ doomemacs-config/
 |------|-------------|------|
 | **GPTel** | LLM integration (Claude, OpenAI, Gemini, local) | `ai-gptel.el` |
 | **Agent Shell** | ACP protocol, agent-shell-manager | `ai-agent-shell.el` |
+| **Pi Coding Agent** | Lightweight AI agent via stdio RPC (Korean input OK) | `ai-pi-agent.el` |
 | **AI Orchestration** | Multi-agent coordination | `ai-orchestration.el` |
 | **Claude Code MCP** | MCP tool definitions for Claude Code | `+claude-code-ide-mcp-tools.el` |
 | **ECA Whisper** | Speech-to-text via whisper.cpp | `ai-stt-eca-whisper.el` |
 | **Edge TTS** | Microsoft Edge text-to-speech | `ai-tts-edge.el` |
 | **tmux/Zellij** | Terminal multiplexer agent workflows | `tmux-config.el`, `zellij-config.el` |
+| **tramp-rpc** | High-performance remote ops (2-38x faster TRAMP) | `tramp-rpc-config.el` |
 
 ### EAF (Emacs Application Framework)
 
@@ -216,7 +221,9 @@ Started as a lightweight terminal-first configuration, evolved into a comprehens
 - Denote export system for Digital Garden publishing
 - Multi-agent orchestration via tmux/Zellij integration
 - Agent collaboration tools (yank-code-with-context, MCP tools)
-- Modular architecture expansion (14 files → 39 files)
+- Pi Coding Agent: terminal-free AI via stdio RPC with native Korean input
+- tramp-rpc: VS Code Remote-level performance for remote development
+- Modular architecture expansion (14 files → 40+ files)
 
 The focus remains on AI-assisted workflows while maintaining reproducibility across devices.
 
@@ -227,6 +234,8 @@ MIT License
 ## Related Links
 
 - [Doom Emacs](https://github.com/doomemacs/doomemacs)
+- [Pi Coding Agent](https://github.com/dnouri/pi-coding-agent)
+- [tramp-rpc](https://github.com/ArthurHeymans/emacs-tramp-rpc)
 - [EAF](https://github.com/emacs-eaf/emacs-application-framework)
 - [GLG-Mono Font](https://github.com/junghan0611/GLG-Mono)
 - [힣's Digital Garden](https://notes.junghanacs.com)

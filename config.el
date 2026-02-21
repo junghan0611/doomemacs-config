@@ -223,14 +223,15 @@
 (require 'tab-bar-config)
 
 (require 'prog-mode-config)
-(require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
-(require 'android-config)              ; Android/Kotlin 개발 환경
+;; (require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
+;; (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
 (require 'project-config)
 (require 'eaf-config)                ; EAF (조건부 로딩)
 (require 'elfeed-config)             ; elfeed + elfeed-tube
 (require 'zotero-config)             ; zotero translation server (조건부 로딩)
 (require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
+(require 'tramp-rpc-config)          ; 고성능 TRAMP 백엔드 (RPC over SSH)
 (require 'tmux-config)               ; tmux + claude code orchestration
 (require 'zellij-config)             ; zellij terminal multiplexer
 (require 'search-config)             ; recent-rgrep 등 검색 도구

@@ -162,6 +162,11 @@
 ;; (package! casual)
 (package! password-store-menu)
 
+;;;; tramp-rpc-config.el
+
+(package! msgpack)
+(package! tramp-rpc :recipe (:host github :repo "ArthurHeymans/emacs-tramp-rpc" :files ("lisp/*.el")))
+
 ;;;; tmux/zellij orchestration
 
 (package! emamux)  ; tmux manipulation from Emacs
