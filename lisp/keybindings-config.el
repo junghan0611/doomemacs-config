@@ -44,10 +44,15 @@
       "M-s-k" #'evil-window-up
       "M-s-j" #'evil-window-down
 
-      "s-[" #'evil-window-left
-      "s-]" #'evil-window-right
-      "s-{" #'evil-window-up
-      "s-}" #'evil-window-down
+      ;; "s-[" #'evil-window-left
+      ;; "s-]" #'evil-window-right
+      ;; "s-{" #'evil-window-up
+      ;; "s-}" #'evil-window-down
+
+      "s-[" #'centaur-tabs-backward
+      "s-]" #'centaur-tabs-forward
+
+      "M-\\" #'other-window
 
       ;; Winner
       "C-c <left>" #'winner-undo

@@ -8,6 +8,7 @@
 
 ;;; Commentary:
 
+;; TODO 설명 작성 할 것
 
 ;;; Code:
 
@@ -18,14 +19,14 @@
 ;; → 빌트인 tab-line face를 상속하여 테마 전환 시 자동 추종.
 (after! centaur-tabs
   (custom-set-faces!
-   '(centaur-tabs-default :inherit tab-line)
-   '(centaur-tabs-selected :inherit tab-line-tab-current)
-   '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
-   '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
-   '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
-   '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
-   '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
-   '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified)))
+    '(centaur-tabs-default :inherit tab-line)
+    '(centaur-tabs-selected :inherit tab-line-tab-current)
+    '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
+    '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
+    '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
+    '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
+    '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
+    '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified)))
 
 ;;;; celestial-mode-line
 
