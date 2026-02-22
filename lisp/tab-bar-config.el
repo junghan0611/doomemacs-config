@@ -11,7 +11,23 @@
 
 ;;; Code:
 
-;;;;; celestial-mode-line
+;;;; centaur-tabs face (ef-themes/doric-themes 호환)
+
+;; modus-themes는 centaur-tabs face를 자체 지원.
+;; ef-themes/doric-themes는 tab-line face만 정의하고 centaur-tabs face가 없음.
+;; → 빌트인 tab-line face를 상속하여 테마 전환 시 자동 추종.
+(after! centaur-tabs
+  (custom-set-faces!
+   '(centaur-tabs-default :inherit tab-line)
+   '(centaur-tabs-selected :inherit tab-line-tab-current)
+   '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
+   '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
+   '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
+   '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
+   '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
+   '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified)))
+
+;;;; celestial-mode-line
 
 (use-package! celestial-mode-line
   :after time
@@ -34,10 +50,11 @@
   (setq tab-bar-new-button-show nil)
 
   (setq tab-bar-format
-        '( ;; tab-bar-format-history
-          tab-bar-format-tabs
-          tab-bar-separator
-          tab-bar-format-add-tab
+        '(
+          ;; ;; tab-bar-format-history
+          ;; tab-bar-format-tabs
+          ;; tab-bar-separator
+          ;; tab-bar-format-add-tab
           tab-bar-format-align-right
           tab-bar-format-global
           ))
@@ -62,7 +79,7 @@
   (add-hook 'doom-after-reload-hook #'my/load-global-mode-string)
   )
 
-;;;;; DONT keycast tab-bar
+;;;; DONT keycast tab-bar
 
 ;; (use-package! keycast
 ;;   :config
@@ -111,22 +128,22 @@
 ;;     (add-to-list 'keycast-substitute-alist `(,event nil)))
 ;;   )
 
-;;;; 탭 네비게이션 키바인딩
+;;;; DONT tab-bar keybindings
 
-(with-eval-after-load 'tab-bar
-  ;; gb / gB
-  (define-key evil-motion-state-map "gb" 'tab-next)
-  (define-key evil-motion-state-map "gB" 'tab-previous)
-  (define-key evil-normal-state-map "gb" 'tab-next)
-  (define-key evil-normal-state-map "gB" 'tab-previous)
+;; (with-eval-after-load 'tab-bar
+;;   ;; gb / gB
+;;   (define-key evil-motion-state-map "gb" 'tab-next)
+;;   (define-key evil-motion-state-map "gB" 'tab-previous)
+;;   (define-key evil-normal-state-map "gb" 'tab-next)
+;;   (define-key evil-normal-state-map "gB" 'tab-previous)
 
-  (define-key evil-motion-state-map "gh" 'menu-bar-open)
-  (define-key evil-normal-state-map "gh" 'menu-bar-open)
+;;   (define-key evil-motion-state-map "gh" 'menu-bar-open)
+;;   (define-key evil-normal-state-map "gh" 'menu-bar-open)
 
-  ;; Ctrl + Number
-  (global-set-key (kbd "s-\\") 'tab-bar-switch-to-tab)
-  (global-set-key (kbd "s-{") 'tab-bar-switch-to-prev-tab)
-  (global-set-key (kbd "s-}") 'tab-bar-switch-to-next-tab))
+;;   ;; Ctrl + Number
+;;   (global-set-key (kbd "s-\\") 'tab-bar-switch-to-tab)
+;;   (global-set-key (kbd "s-{") 'tab-bar-switch-to-prev-tab)
+;;   (global-set-key (kbd "s-}") 'tab-bar-switch-to-next-tab))
 
 ;;; provide
 

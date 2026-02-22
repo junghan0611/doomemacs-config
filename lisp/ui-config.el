@@ -39,7 +39,7 @@
               ;; fortune 명령어가 있으면 사용, termux는 -c 옵션이 없으므로 조건부 처리
               (let ((fortune-cmd (if IS-TERMUX
                                      "fortune"  ; termux: simple fortune
-                                   "fortune -c 90% advice 10% ."))) ; other: with -c option
+                                   "fortune ~/.fortunes/advice"))) ; NixOS: ~/.fortunes/advice (Kevin Kelly)
                 (string-join
                  (mapcar
                   (lambda (l) (concat "\n " (string-fill l 72)))
@@ -180,9 +180,10 @@ _THEME 인자는 `enable-theme-functions' 호환용."
            :mode-line-inactive spacious-padding-subtle-mode-line-inactive))
   (setq spacious-padding-widths
         '(:header-line-width 4
-          :mode-line-width 4 ; 6
-          :tab-width 4 ; sync mode-line-width for keycast-tab-bar
-          :internal-border-width 20 ; 15
+          :mode-line-width 4
+          :tab-bar-width 2
+          :tab-line-width 2
+          :internal-border-width 15
           :right-divider-width 30 ; 30
           :scroll-bar-width 8
           :fringe-width 8

@@ -154,22 +154,23 @@
 (package! git-link)
 (package! magit-todos)
 (package! magit-gh)
-;; (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
+(package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 (package! tmr) ;; TODO Time Management
+(package! msgpack)
+(package! tramp-rpc :recipe (:host github :repo "ArthurHeymans/emacs-tramp-rpc" :files ("lisp/*.el")))
 
 ;;;; Transient Menu
 
 ;; (package! casual)
 (package! password-store-menu)
 
-;;;; tramp-rpc-config.el
-
-(package! msgpack)
-(package! tramp-rpc :recipe (:host github :repo "ArthurHeymans/emacs-tramp-rpc" :files ("lisp/*.el")))
-
-;;;; tmux/zellij orchestration
+;;;; tmux-config.el
 
 (package! emamux)  ; tmux manipulation from Emacs
+
+;;;; zellij-config.el
+
+;; TODO ...
 
 ;;;; ai-gptel.el
 
@@ -189,7 +190,7 @@
 ;; 경로 변경은 아래 한 줄만 수정!
 ;; (when (file-directory-p "~/.emacs.d/site-lisp/efrit/")
 ;;   (package! efrit :recipe (:local-repo "~/.emacs.d/site-lisp/efrit/" :files ("lisp/*.el"))))
-(package! beads :recipe (:host github :repo "ChristianTietze/beads.el"))
+;; (package! beads :recipe (:host github :repo "ChristianTietze/beads.el"))
 
 ;;;; ai-agent-shell.el
 

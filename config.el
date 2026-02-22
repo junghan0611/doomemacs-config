@@ -215,7 +215,6 @@
 (require 'ai-pi-agent)               ; Pi coding agent 설정
 (require 'ai-bot-config)             ; Telegram 봇 통합
 
-;; (require 'ai-gptel-acp)           ; gptel + ACP 통합 (doom-md7)
 (require 'ai-stt-eca-whisper)
 (require 'ai-tts-edge)
 
@@ -226,12 +225,11 @@
 ;; (require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
 ;; (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
-(require 'project-config)
-(require 'eaf-config)                ; EAF (조건부 로딩)
+(require 'project-config)               ; 고성능 TRAMP 백엔드 (RPC over SSH)
+;; (require 'eaf-config)                ; EAF (조건부 로딩)
 (require 'elfeed-config)             ; elfeed + elfeed-tube
 (require 'zotero-config)             ; zotero translation server (조건부 로딩)
-(require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
-(require 'tramp-rpc-config)          ; 고성능 TRAMP 백엔드 (RPC over SSH)
+;; (require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
 (require 'tmux-config)               ; tmux + claude code orchestration
 (require 'zellij-config)             ; zellij terminal multiplexer
 (require 'search-config)             ; recent-rgrep 등 검색 도구
@@ -272,8 +270,6 @@
           "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
   (setq dabbrev-abbrev-skip-leading-regexp "[$*/=~']"))
 
-
-
 ;;;; fortune
 
 ;; not work on termux
@@ -302,6 +298,7 @@
   (setq clipetty-assume-nested-mux nil))
 
 ;;;; Terminal Mode
+
 (unless (display-graphic-p) ; terminal
   (setq visible-cursor nil)
   (xterm-mouse-mode -1) ; important
@@ -386,7 +383,7 @@ Returns t on success, nil if notify-send is not available."
 ;;   )
 
 
-;;; TODO py3status integration (ElleNajit)
+;;; DONT py3status integration (ElleNajit)
 
 ;; (with-eval-after-load 'org-clock
 ;;   (add-hook 'org-clock-in-hook #'junghan/update-org-clocked-in-task-file)

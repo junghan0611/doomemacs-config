@@ -15,43 +15,43 @@
 (require 'doom-modeline)
 
 (progn
-  (doom-modeline-def-modeline
-    'main
-    '(eldoc
-      bar
-      persp-name
-      ;; workspace-name - conflict tab-bar
-      window-number
-      modals
-      input-method
-      matches
-      follow
-      buffer-info
-      remote-host
-      buffer-position
-      word-count
-      parrot
-      selection-info)
-    '(compilation
-      objed-state
-      misc-info
-      battery
-      grip
-      irc
-      mu4e
-      gnus
-      github
-      debug
-      repl
-      lsp
-      minor-modes
-      indent-info
-      buffer-encoding
-      major-mode
-      process
-      vcs
-      check
-      time))
+  ;; (doom-modeline-def-modeline
+  ;;   'main
+  ;;   '(eldoc
+  ;;     bar
+  ;;     persp-name
+  ;;     ;; workspace-name - conflict tab-bar
+  ;;     window-number
+  ;;     modals
+  ;;     input-method
+  ;;     matches
+  ;;     follow
+  ;;     buffer-info
+  ;;     remote-host
+  ;;     buffer-position
+  ;;     word-count
+  ;;     parrot
+  ;;     selection-info)
+  ;;   '(compilation
+  ;;     objed-state
+  ;;     misc-info
+  ;;     battery
+  ;;     grip
+  ;;     irc
+  ;;     mu4e
+  ;;     gnus
+  ;;     github
+  ;;     debug
+  ;;     repl
+  ;;     lsp
+  ;;     minor-modes
+  ;;     indent-info
+  ;;     buffer-encoding
+  ;;     major-mode
+  ;;     process
+  ;;     vcs
+  ;;     check
+  ;;     time))
 
   (setq doom-modeline-time nil)
   (setq doom-modeline-time-icon nil)
