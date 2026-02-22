@@ -22,31 +22,25 @@ user-keys.el
 .agent-shell/
 .claude/
 templates/
-fortune/
 *.dat
 ccmenu
-CLAUDE.md
 
 # Generated/cache files
 bin/.last-export/
-tempel-templates.eld
-var/tempel-templates.eld
 
 # Personal dictionaries and abbreviations (machine-specific)
-var/abbrev_defs
-var/aspell.en.pws
-var/hunspell_ko_personal
-var/logo.png
+# var/abbrev_defs
+# var/aspell.en.pws
+# var/hunspell_ko_personal
+# var/logo.png
 
 # Security - DO NOT COMMIT
 # Sensitive information that should never be in version control
-var/sensitive-strings.txt
+# var/sensitive-strings.txt
 
 # QTermWidget build (external project)
 qtermwidget/
 
-NOW.org
-TODO.org
 docs/plans
 
 *.db
