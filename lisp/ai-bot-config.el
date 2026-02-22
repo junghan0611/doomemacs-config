@@ -73,14 +73,17 @@ telega가 실행 중이 아니면 먼저 시작한다."
       :n "?"  #'telega-transient--prefix-telega-describe-map
       :n "F"  #'telega-transient--prefix-telega-folder-map
       :n "v"  #'telega-transient--prefix-telega-root-view-map
-      :n "M-g" #'telega-transient--prefix-telega-root-fastnav-map
+      :n "M-g f" #'telega-transient--prefix-telega-root-fastnav-map
 
       ;; Chat 버퍼 (대화창)
       :map telega-chat-mode-map
-      :n "M-g" #'telega-transient--prefix-telega-chatbuf-fastnav-map
+      :n "M-g f" #'telega-transient--prefix-telega-chatbuf-fastnav-map
       ;; M-j/M-k: 메시지 단위 이동 (j/k는 라인, M-j/M-k는 대화 단위)
       :n "M-j" #'telega-button-forward
-      :n "M-k" #'telega-button-backward)
+      :n "M-k" #'telega-button-backward
+      :n "M-n" #'telega-button-forward
+      :n "M-p" #'telega-button-backward
+      )
 
 ;;;; 키바인딩 (SPC j 확장)
 
