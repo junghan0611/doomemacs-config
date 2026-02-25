@@ -195,13 +195,26 @@ For relative paths, tries `default-directory' and `denote-directory'."
                  (t nil)))))))
 
   (defun vertico-sort-modified ()
+    "Toggle sort between modified-time and default (alpha/history).
+With denote-file-prompt, default already sorts by modified time (slow).
+This override uses `my/sort-modified' (hash table, ~5x faster)."
     (interactive)
     (setq-local vertico-sort-override-function
-                (and (not vertico-sort-override-function)
-                     #'my/sort-modified)
-                vertico--input t))
+                (if vertico-sort-override-function
+                    nil
+                  #'my/sort-modified)
+                vertico--input t)
+    (message "Sort: %s" (if vertico-sort-override-function "modified-time ↓" "default")))
 
-  (keymap-set vertico-map "M-," #'vertico-sort-modified))
+  (keymap-set vertico-map "M-," #'vertico-sort-modified)
+
+  ;; denote-file 카테고리: my/sort-modified 사용 (denote 기본 sort보다 5배 빠름)
+  ;; denote 4.1+는 display-sort-function에 수정시간순을 이미 등록하지만
+  ;; file-attributes를 매번 호출해서 3000+파일에서 ~1초 소요.
+  ;; my/sort-modified는 hash table 캐싱으로 ~0.2초.
+  (after! vertico-multiform
+    (add-to-list 'vertico-multiform-categories
+                 '(denote-file (vertico-sort-override-function . my/sort-modified)))))
 
 ;;;; embark
 
