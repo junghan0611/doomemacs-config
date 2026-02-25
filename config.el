@@ -238,6 +238,8 @@
 (require 'termux-config)
 (require 'functions)
 
+(load! "lisp/ai-gptel-local-proxy" nil t) ; 로컬 전용 프록시 (없으면 무시)
+
 ;;; overide doomemacs
 
 ;;;; tempel

@@ -71,7 +71,7 @@
   (setq gptel-deepseek-backend
         (gptel-make-deepseek "DeepSeek"
           :stream t
-          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che"))))
+          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
 
 ;;;;;; gptel openrouter models
 
@@ -176,25 +176,19 @@
           :stream t
           :key "not-needed"
           :models '((claude-sonnet-4-6
-                     :description "Fast + intelligent, agentic search - Sonnet 4.6"
+                     :description "Sonnet 4.6 + tool-use (Read/Write/Bash)"
                      :capabilities (media tool-use)
                      :context-window 200
                      :input-cost 3
                      :output-cost 15)
                     (claude-opus-4-6
-                     :description "Most intelligent - Opus 4.6"
+                     :description "Opus 4.6 + tool-use (Read/Write/Bash)"
                      :capabilities (media tool-use)
                      :context-window 200
                      :input-cost 5
                      :output-cost 25)
-                    (claude-sonnet-4-5-20250929
-                     :description "Sonnet 4.5 legacy"
-                     :capabilities (media tool-use)
-                     :context-window 200
-                     :input-cost 3
-                     :output-cost 15)
                     (claude-haiku-4-5-20251001
-                     :description "Fastest"
+                     :description "Haiku 4.5 + tool-use (fastest)"
                      :capabilities (media tool-use)
                      :context-window 200
                      :input-cost 1

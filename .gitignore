@@ -38,6 +38,9 @@ bin/.last-export/
 # Sensitive information that should never be in version control
 # var/sensitive-strings.txt
 
+# Local-only AI proxy config (ToS-sensitive, never publish)
+lisp/ai-gptel-local-proxy.el
+
 # QTermWidget build (external project)
 qtermwidget/
 
