@@ -103,6 +103,7 @@
 (package! denote-silo)
 (package! denote-sequence)
 (package! denote-markdown)
+(package! denote-merge :recipe (:host github :repo "protesilaos/denote-merge"))
 
 (package! denote-search)
 (package! denote-regexp)

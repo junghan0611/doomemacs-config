@@ -213,5 +213,19 @@ If no files are marked, update the file at point."
 ;;   (add-to-list 'consult-buffer-sources 'consult-ten-glossary 'append) ; g
 ;;   )
 
+;;;; denote-merge
+
+(use-package! denote-merge
+  :commands
+  ( denote-merge-file
+    denote-merge-region
+    denote-merge-region-plain
+    denote-merge-region-plain-indented
+    denote-merge-region-org-src
+    denote-merge-region-org-quote
+    denote-merge-region-org-example
+    denote-merge-region-markdown-quote
+    denote-merge-region-markdown-fenced-block))
+
 (provide 'denote-config)
 ;;; denote-config.el ends here
