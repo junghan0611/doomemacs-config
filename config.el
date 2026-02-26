@@ -227,7 +227,8 @@
 (require 'utils-config)
 (require 'project-config)               ; 고성능 TRAMP 백엔드 (RPC over SSH)
 ;; (require 'eaf-config)                ; EAF (조건부 로딩)
-(require 'elfeed-config)             ; elfeed + elfeed-tube
+(load! "lisp/ai-gptel-local-proxy" nil t) ; 로컬 전용 프록시 (없으면 무시)
+(require 'elfeed-config)             ; elfeed + gptel 인라인 요약/번역 + remember
 (require 'zotero-config)             ; zotero translation server (조건부 로딩)
 ;; (require 'ai-orchestration)          ; efrit/beads (조건부 로딩)
 (require 'tmux-config)               ; tmux + claude code orchestration
@@ -237,8 +238,6 @@
 (require 'keybindings-denote-config)
 (require 'termux-config)
 (require 'functions)
-
-(load! "lisp/ai-gptel-local-proxy" nil t) ; 로컬 전용 프록시 (없으면 무시)
 
 ;;; overide doomemacs
 
