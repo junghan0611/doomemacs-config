@@ -220,9 +220,18 @@ SYSTEM-MSG는 시스템 프롬프트.
 
 ;;;;; show 버퍼 표시
 
+(defun +elfeed--fill-text (text)
+  "TEXT를 현재 윈도우 너비에 맞게 fill하여 반환."
+  (with-temp-buffer
+    (insert (string-trim text))
+    (let ((fill-column (max 60 (min 80 (- (window-width) 4)))))
+      (fill-region (point-min) (point-max)))
+    (buffer-string)))
+
 (defun +elfeed--show-insert-text (label text face)
-  "elfeed-show 버퍼에 LABEL: TEXT를 삽입 (FACE 적용)."
-  (let ((inhibit-read-only t))
+  "elfeed-show 버퍼에 LABEL: TEXT를 삽입 (FACE 적용, fill 처리)."
+  (let ((inhibit-read-only t)
+        (filled (+elfeed--fill-text text)))
     (save-excursion
       (goto-char (point-min))
       ;; Link: 헤더 다음에 삽입
@@ -233,8 +242,8 @@ SYSTEM-MSG는 시스템 프롬프트.
           (let ((start (point)))
             (forward-paragraph)
             (delete-region start (point))))
-        (insert (propertize (format "%s: " label) 'face 'message-header-name)
-                (propertize (string-trim text) 'face face)
+        (insert (propertize (format "%s:\n" label) 'face 'message-header-name)
+                (propertize filled 'face face)
                 "\n\n")))))
 
 (defun +elfeed-show-summarize ()
@@ -271,47 +280,10 @@ SYSTEM-MSG는 시스템 프롬프트.
            (with-current-buffer buf
              (+elfeed--show-insert-text "번역" translation '+elfeed-translation-face))))))))
 
-;;;;; search 버퍼 overlay
-
-(defun +elfeed--search-overlay (entry)
-  "Search 버퍼에서 ENTRY의 요약 overlay 반환."
-  (seq-find (lambda (ov) (eq (overlay-get ov '+elfeed-entry) entry))
-            (overlays-in (point-min) (point-max))))
-
-(defun +elfeed--search-show-overlay (entry text face)
-  "Search 버퍼에서 ENTRY 아래에 TEXT overlay 표시."
-  ;; 기존 overlay 제거
-  (when-let ((ov (+elfeed--search-overlay entry)))
-    (delete-overlay ov))
-  (let ((pos (seq-position elfeed-search-entries entry)))
-    (when pos
-      (save-excursion
-        (elfeed-goto-line (+ pos elfeed-search--offset))
-        (let ((ov (make-overlay (line-end-position) (1+ (line-end-position)))))
-          (overlay-put ov '+elfeed-entry entry)
-          (overlay-put ov 'after-string
-                       (concat "\n"
-                               (propertize (string-trim text) 'face face)
-                               "\n")))))))
-
-(defun +elfeed-search-summarize ()
-  "Search 버퍼에서 선택된 엔트리를 요약+번역하여 overlay 표시."
-  (interactive)
-  (unless (derived-mode-p 'elfeed-search-mode)
-    (user-error "Not in elfeed-search buffer"))
-  (let ((entry (elfeed-search-selected :ignore-region)))
-    (when (elfeed-entry-p entry)
-      (if-let ((cached (elfeed-meta entry :summary-ko)))
-          ;; 토글: 이미 overlay가 있으면 제거
-          (if (+elfeed--search-overlay entry)
-              (delete-overlay (+elfeed--search-overlay entry))
-            (+elfeed--search-show-overlay entry cached '+elfeed-summary-face))
-        ;; 생성
-        (+elfeed--search-show-overlay entry "요약 생성 중..." '+elfeed-summary-face)
-        (+elfeed-summarize entry
-         (lambda (summary)
-           (when (+elfeed--search-overlay entry)
-             (+elfeed--search-show-overlay entry summary '+elfeed-summary-face))))))))
+;;;;; search 버퍼 overlay — 보류
+;; search 버퍼에서 overlay 삽입 시 엔트리 목록이 망가지는 문제.
+;; elfeed-summarize는 elfeed-goto-line + elfeed-search--offset으로 처리하지만
+;; Doom의 elfeed search 커스텀과 충돌 가능. 추후 재검토.
 
 ;;;;; 캐시 관리
 
@@ -359,7 +331,6 @@ elfeed:URL#ID 링크를 자동 삽입. ~/org/remember.org에 저장 (Syncthing �
   (map! :map elfeed-search-mode-map
         :niv "/" #'+elfeed-search-content
         :niv "q" #'+elfeed-search-content-clear
-        :n "z" #'+elfeed-search-summarize        ; 인라인 요약 토글
         :localleader
         "/" #'+elfeed-search-content
         "c" #'+elfeed-search-content-clear
