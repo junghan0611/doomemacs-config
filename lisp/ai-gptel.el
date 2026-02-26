@@ -148,7 +148,7 @@
           :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
           :models gptel--openrouter-models))
   (setq gptel-openrouter-chat-model 'openai/gpt-5.1-chat) ; < 1.0s latency
-  (setq gptel-openrouter-flash-model 'google/gemini-2.5-flash) ; < 0.5s latency
+  (setq gptel-openrouter-flash-model 'google/gemini-3-flash-preview) ; 3.8s bench, best speed+quality
   (setq gptel-openrouter-pro-model 'google/gemini-2.5-pro) ; < 2.5s latency
 
 ;;;;;; gptel Claude-Code (via wrapper)

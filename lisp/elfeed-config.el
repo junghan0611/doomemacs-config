@@ -20,19 +20,18 @@
 ;;   elfeed entry → Z → 전문 한국어 번역 → 인라인 표시
 ;;   elfeed entry → a → remember 메모 (elfeed 링크 자동 삽입)
 ;;
-;; 번역 벤치마크 (2026-02-26, 719자 영어):
-;;   | 모델                             | 속도  | 품질 |
-;;   |----------------------------------+-------+------|
-;;   | Claude Haiku 4.5 (OpenRouter) ★  | 2.7초 | ○   |
-;;   | Gemini 3 Flash (OpenRouter)      | 3.8초 | ◎   |
-;;   | Claude Sonnet 4.6 (CLIProxy)     | 5.8초 | ◎   |
-;;   | GPT-5 Mini (OpenRouter)          | 6.5초 | ○   |
-;;   | DeepSeek Chat                    | 6.8초 | ○   |
-;;   | Gemini 2.5 Flash (OpenRouter)    | 6.8초 | ◎   |
+;; 번역 벤치마크 (2026-02-26, 719자 영어, 6개 모델 동시 비교):
+;;   | # | 모델                          | 속도  | 품질 | 용도            |
+;;   |---+-------------------------------+-------+------+-----------------|
+;;   | 1 | Claude Haiku 4.5 (OpenRouter)  | 2.7초 | ○   | 속도 최우선     |
+;;   | 2 | Gemini 3 Flash (OpenRouter) ★  | 3.8초 | ◎   | 일상 번역 (기본)|
+;;   | 3 | Claude Sonnet 4.6 (CLIProxy)   | 5.8초 | ◎   | 정밀 번역/책    |
+;;   | 4 | GPT-5 Mini (OpenRouter)        | 6.5초 | ○   | 범용            |
+;;   | 5 | DeepSeek Chat                  | 6.8초 | ○   | 폴백            |
+;;   | 6 | Gemini 2.5 Flash (OpenRouter)  | 6.8초 | ◎   | 레거시          |
 ;;
-;;   → 기본: Gemini 3 Flash (속도+품질 최적 균형)
-;;   → Haiku 가장 빠르지만 "하니스" 등 음차 품질 약간 떨어짐
-;;   → Gemini 3 Flash: "하네스(harness)" 병기, 자연스러운 한국어
+;;   → 기본: #2 Gemini 3 Flash (속도+품질 최적, 괄호 병기 자연스러움)
+;;   → 책/논문: #3 Sonnet 4.6 (문어체, 정확, $0 구독)
 ;;   → M-x +elfeed-translate-benchmark 로 재측정 가능
 
 ;;; Code:
