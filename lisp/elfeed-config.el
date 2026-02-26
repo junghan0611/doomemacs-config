@@ -20,14 +20,19 @@
 ;;   elfeed entry → Z → 전문 한국어 번역 → 인라인 표시
 ;;   elfeed entry → a → remember 메모 (elfeed 링크 자동 삽입)
 ;;
-;; 번역 벤치마크 (2026-02-25, 719자 영어):
-;;   | 백엔드                          | 속도  | 품질 | 비용       |
-;;   |---------------------------------+-------+------+------------|
-;;   | Gemini 3 Flash (OpenRouter) ★   | 3.9초 | ◎   | ~$0.001    |
-;;   | Claude Sonnet 4.6 (CLIProxy)    | 6.7초 | ◎   | $0 (구독)  |
-;;   | DeepSeek Chat                   | 8.1초 | ○   | ~$0.0005   |
+;; 번역 벤치마크 (2026-02-26, 719자 영어):
+;;   | 모델                             | 속도  | 품질 |
+;;   |----------------------------------+-------+------|
+;;   | Claude Haiku 4.5 (OpenRouter) ★  | 2.7초 | ○   |
+;;   | Gemini 3 Flash (OpenRouter)      | 3.8초 | ◎   |
+;;   | Claude Sonnet 4.6 (CLIProxy)     | 5.8초 | ◎   |
+;;   | GPT-5 Mini (OpenRouter)          | 6.5초 | ○   |
+;;   | DeepSeek Chat                    | 6.8초 | ○   |
+;;   | Gemini 2.5 Flash (OpenRouter)    | 6.8초 | ◎   |
 ;;
-;;   → 기본: Gemini Flash (속도+품질 균형)
+;;   → 기본: Gemini 3 Flash (속도+품질 최적 균형)
+;;   → Haiku 가장 빠르지만 "하니스" 등 음차 품질 약간 떨어짐
+;;   → Gemini 3 Flash: "하네스(harness)" 병기, 자연스러운 한국어
 ;;   → M-x +elfeed-translate-benchmark 로 재측정 가능
 
 ;;; Code:
@@ -353,32 +358,40 @@ SYSTEM-MSG는 시스템 프롬프트.
       (goto-char (point-min))))
   (pop-to-buffer "*번역 벤치마크*"))
 
+(defvar +elfeed-bench--models
+  '(;; OpenRouter 모델들
+    ("Gemini 3 Flash"      openrouter google/gemini-3-flash-preview)
+    ("Gemini 2.5 Flash"    openrouter google/gemini-2.5-flash)
+    ("GPT-5 Mini"          openrouter openai/gpt-5-mini)
+    ("Claude Haiku 4.5"    openrouter anthropic/claude-haiku-4.5)
+    ;; CLIProxyAPI
+    ("Claude Sonnet (Proxy)" cliproxy claude-sonnet-4-6)
+    ;; DeepSeek
+    ("DeepSeek Chat"       deepseek deepseek-chat))
+  "벤치마크 대상 모델 목록. (이름 백엔드타입 모델명)")
+
 (defun +elfeed-translate-benchmark ()
-  "3개 백엔드로 동일 텍스트 번역 벤치마크 실행.
+  "모든 사용 가능한 백엔드로 번역 벤치마크 실행.
 결과는 *번역 벤치마크* 버퍼에 속도순 표시."
   (interactive)
   (setq +elfeed-bench--results nil)
   (setq +elfeed-bench--pending 0)
-  ;; OpenRouter Gemini Flash
-  (when (boundp 'gptel-openrouter-backend)
-    (cl-incf +elfeed-bench--pending)
-    (+elfeed-bench--send "Gemini 3 Flash (OpenRouter)"
-                         gptel-openrouter-backend
-                         'google/gemini-3-flash-preview))
-  ;; CLIProxyAPI Claude
-  (when (and (boundp 'gptel-cliproxy-backend)
-             (fboundp 'gptel--cliproxy-available-p)
-             (gptel--cliproxy-available-p))
-    (cl-incf +elfeed-bench--pending)
-    (+elfeed-bench--send "Claude Sonnet 4.6 (Proxy)"
-                         gptel-cliproxy-backend
-                         'claude-sonnet-4-6))
-  ;; DeepSeek
-  (when (boundp 'gptel-deepseek-backend)
-    (cl-incf +elfeed-bench--pending)
-    (+elfeed-bench--send "DeepSeek Chat"
-                         gptel-deepseek-backend
-                         'deepseek-chat))
+  (dolist (spec +elfeed-bench--models)
+    (let* ((name (nth 0 spec))
+           (type (nth 1 spec))
+           (model (nth 2 spec))
+           (backend (pcase type
+                      ('openrouter (and (boundp 'gptel-openrouter-backend)
+                                       gptel-openrouter-backend))
+                      ('cliproxy (and (boundp 'gptel-cliproxy-backend)
+                                      (fboundp 'gptel--cliproxy-available-p)
+                                      (gptel--cliproxy-available-p)
+                                      gptel-cliproxy-backend))
+                      ('deepseek (and (boundp 'gptel-deepseek-backend)
+                                      gptel-deepseek-backend)))))
+      (when backend
+        (cl-incf +elfeed-bench--pending)
+        (+elfeed-bench--send name backend model))))
   (if (> +elfeed-bench--pending 0)
       (message "벤치마크 시작 — %d개 요청 동시 전송..." +elfeed-bench--pending)
     (message "사용 가능한 백엔드가 없습니다")))
