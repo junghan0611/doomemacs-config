@@ -282,6 +282,41 @@ org-mode
 [SYS]: You are a helpful assistant. Please write in Korean language.
 [ME]: " r> n> "#+end_ai")
 
+;;;; ob-gptel 템플릿
+
+;; 기본 호출 (현재 기본 백엔드)
+(gpt "#+begin_src gptel" n> r> n> "#+end_src")
+
+;; Claude Proxy — 빠른 채팅 ($0, ~2초)
+(gpt-proxy "#+begin_src gptel :backend \"Claude-Proxy\" :model claude-sonnet-4-6" n> r> n> "#+end_src")
+
+;; OpenRouter Gemini Flash — 번역/요약 기본 (~4초)
+(gpt-flash "#+begin_src gptel :backend \"OpenRouter\" :model google/gemini-3-flash-preview" n> r> n> "#+end_src")
+
+;; DeepSeek — 폴백
+(gpt-deep "#+begin_src gptel :backend \"DeepSeek\" :model deepseek-chat" n> r> n> "#+end_src")
+
+;; 번역 (Gemini Flash + 번역 프롬프트)
+(gpt-translate "#+begin_src gptel :backend \"OpenRouter\" :model google/gemini-3-flash-preview :system \"You are a professional translator. Translate to natural Korean. Keep technical terms in English. No preamble.\" :temperature 0.1" n> r> n> "#+end_src")
+
+;; 요약 (Gemini Flash + 요약 프롬프트)
+(gpt-summarize "#+begin_src gptel :backend \"OpenRouter\" :model google/gemini-3-flash-preview :system \"You are a helpful reading assistant. Generate a concise TLDR summary with bullet points. Respond in Korean.\" :temperature 0.4" n> r> n> "#+end_src")
+
+;; 코드 생성 (Sonnet + :wrap)
+(gpt-code "#+begin_src gptel :backend \"Claude-Proxy\" :model claude-sonnet-4-6 :wrap src " (p "언어 (elisp/sh/nix/python): ") n> r> n> "#+end_src")
+
+;; 대화 세션
+(gpt-session "#+begin_src gptel :backend \"Claude-Proxy\" :model claude-sonnet-4-6 :session " (p "세션명: ") n> r> n> "#+end_src")
+
+;; 시스템 프롬프트 커스텀
+(gpt-system "#+begin_src gptel :backend \"Claude-Proxy\" :model claude-sonnet-4-6 :system \"" (p "시스템 프롬프트: ") "\"" n> r> n> "#+end_src")
+
+;; 디버깅 (dry-run)
+(gpt-dry "#+begin_src gptel :backend \"Claude-Proxy\" :model claude-sonnet-4-6 :dry-run yes" n> r> n> "#+end_src")
+
+;; org 형식 출력
+(gpt-org "#+begin_src gptel :backend \"Claude-Proxy\" :model claude-sonnet-4-6 :format org" n> r> n> "#+end_src")
+
 (export-html "#+begin_export HTML" n> r> n> "#+end_export")
 
 (tagskeywords "#+hugo_front_matter_key_replace: tags>keywords")
