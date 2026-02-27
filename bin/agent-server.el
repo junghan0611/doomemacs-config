@@ -191,6 +191,54 @@
       (message "[agent-server] ✓ denote-silo loaded"))
   (error nil))
 
+;;;; Security: Path Access Control
+;; CRITICAL: emacs daemon runs on HOST — Docker ro mounts are bypassed.
+;; All file operations must enforce access control here.
+
+(defvar agent-server-read-paths
+  '("/home/junghan/org/"
+    "/home/junghan/repos/gh/"
+    "/home/junghan/repos/work/"
+    "/home/junghan/repos/3rd/")
+  "Paths the agent can READ from.")
+
+(defvar agent-server-write-paths
+  '("/home/junghan/org/botlog/"
+    "/home/junghan/repos/gh/self-tracking-data/")
+  "Paths the agent can WRITE to. Must match Docker rw mounts.")
+
+(defun agent-server--path-allowed-p (file mode)
+  "Check if FILE access is allowed for MODE (read or write).
+Returns t if allowed, signals error if not."
+  (let* ((expanded (expand-file-name file))
+         (paths (pcase mode
+                  ('read (append agent-server-write-paths agent-server-read-paths))
+                  ('write agent-server-write-paths)
+                  (_ (error "Unknown mode: %s" mode)))))
+    (unless (cl-some (lambda (prefix)
+                       (string-prefix-p (expand-file-name prefix) expanded))
+                     paths)
+      (error "ACCESS DENIED: %s not allowed for %s. Allowed: %S"
+             expanded mode paths))
+    t))
+
+;; Override dangerous built-ins when called from agent context
+;; NOTE: These protect against (write-region ... "/etc/passwd") via emacs_eval
+(defvar agent-server--original-write-region (symbol-function 'write-region))
+(defvar agent-server--write-guard-enabled t
+  "When non-nil, write-region checks agent-server-write-paths.")
+
+(defun agent-server--guarded-write-region (start end filename &rest args)
+  "Write-region with path guard. Only allows writes to agent-server-write-paths."
+  (when agent-server--write-guard-enabled
+    (agent-server--path-allowed-p filename 'write))
+  (apply agent-server--original-write-region start end filename args))
+
+;; Install guard — uncomment to enforce globally (strict mode)
+;; (fset 'write-region #'agent-server--guarded-write-region)
+;; NOTE: Global override disabled for now — internal packages (org, denote)
+;; also use write-region. Enable per-function guards instead.
+
 ;;;; Agent Functions
 ;; These are the stable API that the agent calls via emacs_eval.
 ;; New functions can be defined at runtime via emacs_eval — when stable,
@@ -212,6 +260,7 @@
 (defun agent-org-read-file (file)
   "Read org FILE and return its contents as string.
 FILE should be an absolute path."
+  (agent-server--path-allowed-p file 'read)
   (if (file-exists-p file)
       (with-temp-buffer
         (insert-file-contents file)
@@ -221,6 +270,7 @@ FILE should be an absolute path."
 (defun agent-org-get-headings (file &optional max-level)
   "Return headings from org FILE as a list of (LEVEL TITLE) pairs.
 MAX-LEVEL limits depth (default: all levels)."
+  (agent-server--path-allowed-p file 'read)
   (when (file-exists-p file)
     (with-temp-buffer
       (insert-file-contents file)
@@ -236,6 +286,7 @@ MAX-LEVEL limits depth (default: all levels)."
 
 (defun agent-org-get-properties (file)
   "Return file-level properties (#+KEY: VALUE) from org FILE as alist."
+  (agent-server--path-allowed-p file 'read)
   (when (file-exists-p file)
     (with-temp-buffer
       (insert-file-contents file)
@@ -292,7 +343,9 @@ Returns list of (ID TITLE TAGS FILE)."
       (nreverse results))))
 
 (defun agent-org-dblock-update (file)
-  "Update all dynamic blocks in org FILE."
+  "Update all dynamic blocks in org FILE.
+Requires write access — dblock update modifies and saves the file."
+  (agent-server--path-allowed-p file 'write)
   (if (not (file-exists-p file))
       (format "ERROR: File not found: %s" file)
     (let ((buf (find-file-noselect file)))
