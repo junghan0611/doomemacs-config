@@ -1,0 +1,165 @@
+#+title: ob-gptel 활용 샘플
+#+date: [2026-02-26 Wed]
+#+filetags: :gptel:orgbabel:sample:
+#+author: Junghan Kim
+#+description: ob-gptel + 내 gptel 백엔드/프롬프트 연동 레시피
+
+* 개요
+
+ob-gptel은 Org Babel 소스 블록으로 LLM을 호출한다.
+=C-c C-c= 하면 결과가 =#+RESULTS:= 에 바로 삽입.
+
+사용 가능한 백엔드:
+| 이름           | 모델 예시                       | 용도              |
+|----------------+---------------------------------+-------------------|
+| Claude-Proxy   | claude-sonnet-4-6               | 빠른 채팅 ($0)    |
+| OpenRouter     | google/gemini-3-flash-preview   | 번역/요약 (기본)  |
+| DeepSeek       | deepseek-chat                   | 폴백              |
+| Claude-Code    | claude-sonnet-4-20250514        | 도구 사용 (무거움) |
+
+* 기본 호출 — 현재 기본 백엔드 사용
+
+#+begin_src gptel
+이맥스에서 가장 유용한 기능 3가지를 간단히 설명해주세요.
+#+end_src
+
+* 백엔드 + 모델 지정
+
+** Claude Proxy (Sonnet 4.6, 구독 무료, ~2초)
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6
+Emacs Lisp에서 hash table과 alist의 성능 차이를 간단히 설명해주세요.
+#+end_src
+
+** OpenRouter Gemini 3 Flash (번역/요약 기본, ~4초)
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview
+Explain the difference between CRDT and OT in 3 sentences.
+#+end_src
+
+** DeepSeek Chat (저가 폴백)
+
+#+begin_src gptel :backend "DeepSeek" :model deepseek-chat
+NixOS의 장점을 3줄로 요약해주세요.
+#+end_src
+
+* 시스템 프롬프트 — :system 헤더
+
+** 번역 전용
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview :system "You are a professional translator. Translate the following text naturally to Korean. Maintain the original meaning and tone. Use natural Korean expressions. Keep technical terms in English where appropriate. Do NOT add any preamble or explanation."
+Anthropic this week revised its legal terms to clarify its policy forbidding the use of third-party harnesses with Claude subscriptions. Claude Code is a harness or wrapper that integrates with the user's terminal and routes prompts to the available Claude model.
+#+end_src
+
+** 요약 전용
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview :system "You are a helpful reading assistant. Generate a concise TLDR summary. Cover the main points clearly. Use bullet points for key takeaways. Respond in Korean." :temperature 0.4
+[여기에 긴 텍스트를 붙여넣기]
+#+end_src
+
+** 코딩 어시스턴트
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :system "You are an expert Emacs Lisp programmer. Write clean, idiomatic code. Explain briefly."
+defun으로 현재 버퍼의 org 헤딩 목록을 추출하는 함수를 작성해주세요.
+#+end_src
+
+* 대화 이어가기 — :session
+
+같은 session 이름을 주면 이전 블록의 결과를 컨텍스트로 전달:
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :session design
+Emacs에서 에이전트 이벤트를 받아서 modeline에 표시하는 구조를 설계해주세요.
+간단한 elisp 스켈레톤을 보여주세요.
+#+end_src
+
+#+begin_src gptel :session design
+이 구조에 inbox (pending 이벤트 큐)를 추가하려면 어떻게 수정해야 하나요?
+#+end_src
+
+* :prompt — 이전 블록 참조
+
+#+name: ko-context
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :system "You are a Korean language expert."
+"존재 대 존재 협업"이라는 표현의 철학적 맥락을 설명해주세요.
+#+end_src
+
+#+begin_src gptel :prompt ko-context
+이 개념을 AI 개발에 적용하면 어떤 윤리적 함의가 있을까요?
+#+end_src
+
+* 코드 생성 — :wrap src
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :wrap src emacs-lisp
+Emacs Lisp 함수: 문자열 리스트에서 가장 긴 문자열을 반환.
+코드만 출력, 설명 없이.
+#+end_src
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview :wrap src sh
+GNU find 명령어: /tmp에서 2일 이상 된 .log 파일을 모두 삭제.
+명령어만 출력, 설명 없이.
+#+end_src
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :wrap src nix
+NixOS flake.nix: Python 3.12 + numpy + pandas 개발 환경.
+코드만 출력.
+#+end_src
+
+* Org 형식 출력 — :format org
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :format org
+Denote 파일 관리 팁을 org-mode 형식으로 정리해주세요.
+헤딩, 리스트, 코드 블록을 사용해주세요.
+#+end_src
+
+* 디버깅 — :dry-run
+
+API 요청 구조만 확인 (실제 전송 안 함):
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :dry-run yes
+테스트 프롬프트
+#+end_src
+
+* Temperature 가이드
+
+| 작업 | 권장 Temperature | 이유                      |
+|------+------------------+---------------------------|
+| 번역 |          0.1-0.2 | 원문 충실, 일관성          |
+| 요약 |          0.3-0.5 | 핵심 추출 + 약간 재구성    |
+| 코딩 |          0.2-0.4 | 정확성 + 약간의 변형       |
+| 창작 |          0.7-1.0 | 다양성, 창의성             |
+
+* 실전 레시피
+
+** RSS 기사 번역 (elfeed에서 복사 후)
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview :system "You are a professional translator. Translate to natural Korean. Keep technical terms in English. No preamble." :temperature 0.1
+[elfeed에서 복사한 기사 텍스트를 여기에]
+#+end_src
+
+** 코드 리뷰
+
+#+begin_src gptel :backend "Claude-Proxy" :model claude-sonnet-4-6 :system "You are a senior code reviewer. Be concise. Focus on bugs, performance, and readability."
+다음 코드를 리뷰해주세요:
+
+(defun my-func (items)
+  (let ((result '()))
+    (dolist (item items)
+      (when (> (length item) 3)
+        (push (upcase item) result)))
+    (nreverse result)))
+#+end_src
+
+** 커밋 메시지 생성
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview :system "Generate a conventional commit message (feat/fix/refactor/docs) from the following diff. First line max 72 chars. Body with bullet points." :wrap src text
+[git diff 출력을 여기에]
+#+end_src
+
+** Literate DevOps — 명령어 생성 + 실행
+
+#+begin_src gptel :backend "OpenRouter" :model google/gemini-3-flash-preview :wrap src sh
+systemd user service 파일을 만드는 명령어.
+서비스 이름: cliproxyapi, 실행 파일: ~/cliproxyapi/cliproxyapi
+Restart=always, After=network.target
+명령어만 출력.
+#+end_src
