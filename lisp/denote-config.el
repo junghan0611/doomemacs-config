@@ -126,6 +126,51 @@
     (citar-denote-mode))
   )
 
+;;;; 업스트림 패치 (doom sync 안전)
+
+;; [bd-2pd] denote-org: include-date lambda 1-인자 → 2-인자 시그니처 불일치
+;; denote 4.1+ 에서 denote-link-description-format이 (FILE FILE-TYPE) 요구
+;; denote-org--insert-links가 include-date일 때 (lambda (file)) 바인딩 → warning
+;; 업스트림 보고 예정: https://github.com/protesilaos/denote/issues
+(after! denote-org
+  (defun denote-org--insert-links (files &optional id-only include-date)
+    "Insert links to FILES. Patched: include-date lambda accepts FILE-TYPE."
+    (let ((denote-link-description-format
+           (if include-date
+               (lambda (file &optional _file-type)
+                 (let* ((file-type (denote-filetype-heuristics file))
+                        (title (denote-retrieve-title-or-filename file file-type))
+                        (identifier (denote-retrieve-filename-identifier file))
+                        (date (denote-id-to-date identifier)))
+                   (format "%s (%s)" title date)))
+             denote-link-description-format)))
+      (denote-link--insert-links files 'org id-only :no-other-sorting))))
+
+;; [bd-2pd] citar-denote v2.5.3: docstring 이스케이프 안 된 따옴표 → read error
+;; citar-denote-nobib docstring: `citar-denote-keyword'". → invalid-read-syntax
+;; 업스트림 보고 예정: https://github.com/pprevos/citar-denote/issues
+;; advice로 패치 불가 (read 단계 에러) → packages.el에서 recipe pin 또는 :built-in 사용 검토
+;; 임시 해결: doom sync 후 수동 패치 스크립트
+(defun my/patch-citar-denote-docstring ()
+  "Fix citar-denote.el unescaped quote in docstring (upstream bug)."
+  (let ((files (list
+                (expand-file-name "~/.config/emacs/.local/straight/repos/citar-denote/citar-denote.el")
+                (expand-file-name "~/.config/emacs/.local/straight/build-30.2/citar-denote/citar-denote.el")
+                ;; Doom 경로 변형
+                (expand-file-name "~/doomemacs/.local/straight/repos/citar-denote/citar-denote.el")
+                (expand-file-name "~/doomemacs/.local/straight/build-30.2/citar-denote/citar-denote.el"))))
+    (dolist (file files)
+      (when (file-exists-p file)
+        (with-temp-buffer
+          (insert-file-contents file)
+          (when (search-forward "`citar-denote-keyword'\"." nil t)
+            (replace-match "`citar-denote-keyword'.\"")
+            (write-region (point-min) (point-max) file)
+            (message "Patched: %s" file)
+            ;; elc 삭제
+            (let ((elc (concat file "c")))
+              (when (file-exists-p elc) (delete-file elc)))))))))
+
 ;;;; Dired dblock update
 
 (progn
