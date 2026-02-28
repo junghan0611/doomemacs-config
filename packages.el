@@ -143,6 +143,7 @@
 (package! org-download)
 (package! org-rich-yank)
 (package! org-appear)
+(package! org-reverse-datetree)
 
 ;;;; editing-config.el
 
