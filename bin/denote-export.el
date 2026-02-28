@@ -196,7 +196,22 @@
 (condition-case err
     (progn
       (require 'denote-org)
-      (message "[Server] ✓ denote-org loaded (dblock functions available)"))
+      ;; Patch: include-date lambda arity (1-arg → 2-arg)
+      ;; denote 4.1+ expects (FILE FILE-TYPE) but denote-org uses (FILE)
+      ;; Same patch as denote-config.el (after! denote-org ...)
+      (defun denote-org--insert-links (files &optional id-only include-date)
+        "Insert links to FILES. Patched: include-date lambda accepts FILE-TYPE."
+        (let ((denote-link-description-format
+               (if include-date
+                   (lambda (file &optional _file-type)
+                     (let* ((file-type (denote-filetype-heuristics file))
+                            (title (denote-retrieve-title-or-filename file file-type))
+                            (identifier (denote-retrieve-filename-identifier file))
+                            (date (denote-id-to-date identifier)))
+                       (format "%s (%s)" title date)))
+                 denote-link-description-format)))
+          (denote-link--insert-links files 'org id-only :no-other-sorting)))
+      (message "[Server] ✓ denote-org loaded + include-date patch applied"))
   (error
    (message "[Server] WARNING: denote-org failed to load: %S" err)))
 
