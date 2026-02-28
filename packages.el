@@ -217,6 +217,7 @@
 ;;;; ai-bot-config.el
 
 (package! telega)
+(package! ement)
 
 ;;;; ai-stt-eca-whisper.el
 

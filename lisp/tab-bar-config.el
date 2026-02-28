@@ -18,6 +18,7 @@
 ;; ef-themes/doric-themes는 tab-line face만 정의하고 centaur-tabs face가 없음.
 ;; → 빌트인 tab-line face를 상속하여 테마 전환 시 자동 추종.
 (after! centaur-tabs
+  (setq centaur-tabs-height 18)
   (custom-set-faces!
     '(centaur-tabs-default :inherit tab-line)
     '(centaur-tabs-selected :inherit tab-line-tab-current)
