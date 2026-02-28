@@ -66,7 +66,7 @@ show_menu() {
   echo "  ${YELLOW}Denote Export (Hugo)${NC}"
   echo "    7) export all (증분)"
   echo "    8) export all --force (전체)"
-  echo "    9) export 개별 선택"
+  echo "    9) export 폴더 선택"
   echo ""
   echo "  ${YELLOW}Agent Server${NC}"
   echo "    a) agent start"
@@ -204,26 +204,33 @@ cmd_export_single() {
 }
 
 show_export_submenu() {
-  local jobs
-  jobs=$(ask_jobs)
   echo ""
-  echo "  ${YELLOW}Export 대상 선택${NC}"
-  echo "    1) meta    2) bib    3) notes    4) botlog"
-  echo "    5) 커스텀 디렉토리"
-  echo "    f) --force 옵션 추가"
+  echo "  ${YELLOW}Export 폴더 선택${NC}"
+  echo "    1) meta     (증분)     f1) meta     (전체)"
+  echo "    2) bib      (증분)     f2) bib      (전체)"
+  echo "    3) notes    (증분)     f3) notes    (전체)"
+  echo "    4) botlog   (증분)     f4) botlog   (전체)"
+  echo "    5) llmlog   (증분)     f5) llmlog   (전체)"
+  echo "    6) 커스텀 디렉토리"
   echo ""
+  read -p "선택 (1-6, f 접두사 = force): " sub
+
   local force=""
-  read -p "선택 (1-5, f 접두사 가능 예: f1): " sub
   if [[ "$sub" == f* ]]; then
     force="--force"
     sub="${sub:1}"
   fi
+
+  local jobs
+  jobs=$(ask_jobs)
+
+  local folders=(meta bib notes botlog llmlog)
   case "$sub" in
-    1) cmd_export_single "$(resolve_org_dir meta)" "$jobs" "$force" ;;
-    2) cmd_export_single "$(resolve_org_dir bib)" "$jobs" "$force" ;;
-    3) cmd_export_single "$(resolve_org_dir notes)" "$jobs" "$force" ;;
-    4) cmd_export_single "$(resolve_org_dir botlog)" "$jobs" "$force" ;;
-    5)
+    [1-5])
+      local idx=$((sub - 1))
+      cmd_export_single "$(resolve_org_dir "${folders[$idx]}")" "$jobs" "$force"
+      ;;
+    6)
       read -p "디렉토리 경로: " custom_dir
       cmd_export_single "$custom_dir" "$jobs" "$force"
       ;;
