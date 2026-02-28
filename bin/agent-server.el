@@ -59,6 +59,11 @@
 (setq enable-local-eval nil)
 (setq enable-dir-local-variables t)
 
+;; No backup/auto-save files (Doom disables these, but we're not Doom)
+(setq make-backup-files nil)
+(setq auto-save-default nil)
+(setq create-lockfiles nil)
+
 (message "[agent-server] Starting v%s ..." agent-server-version)
 
 ;;;; Doom Straight Package Loading Infrastructure

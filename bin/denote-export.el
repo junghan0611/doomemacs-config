@@ -49,6 +49,11 @@
 (setq enable-local-eval nil)         ; Never eval file-local code
 (setq enable-dir-local-variables t)  ; Keep dir-locals support
 
+;; No backup/auto-save/lockfiles (headless daemon)
+(setq make-backup-files nil)
+(setq auto-save-default nil)
+(setq create-lockfiles nil)
+
 ;; Enable debug on error
 (setq debug-on-error t)
 
