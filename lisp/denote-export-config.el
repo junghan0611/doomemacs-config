@@ -176,8 +176,8 @@
 
 (defun my/get-hugo-section-directory-from-path (path)
   "Extract Hugo section from PATH.
-Checks for /notes, /journal, /talks, /meta, /bib directories."
-  (let ((directories '("/test" "/notes" "/journal" "/talks" "/meta" "/bib"))
+Checks for /notes, /journal, /talks, /meta, /bib, /botlog directories."
+  (let ((directories '("/test" "/notes" "/journal" "/talks" "/meta" "/bib" "/botlog"))
         (matched-dir nil))
     (dolist (dir directories)
       (when (string-match-p (regexp-quote dir) path)
@@ -429,15 +429,22 @@ Helps cleanup after batch export."
                (not (string-match-p "\\*" (buffer-name buffer))))
       (kill-buffer buffer))))
 
+(defvar my/org-hugo-export-exclude-subdirs '("agenda")
+  "List of subdirectory names to exclude from Hugo export.")
+
 (defun my/org-hugo-export-directory (directory)
   "Export all Org files in DIRECTORY to Markdown using `org-hugo-export-to-md'.
-Sequential processing - for parallel export, use external script."
+Sequential processing - for parallel export, use external script.
+Subdirectories listed in `my/org-hugo-export-exclude-subdirs' are skipped."
   (interactive "DSelect directory: ")
   (let ((org-files (directory-files-recursively directory "\\.org\\'")))
     (dolist (org-file org-files)
-      (message "Exporting: %s" org-file)
-      (with-current-buffer (find-file-noselect org-file)
-        (org-hugo-export-to-md))))
+      (unless (cl-some (lambda (subdir)
+                         (string-match-p (format "/%s/" subdir) org-file))
+                       my/org-hugo-export-exclude-subdirs)
+        (message "Exporting: %s" org-file)
+        (with-current-buffer (find-file-noselect org-file)
+          (org-hugo-export-to-md)))))
 
   (my/kill-all-buffers-except-toolbox)
   (garbage-collect)
@@ -469,7 +476,7 @@ Used by parallel export script."
 ;; Garden directory configuration
 ;; Override in per-machine.el if needed
 (defvar garden-directory-lists
-  '("~/org/meta" "~/org/bib" "~/org/notes")
+  '("~/org/meta" "~/org/bib" "~/org/notes" "~/org/botlog")
   "List of directories to process for dblock updates and export.")
 
 (defun my/update-dblock-garden-all ()

@@ -45,6 +45,7 @@ CLEANUP_DAEMONS=$DEFAULT_DAEMONS
 META_DIR="${ORG_ROOT}/meta"
 BIB_DIR="${ORG_ROOT}/bib"
 NOTES_DIR="${ORG_ROOT}/notes"
+BOTLOG_DIR="${ORG_ROOT}/botlog"
 TEST_DIR="${ORG_ROOT}/test"
 
 # Colors
@@ -62,10 +63,11 @@ ${BLUE}사용법:${NC}
   denote-export.sh [명령] [옵션]
 
 ${BLUE}Export 명령 (멀티 데몬):${NC}
-  all [daemons]          - 전체 폴더 순차 처리 (meta, bib, notes) ${YELLOW}⭐ 권장${NC}
+  all [daemons]          - 전체 폴더 순차 처리 (meta, bib, notes, botlog) ${YELLOW}⭐ 권장${NC}
   meta [daemons]         - ~/org/meta 폴더만 (530 files)
   bib [daemons]          - ~/org/bib 폴더만 (649 files)
   notes [daemons]        - ~/org/notes 폴더만 (797 files)
+  botlog [daemons]       - ~/org/botlog 폴더만 (봇 활동 로그)
   test [daemons]         - ~/org/test 폴더만 (빠른 검증)
   run [dir] [daemons]    - 커스텀 디렉토리 지정
 
@@ -176,12 +178,12 @@ case "$COMMAND" in
     log_info "=========================================="
     log_info "Denote Export - 전체 폴더 순차 처리 ($MODE_DESC)"
     log_info "Daemons per folder: $NUM_DAEMONS"
-    log_info "Folders: meta → bib → notes"
+    log_info "Folders: meta → bib → notes → botlog"
     log_info "=========================================="
     echo ""
 
     # Process each directory sequentially, reusing daemons between folders
-    FOLDERS=(meta bib notes)
+    FOLDERS=(meta bib notes botlog)
     TOTAL_FOLDERS=${#FOLDERS[@]}
     FOLDER_NUM=1
     ALL_START=$(date +%s)
@@ -281,6 +283,25 @@ case "$COMMAND" in
     echo ""
 
     python3 "$PYTHON_SCRIPT" export "$NOTES_DIR" "$NUM_DAEMONS" $FORCE_FLAG
+    ;;
+
+  botlog)
+    NUM_DAEMONS="${ARGS[1]:-$DEFAULT_DAEMONS}"
+    CLEANUP_DAEMONS="$NUM_DAEMONS"
+
+    if [ ! -d "$BOTLOG_DIR" ]; then
+      log_error "Directory not found: $BOTLOG_DIR"
+      exit 1
+    fi
+
+    log_info "======================================"
+    log_info "Denote Export - botlog 폴더"
+    log_info "Directory: $BOTLOG_DIR"
+    log_info "Daemons: $NUM_DAEMONS"
+    log_info "======================================"
+    echo ""
+
+    python3 "$PYTHON_SCRIPT" export "$BOTLOG_DIR" "$NUM_DAEMONS" $FORCE_FLAG
     ;;
 
   test)

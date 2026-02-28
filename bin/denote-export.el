@@ -309,7 +309,7 @@ Returns nil if no ID found."
 
 (defun get-org-hugo-section-from-path (filepath)
   "Determine org-hugo-section from FILEPATH directory.
-Returns meta, bib, notes, or test based on parent directory name."
+Returns meta, bib, notes, botlog, or test based on parent directory name."
   (let ((parent-dir (file-name-nondirectory
                       (directory-file-name
                        (file-name-directory filepath)))))
@@ -317,6 +317,7 @@ Returns meta, bib, notes, or test based on parent directory name."
      ((string= parent-dir "meta") "meta")
      ((string= parent-dir "bib") "bib")
      ((string= parent-dir "notes") "notes")
+     ((string= parent-dir "botlog") "botlog")
      ((string= parent-dir "test") "test")
      (t "notes")))) ; default to notes
 
