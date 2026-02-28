@@ -31,10 +31,10 @@ BLUE='\033[0;34m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-info()    { echo -e "${BLUE}ℹ${NC} $*"; }
-success() { echo -e "${GREEN}✓${NC} $*"; }
-warn()    { echo -e "${YELLOW}⚠${NC} $*"; }
-error()   { echo -e "${RED}✗${NC} $*"; exit 1; }
+info()    { printf '%b\n' "${BLUE}ℹ${NC} $*"; }
+success() { printf '%b\n' "${GREEN}✓${NC} $*"; }
+warn()    { printf '%b\n' "${YELLOW}⚠${NC} $*"; }
+error()   { printf '%b\n' "${RED}✗${NC} $*"; exit 1; }
 
 # Cleanup daemons on interrupt
 cleanup() {
@@ -46,51 +46,49 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 show_help() {
-  cat <<EOF
-${BOLD}Doom Emacs 닷파일 통합 관리${NC}
-
-${BLUE}사용법:${NC}  ./run.sh <명령> [옵션]
-
-${BOLD}━━━ Doom 관리 ━━━${NC}
-  sync                    doom sync
-  sync-update             doom sync -u -j 2
-  doctor                  doom doctor
-
-${BOLD}━━━ Denote Dblock 업데이트 ━━━${NC}
-  dblock [DIR] [N]        dblock 업데이트 (기본: ~/org/meta, N=${DEFAULT_JOBS})
-  dblock meta [N]         ~/org/meta dblock
-  dblock notes [N]        ~/org/notes dblock
-  dblock all [N]          meta + notes + bib + botlog 순차
-
-${BOLD}━━━ Denote Export (Hugo) ━━━${NC}
-  export all [N]          전체 export (meta→bib→notes→botlog)
-  export meta [N]         ~/org/meta export
-  export bib [N]          ~/org/bib export
-  export notes [N]        ~/org/notes export
-  export botlog [N]       ~/org/botlog export
-  export DIR [N]          커스텀 디렉토리 export
-  export --force ...      증분 무시, 전체 강제
-
-${BOLD}━━━ Agent Server ━━━${NC}
-  agent start             에이전트 서버 데몬 시작
-  agent stop              에이전트 서버 중지
-  agent restart           재시작
-  agent status            상태 확인
-  agent eval EXPR         emacsclient eval 실행
-
-${BOLD}옵션:${NC}
-  N = 병렬 작업 수 (기본: ${DEFAULT_JOBS})
-
-${BOLD}예제:${NC}
-  ./run.sh sync                     # doom sync
-  ./run.sh sync-update              # doom sync -u -j 2
-  ./run.sh dblock                   # meta dblock (4 workers)
-  ./run.sh dblock all 8             # 전체 dblock (8 workers)
-  ./run.sh export all               # 전체 export (증분)
-  ./run.sh export meta --force      # meta 전체 강제 export
-  ./run.sh agent start              # 에이전트 서버 시작
-  ./run.sh agent eval '(agent-server-status)'
-EOF
+  printf '%b\n' "${BOLD}Doom Emacs 닷파일 통합 관리${NC}"
+  echo ""
+  printf '%b\n' "${BLUE}사용법:${NC}  ./run.sh <명령> [옵션]"
+  echo ""
+  printf '%b\n' "${BOLD}━━━ Doom 관리 ━━━${NC}"
+  echo "  sync                    doom sync"
+  echo "  sync-update             doom sync -u -j 2"
+  echo "  doctor                  doom doctor"
+  echo ""
+  printf '%b\n' "${BOLD}━━━ Denote Dblock 업데이트 ━━━${NC}"
+  echo "  dblock [DIR] [N]        dblock 업데이트 (기본: ~/org/meta, N=${DEFAULT_JOBS})"
+  echo "  dblock meta [N]         ~/org/meta dblock"
+  echo "  dblock notes [N]        ~/org/notes dblock"
+  echo "  dblock all [N]          meta + notes + bib + botlog 순차"
+  echo ""
+  printf '%b\n' "${BOLD}━━━ Denote Export (Hugo) ━━━${NC}"
+  echo "  export all [N]          전체 export (meta→bib→notes→botlog)"
+  echo "  export meta [N]         ~/org/meta export"
+  echo "  export bib [N]          ~/org/bib export"
+  echo "  export notes [N]        ~/org/notes export"
+  echo "  export botlog [N]       ~/org/botlog export"
+  echo "  export DIR [N]          커스텀 디렉토리 export"
+  echo "  export --force ...      증분 무시, 전체 강제"
+  echo ""
+  printf '%b\n' "${BOLD}━━━ Agent Server ━━━${NC}"
+  echo "  agent start             에이전트 서버 데몬 시작"
+  echo "  agent stop              에이전트 서버 중지"
+  echo "  agent restart           재시작"
+  echo "  agent status            상태 확인"
+  echo "  agent eval EXPR         emacsclient eval 실행"
+  echo ""
+  printf '%b\n' "${BOLD}옵션:${NC}"
+  echo "  N = 병렬 작업 수 (기본: ${DEFAULT_JOBS})"
+  echo ""
+  printf '%b\n' "${BOLD}예제:${NC}"
+  echo "  ./run.sh sync                     # doom sync"
+  echo "  ./run.sh sync-update              # doom sync -u -j 2"
+  echo "  ./run.sh dblock                   # meta dblock (4 workers)"
+  echo "  ./run.sh dblock all 8             # 전체 dblock (8 workers)"
+  echo "  ./run.sh export all               # 전체 export (증분)"
+  echo "  ./run.sh export meta --force      # meta 전체 강제 export"
+  echo "  ./run.sh agent start              # 에이전트 서버 시작"
+  echo "  ./run.sh agent eval '(agent-server-status)'"
 }
 
 # ━━━ Doom ━━━
