@@ -128,23 +128,8 @@
 
 ;;;; 업스트림 패치 (doom sync 안전)
 
-;; [bd-2pd] denote-org: include-date lambda 1-인자 → 2-인자 시그니처 불일치
-;; denote 4.1+ 에서 denote-link-description-format이 (FILE FILE-TYPE) 요구
-;; denote-org--insert-links가 include-date일 때 (lambda (file)) 바인딩 → warning
-;; 업스트림 보고 예정: https://github.com/protesilaos/denote/issues
-(after! denote-org
-  (defun denote-org--insert-links (files &optional id-only include-date)
-    "Insert links to FILES. Patched: include-date lambda accepts FILE-TYPE."
-    (let ((denote-link-description-format
-           (if include-date
-               (lambda (file &optional _file-type)
-                 (let* ((file-type (denote-filetype-heuristics file))
-                        (title (denote-retrieve-title-or-filename file file-type))
-                        (identifier (denote-retrieve-filename-identifier file))
-                        (date (denote-id-to-date identifier)))
-                   (format "%s (%s)" title date)))
-             denote-link-description-format)))
-      (denote-link--insert-links files 'org id-only :no-other-sorting))))
+;; [bd-2pd] denote-org include-date: 업스트림 수정됨 (denote-org#21, de66802)
+;; 로컬 패치 제거 완료 (2026-03-01)
 
 ;; [bd-2pd] citar-denote v2.5.3: docstring 이스케이프 안 된 따옴표 → read error
 ;; citar-denote-nobib docstring: `citar-denote-keyword'". → invalid-read-syntax
