@@ -26,12 +26,18 @@
 ;; _aprj (active project) 태그가 있는 denote 파일 + botlog/agenda/
 ;; 프로젝트를 agenda에 올리려면 denote 태그에 aprj 추가
 (defun my/org-agenda-files-rebuild ()
-  "Rebuild org-agenda-files from _aprj tagged files + botlog/agenda/."
+  "Rebuild org-agenda-files from _aprj files + botlog/agenda/ + current journal."
   (setq org-agenda-files
         (append
+         ;; 1. _aprj 태그 파일
          (denote-directory-files "_aprj")
+         ;; 2. 에이전트 어젠다 디렉토리
          (let ((agent-dir (expand-file-name "botlog/agenda/" denote-directory)))
-           (when (file-directory-p agent-dir) (list agent-dir))))))
+           (when (file-directory-p agent-dir) (list agent-dir)))
+         ;; 3. 현재 주 journal 파일
+         (when (fboundp 'org-journal--get-entry-path)
+           (let ((jp (ignore-errors (org-journal--get-entry-path))))
+             (when (and jp (file-exists-p jp)) (list jp)))))))
 
 ;; 초기 구성
 (my/org-agenda-files-rebuild)
