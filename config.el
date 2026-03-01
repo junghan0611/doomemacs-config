@@ -420,4 +420,7 @@ Returns t on success, nil if notify-send is not available."
          :i "`" #'toggle-input-method))
   )
 
+;;; Workflow Shared (인간/에이전트 공유 — denote 이후 로드)
+(after! denote (require 'workflow-shared))
+
 ;;; END

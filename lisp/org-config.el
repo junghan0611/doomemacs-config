@@ -80,9 +80,8 @@
 
 ;;;; custom agenda files
 
-  ;; workflow-shared.el: _aprj 태그 + botlog/agenda/ 동적 구성
-  ;; denote 로드 후 평가 필요
-  (after! denote (require 'workflow-shared))
+  ;; workflow-shared.el: config.el 끝에서 (after! denote) 로드
+  ;; _aprj 태그 + botlog/agenda/ 동적 구성
 
   (setq org-agenda-diary-file (my/org-diary-file))
   (setq org-default-notes-file (my/org-inbox-file))
