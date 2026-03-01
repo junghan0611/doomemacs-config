@@ -328,7 +328,7 @@
   ;; (setq org-journal-time-format "%R ")
   (setq org-journal-carryover-items  "TODO=\"TODO\"|TODO=\"NEXT\"")
 
-  (setq org-journal-enable-agenda-integration t) ; default nil
+  (setq org-journal-enable-agenda-integration nil) ; my/org-journal-new-entry가 현재 주만 등록
   (setq org-journal-file-type 'weekly)
 
   (setq org-journal-tag-alist '(("meet" . ?m) ("dev" . ?d) ("idea" . ?i) ("emacs" . ?e) ("discuss" . ?c) ("1on1" . ?o))) ; default nil
@@ -354,11 +354,14 @@ PREFIX가 있으면 엔트리 생성 없이 파일만 열기 (org-journal 기본
   (interactive "P")
   ;; 1. agenda-files 등록
   (my/org-journal--ensure-agenda-file)
-  ;; 2. 기본 new-entry (no-timestamp=t로 plain text 시간 억제)
-  (org-journal-new-entry prefix nil (not prefix))
-  ;; 3. active timestamp 삽입 (엔트리 생성 시에만)
+  ;; 2. 기본 new-entry (timestamp는 org-journal이 HH:MM 넣음)
+  (org-journal-new-entry prefix)
+  ;; 3. active timestamp를 다음 줄에 삽입 (엔트리 생성 시에만)
+  ;; 형식: ** 11:33 제목\n<2026-03-01 Sun 11:33>
   (unless prefix
-    (insert (format-time-string "<%Y-%m-%d %a %H:%M> "))))
+    (save-excursion
+      (end-of-line)
+      (insert "\n" (format-time-string "<%Y-%m-%d %a %H:%M>")))))
 
 (defun my/org-journal-last-entry ()
   "현재 주 journal 파일을 열고 마지막 엔트리로 이동."
