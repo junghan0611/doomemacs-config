@@ -170,6 +170,16 @@
 
 ;;;; Directory & Bibliography Configuration
 
+;; NOTE 2026-03-01: ~/org → ~/sync/org 심볼릭 링크 환경.
+;; Doom은 find-file-visit-truename=t로 buffer-file-name이 실제 경로로 resolve됨.
+;; agent-server는 Doom이 아니라 find-file-visit-truename=nil (기본값) →
+;; buffer-file-name이 ~/org/... 그대로 → expand-file-name으로 충분.
+;;
+;; "워크플로우 공유(Workflow Sharing)":
+;; 인간(Doom)과 에이전트(agent-server)가 동일한 ~/org를 읽고 쓴다.
+;; botlog/는 에이전트 rw — 봇로그 문서, botlog/agenda/ reverse-datetree 기록.
+;; 인간의 org-agenda가 botlog/agenda/를 포함하므로,
+;; 에이전트 활동이 인간의 agenda 뷰에 자연스럽게 나타난다.
 (defvar org-directory (expand-file-name "~/org"))
 (setq denote-directory (expand-file-name "~/org/"))
 

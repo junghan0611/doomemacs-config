@@ -334,6 +334,47 @@
   (setq org-journal-tag-alist '(("meet" . ?m) ("dev" . ?d) ("idea" . ?i) ("emacs" . ?e) ("discuss" . ?c) ("1on1" . ?o))) ; default nil
   )
 
+;;;;; my/org-journal — agenda 통합 강화
+
+;; 문제: org-journal-new-entry는 plain text 시간만 넣어서 org-agenda에서 안 보임.
+;; org-journal-enable-agenda-integration은 future 파일까지 전체 스캔 → 느림.
+;; 해결: 현재 주 파일만 agenda-files에 추가 + active timestamp 삽입.
+
+(defun my/org-journal--ensure-agenda-file ()
+  "현재 주 journal 파일을 org-agenda-files에 추가 (없으면)."
+  (when-let* ((entry-path (org-journal--get-entry-path)))
+    (let ((truename (file-truename entry-path)))
+      (unless (member truename (mapcar #'file-truename (org-agenda-files)))
+        (org-agenda-file-to-front entry-path)
+        (message "agenda-files에 추가: %s" (file-name-nondirectory entry-path))))))
+
+(defun my/org-journal-new-entry (&optional prefix)
+  "org-journal-new-entry + agenda 파일 등록 + active timestamp 삽입.
+PREFIX가 있으면 엔트리 생성 없이 파일만 열기 (org-journal 기본 동작)."
+  (interactive "P")
+  ;; 1. agenda-files 등록
+  (my/org-journal--ensure-agenda-file)
+  ;; 2. 기본 new-entry (no-timestamp=t로 plain text 시간 억제)
+  (org-journal-new-entry prefix nil (not prefix))
+  ;; 3. active timestamp 삽입 (엔트리 생성 시에만)
+  (unless prefix
+    (insert (format-time-string "<%Y-%m-%d %a %H:%M> "))))
+
+(defun my/org-journal-last-entry ()
+  "현재 주 journal 파일을 열고 마지막 엔트리로 이동."
+  (interactive)
+  (let* ((entry-path (org-journal--get-entry-path))
+         (buf (find-file entry-path)))
+    (with-current-buffer buf
+      (goto-char (point-max))
+      ;; 마지막 time-level 헤딩으로 이동
+      (when (re-search-backward
+             (format "^%s" (regexp-quote org-journal-time-prefix))
+             nil t)
+        (org-show-entry)
+        (org-show-children)
+        (recenter 3)))))
+
 ;;;; citar
 
 (progn

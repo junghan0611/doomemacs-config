@@ -132,7 +132,7 @@
 (map! :leader
       (:prefix ("n" . "notes")
                "g" #'+default/org-notes-search
-               "SPC" #'org-journal-open-current-journal-file
+               "SPC" #'my/org-journal-last-entry
                "L" #'my/org-store-link-id-optional
                ))
 

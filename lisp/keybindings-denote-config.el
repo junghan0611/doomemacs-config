@@ -226,8 +226,8 @@
       :desc "Rename title"          "<" #'denote-rename-file-title
       :desc "Random note"           "/" #'my/denote-random-note
       :desc "Backlinks buffer"      "-" #'denote-show-backlinks-buffer
-      :desc "Journal current"       "TAB" #'org-journal-open-current-journal-file
-      :desc "Journal new"           "j" #'org-journal-new-entry
+      :desc "Journal last entry"     "TAB" #'my/org-journal-last-entry
+      :desc "Journal new (agenda)"  "j" #'my/org-journal-new-entry
       :desc "Rename keywords"       "k" #'denote-rename-file-keywords
       :desc "Rename signature"      "z" #'denote-rename-file-signature
       :desc "Assign zettel"         "Z" #'my/denote-assign-zettel
