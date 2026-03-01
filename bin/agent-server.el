@@ -183,6 +183,14 @@
 (defvar org-directory (expand-file-name "~/org"))
 (setq denote-directory (expand-file-name "~/org/"))
 
+;; org-agenda-files: org-config.el과 동일한 동적 구성
+;; _aprj 태그 파일 + botlog/agenda/
+(setq org-agenda-files
+      (append
+       (denote-directory-files "_aprj")
+       (let ((agent-dir (expand-file-name "botlog/agenda/" denote-directory)))
+         (when (file-directory-p agent-dir) (list agent-dir)))))
+
 ;; Load user info (+user-info.el)
 (let ((user-info (expand-file-name "+user-info.el" doom-user-dir)))
   (when (file-exists-p user-info)
