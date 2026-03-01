@@ -22,7 +22,9 @@
   :commands
   (denote denote-create-note denote-insert-link denote-show-backlinks-buffer denote-link-ol-store)
   :init
-  (setq denote-directory org-directory)
+  ;; Doom sets find-file-visit-truename → buffer-file-name resolves symlinks
+  ;; denote-directory must match resolved path for org-store-link to work
+  (setq denote-directory (file-truename org-directory))
   (require 'denote-org)
   ;; (require 'denote-silo)
   (require 'denote-sequence)
