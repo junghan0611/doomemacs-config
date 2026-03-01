@@ -80,12 +80,18 @@
 
 ;;;; custom agenda files
 
-  ;; ;; (setq org-agenda-files org-user-agenda-files)
-
-  ;; 에이전트 어젠다: botlog/agenda/ 폴더를 agenda-files에 추가
-  ;; reverse datetree 형식, 디바이스별 파일 분리
-  (add-to-list 'org-agenda-files
-               (file-name-concat org-directory "botlog/agenda/") t)
+  ;; org-agenda-files 동적 구성:
+  ;; 1. _aprj 태그 파일 (active project)
+  ;; 2. botlog/agenda/ (에이전트 활동 기록)
+  ;; 3. 현재 주 journal (my/org-journal-new-entry가 추가)
+  ;; custom.el의 하드코딩 리스트 대신 동적 검색 사용
+  (setq org-agenda-files
+        (append
+         ;; _aprj 태그가 있는 denote 파일
+         (denote-directory-files "_aprj")
+         ;; 에이전트 어젠다 디렉토리
+         (let ((agent-dir (file-name-concat org-directory "botlog/agenda/")))
+           (when (file-directory-p agent-dir) (list agent-dir)))))
 
   (setq org-agenda-diary-file (my/org-diary-file))
   (setq org-default-notes-file (my/org-inbox-file))
