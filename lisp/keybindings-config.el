@@ -417,6 +417,12 @@
 ;;;;; Org Journal
 
 (after! org-journal
+  ;; Doom SPC n j j → org-journal-new-entry 를 오버라이드
+  (map! :leader
+        (:prefix ("n" . "notes")
+         (:prefix ("j" . "journal")
+          :desc "New entry (agenda)" "j" #'my/org-journal-new-entry
+          :desc "Last entry"         "l" #'my/org-journal-last-entry)))
   (map! :map org-journal-mode-map
         :n "]f" #'org-journal-next-entry
         :n "[f" #'org-journal-previous-entry

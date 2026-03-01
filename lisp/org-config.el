@@ -105,6 +105,7 @@
   ;; Shift the agenda to show the previous 3 days and the next 7 days for
   ;; better context on your week. The past is less important than the future.
   (setq org-agenda-span 'day) ; default 'week, doom 10
+  (setq org-agenda-start-day nil) ; nil = today (doom default: "-3d")
 
   ;; Hide all scheduled todo.
   (setq org-agenda-todo-ignore-scheduled 'all)
@@ -259,15 +260,15 @@
               (define-key org-agenda-mode-map [(double-mouse-1)] 'org-agenda-goto-mouse)))
 
   (defun cc/org-agenda-goto-now ()
-    "Redo agenda view and move point to current time '← now'"
+    "Redo agenda view and move point to current time '← now'.
+org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
     (interactive)
-    (org-agenda-redo)
+    (org-agenda-redo t)      ; t = full rebuild (캐시 무시)
     (org-agenda-goto-today)
-
-    (if window-system
-        (search-forward "← now ─")
-      (search-forward "now -"))
-    )
+    (ignore-errors
+      (if window-system
+          (search-forward "← now ─")
+        (search-forward "now -"))))
 
   (add-hook 'org-agenda-mode-hook
             (lambda ()
@@ -364,15 +365,16 @@ PREFIX가 있으면 엔트리 생성 없이 파일만 열기 (org-journal 기본
       (insert "\n" (format-time-string "<%Y-%m-%d %a %H:%M>")))))
 
 (defun my/org-journal-last-entry ()
-  "현재 주 journal 파일을 열고 마지막 엔트리로 이동."
+  "현재 주 journal 파일을 열고 마지막 시간 엔트리로 이동.
+** HH:MM 패턴만 매칭 (** [검색어:...] 등 제외)."
   (interactive)
   (let* ((entry-path (org-journal--get-entry-path))
          (buf (find-file entry-path)))
     (with-current-buffer buf
       (goto-char (point-max))
-      ;; 마지막 time-level 헤딩으로 이동
+      ;; ** HH:MM 또는 ** DONE HH:MM 또는 ** TODO HH:MM 패턴
       (when (re-search-backward
-             (format "^%s" (regexp-quote org-journal-time-prefix))
+             "^\\*\\* \\(?:TODO \\|DONE \\|NEXT \\)?[0-9]\\{2\\}:[0-9]\\{2\\} "
              nil t)
         (org-show-entry)
         (org-show-children)
