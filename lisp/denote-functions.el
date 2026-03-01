@@ -179,7 +179,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :reverse-sort nil
                            :id-only nil
                            :this-heading-only nil
-                           :include-date nil))
+                           :include-date t))
   (org-update-dblock))
 
 ;;;###autoload
@@ -195,7 +195,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :sort-by-component nil
                            :reverse-sort t
                            :id-only nil
-                           :include-date nil))
+                           :include-date t))
   (org-update-dblock))
 
 ;;;###autoload
@@ -211,7 +211,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :sort-by-component nil
                            :reverse-sort t
                            :id-only nil
-                           :include-date nil))
+                           :include-date t))
   (org-update-dblock))
 
 ;;;###autoload
@@ -227,7 +227,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :sort-by-component nil
                            :reverse-sort t
                            :id-only nil
-                           :include-date nil))
+                           :include-date t))
   (org-update-dblock))
 
 ;;;###autoload
@@ -249,7 +249,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                              :sort-by-component nil
                              :reverse-sort t
                              :id-only nil
-                             :include-date nil))
+                             :include-date t))
     (org-update-dblock)))
 
 ;;;###autoload
@@ -274,7 +274,7 @@ With prefix ARG, prompt for a date via calendar."
                         (number-sequence 0 6)))
          (regexp (mapconcat (lambda (d) (concat d "T*")) dates "\\\\|")))
     (insert
-     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date nil\n#+END:\n"
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
              regexp))))
 
 ;;;; Refile & Extract

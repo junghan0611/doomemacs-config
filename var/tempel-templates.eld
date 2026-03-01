@@ -252,11 +252,11 @@ org-mode
 ;; #+hugo: more
 
 ;; * #Keyword :noexport:
-;; #+BEGIN: denote-links :regexp \"000\" :excluded-dirs-regexp nil :sort-by-component nil :reverse-sort nil :id-only nil :include-date nil
+;; #+BEGIN: denote-links :regexp \"000\" :excluded-dirs-regexp nil :sort-by-component nil :reverse-sort nil :id-only nil :include-date t
 ;; #+END:
 
 ;; * #Backlink :noexport:
-;; #+BEGIN: denote-backlinks :excluded-dirs-regexp nil :sort-by-component nil :reverse-sort nil :id-only nil :this-heading-only nil :include-date nil
+;; #+BEGIN: denote-backlinks :excluded-dirs-regexp nil :sort-by-component nil :reverse-sort nil :id-only nil :this-heading-only nil :include-date t
 ;; #+END:
 
 ;; * Related-Notes
