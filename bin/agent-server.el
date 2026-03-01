@@ -162,6 +162,13 @@
 (condition-case nil (require 'denote-org) (error nil))
 (condition-case nil (require 'denote-explore) (error nil))
 
+;; 워크플로우 공유: 인간(Doom)과 동일한 agenda 설정
+(let ((shared (expand-file-name "lisp/workflow-shared.el" doom-user-dir)))
+  (when (file-exists-p shared)
+    (load shared nil t)
+    (message "[agent-server] ✓ workflow-shared loaded (agenda-files: %d)"
+             (length org-agenda-files))))
+
 (message "[agent-server] ✓ Packages loaded (org %s, denote %s)"
          (org-version)
          (if (featurep 'denote) (denote-retrieve-title-or-filename
@@ -182,14 +189,6 @@
 ;; 에이전트 활동이 인간의 agenda 뷰에 자연스럽게 나타난다.
 (defvar org-directory (expand-file-name "~/org"))
 (setq denote-directory (expand-file-name "~/org/"))
-
-;; org-agenda-files: org-config.el과 동일한 동적 구성
-;; _aprj 태그 파일 + botlog/agenda/
-(setq org-agenda-files
-      (append
-       (denote-directory-files "_aprj")
-       (let ((agent-dir (expand-file-name "botlog/agenda/" denote-directory)))
-         (when (file-directory-p agent-dir) (list agent-dir)))))
 
 ;; Load user info (+user-info.el)
 (let ((user-info (expand-file-name "+user-info.el" doom-user-dir)))
