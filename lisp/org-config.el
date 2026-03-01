@@ -372,9 +372,9 @@ PREFIX가 있으면 엔트리 생성 없이 파일만 열기 (org-journal 기본
          (buf (find-file entry-path)))
     (with-current-buffer buf
       (goto-char (point-max))
-      ;; ** HH:MM 또는 ** DONE HH:MM 또는 ** TODO HH:MM 패턴
+      ;; ** HH:MM 또는 ** TODO/NEXT/DONE/DONT HH:MM 패턴
       (when (re-search-backward
-             "^\\*\\* \\(?:TODO \\|DONE \\|NEXT \\)?[0-9]\\{2\\}:[0-9]\\{2\\} "
+             "^\\*\\* \\(?:TODO \\|NEXT \\|DONE \\|DONT \\)?[0-9]\\{2\\}:[0-9]\\{2\\}"
              nil t)
         (org-show-entry)
         (org-show-children)
