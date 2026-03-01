@@ -233,7 +233,9 @@
         "   ")))
 
   (setq org-agenda-prefix-format
-        '((agenda . " %-4e %i %-12:c%?-12t% s ")
+        '(
+          ;; (agenda . " %-4e %i %-12:c%?-12t% s ")
+          (agenda . " %i %-7:c%?-12t% s ")
           (todo . " %i %-10:c %-5e %(gopar/get-schedule-or-deadline-if-available)")
           (tags . " %i %-12:c")
           (search . " %i %-12:c")))
