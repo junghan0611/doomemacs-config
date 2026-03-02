@@ -36,6 +36,7 @@
 ;; 2025-04-15 remove "⊨"
 ;; "⊢" prove, "⊨" entail , "∉" notin
 (setq my/unicode-notetaking '( " "
+                               "—" ;; 0x2014 agent-aware unicode
                                "§"
                                "§ section"
                                "¶ paragraph"
@@ -68,7 +69,7 @@
                                "〈홑화살괄호 〉"
                                ;; "≪겹화살괄호≫"
                                "｢홑낫표｣"
-                               "― QUOTADASH"
+                               "— QUOTADASH" ; 0x2014
                                ))
 
 (setq my/unicode-notetaking-circle '(
