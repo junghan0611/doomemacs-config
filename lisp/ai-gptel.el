@@ -145,7 +145,7 @@
           :endpoint "/api/v1/chat/completions"
           :stream t
           ;; :key #'gptel-api-key
-          :key (lambda () (password-store-get "work/api/openrouter/devteam-backup"))
+          :key (lambda () (password-store-get "work/api/openrouter/devteam-goqual-backup"))
           :models gptel--openrouter-models))
   (setq gptel-openrouter-chat-model 'openai/gpt-5.1-chat) ; < 1.0s latency
   (setq gptel-openrouter-flash-model 'google/gemini-3-flash-preview) ; 3.8s bench, best speed+quality
