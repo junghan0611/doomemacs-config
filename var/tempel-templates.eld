@@ -60,6 +60,8 @@ emacs-lisp-mode
 ;;;; fundamental-mode
 fundamental-mode ;; Available everywhere
 
+(@jh "@junghan — ")
+(junghan "@junghan — ")
 (today (format-time-string "%Y-%m-%d"))
 (did (format-time-string "%Y%m%d")) ; 20241122T
 (dayid (format-time-string "%Y%m%dT")) ; 20241122T
