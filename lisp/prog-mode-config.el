@@ -150,6 +150,11 @@
 ;;   ;; (global-set-key (kbd "M-g F") 'consult-flymake)
 ;;   )
 
+;;;; treesit
+
+(with-eval-after-load 'treesit
+  (setq treesit-auto-install-grammar 'always))
+
 ;;;; DONT bugfix treesit
 
 ;; (after! treesit

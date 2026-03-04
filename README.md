@@ -96,6 +96,7 @@ doomemacs-config/
 │   ├── korean-input-config.el # Korean input, fonts, NFD→NFC
 │   ├── denote-*.el          # Denote ecosystem (4 files)
 │   ├── org-config.el        # Org-mode settings
+│   ├── workflow-shared.el   # Human/Agent shared workflow (agenda, journal)
 │   ├── functions.el         # Utility functions (yank-code-with-context)
 │   ├── keybindings-config.el # Key bindings
 │   ├── tramp-rpc-config.el   # High-perf TRAMP backend (RPC over SSH)
@@ -125,6 +126,17 @@ doomemacs-config/
 | **Edge TTS** | Microsoft Edge text-to-speech | `ai-tts-edge.el` |
 | **tmux/Zellij** | Terminal multiplexer agent workflows | `tmux-config.el`, `zellij-config.el` |
 | **tramp-rpc** | High-performance remote ops (2-38x faster TRAMP) | `tramp-rpc-config.el` |
+
+### Unified Agenda View — Human & Agent Single Timeline
+
+Human and AI agents share a single `org-agenda` timeline via `workflow-shared.el`. Both sides read/write `~/org/`, and the same agenda view is visible regardless of who calls it.
+
+- **Dynamic `org-agenda-files`**: Built from `_aprj` tagged Denote files + `botlog/agenda/` + current journal
+- **Category-based identity**: `#+category: Human` / `#+category: Agent` → displayed as full name (GUI) or single letter H/A (TUI/Termux)
+- **Smart truncation**: Long agent entries are auto-truncated to keep tags visible in split windows (i3wm)
+- **Follow mode**: `F` in agenda to preview entries in adjacent window
+
+→ See: [통합 어젠다 뷰 완성 — 인간과 에이전트 단일 타임라인](https://notes.junghanacs.com/botlog/20260301T154500)
 
 ### EAF (Emacs Application Framework)
 
@@ -224,6 +236,7 @@ Started as a lightweight terminal-first configuration, evolved into a comprehens
 - Pi Coding Agent: terminal-free AI via stdio RPC with native Korean input
 - tramp-rpc: VS Code Remote-level performance for remote development
 - Modular architecture expansion (14 files → 40+ files)
+- Unified agenda view: Human & Agent single timeline with smart truncation
 
 The focus remains on AI-assisted workflows while maintaining reproducibility across devices.
 

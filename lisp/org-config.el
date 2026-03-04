@@ -96,7 +96,7 @@
 ;;;; org-agenda
 
   ;; Use sticky agenda since I need different agenda views (personal and work) at the same time.
-  (setq org-agenda-sticky t) ; default nil
+  ;; (setq org-agenda-sticky t) ; default nil
 
   ;; Shift the agenda to show the previous 3 days and the next 7 days for
   ;; better context on your week. The past is less important than the future.
@@ -185,7 +185,7 @@
 
   ;; (setq org-auto-align-tags nil) ; default t, use doom's custom
   ;; (setq org-tags-column 0) ; default -77
-  (setq org-agenda-tags-column -80) ;; 'auto ; org-tags-column
+  ;; org-agenda-tags-column은 아래 prefix-format 근처에서 'auto로 설정
   (setq org-agenda-show-inherited-tags nil)
 
   (setq org-tag-alist (quote (
@@ -232,29 +232,76 @@
         ;; (format "🗓️ ")
         "   ")))
 
-  (setq org-agenda-prefix-format
-        '(
-          ;; (agenda . " %-4e %i %-12:c%?-12t% s ")
-          (agenda . " %i %-7:c%?-12t% s ")
-          (todo . " %i %-10:c %-5e %(gopar/get-schedule-or-deadline-if-available)")
-          (tags . " %i %-12:c")
-          (search . " %i %-12:c")))
+  (defun my/org-agenda-category-short ()
+    "카테고리 첫 글자 반환. Agent→A, Human→H, Journal→J 등."
+    (let ((cat (org-get-category)))
+      (if (and cat (> (length cat) 0))
+          (substring cat 0 1)
+        " ")))
 
-  (when IS-TERMUX
+  (if (display-graphic-p)
+      (setq org-agenda-prefix-format
+            '((agenda . " %i %-7:c%?-12t% s ")
+              (todo . " %i %-10:c %-5e %(gopar/get-schedule-or-deadline-if-available)")
+              (tags . " %i %-12:c")
+              (search . " %i %-12:c")))
+    ;; TUI (Termux 등): 1글자 카테고리 + 시간 + 내용
     (setq org-agenda-prefix-format
-          '((agenda  . " %i %?-12t% s")
-            (todo  . " %i ")
-            (tags  . " %i ")
-            (search . " %i "))))
+          '((agenda  . " %i%(my/org-agenda-category-short) %?-12t% s")
+            (todo  . " %i%(my/org-agenda-category-short) ")
+            (tags  . " %i%(my/org-agenda-category-short) ")
+            (search . " %i%(my/org-agenda-category-short) "))))
 
   (setq org-agenda-category-icon-alist nil)
+
+  (setq org-agenda-tags-column 'auto) ; 창 너비에 맞춰 태그 배치
 
   (setq org-agenda-hide-tags-regexp
         "agenda\\|DONT\\|LOG\\|ATTACH\\|GENERAL\\|BIRTHDAY\\|PERSONAL\\|PROFESSIONAL\\|TRAVEL\\|PEOPLE\\|HOME\\|FINANCE\\|PURCHASES")
 
+  (defun my/org-agenda-truncate-lines ()
+    "Agenda 엔트리 제목을 잘라서 태그가 보이도록 보장.
+태그 영역(마지막 N컬럼)을 침범하는 긴 제목을 '..'+태그로 교체."
+    (let* ((inhibit-read-only t)
+           (win-width (or (window-width) 80))
+           ;; 태그 영역: 창 너비의 ~30% (최소 20자, 최대 35자)
+           (tag-reserve (min 35 (max 20 (/ win-width 3)))))
+      (save-excursion
+        (goto-char (point-min))
+        (while (not (eobp))
+          (when (org-get-at-bol 'org-marker)
+            (let* ((line-end (line-end-position))
+                   (tags (org-get-at-bol 'tags))
+                   (tag-str (if tags (concat " :" (mapconcat #'identity tags ":") ":") ""))
+                   (tag-len (length tag-str))
+                   (max-content (- win-width tag-len 1)) ; 1 for space before tags
+                   (line-str (buffer-substring (line-beginning-position) line-end))
+                   (content-len (- (length line-str) (if (string-match "\\s-+:[^ ]+:$" line-str)
+                                                         (length (match-string 0 line-str))
+                                                       0))))
+              (when (> content-len max-content)
+                ;; 기존 태그 부분 제거 후 잘린 제목 + 태그 다시 삽입
+                (let* ((content-start (line-beginning-position))
+                       (pure-content (buffer-substring content-start
+                                                       (+ content-start
+                                                          (min content-len (length line-str)))))
+                       ;; 기존 태그 제거한 순수 내용
+                       (clean (if (string-match "\\(.*?\\)\\s-+:[^ \n]+:$" pure-content)
+                                  (match-string 1 pure-content)
+                                pure-content))
+                       (trunc-len (- max-content 2)) ; 2 for ".."
+                       (truncated (if (> (length clean) trunc-len)
+                                      (concat (substring clean 0 trunc-len) "..")
+                                    clean)))
+                  (delete-region (line-beginning-position) line-end)
+                  (insert truncated
+                          (make-string (max 1 (- win-width (length truncated) tag-len)) ?\s)
+                          tag-str)))))
+          (forward-line 1)))))
+
   (add-hook 'org-agenda-finalize-hook
             (lambda ()
-              ;; (setq-local line-spacing 0.2)
+              (my/org-agenda-truncate-lines)
               (define-key org-agenda-mode-map [(double-mouse-1)] 'org-agenda-goto-mouse)))
 
   (defun cc/org-agenda-goto-now ()
@@ -267,6 +314,10 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
       (if window-system
           (search-forward "← now ─")
         (search-forward "now -"))))
+
+  (after! evil-org-agenda
+    (evil-define-key* 'motion evil-org-agenda-mode-map
+      "F" #'org-agenda-follow-mode))
 
   (add-hook 'org-agenda-mode-hook
             (lambda ()
@@ -332,51 +383,6 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
 
   (setq org-journal-tag-alist '(("meet" . ?m) ("dev" . ?d) ("idea" . ?i) ("emacs" . ?e) ("discuss" . ?c) ("1on1" . ?o))) ; default nil
   )
-
-;;;;; my/org-journal — agenda 통합 강화
-
-;; 문제: org-journal-new-entry는 plain text 시간만 넣어서 org-agenda에서 안 보임.
-;; org-journal-enable-agenda-integration은 future 파일까지 전체 스캔 → 느림.
-;; 해결: 현재 주 파일만 agenda-files에 추가 + active timestamp 삽입.
-
-(defun my/org-journal--ensure-agenda-file ()
-  "현재 주 journal 파일을 org-agenda-files에 추가 (없으면)."
-  (when-let* ((entry-path (org-journal--get-entry-path)))
-    (let ((truename (file-truename entry-path)))
-      (unless (member truename (mapcar #'file-truename (org-agenda-files)))
-        (org-agenda-file-to-front entry-path)
-        (message "agenda-files에 추가: %s" (file-name-nondirectory entry-path))))))
-
-(defun my/org-journal-new-entry (&optional prefix)
-  "org-journal-new-entry + agenda 파일 등록 + active timestamp 삽입.
-PREFIX가 있으면 엔트리 생성 없이 파일만 열기 (org-journal 기본 동작)."
-  (interactive "P")
-  ;; 1. agenda-files 등록
-  (my/org-journal--ensure-agenda-file)
-  ;; 2. 기본 new-entry (timestamp는 org-journal이 HH:MM 넣음)
-  (org-journal-new-entry prefix)
-  ;; 3. active timestamp를 다음 줄에 삽입 (엔트리 생성 시에만)
-  ;; 형식: ** 11:33 제목\n<2026-03-01 Sun 11:33>
-  (unless prefix
-    (save-excursion
-      (end-of-line)
-      (insert "\n" (format-time-string "<%Y-%m-%d %a %H:%M>")))))
-
-(defun my/org-journal-last-entry ()
-  "현재 주 journal 파일을 열고 마지막 시간 엔트리로 이동.
-** HH:MM 패턴만 매칭 (** [검색어:...] 등 제외)."
-  (interactive)
-  (let* ((entry-path (org-journal--get-entry-path))
-         (buf (find-file entry-path)))
-    (with-current-buffer buf
-      (goto-char (point-max))
-      ;; ** HH:MM 또는 ** TODO/NEXT/DONE/DONT HH:MM 패턴
-      (when (re-search-backward
-             "^\\*\\* \\(?:TODO \\|NEXT \\|DONE \\|DONT \\)?[0-9]\\{2\\}:[0-9]\\{2\\}"
-             nil t)
-        (org-show-entry)
-        (org-show-children)
-        (recenter 3)))))
 
 ;;;; citar
 
