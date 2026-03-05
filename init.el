@@ -152,10 +152,10 @@
        (javascript +tree-sitter) ; all(hope(abandon(ye(who(enter(here))))))
        (web +tree-sitter) ; the tubes
        (yaml +tree-sitter) ; JSON, but readable
-       (zig +lsp)  ; C, but simpler
+       (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
        (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
-       (go +lsp)
+       (go +tree-sitter +lsp)
        (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
        (scheme +mit) ;; +racket ; a fully conniving family of lisps
        ess
