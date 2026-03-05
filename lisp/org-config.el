@@ -233,10 +233,13 @@
         "   ")))
 
   (defun my/org-agenda-category-short ()
-    "카테고리 첫 글자 반환. Agent→A, Human→H, Journal→J 등."
-    (let ((cat (org-get-category)))
-      (if (and cat (> (length cat) 0))
-          (substring cat 0 1)
+    "카테고리 첫 글자 반환. marker가 없는 줄(타임라인, diary)은 공백."
+    (let ((marker (org-get-at-bol 'org-marker)))
+      (if marker
+          (let ((cat (org-get-category)))
+            (if (and cat (> (length cat) 0))
+                (substring cat 0 1)
+              " "))
         " ")))
 
   (if (display-graphic-p)

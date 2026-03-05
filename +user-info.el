@@ -52,7 +52,7 @@
 (defun my/expand-org-file-name (filename)
   (expand-file-name filename org-directory))
 
-(defconst user-inbox-file "meta/20230202T020200--inbox-now__aprj_meta.org")
+(defconst user-inbox-file "meta/20230202T020200--now__aprj_meta.org")
 (defun my/org-inbox-file () (my/expand-org-file-name user-inbox-file))
 
 (defun my/org-tasks-file () (my/expand-org-file-name user-inbox-file))
@@ -73,11 +73,11 @@
 ;; meta
 (defun my/org-contacts-file () (my/expand-org-file-name "meta/20230303T030300--contacts.org"))
 (defun my/org-reading-file () (my/expand-org-file-name "meta/20240329T154123--reading-list.org"))
-(defun my/org-kdc-file () (my/expand-org-file-name "meta/20240312T142358--† 한국십진분류법__classification_kdc_meta.org"))
+(defun my/org-kdc-file () (my/expand-org-file-name "meta/20240312T142358--†-한국십진분류법__classification_kdc_meta.org"))
 
 (defun my/org-cheat-file () (my/expand-org-file-name "notes/20250704T091709--cheat.org"))
 
-(defun my/org-tags-file () (my/expand-org-file-name "meta/20231005T133900--† 태그__meta_tags.org"))
+(defun my/org-tags-file () (my/expand-org-file-name "meta/20231005T133900--†-태그__meta_tags.org"))
 (defun my/org-glossary-file () (my/expand-org-file-name "dict/20240913T145640--general__glossary.txt"))
 
 ;; blog

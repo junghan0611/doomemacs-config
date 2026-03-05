@@ -153,12 +153,9 @@
 ;;;; treesit
 
 (with-eval-after-load 'treesit
-  (setq treesit-auto-install-grammar 'always))
-
-;;;; DONT bugfix treesit
-
-;; (after! treesit
-;;   (setq treesit-extra-load-path (list (concat doom-profile-data-dir "/tree-sitter/"))))
+  (setq treesit-auto-install-grammar 'always)
+  ;; history가 cache 경로를 가지면 Doom advice를 우회하므로 초기화
+  (setq treesit--install-language-grammar-out-dir-history nil))
 
 ;;;; Provide
 
