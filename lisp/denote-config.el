@@ -125,7 +125,10 @@
             (text
              :reference-format "reference:  %s\n"
              :reference-regex "^reference\\s-*:")))
-    (citar-denote-mode))
+    (citar-denote-mode)
+
+    ;; embark-act on [cite:@key] → "1" for find-citation
+    (define-key citar-citation-map (kbd "1") #'citar-denote-find-citation))
   )
 
 ;;;; 업스트림 패치 (doom sync 안전)
