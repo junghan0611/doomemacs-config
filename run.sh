@@ -75,9 +75,6 @@ show_menu() {
   echo "    r) agent restart"
   echo "    e) agent eval"
   echo ""
-  echo "  ${YELLOW}Patch${NC}"
-  echo "    p) citar-denote docstring 패치"
-  echo ""
   echo "    0) Exit"
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -279,28 +276,6 @@ cmd_agent_eval() {
   emacsclient -s "$AGENT_DAEMON" --eval "$expr"
 }
 
-# ━━━ Patch ━━━
-
-cmd_patch_citar() {
-  info "citar-denote docstring 패치..."
-  local files=(
-    "$HOME/doomemacs/.local/straight/repos/citar-denote/citar-denote.el"
-    "$HOME/doomemacs/.local/straight/build-30.2/citar-denote/citar-denote.el"
-  )
-  local patched=0
-  for file in "${files[@]}"; do
-    if [[ -f "$file" ]] && grep -q "\`citar-denote-keyword'\"." "$file"; then
-      sed -i "s/\`citar-denote-keyword'\"./\`citar-denote-keyword'.\"/" "$file"
-      rm -f "${file}c" 2>/dev/null
-      success "패치됨: $(basename "$(dirname "$file")")/$(basename "$file")"
-      patched=$((patched + 1))
-    fi
-  done
-  if [[ $patched -eq 0 ]]; then
-    info "패치 불필요 (이미 적용됨 또는 파일 없음)"
-  fi
-}
-
 # ━━━ CLI Mode (비대화) ━━━
 
 cli_mode() {
@@ -344,9 +319,8 @@ cli_mode() {
         *)       err "agent: start|stop|restart|status|eval" ;;
       esac
       ;;
-    patch)       cmd_patch_citar ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|patch> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -400,7 +374,6 @@ main() {
       x) cmd_agent_stop ;;
       r) cmd_agent_stop; sleep 1; cmd_agent_start ;;
       e) cmd_agent_eval ;;
-      p) cmd_patch_citar ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
