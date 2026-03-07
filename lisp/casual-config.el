@@ -9,111 +9,88 @@
 
 ;; Casual: 각 모드별 Transient UI를 <f12>로 통일 접근.
 ;; 지원 모드에서 <f12> 누르면 해당 모드의 casual 메뉴가 열림.
+;; M-<f12>는 casual-editkit (범용 편집, 모드 무관).
 ;; https://github.com/kickingvegas/casual
+;;
+;; 각 바인딩은 해당 모드가 로드된 후 설정됨 (after!).
+;; casual 서브 패키지는 autoload되어 있어 별도 require 불필요.
 
 ;;; Code:
 
 ;;;; <f12> — 모드별 casual-*-tmenu 바인딩
 
-(use-package! casual
-  :defer t
-  :config
-  ;; 각 모드 맵에 <f12> → casual-*-tmenu 바인딩
-  (map!
-   (:after dired
-    :map dired-mode-map
-    "<f12>" #'casual-dired-tmenu)
+(after! dired
+  (map! :map dired-mode-map "<f12>" #'casual-dired-tmenu))
 
-   (:after calc
-    :map calc-mode-map
-    "<f12>" #'casual-calc-tmenu)
+(after! calc
+  (map! :map calc-mode-map "<f12>" #'casual-calc-tmenu))
 
-   (:after ibuffer
-    :map ibuffer-mode-map
-    "<f12>" #'casual-ibuffer-tmenu)
+(after! ibuffer
+  (map! :map ibuffer-mode-map "<f12>" #'casual-ibuffer-tmenu))
 
-   (:after info
-    :map Info-mode-map
-    "<f12>" #'casual-info-tmenu)
+(after! info
+  (map! :map Info-mode-map "<f12>" #'casual-info-tmenu))
 
-   (:after bookmark
-    :map bookmark-bmenu-mode-map
-    "<f12>" #'casual-bookmarks-tmenu)
+(after! bookmark
+  (map! :map bookmark-bmenu-mode-map "<f12>" #'casual-bookmarks-tmenu))
 
-   (:after re-builder
-    :map reb-mode-map
-    "<f12>" #'casual-re-builder-tmenu)
+(after! re-builder
+  (map! :map reb-mode-map "<f12>" #'casual-re-builder-tmenu))
 
-   (:after org-agenda
-    :map org-agenda-mode-map
-    "<f12>" #'casual-agenda-tmenu)
+(after! org-agenda
+  (map! :map org-agenda-mode-map "<f12>" #'casual-agenda-tmenu))
 
-   (:after org
-    :map org-mode-map
-    "<f12>" #'casual-org-tmenu)
+(after! org
+  (map! :map org-mode-map "<f12>" #'casual-org-tmenu))
 
-   (:after eww
-    :map eww-mode-map
-    "<f12>" #'casual-eww-tmenu)
+(after! eww
+  (map! :map eww-mode-map "<f12>" #'casual-eww-tmenu))
 
-   (:after compile
-    :map compilation-mode-map
-    "<f12>" #'casual-compile-tmenu)
+(after! compile
+  (map! :map compilation-mode-map "<f12>" #'casual-compile-tmenu))
 
-   (:after man
-    :map Man-mode-map
-    "<f12>" #'casual-man-tmenu)
+(after! man
+  (map! :map Man-mode-map "<f12>" #'casual-man-tmenu))
 
-   (:after esh-mode
-    :map eshell-mode-map
-    "<f12>" #'casual-eshell-tmenu)
+(after! esh-mode
+  (map! :map eshell-mode-map "<f12>" #'casual-eshell-tmenu))
 
-   (:after ediff
-    :map ediff-mode-map
-    "<f12>" #'casual-ediff-tmenu)
+(after! ediff
+  (map! :map ediff-mode-map "<f12>" #'casual-ediff-tmenu))
 
-   (:after image-mode
-    :map image-mode-map
-    "<f12>" #'casual-image-tmenu)
+(after! image-mode
+  (map! :map image-mode-map "<f12>" #'casual-image-tmenu))
 
-   (:after calendar
-    :map calendar-mode-map
-    "<f12>" #'casual-calendar-tmenu)
+(after! calendar
+  (map! :map calendar-mode-map "<f12>" #'casual-calendar-tmenu))
 
-   (:after help-mode
-    :map help-mode-map
-    "<f12>" #'casual-help-tmenu)
+(after! help-mode
+  (map! :map help-mode-map "<f12>" #'casual-help-tmenu))
 
-   (:after css-mode
-    :map css-mode-map
-    "<f12>" #'casual-css-tmenu)
+(after! css-mode
+  (map! :map css-mode-map "<f12>" #'casual-css-tmenu))
 
-   (:after csv-mode
-    :map csv-mode-map
-    "<f12>" #'casual-csv-tmenu)
+(after! csv-mode
+  (map! :map csv-mode-map "<f12>" #'casual-csv-tmenu))
 
-   (:after sgml-mode
-    :map html-mode-map
-    "<f12>" #'casual-html-tmenu)
+(after! sgml-mode
+  (map! :map html-mode-map "<f12>" #'casual-html-tmenu))
 
-   (:after make-mode
-    :map makefile-mode-map
-    "<f12>" #'casual-make-tmenu)
+(after! make-mode
+  (map! :map makefile-mode-map "<f12>" #'casual-make-tmenu))
 
-   (:after elisp-mode
-    :map emacs-lisp-mode-map
-    "<f12>" #'casual-elisp-tmenu)
+(after! elisp-mode
+  (map! :map emacs-lisp-mode-map "<f12>" #'casual-elisp-tmenu))
 
-   (:after bibtex
-    :map bibtex-mode-map
-    "<f12>" #'casual-bibtex-tmenu)
+(after! bibtex
+  (map! :map bibtex-mode-map "<f12>" #'casual-bibtex-tmenu))
 
-   (:after isearch
-    :map isearch-mode-map
-    "<f12>" #'casual-isearch-tmenu))
+(after! isearch
+  (map! :map isearch-mode-map "<f12>" #'casual-isearch-tmenu))
 
-  ;; editkit: 범용 편집 메뉴 (모드 무관, M-<f12>)
-  (map! "M-<f12>" #'casual-editkit-main-tmenu))
+;;;; M-<f12> — casual-editkit (범용 편집, 모드 무관)
+
+(map! "M-<f12>" #'casual-editkit-main-tmenu)
 
 (provide 'casual-config)
 ;;; casual-config.el ends here
