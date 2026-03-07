@@ -494,18 +494,16 @@
 
    (:map
     embark-file-map
-    "O" #'consult-outline
     "x" #'embark-open-externally+
     "5" #'embark-dired-merge-action
-    "o" nil
-    (:prefix ("o" . "open")
+    (:prefix ("O" . "split-open")
              "j" (embark-split-action find-file evil-window-split)
              "k" (embark-split-action find-file +evil/window-split-and-follow)
              "h" (embark-split-action find-file evil-window-vsplit)
              "l" (embark-split-action find-file +evil/window-vsplit-and-follow)
              "a" (embark-ace-action find-file))
     (:prefix
-     ("1" . "gptel")
+     ("g" . "gptel")
      "p" #'my/gptel-apply-prompt-to-file
      "t" #'my/gptel-translate-file
      "s" #'my/gptel-summarize-file)
@@ -513,8 +511,7 @@
 
    (:map
     embark-buffer-map
-    "o" nil
-    (:prefix ("o" . "open")
+    (:prefix ("O" . "split-open")
              "j" (embark-split-action switch-to-buffer evil-window-split)
              "k" (embark-split-action switch-to-buffer +evil/window-split-and-follow)
              "l" (embark-split-action switch-to-buffer evil-window-vsplit)
@@ -562,7 +559,7 @@
     embark-sentence-map
     embark-paragraph-map)
    (:prefix
-    ("1" . "gptel")
+    ("g" . "gptel")
     "p" #'my/gptel-apply-prompt-to-region
     "[" #'my/gptel-quick-region
     "t" #'my/gptel-translate-region
