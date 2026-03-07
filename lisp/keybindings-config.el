@@ -34,6 +34,7 @@
       "C-c L" #'my/org-store-link-id-optional
       "C-c i" #'org-insert-link
       "C-c a" #'org-agenda
+      "C-c M-i" #'bh/insert-inactive-timestamp
 
       ;; Scroll (evil)
       "M-u" #'evil-scroll-up
@@ -411,6 +412,7 @@
         "y" #'my/yank-as-markdown
         ";" #'my/clear-nbsp-and-ascii-punctuations
         ":" #'my/insert-nbsp-simple-all
+        "M-r" #'my/refile-heading-to-denote-file
         )
   )
 
