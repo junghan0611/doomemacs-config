@@ -236,6 +236,7 @@
 (require 'search-config)             ; recent-rgrep 등 검색 도구
 (require 'keybindings-config)
 (require 'keybindings-denote-config)
+(require 'casual-config)               ; casual transient UI (<f12>)
 (require 'termux-config)
 (require 'functions)
 
