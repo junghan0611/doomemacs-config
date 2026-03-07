@@ -43,8 +43,28 @@
   ;; +rss-enable-sliced-images ;  default t
   (setq rmh-elfeed-org-files (list (my/org-elfeed-file))) ; default ~/org/elfeed.org
   (setq elfeed-search-filter "") ; "@1-year-ago" "@6-months-ago" "@1-month-ago +unread"
-  (setq elfeed-search-title-max-width 90) ; default 70
   ;; (add-hook 'elfeed-search-mode-hook #'elfeed-update)
+
+  (if (display-graphic-p)
+      (setq elfeed-search-title-max-width 90  ; GUI: 넓게
+            elfeed-search-trailing-width 30)
+    ;; TUI (Termux 등): date + title만, feed/tag 생략
+    (setq elfeed-search-title-max-width 200    ; 창 너비까지 최대한 사용
+          elfeed-search-trailing-width 0)       ; trailing 영역 제거
+    (defun elfeed-search-print-entry--default (entry)
+      "TUI용 elfeed 엔트리 표시: date + title만."
+      (let* ((date (elfeed-search-format-date (elfeed-entry-date entry)))
+             (title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
+             (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
+             (title-width (- (window-width) 12)) ; date(10) + space(2)
+             (title-column (elfeed-format-column
+                            title (elfeed-clamp
+                                   elfeed-search-title-min-width
+                                   title-width
+                                   title-width)
+                            :left)))
+        (insert (propertize date 'face 'elfeed-search-date-face) " ")
+        (insert (propertize title-column 'face title-faces 'kbd-help title)))))
   )
 
 (after! elfeed-tube
