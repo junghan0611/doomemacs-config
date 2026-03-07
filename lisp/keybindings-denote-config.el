@@ -10,6 +10,25 @@
 
 ;; Denote keybindings for Doom Emacs
 ;; Access via M-e or C-c n
+;;
+;; ━━━ which-key 라벨 규칙 ━━━
+;;
+;; map!의 (:prefix ("key" . "desc") ...) 형태를 쓰면 안 된다.
+;; general.el이 which-key-replacement-alist에 nil(전역)로 라벨을 등록하여
+;; 다른 키맵(embark, citar 등)에서도 같은 키에 해당 라벨이 표시된다.
+;;
+;; 올바른 방법:
+;;   1. map!에서는 (:prefix "key" ...) — desc 없이 키만 지정
+;;   2. 라벨은 which-key-add-keymap-based-replacements로 해당 키맵에만 등록
+;;
+;; Bad:
+;;   (map! :map my-map (:prefix ("e" . "extra") ...))
+;;   → 모든 키맵에서 "e" 키에 "extra" 라벨이 보임
+;;
+;; Good:
+;;   (map! :map my-map (:prefix "e" ...))
+;;   (which-key-add-keymap-based-replacements my-map "e" "extra")
+;;   → my-map에서만 "e" 키에 "extra" 라벨이 보임
 
 ;;; Code:
 

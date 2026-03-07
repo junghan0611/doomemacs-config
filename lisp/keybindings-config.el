@@ -13,6 +13,11 @@
 ;; - Doom leader keys (SPC)
 ;; - Mode-specific keymaps
 ;; - Evil keybindings
+;;
+;; NOTE: map! (:prefix ("key" . "desc")) 사용 금지 (embark/citar 등 외부 키맵)
+;; → general.el이 which-key 라벨을 전역 등록하여 다른 맵에 오염됨
+;; → (:prefix "key") + which-key-add-keymap-based-replacements 사용
+;; → 자세한 설명: keybindings-denote-config.el Commentary 참조
 
 ;;; Code:
 
