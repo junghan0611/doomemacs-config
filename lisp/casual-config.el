@@ -55,11 +55,12 @@
 (after! esh-mode
   (map! :map eshell-mode-map "<f12>" #'casual-eshell-tmenu))
 
-(after! ediff
-  (map! :map ediff-mode-map "<f12>" #'casual-ediff-tmenu))
+;; ediff/image: keymap이 모드 활성화 시에만 생성 → hook으로 바인딩
+(add-hook! 'ediff-keymap-setup-hook
+  (define-key ediff-mode-map (kbd "<f12>") #'casual-ediff-tmenu))
 
-(after! image-mode
-  (map! :map image-mode-map "<f12>" #'casual-image-tmenu))
+(add-hook! 'image-mode-hook
+  (define-key image-mode-map (kbd "<f12>") #'casual-image-tmenu))
 
 (after! calendar
   (map! :map calendar-mode-map "<f12>" #'casual-calendar-tmenu))
