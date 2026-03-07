@@ -14,6 +14,11 @@
 ;;
 ;; 각 바인딩은 해당 모드가 로드된 후 설정됨 (after!).
 ;; casual 서브 패키지는 autoload되어 있어 별도 require 불필요.
+;;
+;; 바닐라 Emacs 참고 (Emacs 29.1+ keymap-set 사용):
+;;   (keymap-set dired-mode-map "<f12>" #'casual-dired-tmenu)
+;;   (keymap-set calc-mode-map "<f12>" #'casual-calc-tmenu)
+;; Doom에서는 map! + after! 패턴을 사용.
 
 ;;; Code:
 
@@ -23,7 +28,8 @@
   (map! :map dired-mode-map "<f12>" #'casual-dired-tmenu))
 
 (after! calc
-  (map! :map calc-mode-map "<f12>" #'casual-calc-tmenu))
+  (map! :map calc-mode-map "<f12>" #'casual-calc-tmenu)
+  (map! :map calc-alg-map "<f12>" #'casual-calc-tmenu))
 
 (after! ibuffer
   (map! :map ibuffer-mode-map "<f12>" #'casual-ibuffer-tmenu))
