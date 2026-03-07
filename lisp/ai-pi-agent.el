@@ -31,7 +31,17 @@
 ;;;; pi-coding-agent 기본 설정
 
 (use-package! pi-coding-agent
-  :init (defalias 'pi 'pi-coding-agent)
+  :init
+  (defalias 'pi 'pi-coding-agent)
+  ;; WORKAROUND: md-ts-mode autoload가 전역 markdown-mode를 오버라이딩
+  ;; → Doom의 markdown-mode-map/evil-markdown-mode 키바인딩 소실
+  ;; https://github.com/dnouri/pi-coding-agent/issues/155
+  (after! md-ts-mode
+    (setq auto-mode-alist
+          (assoc-delete-all "\\.md\\'" auto-mode-alist))
+    (when (boundp 'treesit-major-mode-remap-alist)
+      (setq treesit-major-mode-remap-alist
+            (assoc-delete-all 'markdown-mode treesit-major-mode-remap-alist))))
   :custom
   (pi-coding-agent-input-window-height 10)
   (pi-coding-agent-tool-preview-lines 10)

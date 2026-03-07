@@ -131,8 +131,8 @@
        ;; plantuml            ; diagrams for confusing people more
        ;; graphviz
        latex             ; writing papers in Emacs has never been so fun
-       markdown          ; writing docs for people to ignore
-       (org                         ; organize your plain life in plain text
+       (markdown +tree-sitter) ; writing docs for people to ignore
+       (org                          ; organize your plain life in plain text
         +hugo                     ; use Emacs for hugo blogging
         +pandoc                     ; export-with-pandoc support
         +gnuplot                    ; who doesn't like pretty pictures
