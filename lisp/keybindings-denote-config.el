@@ -60,7 +60,7 @@
 ;;;; Annotate (a)
 
 (map! :map my/denote-map
-      (:prefix ("a" . "annotate")
+      (:prefix "a"
        :desc "Archive"              "a" #'orgabilize-org-archive
        :desc "Insert link"          "l" #'orgabilize-insert-org-link
        :desc "Find archived"        "f" #'orgabilize-org-find-archived-file
@@ -76,7 +76,7 @@
 ;;;; Bibliography (b)
 
 (map! :map my/denote-map
-      (:prefix ("b" . "bibliography")
+      (:prefix "b"
        :desc "Insert citation"      "b" #'citar-insert-citation
        :desc "Create note"          "c" #'citar-create-note
        :desc "Create silo note"     "C" #'citar-denote-create-silo-note
@@ -102,7 +102,7 @@
 ;;;; Denote Extra (e)
 
 (map! :map my/denote-map
-      (:prefix ("e" . "extra")
+      (:prefix "e"
        :desc "Random notes"         "1" #'my/denote-random-notes
        :desc "Random bib"           "2" #'my/denote-random-bib
        :desc "Random meta"          "3" #'my/denote-random-meta
@@ -117,7 +117,7 @@
 ;;;; Publish (p)
 
 (map! :map my/denote-map
-      (:prefix ("p" . "publish")
+      (:prefix "p"
        :desc "Hugo lastmod"         "1" #'my/insert-hugo-lastmod-time-stamp
        :desc "Open in hugo"         "o" #'my/org-open-exported-markdown-in-hugo-content
        :desc "Export directory"     "E" #'my/org-hugo-export-directory
@@ -135,7 +135,7 @@
 ;;;; Search (s)
 
 (map! :map my/denote-map
-      (:prefix ("s" . "search")
+      (:prefix "s"
        :desc "Search"               "SPC" #'denote-search
        :desc "Search"               "f" #'denote-search
        :desc "Marked dired"         "d" #'denote-search-marked-dired-files
@@ -147,7 +147,7 @@
 ;;;; Sequence (M-s)
 
 (map! :map my/denote-map
-      (:prefix ("M-s" . "sequence")
+      (:prefix "M-s"
        :desc "New sequence"         "n" #'denote-sequence
        :desc "Find"                 "F" #'denote-sequence-find
        :desc "Link"                 "l" #'denote-sequence-link
@@ -161,26 +161,26 @@
 ;;;; Explore (x)
 
 (map! :map my/denote-map
-      (:prefix ("x" . "explore")
+      (:prefix "x"
                ;; Statistics
-               (:prefix ("c" . "count")
+               (:prefix "c"
                 :desc "Count notes"         "n" #'denote-explore-count-notes
                 :desc "Count keywords"      "k" #'denote-explore-count-keywords)
                ;; Barchart
-               (:prefix ("b" . "barchart")
+               (:prefix "b"
                 :desc "Filetypes"           "f" #'denote-explore-barchart-filetypes
                 :desc "Keywords"            "k" #'denote-explore-barchart-keywords
                 :desc "Timeline"            "t" #'denote-explore-barchart-timeline
                 :desc "Degree"              "d" #'denote-explore-barchart-degree
                 :desc "Backlinks"           "b" #'denote-explore-barchart-backlinks)
                ;; Random
-               (:prefix ("r" . "random")
+               (:prefix "r"
                 :desc "Random note"         "n" #'denote-explore-random-note
                 :desc "Random regex"        "r" #'denote-explore-random-regex
                 :desc "Random link"         "l" #'denote-explore-random-link
                 :desc "Random keyword"      "k" #'denote-explore-random-keyword)
                ;; Janitor
-               (:prefix ("j" . "janitor")
+               (:prefix "j"
                 :desc "Duplicate notes"     "d" #'denote-explore-duplicate-notes
                 :desc "Duplicate dired"     "D" #'denote-explore-duplicate-notes-dired
                 :desc "Missing links"       "l" #'denote-explore-missing-links
@@ -190,7 +190,7 @@
                 :desc "Sync metadata"       "y" #'denote-explore-sync-metadata
                 :desc "Isolated files"      "i" #'denote-explore-isolated-files)
                ;; Network
-               (:prefix ("n" . "network")
+               (:prefix "n"
                 :desc "Network"             "n" #'denote-explore-network
                 :desc "Regenerate"          "r" #'denote-explore-network-regenerate)))
 

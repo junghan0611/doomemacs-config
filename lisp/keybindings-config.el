@@ -472,6 +472,20 @@
   ;; (setq embark-help-key "M-h") ;; doom's C-h
   ;; (setq embark-indicators '(+vertico-embark-which-key-indicator embark-highlight-indicator
   ;;                           embark-isearch-highlight-indicator))
+
+  ;; embark 맵 which-key 라벨 (keymap-based → 전역 오염 방지)
+  (after! which-key
+    (which-key-add-keymap-based-replacements embark-file-map
+      "O" "split-open"
+      "g" "gptel")
+    (which-key-add-keymap-based-replacements embark-buffer-map
+      "O" "split-open")
+    (which-key-add-keymap-based-replacements embark-org-heading-map
+      "9" "denote")
+    (dolist (map (list embark-identifier-map embark-region-map
+                       embark-sentence-map embark-paragraph-map))
+      (which-key-add-keymap-based-replacements map
+        "g" "gptel")))
   ;; (advice-add #'embark-completing-read-prompter
   ;;             :around #'embark-hide-which-key-indicator)
 
@@ -496,14 +510,13 @@
     embark-file-map
     "x" #'embark-open-externally+
     "5" #'embark-dired-merge-action
-    (:prefix ("O" . "split-open")
+    (:prefix "O"
              "j" (embark-split-action find-file evil-window-split)
              "k" (embark-split-action find-file +evil/window-split-and-follow)
              "h" (embark-split-action find-file evil-window-vsplit)
              "l" (embark-split-action find-file +evil/window-vsplit-and-follow)
              "a" (embark-ace-action find-file))
-    (:prefix
-     ("g" . "gptel")
+    (:prefix "g"
      "p" #'my/gptel-apply-prompt-to-file
      "t" #'my/gptel-translate-file
      "s" #'my/gptel-summarize-file)
@@ -511,7 +524,7 @@
 
    (:map
     embark-buffer-map
-    (:prefix ("O" . "split-open")
+    (:prefix "O"
              "j" (embark-split-action switch-to-buffer evil-window-split)
              "k" (embark-split-action switch-to-buffer +evil/window-split-and-follow)
              "l" (embark-split-action switch-to-buffer evil-window-vsplit)
@@ -520,7 +533,7 @@
 
    (:map
     embark-org-heading-map
-    (:prefix ("9" . "denote") ;; TODO add more denote function
+    (:prefix "9" ;; TODO add more denote function
      :desc "denote add links" "u" #'denote-add-links))
 
    (:map
@@ -558,8 +571,7 @@
     embark-region-map
     embark-sentence-map
     embark-paragraph-map)
-   (:prefix
-    ("g" . "gptel")
+   (:prefix "g"
     "p" #'my/gptel-apply-prompt-to-region
     "[" #'my/gptel-quick-region
     "t" #'my/gptel-translate-region
