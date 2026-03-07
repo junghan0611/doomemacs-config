@@ -112,8 +112,8 @@
     :map isearch-mode-map
     "<f12>" #'casual-isearch-tmenu))
 
-  ;; editkit: 범용 편집 메뉴 (모드 무관, C-<f12>)
-  (map! "C-<f12>" #'casual-editkit-main-tmenu))
+  ;; editkit: 범용 편집 메뉴 (모드 무관, M-<f12>)
+  (map! "M-<f12>" #'casual-editkit-main-tmenu))
 
 (provide 'casual-config)
 ;;; casual-config.el ends here
