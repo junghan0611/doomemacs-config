@@ -54,6 +54,10 @@
 (setq auto-save-default nil)
 (setq create-lockfiles nil)
 
+;; org-element 캐시 비활성화 — 다른 프로세스와 동시 접근
+(setq org-element-use-cache nil)
+(setq org-element-cache-persistent nil)
+
 ;; Enable debug on error
 (setq debug-on-error t)
 

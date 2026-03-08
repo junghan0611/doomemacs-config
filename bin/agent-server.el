@@ -64,6 +64,13 @@
 (setq auto-save-default nil)
 (setq create-lockfiles nil)
 
+;; org-element 캐시 비활성화 — 멀티 에이전트 환경
+;; 인간(Doom)과 다른 에이전트가 같은 org 파일을 동시 접근.
+;; persistent 캐시가 있으면 stale 데이터를 읽을 수 있음.
+;; agent-server는 항상 디스크에서 최신 상태를 읽어야 한다.
+(setq org-element-use-cache nil)
+(setq org-element-cache-persistent nil)
+
 (message "[agent-server] Starting v%s ..." agent-server-version)
 
 ;;;; Doom Straight Package Loading Infrastructure
