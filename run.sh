@@ -243,7 +243,10 @@ cmd_agent_start() {
     return 0
   fi
   info "에이전트 서버 시작..."
-  emacs --daemon="$AGENT_DAEMON" --load "$AGENT_LOAD" 2>&1 | tail -5
+  # --init-directory: Doom init 우회 (서버 충돌 방지)
+  # agent-server.el이 straight build에서 직접 load-path 구성
+  mkdir -p /tmp/agent-emacs-init
+  emacs --init-directory=/tmp/agent-emacs-init --daemon="$AGENT_DAEMON" --load "$AGENT_LOAD" 2>&1 | tail -5
   success "에이전트 서버 시작됨"
 }
 

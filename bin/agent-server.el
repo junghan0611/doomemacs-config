@@ -80,11 +80,12 @@
   (or (getenv "EMACSDIR")
       (expand-file-name "~/.emacs.d")))
 
-;; Load Doom core (minimal — for straight.el paths)
+;; NOTE: doom.el, doom-start.el 로드하면 Doom 전체 초기화 실행 →
+;; 기존 Doom GUI 서버와 충돌 ("Emacs server already running").
+;; load-path만 필요하므로 doom 코어 로드하지 않음.
+;; straight build 디렉토리에서 직접 load-path 구성.
 (when (file-directory-p doom-emacs-dir)
-  (setq user-emacs-directory doom-emacs-dir)
-  (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
-  (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
+  (setq user-emacs-directory doom-emacs-dir))
 
 ;; Disable package.el — Doom uses straight.el
 (setq package-enable-at-startup nil)

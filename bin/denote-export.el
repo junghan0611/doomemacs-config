@@ -79,11 +79,10 @@
       (expand-file-name "~/doomemacs-starter")
       (expand-file-name "~/.config/emacs")))
 
-;; Load Doom core (minimal)
+;; NOTE: doom.el, doom-start.el 로드하면 Doom 전체 초기화 실행 →
+;; 기존 Doom GUI 서버와 충돌. load-path만 필요하므로 직접 구성.
 (when (file-directory-p doom-emacs-dir)
-  (setq user-emacs-directory doom-emacs-dir)
-  (load (expand-file-name "lisp/doom.el" doom-emacs-dir) nil t)
-  (load (expand-file-name "lisp/doom-start.el" doom-emacs-dir) nil t))
+  (setq user-emacs-directory doom-emacs-dir))
 
 ;; CRITICAL: Disable package.el completely to prevent ELPA usage
 (setq package-enable-at-startup nil)
