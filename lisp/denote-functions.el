@@ -277,34 +277,6 @@ With prefix ARG, prompt for a date via calendar."
      (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
              regexp))))
 
-;;;; Dblock Advice: include-date fix + folder prefix
-
-;; denote-org upstream bug: include-date lambda에서 file-type이 nil로 전달되어
-;; front-matter 제목 대신 파일명을 사용하는 문제 수정 (protesilaos/denote-org#21)
-;; 추가: 폴더명 prefix로 다중 폴더 정렬 경계 구분
-(defun my/denote-org--insert-links-override (orig-fn files &optional id-only include-date)
-  "Advice around `denote-org--insert-links'.
-Fixes:
-1. file-type nil guard for include-date lambda (upstream bug)
-2. Add folder prefix [notes], [bib], etc. for multi-folder clarity"
-  (if include-date
-      ;; Override: include-date 경로를 직접 처리
-      (let ((denote-link-description-format
-             (lambda (file file-type)
-               (let* ((file-type (or file-type (denote-filetype-heuristics file)))
-                      (title (denote-retrieve-title-or-filename file file-type))
-                      (identifier (denote-retrieve-filename-identifier file))
-                      (date (denote-id-to-date identifier))
-                      (parent-dir (file-name-nondirectory
-                                   (directory-file-name
-                                    (file-name-directory file)))))
-                 (format "%s/ %s (%s)" parent-dir title date)))))
-        (denote-link--insert-links files 'org id-only :no-other-sorting))
-    ;; include-date nil: 원래 동작 유지
-    (funcall orig-fn files id-only include-date)))
-
-(advice-add 'denote-org--insert-links :around #'my/denote-org--insert-links-override)
-
 ;;;; Refile & Extract
 
 (require 'org-archive)

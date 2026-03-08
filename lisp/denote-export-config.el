@@ -163,6 +163,52 @@
 (setq org-export-use-babel nil)                   ; Faster export
 (setq org-export-with-tags 'not-in-toc)
 
+;;;; Section 1.5: Dblock Advice — include-date fix + folder prefix
+;; Shared by both interactive Emacs (config.el → denote-export-config.el)
+;; and batch/daemon export (bin/denote-export.el → denote-export-config.el)
+;;
+;; Fixes:
+;; 1. denote-org upstream bug: include-date lambda receives nil file-type,
+;;    falls back to filename instead of front-matter #+title: (denote-org#21)
+;; 2. Add folder/ prefix for multi-folder dblock clarity
+;;
+;; Remove when upstream fixes: https://github.com/protesilaos/denote-org/issues/21
+
+(defun my/denote-org--read-hugo-lastmod (file)
+  "Read #+hugo_lastmod: from FILE front matter (first 4096 bytes).
+Returns YYYY-MM-DD string or nil."
+  (when (file-exists-p file)
+    (with-temp-buffer
+      (insert-file-contents file nil 0 4096)
+      (goto-char (point-min))
+      (when (re-search-forward
+             "^#\\+hugo_lastmod:\\s-+\\[?\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\)" nil t)
+        (match-string 1)))))
+
+(defun my/denote-org--insert-links-override (orig-fn files &optional id-only include-date)
+  "Advice around `denote-org--insert-links'.
+Fixes file-type nil guard, adds folder prefix and lastmod for include-date.
+Format: folder/ title 'YYYY-MM-DD #YYYY-MM-DD (citar style)"
+  (if include-date
+      (let ((denote-link-description-format
+             (lambda (file file-type)
+               (let* ((file-type (or file-type (denote-filetype-heuristics file)))
+                      (title (denote-retrieve-title-or-filename file file-type))
+                      (identifier (denote-retrieve-filename-identifier file))
+                      (date (denote-id-to-date identifier))
+                      (lastmod (my/denote-org--read-hugo-lastmod file))
+                      (parent-dir (file-name-nondirectory
+                                   (directory-file-name
+                                    (file-name-directory file)))))
+                 (if lastmod
+                     (format "%s/ %s '%s #%s" parent-dir title date lastmod)
+                   (format "%s/ %s '%s" parent-dir title date))))))
+        (denote-link--insert-links files 'org id-only :no-other-sorting))
+    (funcall orig-fn files id-only include-date)))
+
+(with-eval-after-load 'denote-org
+  (advice-add 'denote-org--insert-links :around #'my/denote-org--insert-links-override))
+
 ;;;; Section 2: Denote Link Conversion
 ;; Migrated from denote-hugo.el
 
