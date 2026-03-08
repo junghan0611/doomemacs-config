@@ -298,7 +298,7 @@ Fixes:
                       (parent-dir (file-name-nondirectory
                                    (directory-file-name
                                     (file-name-directory file)))))
-                 (format "[%s] %s (%s)" parent-dir title date)))))
+                 (format "%s/ %s (%s)" parent-dir title date)))))
         (denote-link--insert-links files 'org id-only :no-other-sorting))
     ;; include-date nil: 원래 동작 유지
     (funcall orig-fn files id-only include-date)))
