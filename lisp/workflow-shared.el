@@ -39,8 +39,13 @@
            (let ((jp (ignore-errors (org-journal--get-entry-path))))
              (when (and jp (file-exists-p jp)) (list jp)))))))
 
-;; 초기 구성
-(my/org-agenda-files-rebuild)
+;; 초기 구성: Doom에서는 즉시, agent-server에서는 init 후 지연 실행
+;; (denote 캐시가 준비된 후 rebuild해야 _aprj 파일이 잡힘)
+(if (bound-and-true-p doom-init-time)
+    ;; Doom: 이미 초기화 완료
+    (my/org-agenda-files-rebuild)
+  ;; agent-server: init 완료 후 rebuild
+  (add-hook 'emacs-startup-hook #'my/org-agenda-files-rebuild))
 
 ;;;;; my/org-journal — agenda 통합 강화
 

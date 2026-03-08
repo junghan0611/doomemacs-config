@@ -387,6 +387,48 @@ Requires write access — dblock update modifies and saves the file."
         (when (buffer-live-p buf)
           (kill-buffer buf))))))
 
+;;;; Org Agenda API
+
+(defun agent-org-agenda-day (&optional date)
+  "오늘(또는 DATE) 일간 agenda 뷰를 clean text로 반환.
+DATE는 \"-1\" (어제), \"+3\" (3일 후), \"2026-03-01\" 등.
+Human + Agent + Diary 통합 타임라인."
+  (let ((org-agenda-sticky nil)        ; 캐시 사용 안 함
+        (org-agenda-window-setup 'current-window)
+        (day (cond
+              ((null date) nil)
+              ((string-match "^[+-]?[0-9]+$" date)
+               (+ (org-today) (string-to-number date)))
+              (t (org-time-string-to-absolute date)))))
+    (org-agenda-list nil day 1)
+    (let ((content (buffer-substring-no-properties (point-min) (point-max))))
+      (kill-buffer)
+      content)))
+
+(defun agent-org-agenda-week (&optional date)
+  "DATE 기준 주간 agenda 뷰를 clean text로 반환."
+  (let ((org-agenda-sticky nil)
+        (org-agenda-window-setup 'current-window)
+        (day (cond
+              ((null date) nil)
+              ((string-match "^[+-]?[0-9]+$" date)
+               (+ (org-today) (string-to-number date)))
+              (t (org-time-string-to-absolute date)))))
+    (org-agenda-list nil day 7)
+    (let ((content (buffer-substring-no-properties (point-min) (point-max))))
+      (kill-buffer)
+      content)))
+
+(defun agent-org-agenda-tags (match)
+  "태그 MATCH 조건으로 필터링된 agenda 뷰 반환.
+예: \"commit\", \"pi|botlog\", \"+emacs-draft\"."
+  (let ((org-agenda-sticky nil)
+        (org-agenda-window-setup 'current-window))
+    (org-tags-view nil match)
+    (let ((content (buffer-substring-no-properties (point-min) (point-max))))
+      (kill-buffer)
+      content)))
+
 ;;;; Memory Management
 
 (setq gc-cons-threshold (* 128 1024 1024)) ; 128MB — lighter than export server
@@ -405,7 +447,9 @@ Requires write access — dblock update modifies and saves the file."
 (message "[agent-server] API: agent-server-status, agent-org-read-file,")
 (message "[agent-server]      agent-org-get-headings, agent-org-get-properties,")
 (message "[agent-server]      agent-denote-search, agent-citar-lookup,")
-(message "[agent-server]      agent-org-dblock-update")
+(message "[agent-server]      agent-org-dblock-update,")
+(message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
+(message "[agent-server]      agent-org-agenda-tags")
 (message "[agent-server] REPL: emacs_eval for runtime extension")
 (message "[agent-server] ========================================")
 
