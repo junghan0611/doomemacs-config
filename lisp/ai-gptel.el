@@ -15,7 +15,7 @@
 ;;
 ;;; Commentary:
 ;;
-;;  Description
+;; Description
 ;;
 
 ;;; Code:
@@ -229,6 +229,11 @@
   (setq gptel-magit-backend gptel-openrouter-backend)
   (setq gptel-magit-model gptel-openrouter-flash-model)
 
+  ;; 커서를 단어 위에 놓고 → gptel-quick (또는 embark [ 키)
+  ;; +     더 긴 설명
+  ;; M-w   kill-ring 복사 → C-y로 붙여넣기
+  ;; M-RET 채팅 버퍼로 이어서 질문
+  ;; C-g   닫기
   ;; gptel-quick: 빠른 조회용 — flash 모델 + 한글 프롬프트
   (setq gptel-quick-backend gptel-openrouter-backend)
   (setq gptel-quick-model gptel-openrouter-flash-model)
@@ -241,6 +246,11 @@
 코드라면 기능을, 영어라면 뜻을, 에러라면 원인과 해결을 말하라. \
 복사해서 바로 쓸 수 있게 핵심만."
            count)))
+  ;; gptel-quick 기본값이 url.el(느림)을 강제함 — curl로 되돌리기
+  (advice-add 'gptel-quick :around
+              (lambda (orig-fn &rest args)
+                (let ((gptel-use-curl t))
+                  (apply orig-fn args))))
 
   ;; Claude-Code 서버 상태 확인 함수
   (defun gptel--claude-code-server-available-p ()
