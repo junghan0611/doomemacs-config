@@ -209,6 +209,70 @@ Format: folder/ title 'YYYY-MM-DD #YYYY-MM-DD (citar style)"
 (with-eval-after-load 'denote-org
   (advice-add 'denote-org--insert-links :around #'my/denote-org--insert-links-override))
 
+;;;; Section 1.6: Dblock denote-lastmod — lastmod 기준 필터링
+
+;; #+hugo_lastmod: 날짜를 기준으로 파일을 필터링하는 dblock.
+;; 새 노트(identifier)가 아닌 수정된 노트를 보여준다.
+;;
+;; 사용법:
+;;   #+BEGIN: denote-lastmod :from "2026-03-09" :to "2026-03-15" :excluded-dirs-regexp "journal"
+;;   #+END:
+;;
+;; :from  — 시작일 (YYYY-MM-DD). 생략 시 7일 전
+;; :to    — 종료일 (YYYY-MM-DD). 생략 시 오늘
+;; :excluded-dirs-regexp — 제외 디렉토리 (denote 표준)
+;; :id-only — non-nil이면 id만 출력
+;;
+;; include-date는 항상 t (lastmod 보는 것이 목적이므로)
+
+(defun my/denote-lastmod--read-date (file)
+  "Read #+hugo_lastmod: date from FILE. Returns YYYY-MM-DD or nil.
+Supports both [YYYY-MM-DD ...] and Time-stamp: <YYYY-MM-DD ...> formats."
+  (when (file-exists-p file)
+    (with-temp-buffer
+      (insert-file-contents file nil 0 4096)
+      (goto-char (point-min))
+      (when (re-search-forward
+             "^#\\+hugo_lastmod:\\s-+\\(?:Time-stamp:\\s-+\\)?[<\\[]?\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\)"
+             nil t)
+        (match-string 1)))))
+
+(defun my/denote-lastmod--filter-files (files from to)
+  "Filter FILES by #+hugo_lastmod: date between FROM and TO (YYYY-MM-DD strings)."
+  (seq-filter
+   (lambda (file)
+     (when-let* ((lastmod (my/denote-lastmod--read-date file)))
+       (and (not (string< lastmod from))
+            (not (string< to lastmod)))))
+   files))
+
+;;;###autoload
+(defun org-dblock-write:denote-lastmod (params)
+  "Dynamic block: list Denote files modified (by #+hugo_lastmod:) in date range.
+PARAMS: :from :to :excluded-dirs-regexp :id-only"
+  (let* ((from (or (plist-get params :from)
+                   (format-time-string "%Y-%m-%d"
+                                       (time-subtract (current-time)
+                                                      (days-to-time 7)))))
+         (to (or (plist-get params :to)
+                 (format-time-string "%Y-%m-%d")))
+         (denote-excluded-directories-regexp
+          (or (plist-get params :excluded-dirs-regexp)
+              denote-excluded-directories-regexp))
+         (all-files (denote-directory-files))
+         (filtered (my/denote-lastmod--filter-files all-files from to))
+         ;; lastmod 역순 정렬 (최근 수정 먼저)
+         (sorted (seq-sort
+                  (lambda (a b)
+                    (string> (or (my/denote-lastmod--read-date a) "")
+                             (or (my/denote-lastmod--read-date b) "")))
+                  filtered)))
+    (if (null sorted)
+        (insert (format "No files modified between %s and %s." from to))
+      ;; 기존 advice가 적용된 denote-org--insert-links 사용
+      (denote-org--insert-links sorted (plist-get params :id-only) :include-date))
+    (join-line))) ; remove trailing empty line
+
 ;;;; Section 2: Denote Link Conversion
 ;; Migrated from denote-hugo.el
 
