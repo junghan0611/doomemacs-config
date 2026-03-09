@@ -21,6 +21,18 @@
 
 ;;; Code:
 
+;;;; org-tag-re — 태그에 하이픈/밑줄 불허
+
+;; Denote filetags와 일관성 유지: [a-z0-9] only.
+;; 기본값 "[[:alnum:]_@#%]+" → '_' 제거.
+;; org-tag-line-re, org-tag-group-re는 org-tag-re를 참조하지 않고
+;; 하드코딩되어 있으므로 3개 모두 동기화 필수.
+(setq org-tag-re "[[:alnum:]@#%]+")
+(setq org-tag-line-re
+      "^\\*+ \\(?:.*[ \t]\\)?\\(:\\([[:alnum:]@#%:]+\\):\\)[ \t]*$")
+(setq org-tag-group-re
+      "[ \t]+\\(:\\([[:alnum:]@#%:]+\\):\\)[ \t]*$")
+
 ;;;; org-agenda-files 동적 구성
 
 ;; _aprj (active project) 태그가 있는 denote 파일 + botlog/agenda/

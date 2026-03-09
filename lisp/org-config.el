@@ -183,6 +183,8 @@
 
 ;;;; org-tag and category
 
+  ;; org-tag-re: workflow-shared.el에서 설정 (agent-server와 공유)
+
   ;; (setq org-auto-align-tags nil) ; default t, use doom's custom
   ;; (setq org-tags-column 0) ; default -77
   ;; org-agenda-tags-column은 아래 prefix-format 근처에서 'auto로 설정

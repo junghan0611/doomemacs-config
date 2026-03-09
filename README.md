@@ -89,6 +89,25 @@ Human and AI agents share a single `org-agenda` timeline via `workflow-shared.el
 - **Category-based identity**: `#+category: Human` / `#+category: Agent`
 - **Smart truncation**: Long agent entries auto-truncated to keep tags visible in split windows
 
+#### `workflow-shared.el` — 인간/에이전트 공유 설정
+
+Doom Emacs(사용자)와 `agent-server`(AI)가 **반드시 일치해야 하는** 설정을 한 곳에서 관리한다. 각 환경에서 org/denote 로드 이후에 평가된다.
+
+| 환경 | 로딩 |
+|------|------|
+| Doom (사용자) | `config.el` → `(after! denote (require 'workflow-shared))` |
+| agent-server (AI) | `bin/agent-server.el` → `(load "lisp/workflow-shared.el")` |
+
+**공유 항목:**
+
+| 설정 | 목적 |
+|------|------|
+| `org-tag-re` 및 관련 regex | 태그에 `-`, `_` 불허. Denote filetags와 일관성 유지. `[[:alnum:]@#%]+` |
+| `org-agenda-files` 동적 구성 | `_aprj` 태그 + `botlog/agenda/` + 현재 주 journal |
+| `my/org-journal-new-entry` | active timestamp 삽입으로 journal → agenda 연동 |
+
+**원칙:** UI, 테마, 키바인딩은 각자 달라도 되지만, **데이터를 읽고 쓰는 규칙**(태그 파싱, agenda 범위, 타임스탬프 형식)은 반드시 동일해야 한다.
+
 ## Denote Export System
 
 A multi-daemon parallel pipeline for exporting 2,000+ Denote org-mode notes to Hugo markdown for the [Digital Garden](https://notes.junghanacs.com).
