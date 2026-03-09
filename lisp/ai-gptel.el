@@ -85,7 +85,7 @@
                     "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
                     "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
        :context-window 1048               ; 65536 output token limit
-       :input-cost 0.3
+       :input-cost 0.30
        :output-cost 2.50
        :cutoff-date "2025-01")
 
@@ -101,7 +101,6 @@
        :output-cost 3.00
        :cutoff-date "2025-01")
 
-      ;; https://openrouter.ai/google/gemini-2.5-pro
       (google/gemini-2.5-pro
        :description "Most powerful Gemini thinking model with state-of-the-art performance"
        :capabilities (tool-use json media audio video)
@@ -114,7 +113,7 @@
        :output-cost 10.00                 ; 15 for >200k tokens
        :cutoff-date "2025-01")
 
-      (google/gemini-3-pro-preview
+      (google/gemini-3.1-pro-preview
        :description "Most intelligent Gemini model with SOTA reasoning and multimodal understanding"
        :capabilities (tool-use json media audio video)
        :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
@@ -229,6 +228,19 @@
   ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
   (setq gptel-magit-backend gptel-openrouter-backend)
   (setq gptel-magit-model gptel-openrouter-flash-model)
+
+  ;; gptel-quick: 빠른 조회용 — flash 모델 + 한글 프롬프트
+  (setq gptel-quick-backend gptel-openrouter-backend)
+  (setq gptel-quick-model gptel-openrouter-flash-model)
+  (setq gptel-quick-word-count 30) ; 기본 12 → 30 (한글 ~15자 분량)
+  (setq gptel-quick-timeout 15)    ; 기본 10 → 15초
+  (setq gptel-quick-system-message
+        (lambda (count)
+          (format
+           "한국어로 %d단어 이내로 간결하게 설명하라. \
+코드라면 기능을, 영어라면 뜻을, 에러라면 원인과 해결을 말하라. \
+복사해서 바로 쓸 수 있게 핵심만."
+           count)))
 
   ;; Claude-Code 서버 상태 확인 함수
   (defun gptel--claude-code-server-available-p ()
