@@ -254,7 +254,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
 
 ;;;###autoload
 (defun my/denote-links-this-week (&optional arg)
-  "Insert a denote-links block for this week.
+  "Insert a denote-links block for this week (by creation date).
 With prefix ARG, prompt for a date via calendar."
   (interactive "P")
   (let* ((date (if arg
@@ -276,6 +276,30 @@ With prefix ARG, prompt for a date via calendar."
     (insert
      (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
              regexp))))
+
+;;;###autoload
+(defun my/denote-lastmod-this-week (&optional arg)
+  "Insert a denote-lastmod block for this week (by #+hugo_lastmod: date).
+With prefix ARG, prompt for a date via calendar.
+Shows notes modified this week, not just newly created ones."
+  (interactive "P")
+  (let* ((date (if arg
+                   (calendar-read-date)
+                 (list (string-to-number (format-time-string "%m"))
+                       (string-to-number (format-time-string "%d"))
+                       (string-to-number (format-time-string "%Y")))))
+         (month (nth 0 date))
+         (day   (nth 1 date))
+         (year  (nth 2 date))
+         (time  (encode-time 0 0 0 day month year))
+         (dow (string-to-number (format-time-string "%u" time)))
+         (monday (time-subtract time (days-to-time (1- dow))))
+         (sunday (time-add monday (days-to-time 6)))
+         (from (format-time-string "%Y-%m-%d" monday))
+         (to (format-time-string "%Y-%m-%d" sunday)))
+    (insert
+     (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
+             from to))))
 
 ;;;; Refile & Extract
 
