@@ -1,39 +1,39 @@
-;;; +gptel.el --- Description -*- lexical-binding: t; -*-
-;;
+;;; $DOOMDIR/lisp/ai-gptel.el --- gptel AI 설정 -*- lexical-binding: t; -*-
+
 ;; Copyright (C) 2025 Junghan Kim
-;;
+
 ;; Author: Junghan Kim <junghanacs@gmail.com>
-;; Maintainer: Junghan Kim <junghanacs@gmail.com>
-;; Created: September 07, 2025
-;; Modified: September 07, 2025
-;; Version: 0.0.1
-;; Keywords: Symbol’s value as variable is void: finder-known-keywords
-;; Homepage: https://github.com/junghan0611/+gptel
-;; Package-Requires: ((emacs "24.3"))
-;;
-;; This file is not part of GNU Emacs.
-;;
+;; URL: https://github.com/junghan0611/doomemacs-config
+
 ;;; Commentary:
+
+;; gptel 중심 AI 설정 — 백엔드/모델, 빠른 조회(quick), 버퍼 요약/번역, embark 통합
 ;;
-;; Description
-;;
+;; 구조:
+;;   1. Evil Collection 설정
+;;   2. gptel 코어 (use-package!)
+;;      - 백엔드: DeepSeek, OpenRouter, Claude-Code
+;;      - gptel-org, gptel-quick, gptel-prompt
+;;   3. 버퍼 요약/번역 (+gptel-buffer)
+;;   4. Embark + gptel 통합
+;;   5. 알림 (peon-ping)
 
 ;;; Code:
 
-;;;; evil-collection-gptel
+;;;; Evil Collection
 
 (setq evil-collection-gptel-want-ret-to-send nil)
 (setq evil-collection-gptel-want-shift-ret-menu t)
 (setq evil-collection-gptel-want-shift-ret-to-send nil)
 
-;;;; gptel
-
-;;;;; load
+;;;; gptel 코어
 
 (use-package! gptel
   :init
   (require 'password-store)  ; API 키 접근을 위해 미리 로드
   :config
+
+;;;;;; Hooks & 기본값
 
   (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
   (add-hook 'gptel-post-response-functions 'gptel-end-of-response)
@@ -41,11 +41,10 @@
 
   (setq gptel-include-reasoning nil)
   (setq gptel-default-mode 'org-mode)
-  ;; (setq gptel-temperature 0.3) ; gptel 1.0
   (set-popup-rule! "^\\*OpenRouter\\*$" :side 'right :size 84 :vslot 100 :quit t)
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
-;;;;; gptel-org
+;;;;;; gptel-org
 
   (after! gptel-org
     (defun my/gptel-org-toggle-branching-context ()
@@ -64,16 +63,16 @@
           )
     (setq-default gptel-org-branching-context t))
 
-;;;;; gptel backend
+;;;;; 백엔드 (Backends)
 
-;;;;;; gptel deepseek
+;;;;;; DeepSeek
 
   (setq gptel-deepseek-backend
         (gptel-make-deepseek "DeepSeek"
           :stream t
           :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
 
-;;;;;; gptel openrouter models
+;;;;;; OpenRouter
 
   (defconst gptel--openrouter-models
     '(
@@ -143,14 +142,13 @@
           :host "openrouter.ai"
           :endpoint "/api/v1/chat/completions"
           :stream t
-          ;; :key #'gptel-api-key
           :key (lambda () (password-store-get "work/api/openrouter/devteam-goqual-backup"))
           :models gptel--openrouter-models))
   (setq gptel-openrouter-chat-model 'openai/gpt-5.1-chat) ; < 1.0s latency
   (setq gptel-openrouter-flash-model 'google/gemini-3-flash-preview) ; 3.8s bench, best speed+quality
   (setq gptel-openrouter-pro-model 'google/gemini-2.5-pro) ; < 2.5s latency
 
-;;;;;; gptel Claude-Code (via wrapper)
+;;;;;; Claude-Code (via wrapper)
 
   ;; [서비스 관리] - run-claude-wrapper 스크립트 사용
   ;; run-claude-wrapper              # 서비스 시작
@@ -207,40 +205,68 @@
 
   (advice-add 'gptel--request-data :around #'gptel--claude-code-add-enable-tools)
 
-;;;;; Default Backend and Prompt
+;;;;; 기본 백엔드 선택 & 전환
 
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
   (setq gptel--system-message user-llm-system-prompt)
 
-;;;;; 프롬프트 선택 함수
-
-  (defun my/gptel-select-prompt ()
-    "현재 gptel 버퍼에서 시스템 프롬프트를 선택하여 변경."
-    (interactive)
-    (let* ((prompts `(("기본 (General)" . ,user-llm-system-prompt)
-                      ("요약 (Summarize)" . ,+gptel-summarize-system-message)
-                      ("번역 (Translate)" . ,+gptel-translate-system-message)))
-           (choice (completing-read "프롬프트: " (mapcar #'car prompts) nil t))
-           (prompt (cdr (assoc choice prompts))))
-      (setq-local gptel--system-message prompt)
-      (message "프롬프트 변경: %s" choice)))
-
   ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
   (setq gptel-magit-backend gptel-openrouter-backend)
   (setq gptel-magit-model gptel-openrouter-flash-model)
+
+  ;; Claude-Code 서버 상태 확인
+  (defun gptel--claude-code-server-available-p ()
+    "Check if Claude-Code wrapper server is running on localhost:8000."
+    (condition-case nil
+        (let ((url-request-method "GET")
+              (url-show-status nil))
+          (with-current-buffer
+              (url-retrieve-synchronously "http://localhost:8000/health" t nil 2)
+            (goto-char (point-min))
+            (and (search-forward "healthy" nil t) t)))
+      (error nil)))
+
+  ;; 기본 백엔드: Claude-Code 서버 감지 → 있으면 사용, 없으면 OpenRouter
+  (if (gptel--claude-code-server-available-p)
+      (progn
+        (setq gptel-backend gptel-claude-code-backend)
+        (setq gptel-model 'claude-sonnet-4-6)
+        (message "gptel: Claude-Code 서버 감지 → 기본 백엔드로 설정"))
+    (setq gptel-backend gptel-openrouter-backend)
+    (setq gptel-model gptel-openrouter-chat-model)
+    (message "gptel: Claude-Code 서버 없음 → OpenRouter 사용"))
+
+  ;; 수동 백엔드 전환
+  (defun my/gptel-switch-to-claude-code ()
+    "Switch gptel backend to Claude-Code (requires server running)."
+    (interactive)
+    (if (gptel--claude-code-server-available-p)
+        (progn
+          (setq gptel-backend gptel-claude-code-backend)
+          (setq gptel-model 'claude-sonnet-4-6)
+          (message "Switched to Claude-Code backend"))
+      (message "Claude-Code server not available! Run: run-claude-wrapper")))
+
+  (defun my/gptel-switch-to-openrouter ()
+    "Switch gptel backend to OpenRouter."
+    (interactive)
+    (setq gptel-backend gptel-openrouter-backend)
+    (setq gptel-model gptel-openrouter-chat-model)
+    (message "Switched to OpenRouter backend"))
+
+;;;;; gptel-quick — 빠른 조회
 
   ;; 커서를 단어 위에 놓고 → gptel-quick (또는 embark [ 키)
   ;; +     더 긴 설명
   ;; M-w   kill-ring 복사 → C-y로 붙여넣기
   ;; M-RET 채팅 버퍼로 이어서 질문
   ;; C-g   닫기
-  ;; gptel-quick: 빠른 조회용 — flash 모델 + 한글 프롬프트
+
   (setq gptel-quick-backend gptel-openrouter-backend)
   (setq gptel-quick-model gptel-openrouter-flash-model)
   (setq gptel-quick-word-count 30) ; 기본 12 → 30 (한글 ~15자 분량)
   (setq gptel-quick-timeout 15)    ; 기본 10 → 15초
   (setq gptel-quick-display nil)   ; use echo area
-
   (setq gptel-quick-system-message
         (lambda (count)
           (format
@@ -248,6 +274,7 @@
 코드라면 기능을, 영어라면 뜻을, 에러라면 원인과 해결을 말하라. \
 복사해서 바로 쓸 수 있게 핵심만."
            count)))
+
   ;; gptel-quick 내부 let*이 gptel-use-curl을 nil로 강제함.
   ;; url.el은 한글 등 multibyte body에서 "Multibyte text in HTTP request" 에러 발생.
   ;; :around advice로는 내부 let*에 덮이므로 :override로 curl을 강제한다.
@@ -279,47 +306,22 @@
                                    (posn-at-point (and (use-region-p) (region-beginning))))
                     :callback #'gptel-quick--callback-posframe))))
 
-  ;; Claude-Code 서버 상태 확인 함수
-  (defun gptel--claude-code-server-available-p ()
-    "Check if Claude-Code wrapper server is running on localhost:8000."
-    (condition-case nil
-        (let ((url-request-method "GET")
-              (url-show-status nil))
-          (with-current-buffer
-              (url-retrieve-synchronously "http://localhost:8000/health" t nil 2)
-            (goto-char (point-min))
-            (and (search-forward "healthy" nil t) t)))
-      (error nil)))
+;;;;; 세션 관리
 
-  ;; 기본 백엔드 설정: Claude-Code 서버가 떠있으면 사용, 아니면 OpenRouter
-  (if (gptel--claude-code-server-available-p)
-      (progn
-        (setq gptel-backend gptel-claude-code-backend)
-        (setq gptel-model 'claude-sonnet-4-6)
-        (message "gptel: Claude-Code 서버 감지 → 기본 백엔드로 설정"))
-    (setq gptel-backend gptel-openrouter-backend)
-    (setq gptel-model gptel-openrouter-chat-model)
-    (message "gptel: Claude-Code 서버 없음 → OpenRouter 사용"))
+;;;;;; 프롬프트 선택
 
-  ;; 수동 백엔드 전환 함수
-  (defun my/gptel-switch-to-claude-code ()
-    "Switch gptel backend to Claude-Code (requires server running)."
+  (defun my/gptel-select-prompt ()
+    "현재 gptel 버퍼에서 시스템 프롬프트를 선택하여 변경."
     (interactive)
-    (if (gptel--claude-code-server-available-p)
-        (progn
-          (setq gptel-backend gptel-claude-code-backend)
-          (setq gptel-model 'claude-sonnet-4-6)
-          (message "Switched to Claude-Code backend"))
-      (message "Claude-Code server not available! Run: run-claude-wrapper")))
+    (let* ((prompts `(("기본 (General)" . ,user-llm-system-prompt)
+                      ("요약 (Summarize)" . ,+gptel-summarize-system-message)
+                      ("번역 (Translate)" . ,+gptel-translate-system-message)))
+           (choice (completing-read "프롬프트: " (mapcar #'car prompts) nil t))
+           (prompt (cdr (assoc choice prompts))))
+      (setq-local gptel--system-message prompt)
+      (message "프롬프트 변경: %s" choice)))
 
-  (defun my/gptel-switch-to-openrouter ()
-    "Switch gptel backend to OpenRouter."
-    (interactive)
-    (setq gptel-backend gptel-openrouter-backend)
-    (setq gptel-model gptel-openrouter-chat-model)
-    (message "Switched to OpenRouter backend"))
-
-;;;;; gptel-save-as-org-with-denote-metadata
+;;;;;; Denote 메타데이터로 저장
 
   (defun gptel-save-as-org-with-denote-metadata ()
     "Save buffer to disk when starting gptel with metadata."
@@ -350,18 +352,50 @@
 
         ;; heading-1 add backlink to today
         (insert (format "* 로그 :LLMLOG:\n** [[denote:%s::#%s][%s]]\n"
-                        ;; (format-time-string "%Y%m%dT000000")
                         (format-time-string "%Y%m%dT000000"
                                             (org-journal--convert-time-to-file-type-time
                                              (time-subtract (current-time)
                                                             (* 3600 org-extend-today-until))))
                         (downcase (format-time-string "%Y-%m-%d-%a"))
                         (format-time-string "|%Y-%m-%d %a %H:%M|")))
-        ;; heading-2 [SUM]:
-        ;; (insert (format "** TODO [SUM]: \n"))
         (insert "\n"))))
 
-;;;;; gptel-mode-hook
+;;;;;; 버퍼 초기화 (히스토리 청소)
+
+  ;; 채팅 버퍼에서 마지막 질문만 남기고 이전 대화를 모두 지운다.
+  ;; 토큰 절약하면서 맥락을 이어가고 싶을 때. 키바인딩: M-l
+  (defun gptel-clear-buffer+ ()
+    "Clear gptel buffer, keeping only the last prompt."
+    (interactive)
+    (let* ((beg-marker (concat "^" (alist-get gptel-default-mode gptel-prompt-prefix-alist)))
+           (keep-line (save-excursion
+                        (goto-char (point-max))
+                        (when (re-search-backward beg-marker nil t)
+                          (unless (save-excursion
+                                    (forward-line)
+                                    (re-search-forward beg-marker nil t))
+                            (point))))))
+      (delete-region (point-min) keep-line)
+      (evil-insert-state)))
+
+;;;;; gptel-prompt (prompt-poet)
+
+  ;; git@github.com:character-ai/prompt-poet.git
+  (when (locate-library "gptel-prompt")
+    (require 'gptel-prompts)
+    (use-package! uuidgen)
+    (when (file-exists-p (concat org-directory "resources/prompts/"))
+      (setq gptel-prompts-directory (concat org-directory "resources/prompts/"))
+      (gptel-prompts-update)
+      ;; Ensure prompts are updated if prompt files change
+      (gptel-prompts-add-update-watchers)))
+
+;;;;; gptel-mode Hook & 키바인딩
+
+  (add-hook! 'gptel-mode-hook
+    (defun cae-gptel-mode-setup-h ()
+      (auto-fill-mode -1)
+      (doom-mark-buffer-as-real-h)))
 
   (map! :map gptel-mode-map
         "M-<return>" #'gptel-send
@@ -376,37 +410,14 @@
           "p" #'gptel-save-as-org-with-denote-metadata
           )))
 
-  (add-hook! 'gptel-mode-hook
-    (defun cae-gptel-mode-setup-h ()
-      ;; (setq-local nobreak-char-display nil) ; 2025-07-26 보는게 좋아
-      (auto-fill-mode -1)
-      (doom-mark-buffer-as-real-h)))
-
-  ;; Optional - set up macher as soon as gptel is loaded.
-  ;; (require 'macher)
-
-;;;;; gptel-prompt
-
-  ;; git@github.com:character-ai/prompt-poet.git
-  (when (locate-library "gptel-prompt")
-    (require 'gptel-prompts)
-    (use-package! uuidgen)
-    (when (file-exists-p (concat org-directory "resources/prompts/"))
-      (setq gptel-prompts-directory (concat org-directory "resources/prompts/"))
-      (gptel-prompts-update)
-      ;; Ensure prompts are updated if prompt files change
-      (gptel-prompts-add-update-watchers))
-
-    ;; (require 'gptel-litellm)
-    ;; (gptel-litellm-install-sessions)
-    )
   ) ; end of use-package! gptel
 
-;;;; gptel-buffer: 범용 버퍼 요약/번역
-
-;;;;; after gptel
+;;;; 버퍼 요약/번역 (+gptel-buffer)
 
 (after! gptel
+
+;;;;; 변수 & 시스템 프롬프트
+
   (defvar +gptel-buffer-name "*gptel-buffer*"
     "gptel 버퍼 요약/번역용 사이드 버퍼 이름.")
 
@@ -437,7 +448,23 @@
   (defvar +gptel-summarize-temperature 0.4
     "요약용 중간 temperature - 핵심 추출 + 약간의 재구성 허용.")
 
-  ;; Content Extractors - 각 모드별 컨텐츠 추출
+  (defvar +gptel-buffer-backend nil
+    "요약/번역 전용 백엔드. nil이면 gptel-openrouter-backend 사용.")
+
+  (defvar +gptel-buffer-model gptel-openrouter-flash-model
+    "요약/번역 전용 모델. 긴 컨텍스트 지원 필요.")
+
+  (defun my/gptel-buffer-model-toggle ()
+    "Toggle +gptel-buffer-model between Flash and Pro."
+    (interactive)
+    (setq +gptel-buffer-model
+          (if (eq +gptel-buffer-model gptel-openrouter-flash-model)
+              gptel-openrouter-pro-model
+            gptel-openrouter-flash-model
+            ))
+    (message "gptel-buffer 모델: %s" +gptel-buffer-model))
+
+;;;;; 컨텐츠 추출 (Content Extractors)
 
   (defun +gptel--extract-eww-content ()
     "eww 버퍼에서 컨텐츠 추출."
@@ -510,24 +537,7 @@
        (string-trim text)
        "\n```")))
 
-  ;; 요약/번역 전용 백엔드 및 모델 (긴 컨텍스트용)
-  (defvar +gptel-buffer-backend nil
-    "요약/번역 전용 백엔드. nil이면 gptel-openrouter-backend 사용.")
-
-  (defvar +gptel-buffer-model gptel-openrouter-flash-model
-    "요약/번역 전용 모델. 긴 컨텍스트 지원 필요.")
-
-  (defun my/gptel-buffer-model-toggle ()
-    "Toggle +gptel-buffer-model between Flash and Pro."
-    (interactive)
-    (setq +gptel-buffer-model
-          (if (eq +gptel-buffer-model gptel-openrouter-flash-model)
-              gptel-openrouter-pro-model
-            gptel-openrouter-flash-model
-            ))
-    (message "gptel-buffer 모델: %s" +gptel-buffer-model))
-
-  ;; 핵심 함수
+;;;;; 핵심 함수 — +gptel--send-to-buffer
 
   (defun +gptel--send-to-buffer (content system-message action-name &optional temperature)
     "CONTENT를 gptel 사이드 버퍼로 보내고 SYSTEM-MESSAGE로 요청.
@@ -536,42 +546,35 @@ TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용).
 항상 OpenRouter/Gemini 모델 사용 (긴 컨텍스트 지원)."
     (let* ((formatted (+gptel--format-content-for-llm content))
            (buf (get-buffer-create +gptel-buffer-name))
-           ;; 요약/번역 전용 백엔드 및 모델
            (target-backend (or +gptel-buffer-backend gptel-openrouter-backend))
            (target-model +gptel-buffer-model))
-      ;; 사이드 버퍼 설정
       (with-current-buffer buf
         (unless (derived-mode-p 'org-mode)
           (org-mode))
         (unless gptel-mode
           (gptel-mode 1))
-
         (setq-local gptel-org-branching-context nil)
-        ;; 백엔드 및 모델 명시적 설정 (긴 컨텍스트용)
         (setq-local gptel-backend target-backend)
         (setq-local gptel-model target-model)
-        ;; 시스템 메시지 설정
         (setq-local gptel--system-message system-message)
-        ;; 로컬 온도 설정 (작업별 최적화)
         (when temperature
           (setq-local gptel-temperature temperature))
-        ;; 이전 내용 아래에 새 요청 추가
         (goto-char (point-max))
         (unless (bobp)
           (insert "\n\n"))
         (insert (format "@user: [%s 요청]\n\n%s" action-name formatted))
         (insert "\n\n@assistant:\n"))
-      ;; 사이드 윈도우로 표시
       (display-buffer buf '((display-buffer-in-side-window)
                             (side . right)
                             (window-width . 0.4)))
-      ;; gptel-send 호출
       (with-current-buffer buf
         (goto-char (point-max))
         (gptel-send))
       (message "%s 요청 [%s] (temp=%.1f) → %s"
                action-name target-model
                (or temperature gptel-temperature) +gptel-buffer-name)))
+
+;;;;; 명령 — 요약, 번역, DWIM
 
 ;;;###autoload
   (defun +gptel-summarize-buffer ()
@@ -600,26 +603,9 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
         ("요약 (Summarize)" (+gptel-summarize-buffer))
         ("번역 (Translate)" (+gptel-translate-buffer)))))
 
-;;;;; gptel functions
+;;;;; 키바인딩 — 전역 & 모드별
 
-  ;; "채팅 버퍼 초기화 — 마지막 질문만 남기고 히스토리 청소". 토큰 절약하면서
-  ;; 맥락을 이어가고 싶을 때 쓰는 함수입니다. 키바인딩 M-l에 연결되어 있네요
-  (defun gptel-clear-buffer+ ()
-    (interactive)
-    (let* ((beg-marker (concat "^" (alist-get gptel-default-mode gptel-prompt-prefix-alist)))
-           (keep-line (save-excursion
-                        (goto-char (point-max))
-                        (when (re-search-backward beg-marker nil t)
-                          (unless (save-excursion
-                                    (forward-line)
-                                    (re-search-forward beg-marker nil t))
-                            (point))))))
-      (delete-region (point-min) keep-line)
-      (evil-insert-state)))
-
-;;;;; gptel-buffer 키바인딩
-
-  ;; 전역 키바인딩 (SPC a G 접두어) - SPC a 충돌로 비활성화
+  ;; 전역 (SPC = g)
   (map! :leader
         (:prefix ("=" . "AI")
                  (:prefix ("g" . "gptel-buffer")
@@ -627,7 +613,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
                   :desc "Translate buffer" "t" #'+gptel-translate-buffer
                   :desc "DWIM (choose action)" "g" #'+gptel-buffer-dwim)))
 
-  ;; eww 모드 키바인딩
+  ;; eww
   (after! eww
     (map! :map eww-mode-map
           :localleader
@@ -635,7 +621,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-  ;; elfeed 모드 키바인딩
+  ;; elfeed
   (after! elfeed
     (map! :map elfeed-show-mode-map
           :localleader
@@ -643,7 +629,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-  ;; pdf-view 모드 키바인딩
+  ;; pdf-view
   (after! pdf-tools
     (map! :map pdf-view-mode-map
           :localleader
@@ -651,7 +637,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-  ;; nov 모드 키바인딩
+  ;; nov (epub)
   (after! nov
     (map! :map nov-mode-map
           :localleader
@@ -659,8 +645,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
-;;;;; gptel org-mode-map
-
+  ;; org-mode
   (after! org
     (map! :map org-mode-map
           :localleader
@@ -671,30 +656,30 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
           "M-s" #'gptel-save-as-org-with-denote-metadata
           "M-l" #'gptel-clear-buffer+
           ))
-  ) ; end of after! gptel
 
-;;;; embark-region + gptel 통합
+  ) ; end of after! gptel — 버퍼 요약/번역
+
+;;;; Embark + gptel 통합
 
 ;; 코드 파일에서 영역 선택 → M-o (embark) → prompt 선택 → gptel 전달
 ;; Claude Code 호출 없이 gptel로 빠른 수정/주석화
-;; 관련 beads: doomemacs-config-cx6
 ;;
 ;; [embark-region-map 키바인딩] (keybindings-config.el)
-;; | Key | 함수                          | 설명           |
-;; |-----|-------------------------------|----------------|
+;; | Key | 함수                            | 설명           |
+;; |-----|---------------------------------|----------------|
 ;; | p   | my/gptel-apply-prompt-to-region | prompt 파일 선택 |
-;; | [   | my/gptel-quick-region         | 빠른 질의      |
-;; | t   | my/gptel-translate-region     | 번역 (한↔영)   |
-;; | s   | my/gptel-summarize-region     | 요약           |
-;; | e   | my/gptel-explain-region       | 코드 설명      |
-;; | r   | my/gptel-rewrite-region       | 재작성         |
+;; | [   | my/gptel-quick-region           | 빠른 질의      |
+;; | t   | my/gptel-translate-region       | 번역 (한↔영)   |
+;; | s   | my/gptel-summarize-region       | 요약           |
+;; | e   | my/gptel-explain-region         | 코드 설명      |
+;; | r   | my/gptel-rewrite-region         | 재작성         |
 ;;
 ;; [embark-file-map 키바인딩] (keybindings-config.el)
-;; | Key | 함수                          | 설명                    |
-;; |-----|-------------------------------|-------------------------|
-;; | p   | my/gptel-apply-prompt-to-file | prompt 파일 선택        |
-;; | t   | my/gptel-translate-file       | immersive-translate 번역|
-;; | s   | my/gptel-summarize-file       | 파일 요약               |
+;; | Key | 함수                            | 설명                    |
+;; |-----|---------------------------------|-------------------------|
+;; | p   | my/gptel-apply-prompt-to-file   | prompt 파일 선택        |
+;; | t   | my/gptel-translate-file         | immersive-translate 번역|
+;; | s   | my/gptel-summarize-file         | 파일 요약               |
 ;;
 ;; [프롬프트 디렉토리]
 ;; ~/sync/org/resources/prompts/
@@ -703,12 +688,11 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
 ;; - instant-english.poet     : 즉시 영어 번역
 ;; - code-review-ko.poet      : 코드 리뷰 (한국어)
 ;; - summarize.md             : 요약
-;;
-;; [TODO] 테스트 후 keybindings-config.el 바인딩 활성화
+
+(after! gptel
 
 ;;;;; 프롬프트 선택 함수
 
-(after! gptel
   (defun my/gptel--list-prompts ()
     "gptel-prompts-directory에서 프롬프트 파일 목록 반환."
     (when (and (boundp 'gptel-prompts-directory)
@@ -724,7 +708,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
           (insert-file-contents filepath)
           (buffer-string)))))
 
-;;;;; embark-region용 gptel 함수들
+;;;;; embark-region용 함수
 
   (defun my/gptel-apply-prompt-to-region (beg end)
     "선택 영역에 gptel prompt 적용.
@@ -805,7 +789,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
                           (display-buffer (current-buffer)))
                       (message "재작성 실패: %s" (plist-get info :status)))))))
 
-;;;;; embark-file-map용 gptel 함수들
+;;;;; embark-file용 함수
 
   (defun my/gptel-apply-prompt-to-file (file)
     "FILE에 gptel prompt 적용.
@@ -843,14 +827,12 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
                 content
               :system (with-temp-buffer
                         (insert-file-contents prompt-file)
-                        ;; .poet 파일에서 system content 추출
                         (goto-char (point-min))
                         (if (re-search-forward "role: system\\s-*\n\\s-*content:\\s-*>-?\\s-*\n" nil t)
                             (let ((start (point)))
                               (if (re-search-forward "^- name:" nil t)
                                   (buffer-substring-no-properties start (match-beginning 0))
                                 (buffer-substring-no-properties start (point-max))))
-                          ;; fallback: 전체 내용
                           (buffer-string)))
               :callback (lambda (response info)
                           (if response
@@ -887,9 +869,10 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
                           (display-buffer output-buffer)
                           (message "요약 완료: %s" (file-name-nondirectory file)))
                       (message "요약 실패: %s" (plist-get info :status)))))))
-  )
 
-;;;; peon-ping 사운드 알림
+  ) ; end of after! gptel — embark 통합
+
+;;;; 알림 (Peon-ping)
 
 (defvar my/gptel-peon-ping-script
   (expand-file-name "~/.claude/hooks/peon-ping/peon.sh")
