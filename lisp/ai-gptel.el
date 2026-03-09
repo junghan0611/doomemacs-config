@@ -246,11 +246,36 @@
 코드라면 기능을, 영어라면 뜻을, 에러라면 원인과 해결을 말하라. \
 복사해서 바로 쓸 수 있게 핵심만."
            count)))
-  ;; gptel-quick 기본값이 url.el(느림)을 강제함 — curl로 되돌리기
-  (advice-add 'gptel-quick :around
-              (lambda (orig-fn &rest args)
-                (let ((gptel-use-curl t))
-                  (apply orig-fn args))))
+  ;; gptel-quick 내부 let*이 gptel-use-curl을 nil로 강제함.
+  ;; url.el은 한글 등 multibyte body에서 "Multibyte text in HTTP request" 에러 발생.
+  ;; :around advice로는 내부 let*에 덮이므로 :override로 curl을 강제한다.
+  (advice-add 'gptel-quick :override
+              (lambda (query-text &optional count)
+                "gptel-quick override: curl 강제 + 한글 multibyte 대응."
+                (interactive
+                 (list (cond
+                        ((use-region-p) (buffer-substring-no-properties
+                                         (region-beginning) (region-end)))
+                        ((and (derived-mode-p 'pdf-view-mode)
+                              (fboundp 'pdf-view-active-region-p)
+                              (pdf-view-active-region-p))
+                         (mapconcat #'identity (pdf-view-active-region-text) "\n\n"))
+                        (t (thing-at-point 'sexp)))
+                       current-prefix-arg))
+                (when (xor gptel-quick-backend gptel-quick-model)
+                  (error "gptel-quick-backend and gptel-quick-model must be both set or unset"))
+                (let* ((count (or count gptel-quick-word-count))
+                       (gptel-max-tokens (floor (+ (sqrt (length query-text))
+                                                   (* count 2.5))))
+                       (gptel-use-curl t)  ; ← 핵심: url.el 대신 curl 강제
+                       (gptel-use-context (and gptel-quick-use-context 'system))
+                       (gptel-backend (or gptel-quick-backend gptel-backend))
+                       (gptel-model (or gptel-quick-model gptel-model)))
+                  (gptel-request query-text
+                    :system (funcall gptel-quick-system-message count)
+                    :context (list query-text count
+                                   (posn-at-point (and (use-region-p) (region-beginning))))
+                    :callback #'gptel-quick--callback-posframe))))
 
   ;; Claude-Code 서버 상태 확인 함수
   (defun gptel--claude-code-server-available-p ()
