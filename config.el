@@ -222,6 +222,11 @@
 (require 'tab-bar-config)
 
 (require 'prog-mode-config)
+
+;; markdown-indent-mode: org-indent-mode와 동일한 시각적 계층 구조
+(use-package! markdown-indent-mode
+  :hook (markdown-mode . markdown-indent-mode))
+
 ;; (require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
 ;; (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)

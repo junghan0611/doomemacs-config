@@ -251,4 +251,14 @@
 (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))
 (package! casual)
 
+;;;; markdown
+
+(package! markdown-indent-mode :recipe (:host github :repo "whhone/markdown-indent-mode"))
+
+
+
+(use-package markdown-indent-mode
+  :hook (markdown-mode . markdown-indent-mode))
+
+
 ;;; END
