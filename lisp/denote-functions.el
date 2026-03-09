@@ -441,16 +441,100 @@ The link will contain DESCRIPTION as text."
        (org-set-property "WORDCOUNT" (number-to-string word-count))))))
 
 ;;;###autoload
-(defun my/org-insert-screenshot ()
-  "Take a screenshot with ImageMagick and insert as Org link."
+(defun my/org-insert-screenshot (&optional name)
+  "Take a screenshot with ImageMagick and insert as Org link.
+File saved to ~/org/images/ with YYYYMMDD-NAME.png naming.
+NAME defaults to interactive input."
   (interactive)
-  (let ((filename (read-file-name "Enter filename for screenshot: " default-directory)))
-    (unless (string-equal "png" (file-name-extension filename))
-      (setq filename (concat (file-name-sans-extension filename) ".png")))
-    (call-process-shell-command (format "import %s" filename))
-    (insert (format "#+caption: %s\n" (read-from-minibuffer "Caption: ")))
-    (insert (format "[[file:%s]]" filename))
-    (org-redisplay-inline-images)))
+  (let* ((name (or name (read-string "Screenshot name (no ext): ")))
+         (date (format-time-string "%Y%m%d"))
+         (filename (expand-file-name
+                    (format "%s-%s.png" date name)
+                    "~/org/images/"))
+         (caption (read-string "Caption: " name)))
+    (message "Select area to capture...")
+    (call-process-shell-command (format "import %s" (shell-quote-argument filename)))
+    (when (file-exists-p filename)
+      (insert (format "#+caption: %s\n" caption))
+      (insert (format "[[file:%s]]" filename))
+      (org-redisplay-inline-images))))
+
+;;;###autoload
+(defun my/org-insert-screenshots-this-week (&optional arg)
+  "Insert links to screenshots taken this week (by filename date).
+With prefix ARG, prompt for a date via calendar."
+  (interactive "P")
+  (let* ((date (if arg
+                   (calendar-read-date)
+                 (list (string-to-number (format-time-string "%m"))
+                       (string-to-number (format-time-string "%d"))
+                       (string-to-number (format-time-string "%Y")))))
+         (month (nth 0 date))
+         (day   (nth 1 date))
+         (year  (nth 2 date))
+         (time  (encode-time 0 0 0 day month year))
+         (dow (string-to-number (format-time-string "%u" time)))
+         (monday (time-subtract time (days-to-time (1- dow))))
+         (dates (mapcar (lambda (i)
+                          (format-time-string "%Y%m%d"
+                                              (time-add monday (days-to-time i))))
+                        (number-sequence 0 6)))
+         (img-dir (expand-file-name "~/org/images/"))
+         (files (when (file-directory-p img-dir)
+                  (seq-filter
+                   (lambda (f)
+                     (seq-some (lambda (d) (string-prefix-p d (file-name-nondirectory f))) dates))
+                   (directory-files img-dir t "\\.\\(png\\|jpg\\|jpeg\\|gif\\|webp\\)$"))))
+         (sorted (seq-sort (lambda (a b) (string> a b)) files)))
+    (if (null sorted)
+        (insert (format "이번 주(%s ~ %s) 스크린샷 없음.\n"
+                        (car dates) (car (last dates))))
+      (dolist (f sorted)
+        (let ((name (file-name-sans-extension (file-name-nondirectory f))))
+          (insert (format "- [[file:%s][%s]]\n" f name)))))))
+
+;;;###autoload
+(defun my/org-insert-citations-this-week (&optional arg)
+  "Insert org-cite links for BibTeX entries added this week (by urldate).
+With prefix ARG, prompt for a date via calendar.
+Searches all .bib files in `org-cite-global-bibliography'."
+  (interactive "P")
+  (let* ((date (if arg
+                   (calendar-read-date)
+                 (list (string-to-number (format-time-string "%m"))
+                       (string-to-number (format-time-string "%d"))
+                       (string-to-number (format-time-string "%Y")))))
+         (month (nth 0 date))
+         (day   (nth 1 date))
+         (year  (nth 2 date))
+         (time  (encode-time 0 0 0 day month year))
+         (dow (string-to-number (format-time-string "%u" time)))
+         (monday (time-subtract time (days-to-time (1- dow))))
+         (sunday (time-add monday (days-to-time 6)))
+         (from (format-time-string "%Y-%m-%d" monday))
+         (to (format-time-string "%Y-%m-%d" sunday))
+         (bib-files (bound-and-true-p org-cite-global-bibliography))
+         (results nil))
+    ;; BibTeX 파일에서 urldate 기반 추출 (bin/bib-urldate.pl)
+    (let* ((script (expand-file-name "bin/bib-urldate.pl" doom-user-dir))
+           (bib-args (mapconcat (lambda (f) (shell-quote-argument (expand-file-name f)))
+                                (seq-filter #'file-exists-p bib-files) " "))
+           (output (shell-command-to-string
+                    (format "perl %s %s %s %s"
+                            (shell-quote-argument script) from to bib-args))))
+      (dolist (line (split-string output "\n" t))
+        (let* ((parts (split-string line "\t" t))
+               (key (car parts))
+               (title (cadr parts)))
+          (when (and key title)
+            (push (cons key title) results)))))
+    ;; 삽입
+    (if (null results)
+        (insert (format "이번 주(%s ~ %s) 추가된 서지 없음.\n" from to))
+      (insert (format "** [urldate: %s ~ %s]\n\n" from to))
+      (dolist (entry (nreverse results))
+        (insert (format "- %s [cite:@%s]\n" (cdr entry) (car entry)))))))
+
 
 ;;;; Dired Utilities
 
