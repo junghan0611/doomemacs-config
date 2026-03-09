@@ -253,29 +253,42 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
     (org-update-dblock)))
 
 ;;;###autoload
+(defun my/denote-links-today (&optional arg)
+  "Insert a denote-links block for today (by creation date).
+With prefix ARG, prompt for a date via calendar."
+  (interactive "P")
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (ymd (format-time-string "%Y%m%d" time))
+         (regexp (concat ymd "T*")))
+    (insert
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
+             regexp))))
+
+;;;###autoload
 (defun my/denote-links-this-week (&optional arg)
   "Insert a denote-links block for this week (by creation date).
 With prefix ARG, prompt for a date via calendar."
   (interactive "P")
-  (let* ((date (if arg
-                   (calendar-read-date)
-                 (list (string-to-number (format-time-string "%m"))
-                       (string-to-number (format-time-string "%d"))
-                       (string-to-number (format-time-string "%Y")))))
-         (month (nth 0 date))
-         (day   (nth 1 date))
-         (year  (nth 2 date))
-         (time  (encode-time 0 0 0 day month year))
-         (dow (string-to-number (format-time-string "%u" time)))
-         (monday (time-subtract time (days-to-time (1- dow))))
-         (dates (mapcar (lambda (i)
-                          (format-time-string "%Y%m%d"
-                                              (time-add monday (days-to-time i))))
-                        (number-sequence 0 6)))
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (dates (my/org--week-dates time))
          (regexp (mapconcat (lambda (d) (concat d "T*")) dates "\\\\|")))
     (insert
      (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
              regexp))))
+
+;;;###autoload
+(defun my/denote-lastmod-today (&optional arg)
+  "Insert a denote-lastmod block for today (by #+hugo_lastmod: date).
+With prefix ARG, prompt for a date via calendar."
+  (interactive "P")
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (ymd (format-time-string "%Y-%m-%d" time)))
+    (insert
+     (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
+             ymd ymd))))
 
 ;;;###autoload
 (defun my/denote-lastmod-this-week (&optional arg)
@@ -283,23 +296,12 @@ With prefix ARG, prompt for a date via calendar."
 With prefix ARG, prompt for a date via calendar.
 Shows notes modified this week, not just newly created ones."
   (interactive "P")
-  (let* ((date (if arg
-                   (calendar-read-date)
-                 (list (string-to-number (format-time-string "%m"))
-                       (string-to-number (format-time-string "%d"))
-                       (string-to-number (format-time-string "%Y")))))
-         (month (nth 0 date))
-         (day   (nth 1 date))
-         (year  (nth 2 date))
-         (time  (encode-time 0 0 0 day month year))
-         (dow (string-to-number (format-time-string "%u" time)))
-         (monday (time-subtract time (days-to-time (1- dow))))
-         (sunday (time-add monday (days-to-time 6)))
-         (from (format-time-string "%Y-%m-%d" monday))
-         (to (format-time-string "%Y-%m-%d" sunday)))
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (range (my/org--week-range time)))
     (insert
      (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
-             from to))))
+             (car range) (cdr range)))))
 
 ;;;; Refile & Extract
 
@@ -460,80 +462,118 @@ NAME defaults to interactive input."
       (org-redisplay-inline-images))))
 
 ;;;###autoload
-(defun my/org-insert-screenshots-this-week (&optional arg)
-  "Insert links to screenshots taken this week (by filename date).
-With prefix ARG, prompt for a date via calendar."
-  (interactive "P")
-  (let* ((date (if arg
-                   (calendar-read-date)
-                 (list (string-to-number (format-time-string "%m"))
-                       (string-to-number (format-time-string "%d"))
-                       (string-to-number (format-time-string "%Y")))))
-         (month (nth 0 date))
-         (day   (nth 1 date))
-         (year  (nth 2 date))
-         (time  (encode-time 0 0 0 day month year))
-         (dow (string-to-number (format-time-string "%u" time)))
+(defun my/org--read-date-or-today (&optional arg)
+  "Read date from calendar if ARG, otherwise today. Returns (MONTH DAY YEAR)."
+  (if arg
+      (calendar-read-date)
+    (list (string-to-number (format-time-string "%m"))
+          (string-to-number (format-time-string "%d"))
+          (string-to-number (format-time-string "%Y")))))
+
+(defun my/org--date-to-time (date)
+  "Convert (MONTH DAY YEAR) to time value."
+  (encode-time 0 0 0 (nth 1 date) (nth 0 date) (nth 2 date)))
+
+(defun my/org--week-dates (time)
+  "Return list of YYYYMMDD strings for the week containing TIME (Mon-Sun)."
+  (let* ((dow (string-to-number (format-time-string "%u" time)))
+         (monday (time-subtract time (days-to-time (1- dow)))))
+    (mapcar (lambda (i)
+              (format-time-string "%Y%m%d" (time-add monday (days-to-time i))))
+            (number-sequence 0 6))))
+
+(defun my/org--week-range (time)
+  "Return (FROM . TO) as YYYY-MM-DD strings for the week containing TIME."
+  (let* ((dow (string-to-number (format-time-string "%u" time)))
          (monday (time-subtract time (days-to-time (1- dow))))
-         (dates (mapcar (lambda (i)
-                          (format-time-string "%Y%m%d"
-                                              (time-add monday (days-to-time i))))
-                        (number-sequence 0 6)))
-         (img-dir (expand-file-name "~/org/images/"))
+         (sunday (time-add monday (days-to-time 6))))
+    (cons (format-time-string "%Y-%m-%d" monday)
+          (format-time-string "%Y-%m-%d" sunday))))
+
+;;;;; Screenshots
+
+(defun my/org--insert-screenshots-for-dates (date-strings label)
+  "Insert screenshot links for DATE-STRINGS (YYYYMMDD list). LABEL for empty message."
+  (let* ((img-dir (expand-file-name "~/org/images/"))
          (files (when (file-directory-p img-dir)
                   (seq-filter
                    (lambda (f)
-                     (seq-some (lambda (d) (string-prefix-p d (file-name-nondirectory f))) dates))
+                     (seq-some (lambda (d) (string-prefix-p d (file-name-nondirectory f)))
+                               date-strings))
                    (directory-files img-dir t "\\.\\(png\\|jpg\\|jpeg\\|gif\\|webp\\)$"))))
          (sorted (seq-sort (lambda (a b) (string> a b)) files)))
     (if (null sorted)
-        (insert (format "이번 주(%s ~ %s) 스크린샷 없음.\n"
-                        (car dates) (car (last dates))))
+        (insert (format "%s 스크린샷 없음.\n" label))
       (dolist (f sorted)
         (let ((name (file-name-sans-extension (file-name-nondirectory f))))
           (insert (format "- [[file:%s][%s]]\n" f name)))))))
 
 ;;;###autoload
-(defun my/org-insert-citations-this-week (&optional arg)
-  "Insert org-cite links for BibTeX entries added this week (by urldate).
-With prefix ARG, prompt for a date via calendar.
-Searches all .bib files in `org-cite-global-bibliography'."
+(defun my/org-insert-screenshots-today (&optional arg)
+  "Insert links to today's screenshots. With prefix ARG, pick date from calendar."
   (interactive "P")
-  (let* ((date (if arg
-                   (calendar-read-date)
-                 (list (string-to-number (format-time-string "%m"))
-                       (string-to-number (format-time-string "%d"))
-                       (string-to-number (format-time-string "%Y")))))
-         (month (nth 0 date))
-         (day   (nth 1 date))
-         (year  (nth 2 date))
-         (time  (encode-time 0 0 0 day month year))
-         (dow (string-to-number (format-time-string "%u" time)))
-         (monday (time-subtract time (days-to-time (1- dow))))
-         (sunday (time-add monday (days-to-time 6)))
-         (from (format-time-string "%Y-%m-%d" monday))
-         (to (format-time-string "%Y-%m-%d" sunday))
-         (bib-files (bound-and-true-p org-cite-global-bibliography))
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (ymd (format-time-string "%Y%m%d" time)))
+    (my/org--insert-screenshots-for-dates
+     (list ymd)
+     (format "%s(%s)" (format-time-string "%Y-%m-%d %a" time) ymd))))
+
+;;;###autoload
+(defun my/org-insert-screenshots-this-week (&optional arg)
+  "Insert links to screenshots taken this week (by filename date).
+With prefix ARG, prompt for a date via calendar."
+  (interactive "P")
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (dates (my/org--week-dates time)))
+    (my/org--insert-screenshots-for-dates
+     dates
+     (format "이번 주(%s ~ %s)" (car dates) (car (last dates))))))
+
+;;;;; Citations (urldate)
+
+(defun my/org--insert-citations-for-range (from to)
+  "Insert org-cite links for BibTeX entries with urldate between FROM and TO."
+  (let* ((bib-files (bound-and-true-p org-cite-global-bibliography))
+         (script (expand-file-name "bin/bib-urldate.pl" doom-user-dir))
+         (bib-args (mapconcat (lambda (f) (shell-quote-argument (expand-file-name f)))
+                              (seq-filter #'file-exists-p bib-files) " "))
+         (output (shell-command-to-string
+                  (format "perl %s %s %s %s"
+                          (shell-quote-argument script) from to bib-args)))
          (results nil))
-    ;; BibTeX 파일에서 urldate 기반 추출 (bin/bib-urldate.pl)
-    (let* ((script (expand-file-name "bin/bib-urldate.pl" doom-user-dir))
-           (bib-args (mapconcat (lambda (f) (shell-quote-argument (expand-file-name f)))
-                                (seq-filter #'file-exists-p bib-files) " "))
-           (output (shell-command-to-string
-                    (format "perl %s %s %s %s"
-                            (shell-quote-argument script) from to bib-args))))
-      (dolist (line (split-string output "\n" t))
-        (let* ((parts (split-string line "\t" t))
-               (key (car parts))
-               (title (cadr parts)))
-          (when (and key title)
-            (push (cons key title) results)))))
-    ;; 삽입
+    (dolist (line (split-string output "\n" t))
+      (let* ((parts (split-string line "\t" t))
+             (key (car parts))
+             (title (cadr parts)))
+        (when (and key title)
+          (push (cons key title) results))))
     (if (null results)
-        (insert (format "이번 주(%s ~ %s) 추가된 서지 없음.\n" from to))
+        (insert (format "%s ~ %s 추가된 서지 없음.\n" from to))
       (insert (format "** [urldate: %s ~ %s]\n\n" from to))
       (dolist (entry (nreverse results))
         (insert (format "- %s [cite:@%s]\n" (cdr entry) (car entry)))))))
+
+;;;###autoload
+(defun my/org-insert-citations-today (&optional arg)
+  "Insert org-cite links for BibTeX entries added today (by urldate).
+With prefix ARG, pick date from calendar."
+  (interactive "P")
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (ymd (format-time-string "%Y-%m-%d" time)))
+    (my/org--insert-citations-for-range ymd ymd)))
+
+;;;###autoload
+(defun my/org-insert-citations-this-week (&optional arg)
+  "Insert org-cite links for BibTeX entries added this week (by urldate).
+With prefix ARG, prompt for a date via calendar."
+  (interactive "P")
+  (let* ((date (my/org--read-date-or-today arg))
+         (time (my/org--date-to-time date))
+         (range (my/org--week-range time)))
+    (my/org--insert-citations-for-range (car range) (cdr range))))
 
 
 ;;;; Dired Utilities
