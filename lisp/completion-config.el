@@ -364,6 +364,31 @@ This override uses `my/sort-modified' (hash table, ~5x faster)."
     )
   )
 
+
+;;;; tempel
+
+(use-package! tempel
+  :bind
+  (("M-+" . tempel-complete) ;; Alternative tempel-expand
+   ("M-*" . tempel-insert))
+  :init
+  (setq tempel-path (expand-file-name "var/tempel-templates.eld" doom-user-dir)))
+
+(use-package! tempel-collection
+  :after tempel)
+
+;;;; dabbrev
+
+(progn
+  (require 'dabbrev)
+  (setq dabbrev-abbrev-char-regexp "[가-힣A-Za-z-_]")
+  (setq dabbrev-upcase-means-case-search nil) ; default t
+  (setq dabbrev-ignored-buffer-regexps
+        '("\\` "
+          "\\.\\(?:pdf\\|jpe?g\\|png\\)\\'"
+          "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
+  (setq dabbrev-abbrev-skip-leading-regexp "[$*/=~']"))
+
 ;;; provide
 
 (provide 'completion-config)

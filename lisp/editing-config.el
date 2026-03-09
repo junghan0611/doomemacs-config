@@ -15,6 +15,12 @@
 
 ;;; Code:
 
+;;;; bookmark
+
+(setq bookmark-default-file "~/emacs-bookmarks.el")
+(setq bookmark-use-annotations nil)
+(setq bookmark-automatically-show-annotations t)
+
 ;;;; Ten - Personal Glossary System (핵심 패키지)
 
 ;; Ten 典 (ten): 개인 용어 사전 관리 및 자동 하이라이트
@@ -219,6 +225,12 @@ only those in the selected frame."
   ;; imenu로 문서 구조 탐색
   (setq adoc-imenu-generic-expression
         '(("Sections" "^=+ +\\(.+\\)$" 1))))
+
+;;;; markdown
+
+;; markdown-indent-mode: org-indent-mode와 동일한 시각적 계층 구조
+(use-package! markdown-indent-mode
+  :hook (markdown-mode . markdown-indent-mode))
 
 ;;;; provide
 

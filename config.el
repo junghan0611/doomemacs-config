@@ -223,10 +223,6 @@
 
 (require 'prog-mode-config)
 
-;; markdown-indent-mode: org-indent-mode와 동일한 시각적 계층 구조
-(use-package! markdown-indent-mode
-  :hook (markdown-mode . markdown-indent-mode))
-
 ;; (require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
 ;; (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
@@ -246,36 +242,6 @@
 (require 'functions)
 
 ;;; overide doomemacs
-
-;;;; tempel
-
-(use-package! tempel
-  :bind
-  (("M-+" . tempel-complete) ;; Alternative tempel-expand
-   ("M-*" . tempel-insert))
-  :init
-  (setq tempel-path (expand-file-name "var/tempel-templates.eld" doom-user-dir)))
-
-(use-package! tempel-collection
-  :after tempel)
-
-;;;; bookmark
-
-(setq bookmark-default-file "~/emacs-bookmarks.el")
-(setq bookmark-use-annotations nil)
-(setq bookmark-automatically-show-annotations t)
-
-;;;; dabbrev
-
-(progn
-  (require 'dabbrev)
-  (setq dabbrev-abbrev-char-regexp "[가-힣A-Za-z-_]")
-  (setq dabbrev-upcase-means-case-search nil) ; default t
-  (setq dabbrev-ignored-buffer-regexps
-        '("\\` "
-          "\\.\\(?:pdf\\|jpe?g\\|png\\)\\'"
-          "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
-  (setq dabbrev-abbrev-skip-leading-regexp "[$*/=~']"))
 
 ;;;; fortune
 
@@ -389,7 +355,6 @@ Returns t on success, nil if notify-send is not available."
       t)))
 ;;   )
 
-
 ;;; DONT py3status integration (ElleNajit)
 
 ;; (with-eval-after-load 'org-clock
@@ -401,30 +366,6 @@ Returns t on success, nil if notify-send is not available."
 ;;   (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
 
 
-;;; TODO MIGRATIONS
-
-;;;; my/enable-alice-keyboard-toggle-input-method
-
-(defun my/enable-alice-keyboard-toggle-input-method ()
-  (interactive)
-
-  ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
-
-  (map! (:map vertico-map
-              "`"   #'toggle-input-method)
-        (:map vterm-mode-map
-              "`"   #'toggle-input-method)
-        (:map prog-mode-map
-              "`"   #'toggle-input-method)
-        (:map minibuffer-mode-map
-              "`"   #'toggle-input-method)
-        (:map minibuffer-local-map
-              "`"   #'toggle-input-method)
-        (:map agent-shell-mode-map
-         :i "`" #'toggle-input-method)
-        (:map org-mode-map
-         :i "`" #'toggle-input-method))
-  )
 
 ;;; Workflow Shared (인간/에이전트 공유 — denote 이후 로드)
 (after! denote (require 'workflow-shared))

@@ -53,11 +53,11 @@
 
        :ui
        doom              ; what makes DOOM look the way it does
-       doom-dashboard    ; a nifty splash screen for Emacs
+       ;; dashboard
+       doom-dashboard         ; a nifty splash screen for Emacs
        ;; doom-quit         ; DOOM quit-message prompts when you quit Emacs
        hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW/XXX/BUG
        ;; indent-guides     ; highlighted indent columns
-       ;; minimap           ; show a map of the code on the side
        modeline          ; snazzy, Atom-inspired modeline, plus API
        neotree           ; a project drawer, like NERDTree for vim
        ophints           ; highlight the region an operation acts on
@@ -154,7 +154,7 @@
        (yaml +tree-sitter) ; JSON, but readable
        (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
-       (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
+       ;; (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
        (go +tree-sitter +lsp)
        (clojure +tree-sitter +lsp) ; +tree-sitter java with a lisp
        (scheme +mit) ;; +racket ; a fully conniving family of lisps

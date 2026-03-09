@@ -522,9 +522,9 @@
              "l" (embark-split-action find-file +evil/window-vsplit-and-follow)
              "a" (embark-ace-action find-file))
     (:prefix "g"
-     "p" #'my/gptel-apply-prompt-to-file
-     "t" #'my/gptel-translate-file
-     "s" #'my/gptel-summarize-file)
+             "p" #'my/gptel-apply-prompt-to-file
+             "t" #'my/gptel-translate-file
+             "s" #'my/gptel-summarize-file)
     )
 
    (:map
@@ -577,12 +577,12 @@
     embark-sentence-map
     embark-paragraph-map)
    (:prefix "g"
-    "p" #'my/gptel-apply-prompt-to-region
-    "[" #'my/gptel-quick-region
-    "t" #'my/gptel-translate-region
-    "s" #'my/gptel-summarize-region
-    "e" #'my/gptel-explain-region
-    "r" #'my/gptel-rewrite-region)
+            "p" #'my/gptel-apply-prompt-to-region
+            "[" #'my/gptel-quick-region
+            "t" #'my/gptel-translate-region
+            "s" #'my/gptel-summarize-region
+            "e" #'my/gptel-explain-region
+            "r" #'my/gptel-rewrite-region)
    )
 
 ;;;;;; add-hook
@@ -602,6 +602,28 @@
   ;;   :after #'embark-next-symbol
   ;;   (recenter))
 
+  )
+
+;;;; Custom Keyboard
+
+;; my/enable-alice-keyboard-toggle-input-method
+(defun my/enable-alice-keyboard-toggle-input-method ()
+  (interactive)
+  ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
+  (map! (:map vertico-map
+              "`"   #'toggle-input-method)
+        (:map vterm-mode-map
+              "`"   #'toggle-input-method)
+        (:map prog-mode-map
+              "`"   #'toggle-input-method)
+        (:map minibuffer-mode-map
+              "`"   #'toggle-input-method)
+        (:map minibuffer-local-map
+              "`"   #'toggle-input-method)
+        (:map agent-shell-mode-map
+         :i "`" #'toggle-input-method)
+        (:map org-mode-map
+         :i "`" #'toggle-input-method))
   )
 
 ;;; provide
