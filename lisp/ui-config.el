@@ -21,15 +21,16 @@
 
 ;;;; Dashboard - Terminal Optimized
 
-(setq +doom-dashboard-ascii-banner-fn nil)
+;; 새 :ui dashboard 모듈 사용 (+dashboard-* 접두사)
+(setq +dashboard-ascii-banner-fn nil)
 
 ;; Dashboard 위젯 구성
-(setq +doom-dashboard-functions
+(setq +dashboard-functions
       '(my/dashboard-widget-fortune ;; fortune
-        doom-dashboard-widget-banner
-        doom-dashboard-widget-shortmenu
-        doom-dashboard-widget-loaded
-        doom-dashboard-widget-footer))
+        +dashboard-widget-banner
+        +dashboard-widget-shortmenu
+        +dashboard-widget-loaded
+        +dashboard-widget-footer))
 
 ;; Fortune 위젯: Kevin Kelly 명언 또는 fortune 명령어 출력
 (defun my/dashboard-widget-fortune ()
@@ -48,9 +49,8 @@
             ;; fortune 없으면 Kevin Kelly 기본 명언
             "\n The only way to fight against getting old is to remain astonished.
                                                       - Kevin Kelly")))
-    (+doom-dashboard--center
-     (- +doom-dashboard--width 2)
-     (insert quotestring "\n"))))
+    ;; 새 dashboard의 +dashboard-insert-centered 사용 (pixel-width 기반 센터링)
+    (+dashboard-insert-centered quotestring)))
 
 ;;;; visual-line-mode
 

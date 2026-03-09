@@ -53,8 +53,8 @@
 
        :ui
        doom              ; what makes DOOM look the way it does
-       ;; dashboard
-       doom-dashboard         ; a nifty splash screen for Emacs
+       dashboard              ; a nifty splash screen for Emacs
+       ;; doom-dashboard      ; (deprecated) replaced by :ui dashboard
        ;; doom-quit         ; DOOM quit-message prompts when you quit Emacs
        hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW/XXX/BUG
        ;; indent-guides     ; highlighted indent columns
