@@ -239,6 +239,8 @@
   (setq gptel-quick-model gptel-openrouter-flash-model)
   (setq gptel-quick-word-count 30) ; 기본 12 → 30 (한글 ~15자 분량)
   (setq gptel-quick-timeout 15)    ; 기본 10 → 15초
+  (setq gptel-quick-display nil)   ; use echo area
+
   (setq gptel-quick-system-message
         (lambda (count)
           (format
@@ -600,7 +602,8 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
 
 ;;;;; gptel functions
 
-  ;; TODO 뭐하는 함수인가?! 다시 검토
+  ;; "채팅 버퍼 초기화 — 마지막 질문만 남기고 히스토리 청소". 토큰 절약하면서
+  ;; 맥락을 이어가고 싶을 때 쓰는 함수입니다. 키바인딩 M-l에 연결되어 있네요
   (defun gptel-clear-buffer+ ()
     (interactive)
     (let* ((beg-marker (concat "^" (alist-get gptel-default-mode gptel-prompt-prefix-alist)))
@@ -884,36 +887,6 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
                           (display-buffer output-buffer)
                           (message "요약 완료: %s" (file-name-nondirectory file)))
                       (message "요약 실패: %s" (plist-get info :status)))))))
-  )
-
-;;;; macher
-
-(use-package! macher
-  :defer 5
-  :after gptel
-  :custom
-  ;; The org UI has structured navigation and nice content folding.
-  (macher-action-buffer-ui 'org)
-
-  :config
-  ;; Recommended - register macher tools and presets with gptel.
-  (macher-install)
-
-  ;; Recommended - enable macher infrastructure for tools/prompts in
-  ;; any buffer.  (Actions and presets will still work without this.)
-  (macher-enable)
-
-  ;; Adjust buffer positioning to taste.
-  ;; (add-to-list
-  ;;  'display-buffer-alist
-  ;;  '("\\*macher:.*\\*"
-  ;;    (display-buffer-in-side-window)
-  ;;    (side . bottom)))
-  ;; (add-to-list
-  ;;  'display-buffer-alist
-  ;;  '("\\*macher-patch:.*\\*"
-  ;;    (display-buffer-in-side-window)
-  ;;    (side . right)))
   )
 
 ;;;; peon-ping 사운드 알림
