@@ -254,10 +254,4 @@
 
 (package! markdown-indent-mode :recipe (:host github :repo "whhone/markdown-indent-mode"))
 
-
-
-(use-package markdown-indent-mode
-  :hook (markdown-mode . markdown-indent-mode))
-
-
 ;;; END
