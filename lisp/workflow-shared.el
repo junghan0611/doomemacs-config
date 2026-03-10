@@ -33,6 +33,23 @@
 (setq org-tag-group-re
       "[ \t]+\\(:\\([[:alnum:]@#%:]+\\):\\)[ \t]*$")
 
+;;;; org-agenda-redo — 외부 변경 반영
+
+;; 에이전트가 bash로 agenda 파일을 수정하면 Emacs 버퍼는 디스크와 불일치.
+;; org-agenda-redo-all은 열린 버퍼 기반이라 변경사항이 안 보임.
+;; → redo 전에 agenda 관련 org 버퍼를 자동 revert.
+(defun my/org-agenda-revert-files (&rest _)
+  "Revert all org-agenda file buffers from disk before agenda rebuild."
+  (dolist (file (org-agenda-files))
+    (when-let* ((buf (get-file-buffer file)))
+      (with-current-buffer buf
+        (when (and (not (buffer-modified-p))
+                   (file-exists-p (buffer-file-name)))
+          (revert-buffer t t t))))))
+
+(advice-add 'org-agenda-redo :before #'my/org-agenda-revert-files)
+(advice-add 'org-agenda-redo-all :before #'my/org-agenda-revert-files)
+
 ;;;; org-agenda-files 동적 구성
 
 ;; _aprj (active project) 태그가 있는 denote 파일 + botlog/agenda/
