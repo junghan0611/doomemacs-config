@@ -181,8 +181,7 @@
 
 ;;;; ai-gptel.el
 
-(unpin! gptel)
-;; (package! macher)
+;; (unpin! gptel)
 (package! uuidgen) ; for gptel-prompt
 (package! gptel-prompt :recipe (:host github :repo "jwiegley/gptel-prompts"))
 (package! yaml)      ; for .poet templates
