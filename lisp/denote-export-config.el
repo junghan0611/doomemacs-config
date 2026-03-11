@@ -114,7 +114,8 @@
     (setq citar-citeproc-csl-styles-dir (concat org-directory ".csl")))
 
   ;; Setup export processor; default csl/citeproc-el, with biblatex for latex
-  (after! oc
+  ;; after! is Doom-only; use with-eval-after-load for daemon compatibility
+  (with-eval-after-load 'oc
     (require 'citar-citeproc)
     (setq bibtex-files config-bibfiles)
     (setq citar-format-reference-function 'citar-format-reference)

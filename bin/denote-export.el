@@ -604,6 +604,12 @@ This function handles filenames internally, avoiding shell quoting issues with N
 (defun denote-dblock-update-file (file)
   "Update all dblocks in FILE and save."
   (message "[DBLOCK] Processing: %s" file)
+  ;; Increment file counter and check for GC (shared with export)
+  (setq denote-export-file-counter (1+ denote-export-file-counter))
+  (when (zerop (mod denote-export-file-counter denote-export-gc-interval))
+    (message "[Server] [GC] Running garbage collection at file #%d..." denote-export-file-counter)
+    (garbage-collect)
+    (message "[Server] [GC] Done"))
   (let ((start-time (float-time))
         (buf nil))
     (condition-case err
