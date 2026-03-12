@@ -105,7 +105,7 @@ cd ~/sync/emacs/doomemacs-config
 정규식으로 관련 노트 검색하여 자동 링크 생성
 
 #+begin_example
-#+BEGIN: denote-links :regexp "변환\\|convert" :not-regexp nil :excluded-dirs-regexp "\\(meta\\|llmlog\\)" :sort-by-component nil :reverse-sort t :id-only nil :include-date t
+#+BEGIN: denote-links :regexp "변환\\|convert" :not-regexp nil :excluded-dirs-regexp "\\(meta\\|llmlog\\)" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t
 
 #+END:
 #+end_example

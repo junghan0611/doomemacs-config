@@ -42,10 +42,6 @@
 
 (defcustom denote-silo-base-directories
   '(
-    "~/claude-memory/areas"
-    "~/claude-memory/projects"
-    "~/claude-memory/resources/"
-    "~/claude-memory/resources/solutions/"
     "~/org"
     "~/org/meta"
     "~/org/bib"

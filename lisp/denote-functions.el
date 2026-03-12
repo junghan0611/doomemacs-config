@@ -193,7 +193,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :excluded-dirs-regexp
                            "\\(meta\\|elisp\\|journal\\|posts\\|docs\\|md\\|dict\\|private\\|ekg\\)"
                            :sort-by-component nil
-                           :reverse-sort t
+                           :reverse-sort nil
                            :id-only nil
                            :include-date t))
   (org-update-dblock))
@@ -209,7 +209,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :excluded-dirs-regexp
                            "\\(meta\\|office\\|botlog\\|llmlog\\|notes\\|journal\\|posts\\|docs\\|md\\|dict\\|private\\|ekg\\)"
                            :sort-by-component nil
-                           :reverse-sort t
+                           :reverse-sort nil
                            :id-only nil
                            :include-date t))
   (org-update-dblock))
@@ -225,7 +225,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                            :excluded-dirs-regexp
                            "\\(meta\\|bib\\|office\\|journal\\|posts\\|docs\\|md\\|dict\\|private\\|ekg\\)"
                            :sort-by-component nil
-                           :reverse-sort t
+                           :reverse-sort nil
                            :id-only nil
                            :include-date t))
   (org-update-dblock))
@@ -247,7 +247,7 @@ Interactively, CONFIRMP is non-nil by default; use prefix to skip confirmation."
                              :excluded-dirs-regexp
                              "\\(bib\\|notes\\|office\\|elisp\\|botlog\\|llmlog\\|docs\\|posts\\|md\\|journal\\|dict\\|private\\|ekg\\)"
                              :sort-by-component nil
-                             :reverse-sort t
+                             :reverse-sort nil
                              :id-only nil
                              :include-date t))
     (org-update-dblock)))
@@ -262,7 +262,7 @@ With prefix ARG, prompt for a date via calendar."
          (ymd (format-time-string "%Y%m%d" time))
          (regexp (concat ymd "T*")))
     (insert
-     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t\n#+END:\n"
              regexp))))
 
 ;;;###autoload
@@ -275,7 +275,7 @@ With prefix ARG, prompt for a date via calendar."
          (dates (my/org--week-dates time))
          (regexp (mapconcat (lambda (d) (concat d "T*")) dates "\\\\|")))
     (insert
-     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort t :id-only nil :include-date t\n#+END:\n"
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t\n#+END:\n"
              regexp))))
 
 ;;;###autoload
