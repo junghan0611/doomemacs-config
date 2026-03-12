@@ -41,7 +41,11 @@
         telega-chat-show-deleted-messages-for nil)
 
   ;; transient 메뉴 활성화 (magit 스타일)
-  (telega-transient-keymaps-mode 1))
+  (telega-transient-keymaps-mode 1)
+
+  ;; Doom workspace(persp-mode) + consult-buffer에서 보이도록 real buffer 등록
+  (add-hook 'telega-root-mode-hook #'doom-mark-buffer-as-real-h)
+  (add-hook 'telega-chat-mode-hook #'doom-mark-buffer-as-real-h))
 
 ;;;; 봇 바로가기
 
