@@ -234,7 +234,8 @@
 
 (defvar agent-server-write-paths
   '("/home/junghan/org/botlog/"
-    "/home/junghan/repos/gh/self-tracking-data/")
+    "/home/junghan/repos/gh/self-tracking-data/"
+    "/home/junghan/repos/gh/naver-saiculture/")
   "Paths the agent can WRITE to. Must match Docker rw mounts.")
 
 (defun agent-server--path-allowed-p (file mode)
@@ -330,6 +331,48 @@ MAX-LEVEL limits depth (default: all levels)."
             (when val
               (push (cons key val) props))))
         (nreverse props)))))
+
+(defun agent-denote-rename-by-front-matter (file)
+  "FILE의 front-matter(#+title, #+filetags 등)를 읽어 파일명을 자동 변경.
+`denote-rename-confirmations'를 nil로 바인딩하여 y-or-n-p 프롬프트 없이 실행.
+에이전트가 headless 환경에서 안전하게 호출할 수 있다."
+  (agent-server--path-allowed-p file 'write)
+  (if (not (file-exists-p file))
+      (format "ERROR: File not found: %s" file)
+    (let ((denote-rename-confirmations nil)
+          (denote-save-buffers t)
+          (denote-kill-buffers 'on-rename))
+      (condition-case err
+          (let ((new-name (denote-rename-file-using-front-matter file)))
+            (format "OK: %s → %s"
+                    (file-name-nondirectory file)
+                    (file-name-nondirectory (or new-name file))))
+        (user-error (format "SKIP: %s — %s"
+                            (file-name-nondirectory file)
+                            (error-message-string err)))
+        (error (format "ERROR: %s — %s"
+                       (file-name-nondirectory file)
+                       (error-message-string err)))))))
+
+(defun agent-denote-rename-bulk (directory)
+  "DIRECTORY 내 모든 denote 파일의 front-matter 기반 일괄 rename.
+결과를 (renamed skipped errors) 카운트로 반환."
+  (agent-server--path-allowed-p directory 'write)
+  (let ((files (directory-files-recursively directory "\\.org$"))
+        (renamed 0) (skipped 0) (errors 0)
+        (denote-rename-confirmations nil)
+        (denote-save-buffers t)
+        (denote-kill-buffers 'on-rename))
+    (dolist (file files)
+      (when (denote-file-has-identifier-p file)
+        (condition-case nil
+            (progn
+              (denote-rename-file-using-front-matter file)
+              (cl-incf renamed))
+          (user-error (cl-incf skipped))
+          (error (cl-incf errors)))))
+    (format "Done: %d renamed, %d skipped, %d errors (total: %d files)"
+            renamed skipped errors (length files))))
 
 (defun agent-denote-search (query &optional type)
   "Search Denote notes by QUERY.
@@ -454,6 +497,8 @@ Human + Agent + Diary 통합 타임라인."
 (message "[agent-server] API: agent-server-status, agent-org-read-file,")
 (message "[agent-server]      agent-org-get-headings, agent-org-get-properties,")
 (message "[agent-server]      agent-denote-search, agent-citar-lookup,")
+(message "[agent-server]      agent-denote-rename-by-front-matter,")
+(message "[agent-server]      agent-denote-rename-bulk,")
 (message "[agent-server]      agent-org-dblock-update,")
 (message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
 (message "[agent-server]      agent-org-agenda-tags")
