@@ -156,7 +156,7 @@ _THEME 인자는 `enable-theme-functions' 호환용."
   (interactive)
   ;; (ef-themes-load-random-dark)
   ;; (modus-themes-select 'modus-vivendi-tinted)
-  (modus-themes-load-theme 'ef-owl)
+  (modus-themes-load-theme 'ef-maris-dark)
   ;; 터미널에서 테마 로드 후 배경 투명화 (확실한 적용)
   (unless (display-graphic-p)
     (run-with-timer 0.05 nil #'my/terminal-transparent-background)))

@@ -140,6 +140,7 @@
 
 ;;;; prog-mode-config.el
 
+(unpin! clojure-mode)
 (package! aggressive-indent)
 ;; (package! org-linenote) ; require lsp-mode
 

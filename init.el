@@ -156,8 +156,8 @@
        (cc +tree-sitter)
        ;; (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
        (go +tree-sitter)
-       (clojure +tree-sitter) ; +tree-sitter java with a lisp
-       (scheme +mit) ;; +racket ; a fully conniving family of lisps
+       (clojure +lsp) ; java with a lisp
+       (scheme +mit) ; +racket ; a fully conniving family of lisps
        ess
 
        :email
