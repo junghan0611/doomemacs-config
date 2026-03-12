@@ -51,6 +51,7 @@
     "~/org/bib"
     "~/org/notes"
     "~/org/llmlog"
+    "~/org/botlog"
     "~/org/elisp"
     )
   "기본 Denote Silo 디렉토리 목록.
@@ -63,6 +64,18 @@
 (defun denote-silo--is-git-repo (dir)
   "DIR이 Git 저장소인지 확인합니다."
   (file-directory-p (expand-file-name ".git" dir)))
+
+(defun denote-silo--list-org-files (silo)
+  "SILO 디렉토리의 .org 파일을 재귀적으로 찾아 반환.
+각 요소는 (RELATIVE-PATH . ABSOLUTE-PATH) cons cell.
+.git 디렉토리는 제외합니다."
+  (when (file-directory-p silo)
+    (let ((abs-files (directory-files-recursively silo "\\.org$" nil)))
+      (seq-filter
+       (lambda (pair) (not (string-match-p "/\\.git/" (cdr pair))))
+       (mapcar (lambda (f)
+                 (cons (file-relative-name f silo) f))
+               abs-files)))))
 
 (defun denote-silo--format-display-name (path)
   "경로를 읽기 좋은 짧은 이름으로 변환합니다.
@@ -106,34 +119,60 @@ Git 저장소(.git 폴더 존재)만 포함합니다."
               (push docs-path valid-silos))))))
     (nreverse valid-silos)))
 
+(defun denote-silo-discover-full-repos ()
+  "리포 루트 자체가 silo인 디렉토리를 반환.
+`denote-silo-full-repo-roots' 변수에 등록된 경로 중
+실제 Git 저장소인 것만 포함합니다."
+  (let ((valid-silos '()))
+    (dolist (repo-path (bound-and-true-p denote-silo-full-repo-roots))
+      (let ((real-path (file-truename (expand-file-name repo-path))))
+        (when (and (file-directory-p real-path)
+                   (denote-silo--is-git-repo real-path)
+                   (not (member real-path valid-silos)))
+          (push real-path valid-silos))))
+    (nreverse valid-silos)))
+
 (defun denote-silo-setup-all ()
   "기본 Silo + 동적 발견 Silo 통합 설정.
-Emacs 시작 시 또는 수동으로 호출하여 Silo 목록을 업데이트합니다."
+Emacs 시작 시 또는 수동으로 호출하여 Silo 목록을 업데이트합니다.
+3가지 소스를 통합:
+  1. `denote-silo-base-directories' — 고정 디렉토리
+  2. `denote-silo-repos-roots' — repo/docs/ 자동 발견
+  3. `denote-silo-full-repo-roots' — 리포 루트 전체가 silo"
   (interactive)
   (setq denote-silo-directories
         (delete-dups
          (append
           ;; 기본 디렉토리
           (mapcar #'expand-file-name denote-silo-base-directories)
-          ;; 동적 발견 디렉토리
-          (denote-silo-discover-repo-docs))))
-  (message "Denote Silo initialized: %d directories" (length denote-silo-directories)))
+          ;; 동적 발견: repo/docs/
+          (denote-silo-discover-repo-docs)
+          ;; 풀 리포: 루트 자체가 silo
+          (denote-silo-discover-full-repos))))
+  (message "Denote Silo initialized: %d directories (%d full-repo)"
+           (length denote-silo-directories)
+           (length (denote-silo-discover-full-repos))))
 
 (defun denote-silo-list-all ()
   "모든 등록된 Silo 목록을 상대 경로로 표시합니다."
   (interactive)
-  (let ((silos denote-silo-directories))
+  (let ((silos denote-silo-directories)
+        (full-repos (mapcar (lambda (p) (file-truename (expand-file-name p)))
+                            (bound-and-true-p denote-silo-full-repo-roots))))
     (with-current-buffer (get-buffer-create "*Denote Silos*")
       (erase-buffer)
       (insert "=== Registered Denote Silos ===\n\n")
       (insert (format "Total: %d directories\n\n" (length silos)))
       (dolist (silo silos)
         (let* ((display-name (denote-silo--format-display-name silo))
-               (files (length (directory-files silo nil "\\.org$")))
+               (is-full-repo (member silo full-repos))
+               (files (length (denote-silo--list-org-files silo)))
                (is-git (denote-silo--is-git-repo silo))
-               (git-marker (if is-git " [Git]" "")))
-          (insert (format "• %s%s\n  Path: %s\n  Files: %d\n\n" 
-                          display-name git-marker silo files))))
+               (type-marker (cond (is-full-repo " [Full-Repo]")
+                                  (is-git " [Git/docs]")
+                                  (t ""))))
+          (insert (format "• %s%s\n  Path: %s\n  Files: %d\n\n"
+                          display-name type-marker silo files))))
       (goto-char (point-min))
       (special-mode))
     (display-buffer "*Denote Silos*")))
@@ -143,8 +182,7 @@ Emacs 시작 시 또는 수동으로 호출하여 Silo 목록을 업데이트합
   (interactive)
   (let ((total 0))
     (dolist (silo denote-silo-directories)
-      (when (file-directory-p silo)
-        (setq total (+ total (length (directory-files silo nil "\\.org$"))))))
+      (setq total (+ total (length (denote-silo--list-org-files silo)))))
     (message "Total Denote files across all silos: %d" total)))
 
 ;;;; Consult-notes Integration
@@ -184,19 +222,20 @@ Emacs 시작 시 또는 수동으로 호출하여 Silo 목록을 업데이트합
 
 (defun denote-silo-find-file-all ()
   "모든 Silo에서 파일을 검색합니다 (상대 경로 표시).
-파일 선택 시 'silo-name/filename.org' 형식으로 표시됩니다."
+파일 선택 시 'silo-name/relative-path.org' 형식으로 표시됩니다.
+full-repo silo는 서브디렉토리까지 재귀 탐색합니다."
   (interactive)
   (let* ((all-files-alist
           (mapcan (lambda (silo)
-                    (when (file-directory-p silo)
-                      (let ((display-prefix (denote-silo--format-display-name silo)))
-                        (mapcar (lambda (f)
-                                  (cons (concat display-prefix "/" f)
-                                        (expand-file-name f silo)))
-                                (directory-files silo nil "\\.org$")))))
+                    (let ((display-prefix (denote-silo--format-display-name silo))
+                          (file-pairs (denote-silo--list-org-files silo)))
+                      (mapcar (lambda (pair)
+                                (cons (concat display-prefix "/" (car pair))
+                                      (cdr pair)))
+                              file-pairs)))
                   denote-silo-directories))
-         (choice (completing-read "Find denote file: " 
-                                  (mapcar #'car all-files-alist) 
+         (choice (completing-read "Find denote file: "
+                                  (mapcar #'car all-files-alist)
                                   nil t))
          (file-path (cdr (assoc choice all-files-alist))))
     (find-file file-path)))

@@ -58,8 +58,9 @@
 (setq org-element-use-cache nil)
 (setq org-element-cache-persistent nil)
 
-;; Enable debug on error
-(setq debug-on-error t)
+;; Debug: nil for daemon (debugger crashes headless emacs)
+;; Set t only for interactive troubleshooting
+(setq debug-on-error nil)
 
 ;; Disable author export (prevents "John Doe" default)
 (setq org-export-with-author nil)
@@ -602,7 +603,8 @@ This function handles filenames internally, avoiding shell quoting issues with N
 ;;;; Dblock Functions
 
 (defun denote-dblock-update-file (file)
-  "Update all dblocks in FILE and save."
+  "Update all dblocks in FILE and save.
+Catches all errors including those from dblock handlers to prevent daemon crash."
   (message "[DBLOCK] Processing: %s" file)
   ;; Increment file counter and check for GC (shared with export)
   (setq denote-export-file-counter (1+ denote-export-file-counter))
@@ -619,22 +621,25 @@ This function handles filenames internally, avoiding shell quoting issues with N
             ;; CRITICAL: Ensure org-mode is active for dblock functions
             (unless (derived-mode-p 'org-mode)
               (org-mode))
-            ;; Check if file has dblocks
+            ;; Check if file has denote dblocks (not begin_ai etc.)
             (save-excursion
               (goto-char (point-min))
-              (if (re-search-forward "^#\\+BEGIN:" nil t)  ; Match any BEGIN block
+              (if (re-search-forward "^#\\+BEGIN: denote" nil t)
                   (progn
                     (message "[DBLOCK] Found in %s" (file-name-nondirectory file))
                     (goto-char (point-min))
                     (org-update-all-dblocks)
                     (save-buffer)
                     (message "[DBLOCK] ✓ Updated in %.2fs" (- (float-time) start-time)))
-                (message "[DBLOCK] SKIP: No dblock in %s" (file-name-nondirectory file)))))
+                (message "[DBLOCK] SKIP: No denote dblock in %s" (file-name-nondirectory file)))))
           (when (buffer-live-p buf)
             (kill-buffer buf)))
       (error
-       (message "[DBLOCK] ✗ Failed to update %s: %s" file err)
+       (message "[DBLOCK] ✗ Failed to update %s: %s" file (error-message-string err))
        (when (and buf (buffer-live-p buf))
+         ;; Revert buffer to discard partial dblock changes
+         (with-current-buffer buf
+           (revert-buffer t t t))
          (kill-buffer buf))))))
 
 (defun denote-dblock-update-directory (directory)

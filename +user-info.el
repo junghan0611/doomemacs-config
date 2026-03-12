@@ -21,6 +21,8 @@
 ;; (unless (display-graphic-p) ; terminal
 ;;   (setq doom-font (font-spec :family "Sarasa Term K Nerd Font" :size 15.1)))
 
+;;;; Denote Silo — full-repo roots
+
 ;;;; directory path
 
 (defconst user-org-directory (if (getenv "ORG_DIRECTORY")
@@ -36,6 +38,16 @@
   "Base directory for all repositories")
 (defconst claude-config-dir "~/claude-config/"
   "Directory for Claude configuration and memory")
+
+;;;; Denote Silo — full-repo roots
+
+;; docs/ 없이 리포 루트 전체가 Denote silo인 경우 등록.
+;; denote-silo-config.el이 이 목록을 읽어 재귀 탐색합니다.
+(defvar denote-silo-full-repo-roots
+  (list (concat user-project-directory "gh/naver-saiculture"))
+  "Git 리포 루트 자체를 silo로 등록할 디렉토리 목록.
+기본 정책(repo/docs/)과 달리 리포 루트를 재귀적으로 탐색합니다.
+각 항목은 반드시 Git 저장소여야 합니다.")
 
 ;;;; directories
 
