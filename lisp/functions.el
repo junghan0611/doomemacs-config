@@ -371,6 +371,17 @@ and if it is set to nil, then it would forcefully create the ID."
         (emacs-lisp-docstring-fill-column t))
     (fill-paragraph nil region)))
 
+;;; Dired
+
+;;;###autoload
+(defun my/dired-kill-all-buffers ()
+  (interactive)
+  (mapc (lambda (buf)
+          (when (eq 'dired-mode
+                    (buffer-local-value 'major-mode buf))
+            (kill-buffer buf)))
+        (buffer-list)))
+
 ;;; provide
 
 (provide 'functions)

@@ -121,7 +121,8 @@
 (map! :leader
       (:prefix "b"
        :desc "Dashboard" "h" #'+doom-dashboard/open
-       :desc "Switch to Scratch" "s" #'scratch-buffer))
+       :desc "Switch to Scratch" "s" #'scratch-buffer
+       :desc "Kill all dired buffers" "D" #'my/dired-kill-all-buffers))
 
 ;;;;; Files (f)
 
