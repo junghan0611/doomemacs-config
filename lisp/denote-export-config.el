@@ -216,7 +216,17 @@ Runs on a temporary export copy - original file is NOT modified."
                 (save-excursion (goto-char mb) (insert nbsp))
                 (cl-incf changes))))))
       (when (> changes 0)
-        (message "[Export] CJK emphasis: %d NBSP insertions" changes)))))
+        (message "[Export] CJK emphasis: %d NBSP insertions" changes)))
+
+    ;; Fix markdown-style **bold** → org-style *bold* (inline only, not headings)
+    ;; AI agents often write **bold** in org files out of markdown habit.
+    (goto-char (point-min))
+    (let ((dbl-changes 0))
+      (while (re-search-forward "\\([^*]\\)\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
+        (replace-match "\\1*\\2*")
+        (cl-incf dbl-changes))
+      (when (> dbl-changes 0)
+        (message "[Export] **bold** → *bold*: %d fixes" dbl-changes)))))
 
 (add-hook 'org-export-before-processing-hook #'my/org-fix-cjk-emphasis)
 
