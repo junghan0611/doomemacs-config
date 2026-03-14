@@ -97,7 +97,7 @@
     (save-excursion
       (goto-char (point-min))
       (let ((lastmod-line (format "#+hugo_lastmod: [%s]"
-                                  (format-time-string "%Y-%m-%d %a"))))
+                                  (format-time-string "%Y-%m-%d %a %H:%M"))))
         (if (re-search-forward "^#\\+hugo_lastmod:.*$" nil t)
             ;; Exists: update in place
             (replace-match lastmod-line)
