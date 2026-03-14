@@ -360,6 +360,25 @@ and if it is set to nil, then it would forcefully create the ID."
       ))
   )
 
+  (defun my/fix-markdown-bold-to-org ()
+    "현재 버퍼에서 마크다운 **bold** → org *bold* 변환.
+AI 에이전트가 org 파일에 마크다운 습관으로 **bold**를 쓴 경우 수정.
+org 헤딩(** heading)은 건드리지 않음."
+    (interactive)
+    (save-excursion
+      (let ((changes 0))
+        ;; 1. 줄 중간의 **text** (앞에 비-* 문자)
+        (goto-char (point-min))
+        (while (re-search-forward "\\([^*]\\)\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
+          (replace-match "\\1*\\2*")
+          (cl-incf changes))
+        ;; 2. 줄 시작의 **text** (닫는 **가 같은 줄에 있는 경우만)
+        (goto-char (point-min))
+        (while (re-search-forward "^\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
+          (replace-match "*\\1*")
+          (cl-incf changes))
+        (message "**bold** → *bold*: %d개 변환" changes))))
+
 
 ;;;; unfill paragraph: the opposite of fill-paragraph
 
