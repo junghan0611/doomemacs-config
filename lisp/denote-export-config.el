@@ -130,14 +130,17 @@
 (defun my/insert-white-space ()
   "Insert zero-width space character."
   (interactive)
-  (insert " "))
+  (insert " "))
 
-(defun +org-export-remove-white-space (text _backend _info)
-  "Remove zero width spaces from TEXT."
-  (unless (org-export-derived-backend-p 'org)
-    (replace-regexp-in-string " " "" text)))
-(add-to-list 'org-export-filter-final-output-functions
-             #'+org-export-remove-white-space t)
+;; NBSP removal disabled — my/org-fix-cjk-emphasis inserts NBSP that must
+;; survive into markdown output for remark/Quartz to recognize emphasis.
+;; No manually-inserted NBSP exists in org files (verified 0 occurrences).
+;; (defun +org-export-remove-white-space (text _backend _info)
+;;   "Remove zero width spaces from TEXT."
+;;   (unless (org-export-derived-backend-p 'org)
+;;     (replace-regexp-in-string " " "" text)))
+;; (add-to-list 'org-export-filter-final-output-functions
+;;              #'+org-export-remove-white-space t)
 
 ;; Keybinding for zero-width space (only in interactive mode)
 (when (fboundp 'evil-define-key)
@@ -158,7 +161,7 @@
 ;; in org-export-before-processing-hook. This modifies a temporary copy
 ;; of the buffer, NOT the original file.
 
-;; 1. Font-lock fix (interactive editing — visual only)
+;; 1. Font-lock fix (interactive editing - visual only)
 (setq org-emphasis-regexp-components
       '("-[:space:]('\"{[:multibyte:]"    ; pre-match: add multibyte
         "[:multibyte:]-[:space:].,:!?;'\")}\\[" ; post-match: add multibyte
@@ -168,7 +171,7 @@
 (org-set-emph-re 'org-emphasis-regexp-components
                  org-emphasis-regexp-components)
 
-;; 2. Export fix — insert NBSP around emphasis pairs adjacent to CJK
+;; 2. Export fix - insert NBSP around emphasis pairs adjacent to CJK
 ;;    NBSP (U+00A0) is used because:
 ;;    - org parser treats it as space → emphasis markers recognized
 ;;    - +org-export-remove-white-space removes NBSP from final output
@@ -178,7 +181,7 @@
 Matches emphasis pairs (*bold*, =code=, ~verb~, /italic/, +strike+)
 and adds NBSP before/after the pair if Korean text is adjacent.
 Emphasis content must start and end with non-whitespace (org rule).
-Runs on a temporary export copy — original file is NOT modified."
+Runs on a temporary export copy - original file is NOT modified."
   (save-excursion
     (goto-char (point-min))
     ;; Skip front matter (find first blank line)
@@ -238,7 +241,7 @@ Runs on a temporary export copy — original file is NOT modified."
 (setq org-export-use-babel nil)                   ; Faster export
 (setq org-export-with-tags 'not-in-toc)
 
-;;;; Section 1.5: Dblock Advice — include-date fix + folder prefix
+;;;; Section 1.5: Dblock Advice - include-date fix + folder prefix
 ;; Shared by both interactive Emacs (config.el → denote-export-config.el)
 ;; and batch/daemon export (bin/denote-export.el → denote-export-config.el)
 ;;
@@ -284,7 +287,7 @@ Format: folder/ title 'YYYY-MM-DD #YYYY-MM-DD (citar style)"
 (with-eval-after-load 'denote-org
   (advice-add 'denote-org--insert-links :around #'my/denote-org--insert-links-override))
 
-;;;; Section 1.6: Dblock denote-lastmod — lastmod 기준 필터링
+;;;; Section 1.6: Dblock denote-lastmod - lastmod 기준 필터링
 
 ;; #+hugo_lastmod: 날짜를 기준으로 파일을 필터링하는 dblock.
 ;; 새 노트(identifier)가 아닌 수정된 노트를 보여준다.
@@ -293,10 +296,10 @@ Format: folder/ title 'YYYY-MM-DD #YYYY-MM-DD (citar style)"
 ;;   #+BEGIN: denote-lastmod :from "2026-03-09" :to "2026-03-15" :excluded-dirs-regexp "journal"
 ;;   #+END:
 ;;
-;; :from  — 시작일 (YYYY-MM-DD). 생략 시 7일 전
-;; :to    — 종료일 (YYYY-MM-DD). 생략 시 오늘
-;; :excluded-dirs-regexp — 제외 디렉토리 (denote 표준)
-;; :id-only — non-nil이면 id만 출력
+;; :from  - 시작일 (YYYY-MM-DD). 생략 시 7일 전
+;; :to    - 종료일 (YYYY-MM-DD). 생략 시 오늘
+;; :excluded-dirs-regexp - 제외 디렉토리 (denote 표준)
+;; :id-only - non-nil이면 id만 출력
 ;;
 ;; include-date는 항상 t (lastmod 보는 것이 목적이므로)
 
