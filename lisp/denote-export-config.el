@@ -145,6 +145,80 @@
     (evil-define-key '(insert normal) text-mode-map
       (kbd "M-m") #'my/insert-white-space)))
 
+;;;; Section 0.5: CJK Emphasis Fix
+;; org-mode emphasis markers (*bold*, =code=, ~verbatim~, /italic/, +strike+)
+;; require pre/post match characters around markers. Korean (CJK) characters
+;; are not in the default set, so *강조*는 fails to be recognized as bold.
+;;
+;; org 9.8+ uses a native C parser (org-element--set-regexps is a C subr)
+;; that does NOT respect org-emphasis-regexp-components changes for export.
+;; Font-lock uses org-emph-re (works), but org-element parser ignores it.
+;;
+;; Solution: Insert spaces between emphasis markers and CJK characters
+;; in org-export-before-processing-hook. This modifies a temporary copy
+;; of the buffer, NOT the original file.
+
+;; 1. Font-lock fix (interactive editing — visual only)
+(setq org-emphasis-regexp-components
+      '("-[:space:]('\"{[:multibyte:]"    ; pre-match: add multibyte
+        "[:multibyte:]-[:space:].,:!?;'\")}\\[" ; post-match: add multibyte
+        "[:space:]"                       ; forbidden in border
+        "."                               ; body
+        1))                               ; max newlines
+(org-set-emph-re 'org-emphasis-regexp-components
+                 org-emphasis-regexp-components)
+
+;; 2. Export fix — insert NBSP around emphasis pairs adjacent to CJK
+;;    NBSP (U+00A0) is used because:
+;;    - org parser treats it as space → emphasis markers recognized
+;;    - +org-export-remove-white-space removes NBSP from final output
+;;    - visually invisible in rendered HTML
+(defun my/org-fix-cjk-emphasis (_backend)
+  "Insert NBSP around org emphasis pairs adjacent to CJK for export.
+Matches emphasis pairs (*bold*, =code=, ~verb~, /italic/, +strike+)
+and adds NBSP before/after the pair if Korean text is adjacent.
+Emphasis content must start and end with non-whitespace (org rule).
+Runs on a temporary export copy — original file is NOT modified."
+  (save-excursion
+    (goto-char (point-min))
+    ;; Skip front matter (find first blank line)
+    (when (re-search-forward "^$" nil t) (forward-line 1))
+    (let ((start (point))
+          (nbsp (string ?\u00A0))  ; NBSP character
+          (changes 0))
+      (dolist (m '("*" "=" "~" "/" "+"))
+        (goto-char start)
+        (let ((qm (regexp-quote m)))
+          ;; Match emphasis pair: marker + non-ws content + marker
+          ;; Content must start and end with non-whitespace (org emphasis rule)
+          (while (re-search-forward
+                  (concat qm
+                          "\\([^[:space:]" qm "]"        ; first char: non-ws
+                          "\\(?:[^" qm "\n]*"             ; optional middle
+                          "[^[:space:]" qm "]\\)?\\)"     ; last char: non-ws
+                          qm)
+                  nil t)
+            (let ((mb (match-beginning 0))
+                  (me (match-end 0)))
+              ;; After closing marker: insert NBSP if CJK follows
+              (when (and (< me (point-max))
+                         (let ((c (char-after me)))
+                           (and c (>= c #xAC00) (<= c #xD7A3))))
+                (save-excursion (goto-char me) (insert nbsp))
+                (cl-incf changes))
+              ;; Before opening marker: insert NBSP if CJK precedes
+              (when (and (> mb (point-min))
+                         (let ((c (char-before mb)))
+                           (and c (>= c #xAC00) (<= c #xD7A3))))
+                (save-excursion (goto-char mb) (insert nbsp))
+                (cl-incf changes))))))
+      (when (> changes 0)
+        (message "[Export] CJK emphasis: %d NBSP insertions" changes)))))
+
+(add-hook 'org-export-before-processing-hook #'my/org-fix-cjk-emphasis)
+
+(message "[Export] CJK emphasis fix applied (font-lock + export hook)")
+
 ;;;; Section 1: Org-Export Settings
 ;; Migrated from org-config.el
 
