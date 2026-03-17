@@ -33,6 +33,23 @@
 (setq org-tag-group-re
       "[ \t]+\\(:\\([[:alnum:]@#%:]+\\):\\)[ \t]*$")
 
+;;;; org-agenda 주차 — %W 통일 (ISO %V → Monday-start count)
+
+;; NOTE 2026-03-17: org-agenda 내부가 ISO 8601 주차(%V)를 사용하는데,
+;; 위클리저널 파일명은 %W(월요일 시작 카운트) 기준. 1주 차이 발생.
+;; (예: 2026-03-17 → ISO=W12, %W=W11, 저널=week11)
+;; org-days-to-iso-week를 advice로 %W 기준으로 교체하여
+;; 헤더 "Day-agenda (W##):"와 날짜 줄 모두 한번에 통일.
+(define-advice org-days-to-iso-week (:override (days) use-monday-week-number)
+  "Return %W week number (Monday-start count) instead of ISO 8601.
+Matches `org-journal-file-format' week%W convention."
+  (let* ((date (calendar-gregorian-from-absolute days))
+         (month (car date))
+         (day (cadr date))
+         (year (nth 2 date))
+         (time (encode-time 0 0 0 day month year)))
+    (string-to-number (format-time-string "%W" time))))
+
 ;;;; org-agenda-redo — 외부 변경 반영
 
 ;; 에이전트가 bash로 agenda 파일을 수정하면 Emacs 버퍼는 디스크와 불일치.

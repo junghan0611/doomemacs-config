@@ -95,19 +95,8 @@
 
 ;;;; org-agenda
 
-  ;; NOTE 2026-03-17: org-agenda 전체가 ISO 8601 주차(%V)를 사용하는데,
-  ;; 위클리저널 파일명은 %W(월요일 시작 카운트) 기준. 1주 차이 발생.
-  ;; org-days-to-iso-week를 advice로 %W 기준으로 교체하여
-  ;; 헤더 "Day-agenda (W##):"와 날짜 줄 모두 한번에 통일.
-  (define-advice org-days-to-iso-week (:override (days) use-monday-week-number)
-    "Return %W week number (Monday-start count) instead of ISO 8601.
-Matches `org-journal-file-format' week%W convention."
-    (let* ((date (calendar-gregorian-from-absolute days))
-           (month (car date))
-           (day (cadr date))
-           (year (nth 2 date))
-           (time (encode-time 0 0 0 day month year)))
-      (string-to-number (format-time-string "%W" time))))
+  ;; NOTE 2026-03-17: org-agenda 주차 %W 통일 → workflow-shared.el로 이동.
+  ;; agent-server daemon과 GUI Doom 양쪽에서 동일하게 적용.
 
   ;; Use sticky agenda since I need different agenda views (personal and work) at the same time.
   ;; (setq org-agenda-sticky t) ; default nil
