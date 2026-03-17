@@ -36,7 +36,7 @@
   :type 'string
   :group 'edge-tts)
 
-(defcustom edge-tts-player "mpv"
+(defcustom edge-tts-player "vlc"
   "오디오 재생 프로그램. mpv 또는 vlc 권장."
   :type '(choice (const "mpv")
                  (const "vlc")

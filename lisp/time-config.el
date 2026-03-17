@@ -19,7 +19,10 @@
 (require 'time)
 
 ;; (setq display-time-format "%l:%M %p %b %d W%U") ;; dw-dotfiles
-(setq display-time-format " W%U |%a %e %b, %H:%M| ") ; Ⓦ 🅆 🆆
+;; NOTE 2026-03-17: %W = 월요일 시작 카운트. 위클리저널(%W) + org-agenda(커스텀 %W) 통일.
+;;       %V = ISO 8601 (org-agenda 기본값이었으나 저널과 1주 차이 발생하여 %W로 통일)
+;;       %U = US 주차 (일요일 시작) — 사용 안 함
+(setq display-time-format " W%W |%a %e %b, %H:%M| ") ; Ⓦ 🅆 🆆
 
 ;; Covered by `display-time-format'
 ;; (setq display-time-24hr-format t)
