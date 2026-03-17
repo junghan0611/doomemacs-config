@@ -212,37 +212,8 @@
 ;;   )
                                         ; optionally enable Emacs MCP tools
 
-;; (after! vterm
-;;   ;; sync/code/default/claude-code.el/claude-code.el
-;;   (defun my/vterm-send-alt-return ()
-;;     "Send <alt>-<return> to vterm."
-;;     (interactive)
-;;     (vterm-send-key "
-" nil t))
-
-;;   (setq vterm-always-compile-module t) ;; Compile Vterm without asking.
-;;   (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0") ;; 2025-07-13 Simpler
-;;   (map! :map vterm-mode-map
-;;         :i "M-RET" #'my/vterm-send-alt-return
-;;         :inv "M-y" #'vterm-yank-pop
-;;         :inv "M-\\" #'other-window
-;;         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
-;;         :inv "M-u" 'evil-scroll-up
-;;         :inv "M-v" 'evil-scroll-down)
-
-;;   (setq vterm-max-scrollback 10000)
-;;   ;; (setq x-gtk-use-native-input nil) ;; 2025-08-10 Important with ibus korean input
-
-;;   ;; kime 환경변수 설정 (기존 코드 유지)
-;;   (add-to-list 'vterm-environment "GTK_IM_MODULE=fcitx5")
-;;   (add-to-list 'vterm-environment "QT_IM_MODULE=fcitx5")
-;;   (add-to-list 'vterm-environment "XMODIFIERS=@im=fcitx5")
-
-;;   (defun my/vterm-setup-gtk-use-native-input ()
-;;     "Setup native input for vterm buffer"
-;;     (interactive)
-;;     (when (eq major-mode 'vterm-mode)
-;;       (setq-local x-gtk-use-native-input t))))
+;; NOTE: vterm 설정은 agent-shell 전환으로 제거됨 (2026-03-18)
+;; 필요 시 git history 참조: bf36c36
 
 ;;; Provide
 
