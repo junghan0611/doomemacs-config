@@ -57,7 +57,7 @@
   ;; viewport는 읽기(view-mode) + 작성(edit-mode)이 분리됨
   ;; view-mode: y=yes, m=more, a=again, 1-9=선택 — 빠른 응답
   ;; edit-mode: C-c C-c=전송, M-p/M-n=히스토리, @=파일완성, /=명령완성
-  (setq agent-shell-prefer-viewport-interaction t)
+  (setq agent-shell-prefer-viewport-interaction nil)
 
 ;;;; Usage Tracking — 토큰/비용 모니터링
 
@@ -153,67 +153,6 @@
          :desc "Stop heartbeat" "H" #'meta-agent-shell-heartbeat-stop
          :desc "Send heartbeat now" "s" #'meta-agent-shell-heartbeat-send-now
          :desc "STOP ALL AGENTS" "!" #'meta-agent-shell-big-red-button)))
-
-;;;; DONT claude-code (stevemolitor/claude-code.el)
-
-;; (use-package! claude-code
-;;   :config
-;;   (setq claude-code-terminal-backend 'vterm)
-
-;;   (defun my-claude-notify-with-sound (title message)
-;;     "Display a Linux notification with sound."
-;;     (when (executable-find "notify-send")
-;;       (call-process "notify-send" nil nil nil title message))
-;;     ;; Play sound if paplay is available
-;;     (when (executable-find "paplay")
-;;       (call-process "paplay" nil nil nil "/usr/share/sounds/freedesktop/stereo/complete.oga")))
-
-;;   (setq claude-code-notification-function #'my-claude-notify-with-sound)
-
-;;   ;; optional IDE integration with Monet
-;;   (when (locate-library "monet")
-;;     (require 'monet)
-;;     (add-hook 'claude-code-process-environment-functions #'monet-start-server-function)
-;;     (monet-mode 1))
-
-;;   (set-popup-rule! "^\\*claude" :vslot -15 :width 90 :side 'right :ttl t :select t :quit nil :modeline t)
-
-;;   (claude-code-mode)
-
-;;   (add-hook 'claude-code-start-hook
-;;             (lambda ()
-;;               ;; Only increase scrollback for vterm backend
-;;               (when (eq claude-code-terminal-backend 'vterm)
-;;                 (visual-line-mode -1)
-;;                 (toggle-truncate-lines 1)
-;;                 (setq-local x-gtk-use-native-input t)
-;;                 (define-key claude-code-command-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
-;;                 (define-key vterm-mode-map (kbd "M-RET") 'claude-code--vterm-send-alt-return)
-;;                 (setq-local vterm-max-scrollback 100000)))))
-
-;;;; DONT claude-code-ide (manzaltu/claude-code-ide.el)
-
-;; (use-package! claude-code-ide
-;;   :init
-;;   ;; Open Claude at the bottom with custom height
-;;   (setq claude-code-ide-window-side 'right
-;;         claude-code-ide-window-width 84
-;;         claude-code-ide-window-height 50)
-;;   :config
-;;   (setq claude-code-ide-terminal-backend 'vterm)
-;;   (setq claude-code-ide-use-ide-diff nil)
-;;   (claude-code-ide-emacs-tools-setup)
-
-;;   ;; (load! "+claude-code-ide-mcp-tools")
-
-;;   (after! vterm
-;;     (define-key vterm-mode-map (kbd "M-RET") 'claude-code-ide-insert-newline)
-;;     (define-key vterm-mode-map (kbd "C-g") 'claude-code-ide-send-escape))
-;;   )
-                                        ; optionally enable Emacs MCP tools
-
-;; NOTE: vterm 설정은 agent-shell 전환으로 제거됨 (2026-03-18)
-;; 필요 시 git history 참조: bf36c36
 
 ;;; Provide
 

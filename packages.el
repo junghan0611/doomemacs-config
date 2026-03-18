@@ -208,14 +208,6 @@
 (package! meta-agent-shell :recipe (:host github :repo "ElleNajt/meta-agent-shell"))
 
 (package! pi-coding-agent)
-;; (package! pi-coding-agent :recipe (:host github :repo "junghan0611/pi-coding-agent"))
-
-;;;;; DONT vterm based solutions
-
-;; (package! claude-code :recipe (:host github :repo "stevemolitor/claude-code.el" ))
-;; (unless IS-TERMUX
-;;   (package! monet :recipe (:host github :repo "stevemolitor/monet" )))
-;; (package! claude-code-ide :recipe (:host github :repo "manzaltu/claude-code-ide.el" ))
 
 ;;;; ai-bot-config.el
 
