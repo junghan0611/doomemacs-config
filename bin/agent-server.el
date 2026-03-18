@@ -460,13 +460,18 @@ org-journal 미로드 환경에서 직접 경로 계산.
       (message "[agent-server] journal added: %s" (file-name-nondirectory journal-path)))))
 
 (defun agent-org-agenda--refresh-buffers ()
-  "Agenda 파일 버퍼를 디스크에서 갱신. 외부 변경 반영."
+  "Agenda 파일 버퍼를 디스크에서 갱신. 외부 변경 반영.
+버퍼가 없으면 열어서 최신 상태로 로드 (첫 호출 시 필요)."
   (dolist (file (org-agenda-files))
-    (when-let* ((buf (get-file-buffer file)))
-      (with-current-buffer buf
-        (when (and (not (buffer-modified-p))
-                   (file-exists-p (buffer-file-name)))
-          (revert-buffer t t t))))))
+    (when (file-exists-p file)
+      (let ((buf (get-file-buffer file)))
+        (if buf
+            ;; 열린 버퍼 → revert
+            (with-current-buffer buf
+              (when (not (buffer-modified-p))
+                (revert-buffer t t t)))
+          ;; 열린 버퍼 없음 → 열어서 로드 (agenda가 참조할 수 있게)
+          (find-file-noselect file))))))
 
 (defun agent-org-agenda-day (&optional date)
   "오늘(또는 DATE) 일간 agenda 뷰를 clean text로 반환.
