@@ -440,38 +440,51 @@ Requires write access — dblock update modifies and saves the file."
 ;;;; Org Agenda API
 
 (defun agent-org-agenda--ensure-journal ()
-  "현재 주(Mon-start) journal 파일을 org-agenda-files에 추가.
+  "현재 주 + 이전 2주 journal 파일을 org-agenda-files에 추가.
+geworfen이 ±14일 지원하므로 3주치 필요 (현재 주 + 이전 2주).
 org-journal 미로드 환경에서 직접 경로 계산.
 ~/org → ~/sync/org 심볼릭 링크 환경에서 중복 등록 방지."
   (let* ((now (current-time))
-         ;; 월요일 시작 주의 월요일 날짜 계산
-         (dow (string-to-number (format-time-string "%u" now))) ; 1=Mon..7=Sun
-         (monday (time-subtract now (days-to-time (1- dow))))
-         (week-file (format-time-string
-                     "%Y%m%dT000000--%Y-%m-%d__journal_week%W.org" monday))
-         (journal-path (expand-file-name
-                        (concat "journal/" week-file) org-directory))
-         ;; symlink resolve해서 중복 체크
-         (journal-true (file-truename journal-path))
-         (already (cl-some (lambda (f) (string= (file-truename f) journal-true))
-                           org-agenda-files)))
-    (when (and (file-exists-p journal-path) (not already))
-      (add-to-list 'org-agenda-files journal-path t)
-      (message "[agent-server] journal added: %s" (file-name-nondirectory journal-path)))))
+         (dow (string-to-number (format-time-string "%u" now)))) ; 1=Mon..7=Sun
+    ;; 0, 7, 14일 전의 월요일 기준 journal 파일 등록
+    (dolist (days-back '(0 7 14))
+      (let* ((past (time-subtract now (days-to-time days-back)))
+             (past-dow (string-to-number (format-time-string "%u" past)))
+             (monday (time-subtract past (days-to-time (1- past-dow))))
+             (week-file (format-time-string
+                         "%Y%m%dT000000--%Y-%m-%d__journal_week%W.org" monday))
+             (journal-path (expand-file-name
+                            (concat "journal/" week-file) org-directory))
+             (journal-true (file-truename journal-path))
+             (already (cl-some (lambda (f) (string= (file-truename f) journal-true))
+                               org-agenda-files)))
+        (when (and (file-exists-p journal-path) (not already))
+          (add-to-list 'org-agenda-files journal-path t)
+          (message "[agent-server] journal added: %s"
+                   (file-name-nondirectory journal-path)))))))
 
 (defun agent-org-agenda--refresh-buffers ()
   "Agenda 파일 버퍼를 디스크에서 갱신. 외부 변경 반영.
-버퍼가 없으면 열어서 최신 상태로 로드 (첫 호출 시 필요)."
-  (dolist (file (org-agenda-files))
-    (when (file-exists-p file)
-      (let ((buf (get-file-buffer file)))
-        (if buf
-            ;; 열린 버퍼 → revert
-            (with-current-buffer buf
-              (when (not (buffer-modified-p))
-                (revert-buffer t t t)))
-          ;; 열린 버퍼 없음 → 열어서 로드 (agenda가 참조할 수 있게)
-          (find-file-noselect file))))))
+버퍼가 없으면 열어서 최신 상태로 로드 (첫 호출 시 필요).
+디렉토리 항목은 내부 .org 파일로 확장.
+~/org → ~/sync/org symlink 환경: file-truename으로 버퍼 탐색."
+  (let ((files (cl-mapcan
+                (lambda (entry)
+                  (if (file-directory-p entry)
+                      (directory-files entry t "\\.org$")
+                    (list entry)))
+                org-agenda-files)))
+    (dolist (file files)
+      (when (and (file-exists-p file)
+                 (not (file-directory-p file)))
+        (let* ((true-path (file-truename file))
+               (buf (or (get-file-buffer file)
+                        (get-file-buffer true-path))))
+          (if buf
+              (with-current-buffer buf
+                (when (not (buffer-modified-p))
+                  (revert-buffer t t t)))
+            (find-file-noselect true-path)))))))
 
 (defun agent-org-agenda-day (&optional date)
   "오늘(또는 DATE) 일간 agenda 뷰를 clean text로 반환.
