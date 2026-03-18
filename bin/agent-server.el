@@ -439,12 +439,58 @@ Requires write access — dblock update modifies and saves the file."
 
 ;;;; Org Agenda API
 
+(defun agent-org-agenda--ensure-journal ()
+  "현재 주(Mon-start) journal 파일을 org-agenda-files에 추가.
+org-journal 미로드 환경에서 직접 경로 계산.
+~/org → ~/sync/org 심볼릭 링크 환경에서 중복 등록 방지."
+  (let* ((now (current-time))
+         ;; 월요일 시작 주의 월요일 날짜 계산
+         (dow (string-to-number (format-time-string "%u" now))) ; 1=Mon..7=Sun
+         (monday (time-subtract now (days-to-time (1- dow))))
+         (week-file (format-time-string
+                     "%Y%m%dT000000--%Y-%m-%d__journal_week%W.org" monday))
+         (journal-path (expand-file-name
+                        (concat "journal/" week-file) org-directory))
+         ;; symlink resolve해서 중복 체크
+         (journal-true (file-truename journal-path))
+         (already (cl-some (lambda (f) (string= (file-truename f) journal-true))
+                           org-agenda-files)))
+    (when (and (file-exists-p journal-path) (not already))
+      (add-to-list 'org-agenda-files journal-path t)
+      (message "[agent-server] journal added: %s" (file-name-nondirectory journal-path)))))
+
+(defun agent-org-agenda--refresh-buffers ()
+  "Agenda 파일 버퍼를 디스크에서 갱신. 외부 변경 반영."
+  (dolist (file (org-agenda-files))
+    (when-let* ((buf (get-file-buffer file)))
+      (with-current-buffer buf
+        (when (and (not (buffer-modified-p))
+                   (file-exists-p (buffer-file-name)))
+          (revert-buffer t t t))))))
+
 (defun agent-org-agenda-day (&optional date)
   "오늘(또는 DATE) 일간 agenda 뷰를 clean text로 반환.
 DATE는 \"-1\" (어제), \"+3\" (3일 후), \"2026-03-01\" 등.
-Human + Agent + Diary 통합 타임라인."
-  (let ((org-agenda-sticky nil)        ; 캐시 사용 안 함
+Human + Agent + Diary 통합 타임라인.
+
+호출마다:
+  1. journal 파일을 org-agenda-files에 추가 (없으면)
+  2. 열린 버퍼를 디스크에서 갱신 (외부 변경 반영)
+  3. wide window에서 agenda 생성 (텍스트 잘림 방지)"
+  ;; 1. journal 등록 + 버퍼 갱신
+  (agent-org-agenda--ensure-journal)
+  (agent-org-agenda--refresh-buffers)
+  ;; 2. agenda 생성 — headless에서 frame-width=80이라 텍스트 잘림 방지
+  (set-frame-width nil 300)
+  (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
+        (org-agenda-tags-column 140)  ;; 태그를 140컬럼에 좌측정렬 (일관된 위치)
+        ;; 카테고리 전체 출력: Agent(T), Agent(O), Human 등
+        (org-agenda-prefix-format
+         '((agenda  . " %i %-10:c%?-12t% s")
+           (todo    . " %i %-10:c")
+           (tags    . " %i %-10:c")
+           (search  . " %i %-10:c")))
         (day (cond
               ((null date) nil)
               ((string-match "^[+-]?[0-9]+$" date)
@@ -457,8 +503,17 @@ Human + Agent + Diary 통합 타임라인."
 
 (defun agent-org-agenda-week (&optional date)
   "DATE 기준 주간 agenda 뷰를 clean text로 반환."
+  (agent-org-agenda--ensure-journal)
+  (agent-org-agenda--refresh-buffers)
+  (set-frame-width nil 300)
   (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
+        (org-agenda-tags-column -300)
+        (org-agenda-prefix-format
+         '((agenda  . " %i %-10:c%?-12t% s")
+           (todo    . " %i %-10:c")
+           (tags    . " %i %-10:c")
+           (search  . " %i %-10:c")))
         (day (cond
               ((null date) nil)
               ((string-match "^[+-]?[0-9]+$" date)
