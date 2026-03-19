@@ -167,7 +167,7 @@
   ;; 또는: (setq gptel-backend gptel-claude-code-backend)
   (setq gptel-claude-code-backend
         (gptel-make-openai "Claude-Code"
-          :host "localhost:8000"
+          :host "localhost:28000"
           :endpoint "/v1/chat/completions"
           :protocol "http"
           :stream t
@@ -216,12 +216,12 @@
 
   ;; Claude-Code 서버 상태 확인
   (defun gptel--claude-code-server-available-p ()
-    "Check if Claude-Code wrapper server is running on localhost:8000."
+    "Check if Claude-Code wrapper server is running on localhost:28000."
     (condition-case nil
         (let ((url-request-method "GET")
               (url-show-status nil))
           (with-current-buffer
-              (url-retrieve-synchronously "http://localhost:8000/health" t nil 2)
+              (url-retrieve-synchronously "http://localhost:28000/health" t nil 2)
             (goto-char (point-min))
             (and (search-forward "healthy" nil t) t)))
       (error nil)))

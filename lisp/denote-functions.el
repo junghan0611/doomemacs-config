@@ -262,7 +262,7 @@ With prefix ARG, prompt for a date via calendar."
          (ymd (format-time-string "%Y%m%d" time))
          (regexp (concat ymd "T*")))
     (insert
-     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t\n#+END:\n"
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|transcript\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t\n#+END:\n"
              regexp))))
 
 ;;;###autoload
@@ -275,7 +275,7 @@ With prefix ARG, prompt for a date via calendar."
          (dates (my/org--week-dates time))
          (regexp (mapconcat (lambda (d) (concat d "T*")) dates "\\\\|")))
     (insert
-     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t\n#+END:\n"
+     (format "#+BEGIN: denote-links :regexp \"%s\" :not-regexp nil :excluded-dirs-regexp \"\\\\(journal\\\\|transcript\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\" :sort-by-component nil :reverse-sort nil :id-only nil :include-date t\n#+END:\n"
              regexp))))
 
 ;;;###autoload
@@ -287,7 +287,7 @@ With prefix ARG, prompt for a date via calendar."
          (time (my/org--date-to-time date))
          (ymd (format-time-string "%Y-%m-%d" time)))
     (insert
-     (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
+     (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|transcript\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
              ymd ymd))))
 
 ;;;###autoload
@@ -300,7 +300,7 @@ Shows notes modified this week, not just newly created ones."
          (time (my/org--date-to-time date))
          (range (my/org--week-range time)))
     (insert
-     (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
+     (format "#+BEGIN: denote-lastmod :from \"%s\" :to \"%s\" :excluded-dirs-regexp \"\\\\(journal\\\\|transcript\\\\|office\\\\|archive\\\\|md\\\\|dict\\\\|posts\\\\|private\\\\|ekg\\\\)\"\n#+END:\n"
              (car range) (cdr range)))))
 
 ;;;; Refile & Extract
