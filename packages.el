@@ -146,6 +146,11 @@
 
 ;;;; org-config.el
 
+;; NOTE 2026-03-20: Doom org 모듈에서 +hugo, +contacts, +pomodoro, +passwords 플래그 제거됨.
+;; ox-hugo는 디지털 가든 export 파이프라인 핵심이므로 직접 관리.
+(package! ox-hugo
+  :recipe (:host github :repo "kaushalmodi/ox-hugo" :nonrecursive t))
+
 (package! org-download)
 (package! org-rich-yank)
 (package! org-appear)

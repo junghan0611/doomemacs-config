@@ -133,11 +133,11 @@
        latex             ; writing papers in Emacs has never been so fun
        markdown          ; writing docs for people to ignore
        (org                          ; organize your plain life in plain text
-        +hugo                     ; use Emacs for hugo blogging
+        ;; +hugo +contacts +pomodoro +passwords: Doom에서 제거됨 (2026-03-17)
+        ;; ox-hugo → packages.el에서 직접 관리
         +pandoc                     ; export-with-pandoc support
         +gnuplot                    ; who doesn't like pretty pictures
         +present                    ; using org-mode for presentations
-        +contacts
         +journal
         ;; +jupyter                    ; ipython/jupyter support for babel
         ;; +pretty
