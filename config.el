@@ -33,13 +33,6 @@
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type t)
-;; NOTE 2026-03-20: EMACS_SERVER_NAME 환경변수로 서버 이름 분리
-;; doom-editor.el의 (use-package! server)보다 먼저 적용되어야 함
-;; 30.2 "server" vs 31 IGC "doom-igc" 공존
-(when-let* ((name (getenv "EMACS_SERVER_NAME")))
-  (require 'server)
-  (setq server-name name))
-
 (remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode)
 
 ;; Here are some additional functions/macros that could help you configure Doom:
