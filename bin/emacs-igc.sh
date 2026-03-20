@@ -38,9 +38,17 @@ case "${1:-}" in
     echo "Daemon ${SERVER_NAME} stopped."
     ;;
   --sync)
-    # sync는 batch 모드 — 서버 시작 불필요, 충돌 방지
     unset EMACS_SERVER_NAME
     exec "${DOOM_BIN}" sync
+    ;;
+  --env)
+    unset EMACS_SERVER_NAME
+    exec "${DOOM_BIN}" env
+    ;;
+  --install)
+    # sync + env 한방
+    unset EMACS_SERVER_NAME
+    "${DOOM_BIN}" sync && "${DOOM_BIN}" env
     ;;
   --direct)
     # daemon 없이 직접 실행

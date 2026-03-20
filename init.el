@@ -5,12 +5,14 @@
 ;;;; Single instance guard
 ;; 같은 server-name의 Emacs가 이미 실행 중이면 새 인스턴스를 시작하지 않음
 ;; EMACS_SERVER_NAME 환경변수로 분리 가능 (30.2 "server" vs 31 IGC "doom-igc")
-(require 'server)
-(when-let* ((name (getenv "EMACS_SERVER_NAME")))
-  (setq server-name name))
-(when (server-running-p)
-  (message "Emacs server '%s' already running! Use emacsclient instead." server-name)
-  (kill-emacs))
+;; batch/noninteractive에서는 스킵 (doom sync 등)
+(unless noninteractive
+  (require 'server)
+  (when-let* ((name (getenv "EMACS_SERVER_NAME")))
+    (setq server-name name))
+  (when (server-running-p)
+    (message "Emacs server '%s' already running! Use emacsclient instead." server-name)
+    (kill-emacs)))
 
 ;;;; Termux
 

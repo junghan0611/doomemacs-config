@@ -80,7 +80,9 @@ show_menu() {
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run)"
-  echo "    I) igc sync     (doom sync)"
+  echo "    I) igc install  (sync + env)"
+  echo "    S) igc sync     (doom sync)"
+  echo "    E) igc env      (doom env)"
   echo "    v) igc version"
   echo ""
   echo "    0) Exit"
@@ -333,11 +335,13 @@ cli_mode() {
     igc)
       local action="${1:-run}"; shift || true
       case "$action" in
-        run)     exec "$IGC_SCRIPT" ;;
-        sync)    exec "$IGC_SCRIPT" --sync ;;
-        kill)    exec "$IGC_SCRIPT" --kill ;;
-        version) exec "$IGC_SCRIPT" --version ;;
-        *)       err "igc: run|sync|kill|version" ;;
+        run)     "$IGC_SCRIPT" ;;
+        install) "$IGC_SCRIPT" --install ;;
+        sync)    "$IGC_SCRIPT" --sync ;;
+        env)     "$IGC_SCRIPT" --env ;;
+        kill)    "$IGC_SCRIPT" --kill ;;
+        version) "$IGC_SCRIPT" --version ;;
+        *)       err "igc: run|install|sync|env|kill|version" ;;
       esac
       ;;
     help|--help|-h)
@@ -395,9 +399,11 @@ main() {
       x) cmd_agent_stop ;;
       r) cmd_agent_stop; sleep 1; cmd_agent_start ;;
       e) cmd_agent_eval ;;
-      i) execute_cmd "$IGC_SCRIPT" ;;
-      I) execute_cmd "$IGC_SCRIPT --sync" ;;
-      v) execute_cmd "$IGC_SCRIPT --version" ;;
+      i) "$IGC_SCRIPT"; read -p "계속하려면 Enter..."; continue ;;
+      I) "$IGC_SCRIPT" --install; read -p "계속하려면 Enter..."; continue ;;
+      S) "$IGC_SCRIPT" --sync; read -p "계속하려면 Enter..."; continue ;;
+      E) "$IGC_SCRIPT" --env; read -p "계속하려면 Enter..."; continue ;;
+      v) "$IGC_SCRIPT" --version ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
