@@ -20,6 +20,9 @@ AGENT_DAEMON="agent-server"
 AGENT_LOAD="$BIN_DIR/agent-server.el"
 AGENT_SOCKET="/run/user/$(id -u)/emacs/$AGENT_DAEMON"
 
+# Emacs 31 IGC
+IGC_SCRIPT="$BIN_DIR/emacs-igc.sh"
+
 # Defaults
 DEFAULT_JOBS=4
 
@@ -68,12 +71,17 @@ show_menu() {
   echo "    8) export all --force (전체)"
   echo "    9) export 폴더 선택"
   echo ""
-  echo "  ${YELLOW}Agent Server${NC}"
+  echo "  ${YELLOW}Agent Server${NC} (Emacs 30.2)"
   echo "    a) agent start"
   echo "    s) agent status"
   echo "    x) agent stop"
   echo "    r) agent restart"
   echo "    e) agent eval"
+  echo ""
+  echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
+  echo "    i) igc run      (doom run)"
+  echo "    I) igc sync     (doom sync)"
+  echo "    v) igc version"
   echo ""
   echo "    0) Exit"
   echo ""
@@ -322,8 +330,18 @@ cli_mode() {
         *)       err "agent: start|stop|restart|status|eval" ;;
       esac
       ;;
+    igc)
+      local action="${1:-run}"; shift || true
+      case "$action" in
+        run)     exec "$IGC_SCRIPT" ;;
+        sync)    exec "$IGC_SCRIPT" --sync ;;
+        kill)    exec "$IGC_SCRIPT" --kill ;;
+        version) exec "$IGC_SCRIPT" --version ;;
+        *)       err "igc: run|sync|kill|version" ;;
+      esac
+      ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|igc> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -377,6 +395,9 @@ main() {
       x) cmd_agent_stop ;;
       r) cmd_agent_stop; sleep 1; cmd_agent_start ;;
       e) cmd_agent_eval ;;
+      i) execute_cmd "$IGC_SCRIPT" ;;
+      I) execute_cmd "$IGC_SCRIPT --sync" ;;
+      v) execute_cmd "$IGC_SCRIPT --version" ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
