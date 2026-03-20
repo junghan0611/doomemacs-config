@@ -38,6 +38,8 @@ case "${1:-}" in
     echo "Daemon ${SERVER_NAME} stopped."
     ;;
   --sync)
+    # sync는 batch 모드 — 서버 시작 불필요, 충돌 방지
+    unset EMACS_SERVER_NAME
     exec "${DOOM_BIN}" sync
     ;;
   --direct)
