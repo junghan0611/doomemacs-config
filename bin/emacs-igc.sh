@@ -29,6 +29,8 @@ export XMODIFIERS=@im=emacs
 export DOOMDIR
 export EMACSDIR
 export EMACS="${IGC_EMACS}"
+# 서버 이름 분리 — 기존 "server"(30.2)와 충돌 방지
+export EMACS_SERVER_NAME="${SERVER_NAME}"
 
 case "${1:-}" in
   --kill)
