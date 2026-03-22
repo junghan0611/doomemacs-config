@@ -37,6 +37,25 @@ alias e='DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doo
 alias egui='DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run'
 ```
 
+### Emacs 31 IGC (Experimental)
+
+MPS/IGC garbage collector 빌드로 Emacs 31을 기존 30.2와 공존 운용:
+
+```bash
+# Nix flake 기반 빌드
+nix build .#emacs-igc
+
+# 통합 관리 스크립트
+./run.sh igc install    # 첫 설치 (sync + env + profile)
+./run.sh igc run        # GUI 실행
+./run.sh igc update     # 패키지 업데이트
+./run.sh igc debug      # --debug-init 에러 추적
+./run.sh igc doctor     # 상태 점검
+```
+
+> 30.2는 안정 버전으로 유지, 31은 프론트엔드 집중 사용.
+> centaur-tabs(powerline 의존)는 31에서 비활성화, 빌트인 tab-bar 사용.
+
 ## Structure
 
 ```

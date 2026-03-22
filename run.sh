@@ -86,6 +86,7 @@ show_menu() {
   echo "    U) igc update   (doom sync -u)"
   echo "    E) igc env      (doom env)"
   echo "    D) igc doctor   (doom doctor)"
+  echo "    K) igc kill     (서버 종료)"
   echo "    v) igc version"
   echo ""
   echo "    0) Exit"
@@ -406,9 +407,13 @@ main() {
       r) cmd_agent_stop; sleep 1; cmd_agent_start ;;
       e) cmd_agent_eval ;;
       i) "$IGC_SCRIPT"; read -p "계속하려면 Enter..."; continue ;;
+      d) "$IGC_SCRIPT" --debug; read -p "계속하려면 Enter..."; continue ;;
       I) "$IGC_SCRIPT" --install; read -p "계속하려면 Enter..."; continue ;;
       S) "$IGC_SCRIPT" --sync; read -p "계속하려면 Enter..."; continue ;;
+      U) "$IGC_SCRIPT" --update; read -p "계속하려면 Enter..."; continue ;;
       E) "$IGC_SCRIPT" --env; read -p "계속하려면 Enter..."; continue ;;
+      D) "$IGC_SCRIPT" --doctor; read -p "계속하려면 Enter..."; continue ;;
+      K) "$IGC_SCRIPT" --kill; read -p "계속하려면 Enter..."; continue ;;
       v) "$IGC_SCRIPT" --version ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
