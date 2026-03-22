@@ -46,13 +46,26 @@ case "${1:-}" in
     exec "${DOOM_BIN}" env
     ;;
   --install)
-    # sync + env 한방
+    # sync + env + profile 한방
     unset EMACS_SERVER_NAME
-    "${DOOM_BIN}" sync && "${DOOM_BIN}" env
+    "${DOOM_BIN}" sync && "${DOOM_BIN}" env && "${DOOM_BIN}" profile sync --all
     ;;
   --direct)
     # daemon 없이 직접 실행
     exec "${DOOM_BIN}" run
+    ;;
+  --debug)
+    # debug-init으로 직접 실행 — 에러 추적용
+    exec "${IGC_EMACS}" --init-directory "${EMACSDIR}" --debug-init
+    ;;
+  --update)
+    # sync -u (패키지 업데이트 포함)
+    unset EMACS_SERVER_NAME
+    "${DOOM_BIN}" sync -u -j 2
+    ;;
+  --doctor)
+    unset EMACS_SERVER_NAME
+    exec "${DOOM_BIN}" doctor
     ;;
   --version)
     $IGC_EMACS --version | head -1

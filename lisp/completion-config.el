@@ -32,7 +32,7 @@
   (setq +corfu-want-tab-prefer-navigating-org-tables nil)
 
   ;; HACK: Prevent the annoting completion error when no `ispell' dictionary is set, prefer `cape-dict'
-  (when (eq emacs-major-version 30)
+  (when (>= emacs-major-version 30)
     (setq text-mode-ispell-word-completion nil))
 
   ;; IMO, modern editors have trained a bad habit into us all: a burning need for

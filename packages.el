@@ -126,7 +126,7 @@
 (package! spacious-padding)
 (package! winpulse :recipe (:host github :repo "xenodium/winpulse"))
 
-;;;; Editing
+;;;; TODO Editing
 
 (package! tempel)
 (package! tempel-collection)
@@ -158,6 +158,7 @@
 
 ;;;; editing-config.el
 
+(package! markdown-indent-mode :recipe (:host github :repo "whhone/markdown-indent-mode"))
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 (package! pinentry)
@@ -174,7 +175,7 @@
 
 ;;;; Transient Menu
 
-;; (package! casual)
+(package! casual)
 (package! password-store-menu)
 
 ;;;; tmux-config.el
@@ -245,10 +246,5 @@
 ;;; DEPRECATED
 
 (package! org-glossary :recipe (:host github :repo "tecosaur/org-glossary" :files ("*.el" "*.org" "*.texi")))
-(package! casual)
-
-;;;; markdown
-
-(package! markdown-indent-mode :recipe (:host github :repo "whhone/markdown-indent-mode"))
 
 ;;; END

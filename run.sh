@@ -80,9 +80,12 @@ show_menu() {
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run)"
-  echo "    I) igc install  (sync + env)"
+  echo "    d) igc debug    (--debug-init)"
+  echo "    I) igc install  (sync + env + profile)"
   echo "    S) igc sync     (doom sync)"
+  echo "    U) igc update   (doom sync -u)"
   echo "    E) igc env      (doom env)"
+  echo "    D) igc doctor   (doom doctor)"
   echo "    v) igc version"
   echo ""
   echo "    0) Exit"
@@ -336,12 +339,15 @@ cli_mode() {
       local action="${1:-run}"; shift || true
       case "$action" in
         run)     "$IGC_SCRIPT" ;;
+        debug)   "$IGC_SCRIPT" --debug ;;
         install) "$IGC_SCRIPT" --install ;;
         sync)    "$IGC_SCRIPT" --sync ;;
+        update)  "$IGC_SCRIPT" --update ;;
         env)     "$IGC_SCRIPT" --env ;;
+        doctor)  "$IGC_SCRIPT" --doctor ;;
         kill)    "$IGC_SCRIPT" --kill ;;
         version) "$IGC_SCRIPT" --version ;;
-        *)       err "igc: run|install|sync|env|kill|version" ;;
+        *)       err "igc: run|debug|install|sync|update|env|doctor|kill|version" ;;
       esac
       ;;
     help|--help|-h)

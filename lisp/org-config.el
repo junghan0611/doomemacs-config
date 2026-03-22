@@ -423,37 +423,33 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
   )
 
 
-;;;; org-download
+;;;; org-download (Emacs 30) / 빌트인 yank-media (Emacs 31+)
 
-(use-package! org-download
-  :after org
-  :hook (;; (dired-mode . org-download-enable)
-         (org-mode . org-download-enable))
-  :commands (org-download-enable
-             org-download-yank
-             org-download-screenshot)
-  :config
-  (setq-default org-download-heading-lvl nil)
-  (setq org-download-method 'directory) ; doom 'attach
-  (setq-default org-download-image-dir "~/screenshot" ) ;; share all devieces
-  (setq org-download-display-inline-images nil)
-  (setq org-download-timestamp"%Y%m%dT%H%M%S-") ;; denote id
+;; Emacs 31+에서는 org--image-yank-media-handler가 빌트인.
+;; org-download 외부 패키지 대신 빌트인 yank-media 사용.
+(if (>= emacs-major-version 31)
+    ;; Emacs 31+: 빌트인 yank-media 활용
+    (after! org
+      (setq org-yank-image-file-name-function #'org-yank-image-autogen-filename))
+  ;; Emacs 30: org-download 사용
+  (use-package! org-download
+    :after org
+    :hook (;; (dired-mode . org-download-enable)
+           (org-mode . org-download-enable))
+    :commands (org-download-enable
+               org-download-yank
+               org-download-screenshot)
+    :config
+    (setq-default org-download-heading-lvl nil)
+    (setq org-download-method 'directory) ; doom 'attach
+    (setq-default org-download-image-dir "~/screenshot" ) ;; share all devieces
+    (setq org-download-display-inline-images nil)
+    (setq org-download-timestamp"%Y%m%dT%H%M%S-") ;; denote id
 
-  ;; #+caption: "
-  ;; #+name: fig-"
-  ;; #+attr_html: :width 40% :align center"
-  ;; #+attr_latex: :width \\textwidth"
-  (setq org-download-image-attr-list
-        '("#+attr_html: :width 80% :align center"
-          "#+attr_latex: :width \\textwidth"
-          "#+attr_org: :width 800px"))
-
-  ;; (defun kimim/org-download-annotate (link)
-  ;;   "Annotate LINK with the time of download."
-  ;;   (format "#+name: fig:%s\n#+caption: %s\n"
-  ;;           (file-name-base link) (file-name-base link)))
-  ;; (setq org-download-annotate-function #'kimim/org-download-annotate)
-  )
+    (setq org-download-image-attr-list
+          '("#+attr_html: :width 80% :align center"
+            "#+attr_latex: :width \\textwidth"
+            "#+attr_org: :width 800px"))))
 
 ;;;; org-rich-yank
 
