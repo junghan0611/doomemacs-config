@@ -21,6 +21,9 @@
 (defvar IS-TERMUX
   (string-suffix-p "Android" (string-trim (shell-command-to-string "uname -a"))))
 
+(defvar IS-EMACS31+
+  (>= emacs-major-version 31))
+
 (when IS-TERMUX
   (setq root-path "/data/data/com.termux/files/"))
 
@@ -69,7 +72,7 @@
        (popup +defaults) ; tame sudden yet inevitable temporary windows
        (:unless IS-TERMUX (smooth-scroll +interpolate)) ; So smooth you won't believe it's not butter
 
-       tabs              ; a tab bar for Emacs
+       (:unless IS-EMACS31+ tabs) ; centaur-tabs — powerline 31 비호환
        treemacs          ; a project drawer, like neotree but cooler
        vc-gutter         ; +pretty - vcs diff in the fringe
        ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB
@@ -144,6 +147,7 @@
         +gnuplot                    ; who doesn't like pretty pictures
         +present                    ; using org-mode for presentations
         +journal
+        +dragndrop
         ;; +jupyter                    ; ipython/jupyter support for babel
         ;; +pretty
         ;; +noter                      ; enhanced PDF notetaking

@@ -17,17 +17,19 @@
 ;; modus-themes는 centaur-tabs face를 자체 지원.
 ;; ef-themes/doric-themes는 tab-line face만 정의하고 centaur-tabs face가 없음.
 ;; → 빌트인 tab-line face를 상속하여 테마 전환 시 자동 추종.
-(after! centaur-tabs
-  (setq centaur-tabs-height 18)
-  (custom-set-faces!
-    '(centaur-tabs-default :inherit tab-line)
-    '(centaur-tabs-selected :inherit tab-line-tab-current)
-    '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
-    '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
-    '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
-    '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
-    '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
-    '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified)))
+;; Emacs 31+: centaur-tabs 비활성화 (powerline 31 비호환)
+(when (< emacs-major-version 31)
+  (after! centaur-tabs
+    (setq centaur-tabs-height 18)
+    (custom-set-faces!
+      '(centaur-tabs-default :inherit tab-line)
+      '(centaur-tabs-selected :inherit tab-line-tab-current)
+      '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
+      '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
+      '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
+      '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
+      '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
+      '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified))))
 
 ;;;; celestial-mode-line
 

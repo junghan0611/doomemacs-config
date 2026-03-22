@@ -55,8 +55,8 @@
       ;; "s-{" #'evil-window-up
       ;; "s-}" #'evil-window-down
 
-      "s-[" #'centaur-tabs-backward
-      "s-]" #'centaur-tabs-forward
+      "s-[" (if (< emacs-major-version 31) #'centaur-tabs-backward #'tab-previous)
+      "s-]" (if (< emacs-major-version 31) #'centaur-tabs-forward #'tab-next)
 
       "M-\\" #'other-window
 
