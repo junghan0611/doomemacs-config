@@ -510,26 +510,32 @@ excludes content inside links, verbatim, code, and src blocks.
 Hashtag rules:
 - Pattern: #TAG where TAG starts with a letter (한글 or A-Za-z)
 - Pure numbers like #1, #123 are excluded
-- Preceded by whitespace or start of text
+- Preceded by whitespace, start of text, or opening punctuation ((, \", ')
 
 Mention rules:
 - Only names in `my/org-hugo-mention-names' (word boundary applied)
 - @user, @assistant excluded (Quartz oxhugofm.ts handles them)
 
+Note: org-element parser splits text at `_' boundaries into separate
+plain-text nodes, so #인식의_그물망 arrives as two nodes: #인식의 and _그물망.
+The re-stitching is handled by `my/org-hugo-restitch-broken-hashtag-spans'
+in `org-export-filter-final-output-functions'.
+
 Fontification counterpart: doom-themes-ext-org.el
   regex: \\(?:\\s-\\|^\\)\\(\\([#@]\\)[가-힣A-Za-z0-9_.-]+\\)"
   (when (org-export-derived-backend-p backend 'hugo)
     ;; 1. Wrap #hashtags — require first char to be a letter (not digit)
+    ;;    Pre-match includes opening punctuation for (#태그) patterns
     (setq text
           (replace-regexp-in-string
-           "\\(^\\|[[:space:]]\\)\\(#[가-힣A-Za-z][가-힣A-Za-z0-9_.-]*\\)"
+           "\\(^\\|[[:space:](\"']\\)\\(#[가-힣A-Za-z][가-힣A-Za-z0-9_.-]*\\)"
            (format "\\1<span class=\"%s\">\\2</span>" my/org-hugo-hashtag-class)
            text))
     ;; 2. Wrap @mentions — word boundary prevents partial match
     (dolist (name my/org-hugo-mention-names)
       (setq text
             (replace-regexp-in-string
-             (format "\\(^\\|[[:space:]]\\)\\(@%s\\>\\)" (regexp-quote name))
+             (format "\\(^\\|[[:space:](\"']\\)\\(@%s\\>\\)" (regexp-quote name))
              (format "\\1<span class=\"%s\">\\2</span>" my/org-hugo-mention-class)
              text)))
     text))
@@ -553,6 +559,34 @@ element is fully transcoded (description already filtered)."
 
 (add-to-list 'org-export-filter-link-functions
              #'my/org-hugo-strip-hashtag-spans-in-links)
+
+(defun my/org-hugo-restitch-broken-hashtag-spans (text backend info)
+  "Re-stitch hashtag spans broken by org parser at underscore boundaries.
+
+org-element parser splits `X_Y' into separate plain-text nodes at `_'.
+The plain-text filter only sees the first fragment, producing:
+  <span class=\"org-hashtag\">#인식의</span>_그물망
+
+This final-output filter detects the pattern and extends the span:
+  <span class=\"org-hashtag\">#인식의_그물망</span>
+
+Runs in `org-export-filter-final-output-functions' (after all
+transcoders and element filters have completed)."
+  (when (org-export-derived-backend-p backend 'hugo)
+    ;; Repeatedly extend — handles multiple underscores: #a_b_c
+    (let ((re (format "<span class=\"%s\">\\([^<]+\\)</span>\\(_[가-힣A-Za-z0-9_.-]*\\)"
+                      my/org-hugo-hashtag-class)))
+      (while (string-match re text)
+        (setq text (replace-match
+                    (format "<span class=\"%s\">%s%s</span>"
+                            my/org-hugo-hashtag-class
+                            (match-string 1 text)
+                            (match-string 2 text))
+                    t nil text))))
+    text))
+
+(add-to-list 'org-export-filter-final-output-functions
+             #'my/org-hugo-restitch-broken-hashtag-spans)
 
 ;;;; Section 3: Security Filters
 ;; Migrated from uniconfig.el
