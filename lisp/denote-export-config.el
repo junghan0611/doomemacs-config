@@ -481,6 +481,79 @@ plain text, consistent with org-export-with-broken-links 'mark setting."
 ;; Register denote link export handler
 (org-link-set-parameters "denote" :export #'my/denote-link-ol-export)
 
+;;;; Section 2.5: Hashtag and Mention Span Wrapping for Hugo Export
+;; Wrap #hashtags and @mentions with <span> tags during ox-hugo export.
+;; Counterpart of doom-themes-ext-org.el fontification (interactive editing).
+;;
+;; Uses org-export-filter-plain-text-functions which automatically excludes
+;; content inside links, verbatim, code, and src blocks.
+;;
+;; See: [[denote:20260322T103300][ox-hugo 해시태그/멘션 span 래핑 작업 지침]]
+
+(defvar my/org-hugo-hashtag-class "org-hashtag"
+  "CSS class for hashtag <span> tags in Hugo export.")
+
+(defvar my/org-hugo-mention-class "org-mention"
+  "CSS class for mention <span> tags in Hugo export.")
+
+(defvar my/org-hugo-mention-names '("junghan")
+  "List of @mention names to wrap with <span>.
+Word boundary applied — @junghan matches but @junghan0611 does not.
+@user and @assistant are excluded (Quartz oxhugofm.ts handles them).")
+
+(defun my/org-hugo-wrap-hashtags-and-mentions (text backend info)
+  "Wrap #hashtags and @mentions with <span> tags for Hugo export.
+
+Runs as `org-export-filter-plain-text-functions', which automatically
+excludes content inside links, verbatim, code, and src blocks.
+
+Hashtag rules:
+- Pattern: #TAG where TAG starts with a letter (한글 or A-Za-z)
+- Pure numbers like #1, #123 are excluded
+- Preceded by whitespace or start of text
+
+Mention rules:
+- Only names in `my/org-hugo-mention-names' (word boundary applied)
+- @user, @assistant excluded (Quartz oxhugofm.ts handles them)
+
+Fontification counterpart: doom-themes-ext-org.el
+  regex: \\(?:\\s-\\|^\\)\\(\\([#@]\\)[가-힣A-Za-z0-9_.-]+\\)"
+  (when (org-export-derived-backend-p backend 'hugo)
+    ;; 1. Wrap #hashtags — require first char to be a letter (not digit)
+    (setq text
+          (replace-regexp-in-string
+           "\\(^\\|[[:space:]]\\)\\(#[가-힣A-Za-z][가-힣A-Za-z0-9_.-]*\\)"
+           (format "\\1<span class=\"%s\">\\2</span>" my/org-hugo-hashtag-class)
+           text))
+    ;; 2. Wrap @mentions — word boundary prevents partial match
+    (dolist (name my/org-hugo-mention-names)
+      (setq text
+            (replace-regexp-in-string
+             (format "\\(^\\|[[:space:]]\\)\\(@%s\\>\\)" (regexp-quote name))
+             (format "\\1<span class=\"%s\">\\2</span>" my/org-hugo-mention-class)
+             text)))
+    text))
+
+(add-to-list 'org-export-filter-plain-text-functions
+             #'my/org-hugo-wrap-hashtags-and-mentions)
+
+(defun my/org-hugo-strip-hashtag-spans-in-links (data backend info)
+  "Strip org-hashtag/org-mention span tags from inside link text.
+The plain-text filter wraps all #hashtags and @mentions, including
+those inside link descriptions.  Links already convey semantic meaning;
+inline span tags inside [link text](url) break the intent.
+
+This runs as `org-export-filter-link-functions' — after the link
+element is fully transcoded (description already filtered)."
+  (when (org-export-derived-backend-p backend 'hugo)
+    (replace-regexp-in-string
+     "<span class=\"org-\\(?:hashtag\\|mention\\)\">\\([^<]*\\)</span>"
+     "\\1"
+     data)))
+
+(add-to-list 'org-export-filter-link-functions
+             #'my/org-hugo-strip-hashtag-spans-in-links)
+
 ;;;; Section 3: Security Filters
 ;; Migrated from uniconfig.el
 
