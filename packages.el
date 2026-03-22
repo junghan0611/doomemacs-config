@@ -151,7 +151,6 @@
 (package! ox-hugo
   :recipe (:host github :repo "kaushalmodi/ox-hugo" :nonrecursive t))
 
-(package! org-download)
 (package! org-rich-yank)
 (package! org-appear)
 (package! org-reverse-datetree)

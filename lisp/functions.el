@@ -223,8 +223,8 @@ and if it is set to nil, then it would forcefully create the ID."
   (+workspace/new-named "feed")
   (elfeed)
 
-  (+workspace/new-named "bot")
-  (telega)
+  ;; (+workspace/new-named "bot")
+  ;; (telega)
 
   (+workspace/switch-to-0))
 
