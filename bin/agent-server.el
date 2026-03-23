@@ -278,6 +278,11 @@ Returns t if allowed, signals error if not."
 ;; (fset 'write-region #'agent-server--guarded-write-region)
 ;; NOTE: Global override disabled for now — internal packages (org, denote)
 ;; also use write-region. Enable per-function guards instead.
+;;
+;; ⚠️ 활성화 시 주의: agent-denote-add-* 함수들이 save-buffer 호출 →
+;; write-region 경유 → write 모드 체크. ~/org/notes/ 등은 write-paths에 없으므로
+;; ERROR. 활성화하려면 guarded-write-region에서 denote-append-paths도 허용하거나,
+;; agent-denote-add-* 내부에서 write-guard-enabled을 let-bind로 nil 처리해야 함.
 
 ;;;; Agent Functions
 ;; These are the stable API that the agent calls via emacs_eval.

@@ -253,8 +253,14 @@ show_export_submenu() {
 
 cmd_agent_start() {
   if [[ -S "$AGENT_SOCKET" ]]; then
-    success "이미 실행 중 (socket: $AGENT_SOCKET)"
-    return 0
+    # Stale socket check — 소켓은 있지만 프로세스가 죽은 경우
+    if ! emacsclient -s "$AGENT_DAEMON" --eval '(+ 1 1)' &>/dev/null; then
+      warn "Stale 소켓 감지 — 정리 후 재시작"
+      rm -f "$AGENT_SOCKET"
+    else
+      success "이미 실행 중 (socket: $AGENT_SOCKET)"
+      return 0
+    fi
   fi
   info "에이전트 서버 시작..."
   # --init-directory: Doom init 우회 (서버 충돌 방지)
@@ -270,6 +276,9 @@ cmd_agent_stop() {
     return 0
   fi
   emacsclient -s "$AGENT_DAEMON" --eval '(kill-emacs)' 2>/dev/null || true
+  # Cleanup: 소켓이 남아있으면 강제 제거
+  sleep 0.5
+  [[ -S "$AGENT_SOCKET" ]] && rm -f "$AGENT_SOCKET" && warn "Stale 소켓 제거됨"
   success "에이전트 서버 중지됨"
 }
 
