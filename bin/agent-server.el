@@ -335,7 +335,10 @@ MAX-LEVEL limits depth (default: all levels)."
 (defun agent-denote-rename-by-front-matter (file)
   "FILE의 front-matter(#+title, #+filetags 등)를 읽어 파일명을 자동 변경.
 `denote-rename-confirmations'를 nil로 바인딩하여 y-or-n-p 프롬프트 없이 실행.
-에이전트가 headless 환경에서 안전하게 호출할 수 있다."
+에이전트가 headless 환경에서 안전하게 호출할 수 있다.
+
+Rename 후 검증: front-matter의 #+title, #+filetags 와 파일명이 일치하는지 확인.
+불일치 시 결과에 WARN 포함."
   (agent-server--path-allowed-p file 'write)
   (if (not (file-exists-p file))
       (format "ERROR: File not found: %s" file)
@@ -343,10 +346,29 @@ MAX-LEVEL limits depth (default: all levels)."
           (denote-save-buffers t)
           (denote-kill-buffers 'on-rename))
       (condition-case err
-          (let ((new-name (denote-rename-file-using-front-matter file)))
-            (format "OK: %s → %s"
-                    (file-name-nondirectory file)
-                    (file-name-nondirectory (or new-name file))))
+          (let* ((new-name (denote-rename-file-using-front-matter file))
+                 (result-file (or new-name file))
+                 (result-name (file-name-nondirectory result-file))
+                 ;; Post-rename verification
+                 (warnings nil))
+            ;; Check #+title matches filename title part
+            (when (file-exists-p result-file)
+              (with-temp-buffer
+                (insert-file-contents result-file nil 0 4096)
+                (goto-char (point-min))
+                ;; Verify #+identifier matches filename ID
+                (when (re-search-forward "^#\\+identifier:\\s-+\\([0-9T]+\\)" nil t)
+                  (let ((fm-id (match-string 1))
+                        (fn-id (denote-retrieve-filename-identifier result-file)))
+                    (unless (equal fm-id fn-id)
+                      (push (format "identifier mismatch: fm=%s fn=%s" fm-id fn-id)
+                            warnings))))))
+            (if warnings
+                (format "OK(WARN): %s → %s | %s"
+                        (file-name-nondirectory file) result-name
+                        (string-join warnings "; "))
+              (format "OK: %s → %s"
+                      (file-name-nondirectory file) result-name)))
         (user-error (format "SKIP: %s — %s"
                             (file-name-nondirectory file)
                             (error-message-string err)))
@@ -552,6 +574,159 @@ Human + Agent + Diary 통합 타임라인.
       (kill-buffer)
       content)))
 
+;;;; Denote Operations
+;; Structured append-only operations for denote files.
+;; Counterpart: emacs skill (SKILL.md) documents these for agents.
+;; See: [[denote:20260322T080400][에이전트 denote 오퍼레이션 프로토콜 설계]]
+
+(defvar agent-server-denote-append-paths
+  '("/home/junghan/org/")
+  "Paths where agent-denote-add-* functions can APPEND content.
+Separate from `agent-server-write-paths' — append-only is safer than overwrite.")
+
+(defun agent-server--denote-append-allowed-p (file)
+  "Check if FILE allows denote append operations.
+FILE must be a denote file (has identifier) under `agent-server-denote-append-paths'."
+  (let ((expanded (expand-file-name file)))
+    (unless (and (denote-file-has-identifier-p expanded)
+                 (cl-some (lambda (prefix)
+                            (string-prefix-p (expand-file-name prefix) expanded))
+                          agent-server-denote-append-paths))
+      (error "APPEND DENIED: %s is not a denote file under allowed paths" expanded))
+    t))
+
+(defun agent-denote-keywords ()
+  "Return sorted list of all denote keywords currently in use.
+Agents should query this before creating new tags to avoid fragmentation.
+Note: scans all files — may be slow on first call (3000+ notes)."
+  (denote-keywords))
+
+(defun agent-denote-add-history (id content)
+  "Add a timestamped entry to the History section of denote file ID.
+
+ID is a denote identifier (e.g. \"20260302T191200\").
+CONTENT is the text after the timestamp (e.g. \"@pi-claude — 작업 완료\").
+
+The entry is inserted as the first item under the '* 히스토리' or '* History'
+heading, so the newest entry is always on top.
+
+Returns OK/ERROR string.  Creates the heading if CREATE-IF-MISSING."
+  (let* ((file (denote-get-path-by-id id)))
+    (if (not file)
+        (format "ERROR: No denote file for ID %s" id)
+      (agent-server--denote-append-allowed-p file)
+      (condition-case err
+          (let ((buf (find-file-noselect file))
+                (timestamp (format-time-string "[%Y-%m-%d %a %H:%M]"))
+                (history-re "^\\* \\(?:히스토리\\|History\\)"))
+            (unwind-protect
+                (with-current-buffer buf
+                  (unless (derived-mode-p 'org-mode) (org-mode))
+                  (save-excursion
+                    (goto-char (point-min))
+                    (if (not (re-search-forward history-re nil t))
+                        ;; No history heading — create one after front-matter
+                        (progn
+                          (goto-char (point-min))
+                          ;; Skip front-matter (find first blank line after keywords)
+                          (if (re-search-forward "^$" nil t)
+                              (forward-line 1)
+                            (goto-char (point-max)))
+                          (insert (format "\n* 히스토리\n- %s %s\n" timestamp content))
+                          (save-buffer)
+                          (format "OK: Created 히스토리 heading + entry in %s"
+                                  (file-name-nondirectory file)))
+                      ;; Found history heading — insert after it
+                      (forward-line 1)
+                      (insert (format "- %s %s\n" timestamp content))
+                      (save-buffer)
+                      (format "OK: Added history entry to %s"
+                              (file-name-nondirectory file)))))
+              (when (buffer-live-p buf)
+                (kill-buffer buf))))
+        (error (format "ERROR: %s — %s" id (error-message-string err)))))))
+
+(defun agent-denote-add-heading (id heading content &optional after-heading)
+  "Add a level-1 heading to denote file ID.
+
+HEADING is the heading text (without the leading '* ').
+CONTENT is the body text under the heading.
+AFTER-HEADING, if given, is an existing heading text to insert after
+\(uses `org-end-of-subtree' to find the section end\).
+If nil, appends at end of file.
+
+Returns OK/ERROR string."
+  (let* ((file (denote-get-path-by-id id)))
+    (if (not file)
+        (format "ERROR: No denote file for ID %s" id)
+      (agent-server--denote-append-allowed-p file)
+      (condition-case err
+          (let ((buf (find-file-noselect file)))
+            (unwind-protect
+                (with-current-buffer buf
+                  (unless (derived-mode-p 'org-mode) (org-mode))
+                  (save-excursion
+                    (if after-heading
+                        ;; Find the target heading and go to end of its subtree
+                        (progn
+                          (goto-char (point-min))
+                          (let ((re (format "^\\* .*%s" (regexp-quote after-heading))))
+                            (if (not (re-search-forward re nil t))
+                                (error "Heading not found: %s" after-heading)
+                              (org-end-of-subtree t)
+                              (unless (bolp) (insert "\n")))))
+                      ;; No after-heading — go to end of file
+                      (goto-char (point-max))
+                      (unless (bolp) (insert "\n")))
+                    (insert (format "\n* %s\n\n%s\n" heading content))
+                    (save-buffer)
+                    (format "OK: Added heading '%s' to %s"
+                            heading (file-name-nondirectory file))))
+              (when (buffer-live-p buf)
+                (kill-buffer buf))))
+        (error (format "ERROR: %s — %s" id (error-message-string err)))))))
+
+(defun agent-denote-add-link (id target-id description)
+  "Add a denote link to file ID, pointing to TARGET-ID.
+
+Looks for a '관련' or '관련 노트' or 'Related' heading.
+If found, appends the link there.  If not, creates '** 관련' at end of file.
+
+DESCRIPTION is the link text.  Returns OK/ERROR string."
+  (let* ((file (denote-get-path-by-id id)))
+    (if (not file)
+        (format "ERROR: No denote file for ID %s" id)
+      (agent-server--denote-append-allowed-p file)
+      ;; Verify target exists
+      (let ((target-file (denote-get-path-by-id target-id)))
+        (if (not target-file)
+            (format "ERROR: Target denote file not found for ID %s" target-id)
+          (condition-case err
+              (let ((buf (find-file-noselect file)))
+                (unwind-protect
+                    (with-current-buffer buf
+                      (unless (derived-mode-p 'org-mode) (org-mode))
+                      (save-excursion
+                        (goto-char (point-min))
+                        (let ((link-text (format "- [[denote:%s][%s]]\n" target-id description))
+                              (related-re "^\\*+ \\(?:관련\\(?: 노트\\)?\\|Related\\)"))
+                          (if (re-search-forward related-re nil t)
+                              ;; Found related heading — append after last item
+                              (progn
+                                (org-end-of-subtree t)
+                                (unless (bolp) (insert "\n"))
+                                (insert link-text))
+                            ;; No related heading — create at end
+                            (goto-char (point-max))
+                            (unless (bolp) (insert "\n"))
+                            (insert (format "\n** 관련\n%s" link-text)))
+                          (save-buffer)
+                          (format "OK: Added link to %s in %s"
+                                  target-id (file-name-nondirectory file)))))
+                  (when (buffer-live-p buf)
+                    (kill-buffer buf))))
+            (error (format "ERROR: %s — %s" id (error-message-string err)))))))))
+
 ;;;; Memory Management
 
 (setq gc-cons-threshold (* 128 1024 1024)) ; 128MB — lighter than export server
@@ -574,7 +749,9 @@ Human + Agent + Diary 통합 타임라인.
 (message "[agent-server]      agent-denote-rename-bulk,")
 (message "[agent-server]      agent-org-dblock-update,")
 (message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
-(message "[agent-server]      agent-org-agenda-tags")
+(message "[agent-server]      agent-org-agenda-tags,")
+(message "[agent-server]      agent-denote-keywords, agent-denote-add-history,")
+(message "[agent-server]      agent-denote-add-heading, agent-denote-add-link")
 (message "[agent-server] REPL: emacs_eval for runtime extension")
 (message "[agent-server] ========================================")
 
