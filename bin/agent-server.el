@@ -238,13 +238,22 @@
     "/home/junghan/repos/gh/naver-saiculture/")
   "Paths the agent can WRITE to. Must match Docker rw mounts.")
 
+(defvar agent-server-denote-rename-paths
+  '("/home/junghan/org/")
+  "Paths where denote rename (front-matter → filename sync) is allowed.
+Rename only changes filename, not file content. Weaker than write.")
+
 (defun agent-server--path-allowed-p (file mode)
-  "Check if FILE access is allowed for MODE (read or write).
+  "Check if FILE access is allowed for MODE (read, write, or rename).
 Returns t if allowed, signals error if not."
   (let* ((expanded (expand-file-name file))
          (paths (pcase mode
-                  ('read (append agent-server-write-paths agent-server-read-paths))
+                  ('read (append agent-server-write-paths
+                                 agent-server-denote-rename-paths
+                                 agent-server-read-paths))
                   ('write agent-server-write-paths)
+                  ('rename (append agent-server-write-paths
+                                   agent-server-denote-rename-paths))
                   (_ (error "Unknown mode: %s" mode)))))
     (unless (cl-some (lambda (prefix)
                        (string-prefix-p (expand-file-name prefix) expanded))
@@ -339,7 +348,7 @@ MAX-LEVEL limits depth (default: all levels)."
 
 Rename 후 검증: front-matter의 #+title, #+filetags 와 파일명이 일치하는지 확인.
 불일치 시 결과에 WARN 포함."
-  (agent-server--path-allowed-p file 'write)
+  (agent-server--path-allowed-p file 'rename)
   (if (not (file-exists-p file))
       (format "ERROR: File not found: %s" file)
     (let ((denote-rename-confirmations nil)
@@ -379,7 +388,7 @@ Rename 후 검증: front-matter의 #+title, #+filetags 와 파일명이 일치�
 (defun agent-denote-rename-bulk (directory)
   "DIRECTORY 내 모든 denote 파일의 front-matter 기반 일괄 rename.
 결과를 (renamed skipped errors) 카운트로 반환."
-  (agent-server--path-allowed-p directory 'write)
+  (agent-server--path-allowed-p directory 'rename)
   (let ((files (directory-files-recursively directory "\\.org$"))
         (renamed 0) (skipped 0) (errors 0)
         (denote-rename-confirmations nil)
