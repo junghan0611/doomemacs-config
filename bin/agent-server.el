@@ -670,7 +670,7 @@ Returns OK/ERROR string."
                         ;; Find the target heading and go to end of its subtree
                         (progn
                           (goto-char (point-min))
-                          (let ((re (format "^\\* .*%s" (regexp-quote after-heading))))
+                          (let ((re (format "^\\* %s\\(?:[ \t]\\|$\\)" (regexp-quote after-heading))))
                             (if (not (re-search-forward re nil t))
                                 (error "Heading not found: %s" after-heading)
                               (org-end-of-subtree t)
