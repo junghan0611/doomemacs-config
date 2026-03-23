@@ -17,7 +17,10 @@ EMACSDIR="$HOME/doomemacs-igc"
 DOOM_BIN="${EMACSDIR}/bin/doom"
 
 # flake에서 빌드된 emacs-igc 경로
-IGC_STORE=$(nix build "${DOOMDIR}#emacs-igc" --no-link --print-out-paths 2>/dev/null)
+# GC root를 만들어 nix-gc에서 보호 (--no-link은 GC root 없음 → 삭제됨)
+GC_ROOT="$HOME/.local/state/nix/gcroots/emacs-igc"
+mkdir -p "$(dirname "$GC_ROOT")"
+IGC_STORE=$(nix build "${DOOMDIR}#emacs-igc" --out-link "$GC_ROOT" --print-out-paths 2>/dev/null)
 IGC_EMACS="${IGC_STORE}/bin/emacs"
 IGC_CLIENT="${IGC_STORE}/bin/emacsclient"
 
