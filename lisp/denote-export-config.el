@@ -481,6 +481,51 @@ plain text, consistent with org-export-with-broken-links 'mark setting."
 ;; Register denote link export handler
 (org-link-set-parameters "denote" :export #'my/denote-link-ol-export)
 
+;;;; Section 2.3: download: → file: link rewrite (before-processing hook)
+;; Doom Emacs defines "download:" link type (org-download +dragndrop contrib)
+;; for images saved via org-download. The link stores a relative filename
+;; resolved against `org-download-image-dir'.
+;;
+;; Problem: "download:" has no :export handler → ox-hugo outputs raw text.
+;; Solution: rewrite [[download:file.png]] → [[file:~/screenshot/file.png]]
+;; in the export temp buffer BEFORE parsing, so ox-hugo's full pipeline
+;; handles it (copy to static/, path rewrite, figure shortcode).
+;;
+;; Same pattern as my/org-fix-cjk-emphasis — runs on temp copy, not original.
+;;
+;; Emacs 31 transition note:
+;; - 31 builtin yank-media produces [[file:relative/path.png]]
+;; - "download:" is Doom-only, will eventually retire
+;; - This hook ensures existing download: links export correctly
+;;   until all download: links are migrated to file: links.
+
+(defun my/org-rewrite-download-links (_backend)
+  "Rewrite [[download:file.png]] to [[file:FULL-PATH]] before export.
+Resolves the filename against `org-download-image-dir'.
+Runs on a temporary export copy — original file is NOT modified."
+  (let ((image-dir (or (and (boundp 'org-download-image-dir)
+                            org-download-image-dir)
+                       "."))
+        (changes 0))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward
+              "\\[\\[download:\\([^]]+\\)\\]\\(\\[\\([^]]*\\)\\]\\)?\\]"
+              nil t)
+        (let* ((filename (match-string 1))
+               (desc-part (match-string 2))  ; includes brackets or nil
+               (full-path (expand-file-name filename image-dir))
+               (replacement
+                (if desc-part
+                    (format "[[file:%s]%s]" full-path desc-part)
+                  (format "[[file:%s]]" full-path))))
+          (replace-match replacement t t)
+          (cl-incf changes))))
+    (when (> changes 0)
+      (message "[Export] download: → file: rewrites: %d" changes))))
+
+(add-hook 'org-export-before-processing-hook #'my/org-rewrite-download-links)
+
 ;;;; Section 2.5: Hashtag and Mention Span Wrapping for Hugo Export
 ;; Wrap #hashtags and @mentions with <span> tags during ox-hugo export.
 ;; Counterpart of doom-themes-ext-org.el fontification (interactive editing).
