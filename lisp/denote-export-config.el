@@ -505,7 +505,9 @@ Resolves the filename against `org-download-image-dir', with fallback
 to `org-attach-id-dir' (for files saved before the setq-default fix).
 Runs on a temporary export copy — original file is NOT modified."
   (let ((image-dir (or (and (boundp 'org-download-image-dir)
-                            (default-value 'org-download-image-dir))
+                            ;; Try default-value first, then current value
+                            (or (default-value 'org-download-image-dir)
+                                org-download-image-dir))
                        "."))
         (attach-dir (and (boundp 'org-attach-id-dir) org-attach-id-dir))
         (changes 0))
