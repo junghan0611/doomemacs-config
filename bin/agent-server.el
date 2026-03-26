@@ -679,45 +679,101 @@ Returns OK/ERROR string.  Creates the heading if CREATE-IF-MISSING."
                 (kill-buffer buf))))
         (error (format "ERROR: %s — %s" id (error-message-string err)))))))
 
-(defun agent-denote-add-heading (id heading content &optional after-heading)
+(defun agent-denote-add-heading (id heading &rest args)
   "Add a level-1 heading to denote file ID.
 
 HEADING is the heading text (without the leading '* ').
+
+Flexible argument handling — all these forms work:
+  (agent-denote-add-heading ID HEADING \"content\")
+  (agent-denote-add-heading ID HEADING \"content\" \"after-heading\")
+  (agent-denote-add-heading ID HEADING \"TAGS\" \"content\")
+  (agent-denote-add-heading ID HEADING \"TAGS\" \"content\" AFTER-IDX)
+
+Auto-detection: if 3rd arg matches org tag pattern (uppercase letters,
+colons, e.g. \"LLMLOG\" or \"LLMLOG:ARCHIVE\"), it's treated as TAGS.
+Otherwise it's CONTENT.
+
+TAGS are appended to the heading as org tags: * heading :TAG1:TAG2:
 CONTENT is the body text under the heading.
-AFTER-HEADING, if given, is an existing heading text to insert after
-\(uses `org-end-of-subtree' to find the section end\).
-If nil, appends at end of file.
+AFTER-IDX (integer) is ignored for backward compat (used to be after-heading index).
+AFTER-HEADING (string) inserts after that existing heading's subtree.
 
 Returns OK/ERROR string."
-  (let* ((file (denote-get-path-by-id id)))
-    (if (not file)
-        (format "ERROR: No denote file for ID %s" id)
-      (agent-server--denote-append-allowed-p file)
-      (condition-case err
-          (let ((buf (find-file-noselect file)))
-            (unwind-protect
-                (with-current-buffer buf
-                  (unless (derived-mode-p 'org-mode) (org-mode))
-                  (save-excursion
-                    (if after-heading
-                        ;; Find the target heading and go to end of its subtree
-                        (progn
-                          (goto-char (point-min))
-                          (let ((re (format "^\\* %s\\(?:[ \t]\\|$\\)" (regexp-quote after-heading))))
-                            (if (not (re-search-forward re nil t))
-                                (error "Heading not found: %s" after-heading)
-                              (org-end-of-subtree t)
-                              (unless (bolp) (insert "\n")))))
-                      ;; No after-heading — go to end of file
-                      (goto-char (point-max))
-                      (unless (bolp) (insert "\n")))
-                    (insert (format "\n* %s\n\n%s\n" heading content))
-                    (save-buffer)
-                    (format "OK: Added heading '%s' to %s"
-                            heading (file-name-nondirectory file))))
-              (when (buffer-live-p buf)
-                (kill-buffer buf))))
-        (error (format "ERROR: %s — %s" id (error-message-string err)))))))
+  ;; Parse flexible args
+  (let* ((tags nil)
+         (content "")
+         (after-heading nil)
+         ;; Detect pattern: is first arg a tag-like string?
+         (first-arg (car args))
+         (rest-args (cdr args)))
+    ;; Auto-detect tags vs content
+    (cond
+     ;; No args → heading only
+     ((null first-arg)
+      (setq content ""))
+     ;; First arg looks like org tags (all uppercase, no spaces, no newlines)
+     ((and (stringp first-arg)
+           (string-match-p "\\`[A-Z][A-Z0-9:]*\\'" first-arg))
+      (setq tags first-arg)
+      ;; Next arg is content
+      (when (car rest-args)
+        (if (stringp (car rest-args))
+            (setq content (car rest-args))
+          ;; integer → skip (backward compat)
+          )
+        (setq rest-args (cdr rest-args)))
+      ;; Next could be after-heading (string) or index (integer, skip)
+      (when (car rest-args)
+        (cond
+         ((stringp (car rest-args)) (setq after-heading (car rest-args)))
+         ((integerp (car rest-args)) nil)))) ;; skip numeric
+     ;; First arg is content (normal case)
+     ((stringp first-arg)
+      (setq content first-arg)
+      ;; Next is after-heading
+      (when (car rest-args)
+        (if (stringp (car rest-args))
+            (setq after-heading (car rest-args)))))
+     ;; Anything else
+     (t (setq content (format "%s" first-arg))))
+
+    ;; Build heading text with optional tags
+    (let* ((heading-text (if tags
+                             (format "%s :%s:" heading
+                                     (mapconcat #'identity
+                                                (split-string tags ":" t)
+                                                ":"))
+                           heading))
+           (file (denote-get-path-by-id id)))
+      (if (not file)
+          (format "ERROR: No denote file for ID %s" id)
+        (agent-server--denote-append-allowed-p file)
+        (condition-case err
+            (let ((buf (find-file-noselect file)))
+              (unwind-protect
+                  (with-current-buffer buf
+                    (unless (derived-mode-p 'org-mode) (org-mode))
+                    (save-excursion
+                      (if after-heading
+                          ;; Find the target heading and go to end of its subtree
+                          (progn
+                            (goto-char (point-min))
+                            (let ((re (format "^\\* %s\\(?:[ \t]\\|$\\)" (regexp-quote after-heading))))
+                              (if (not (re-search-forward re nil t))
+                                  (error "Heading not found: %s" after-heading)
+                                (org-end-of-subtree t)
+                                (unless (bolp) (insert "\n")))))
+                        ;; No after-heading — go to end of file
+                        (goto-char (point-max))
+                        (unless (bolp) (insert "\n")))
+                      (insert (format "\n* %s\n\n%s\n" heading-text content))
+                      (save-buffer)
+                      (format "OK: Added heading '%s' to %s"
+                              heading-text (file-name-nondirectory file))))
+                (when (buffer-live-p buf)
+                  (kill-buffer buf))))
+          (error (format "ERROR: %s — %s" id (error-message-string err))))))))
 
 (defun agent-denote-add-link (id target-id description)
   "Add a denote link to file ID, pointing to TARGET-ID.
