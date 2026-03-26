@@ -473,6 +473,25 @@ Requires write access — dblock update modifies and saves the file."
         (when (buffer-live-p buf)
           (kill-buffer buf))))))
 
+(defun agent-being-data (&optional as-json)
+  "Return current user 'being data' as a plist (or JSON with AS-JSON non-nil).
+Delegates to `workflow-shared-being-data'; data is computed once at server
+startup via `workflow-shared-compute-being-data' and then cached.
+
+Example return value:
+  (:notes 3328 :journal-days 1477 :garden 2178 :bib 671
+   :notes-formatted \"3,328\" :journal-days-formatted \"1,477\"
+   :garden-formatted \"2,178\" :bib-formatted \"671\"
+   :computed-at \"2026-03-26 Thu 10:00\")
+
+Usage:
+  emacsclient -s agent-server --eval '(agent-being-data)'
+  emacsclient -s agent-server --eval '(agent-being-data t)'  ; JSON"
+  (if (fboundp 'workflow-shared-being-data)
+      (workflow-shared-being-data as-json)
+    (message "[agent-server] WARNING: workflow-shared not loaded")
+    nil))
+
 ;;;; Org Agenda API
 
 (defun agent-org-agenda--ensure-journal ()

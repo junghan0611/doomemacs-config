@@ -287,11 +287,25 @@
 
 (require 'org-macro)
 
-(defun batch-expand-macros-before-export (backend)
-  "Expand all org macros before export."
-  (condition-case err
+;; workflow-shared.el 로드 — being-data 계산 함수 공유 (agent-server와 동일 소스)
+(let ((shared (expand-file-name "lisp/workflow-shared.el" original-doom-user-dir)))
+  (if (file-exists-p shared)
       (progn
-        (org-macro-initialize-templates)
+        (load shared t t)
+        (message "[Server] ✓ workflow-shared loaded"))
+    (message "[Server] WARNING: workflow-shared.el not found at %s" shared)))
+
+;; Fix 1: initialize-templates를 호출하기 전에 전역 org-macro-templates를 캡처하여
+;; DEFAULT로 전달 — 서버 시작 시 등록된 정적 템플릿이 buffer-local 재설정 후에도 유지됨.
+;; 이전 버그: (org-macro-initialize-templates) 인자 없음 →
+;;   buffer-local org-macro-templates를 새로 생성하면서 전역 추가분이 소멸됨.
+(defun batch-expand-macros-before-export (backend)
+  "Expand all org macros before export.
+Passes current (global) `org-macro-templates' as DEFAULT so server-startup
+static templates are preserved after buffer-local reset by initialize-templates."
+  (condition-case err
+      (let ((server-templates org-macro-templates))
+        (org-macro-initialize-templates server-templates)
         (org-macro-replace-all org-macro-templates))
     (error
      (message "[Server] WARNING: Macro expansion failed: %S" err))))
@@ -299,11 +313,22 @@
 (add-hook 'org-export-before-processing-hook
           #'batch-expand-macros-before-export)
 
-(when (featurep 'denote-explore)
-  (add-to-list 'org-macro-templates
-               '("denote-explore-count-notes" . "(eval (denote-explore-count-notes))") t)
-  (add-to-list 'org-macro-templates
-               '("denote-explore-count-keywords" . "(eval (denote-explore-count-keywords))") t))
+;; Fix 2: 서버 시작 시 1회 계산 → 정적 문자열로 등록
+;; 이전 버그: "(eval (denote-explore-count-notes))" 방식 →
+;;   파일 export마다 파일시스템 전체 스캔 + add-to-list 자체가 무효였음.
+;; 개선: workflow-shared에서 1회 계산 후 정적 문자열 등록.
+(when (fboundp 'workflow-shared-compute-being-data)
+  (workflow-shared-compute-being-data)
+  (let ((data (workflow-shared-being-data)))
+    (when data
+      (dolist (pair `(("notes-count"  . ,(plist-get data :notes-formatted))
+                      ("journal-days" . ,(plist-get data :journal-days-formatted))
+                      ("garden-count" . ,(plist-get data :garden-formatted))))
+        (add-to-list 'org-macro-templates pair t))
+      (message "[Server] Static macros registered: notes=%s journal=%s garden=%s"
+               (plist-get data :notes-formatted)
+               (plist-get data :journal-days-formatted)
+               (plist-get data :garden-formatted)))))
 
 (message "[Server] Macro expansion configured")
 

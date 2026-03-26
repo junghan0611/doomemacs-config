@@ -140,5 +140,90 @@ PREFIX가 있으면 엔트리 생성 없이 파일만 열기 (org-journal 기본
         (org-show-children)
         (recenter 3)))))
 
+;;;; 존재 데이터 (Being Data) — 사용자 현황 수치
+
+;; 인간(Doom)과 에이전트(agent-server)가 동일한 데이터를 조회하는 단일 소스.
+;; denote-export-server: 정적 org 매크로 {{{notes-count}}} 등에 사용.
+;; agent-server: (agent-being-data) API로 에이전트가 런타임 조회에 사용.
+;; 서버 시작 시 1회 계산 후 캐시. (workflow-shared-compute-being-data) 로 갱신 가능.
+
+(defvar workflow-shared--being-data nil
+  "Cached being data plist. Computed once per session.
+Keys: :notes :journal-days :garden :bib
+      :notes-formatted :journal-days-formatted :garden-formatted :bib-formatted
+      :computed-at
+Call `workflow-shared-compute-being-data' to refresh.")
+
+(defun workflow-shared--format-with-commas (n)
+  "Format integer N with thousands separators. e.g. 3328 → \"3,328\"."
+  (let* ((s (number-to-string n))
+         (groups nil)
+         (i (length s)))
+    (while (> i 0)
+      (push (substring s (max 0 (- i 3)) i) groups)
+      (setq i (- i 3)))
+    (mapconcat #'identity groups ",")))
+
+(defun workflow-shared--shell-count (cmd)
+  "Run shell CMD and return integer. Returns 0 on error."
+  (condition-case err
+      (with-temp-buffer
+        (call-process "sh" nil t nil "-c" cmd)
+        (string-to-number (string-trim (buffer-string))))
+    (error
+     (message "[workflow-shared] shell-count error (%s): %S" cmd err)
+     0)))
+
+(defun workflow-shared-compute-being-data ()
+  "Compute being data and store in `workflow-shared--being-data'.
+Safe to call multiple times — recomputes and updates cache.
+Requires denote to be loaded for best results; falls back to shell counts."
+  (unless (featurep 'denote)
+    (message "[workflow-shared] WARNING: denote not loaded, being-data uses shell fallback"))
+  (let* ((notes   (workflow-shared--shell-count
+                   "find ~/org/ -name '*.org' | wc -l"))
+         (garden  (workflow-shared--shell-count
+                   "find ~/repos/gh/notes/content -name '*.md' | wc -l"))
+         (jdays   (- (time-to-days (current-time))
+                     (time-to-days (encode-time 0 0 0 10 3 2022))))
+         (bib     (workflow-shared--shell-count
+                   "ls ~/org/bib/*.org 2>/dev/null | wc -l"))
+         (now-str (format-time-string "%Y-%m-%d %a %H:%M")))
+    (setq workflow-shared--being-data
+          (list :notes                  notes
+                :journal-days           jdays
+                :garden                 garden
+                :bib                    bib
+                :notes-formatted        (workflow-shared--format-with-commas notes)
+                :journal-days-formatted (workflow-shared--format-with-commas jdays)
+                :garden-formatted       (workflow-shared--format-with-commas garden)
+                :bib-formatted          (workflow-shared--format-with-commas bib)
+                :computed-at            now-str))
+    (message "[workflow-shared] being-data: notes=%d journal=%d garden=%d bib=%d (at %s)"
+             notes jdays garden bib now-str)
+    workflow-shared--being-data))
+
+(defun workflow-shared-being-data (&optional as-json)
+  "Return being data plist. Computes on first call, then returns cache.
+With AS-JSON non-nil, returns JSON string.
+
+Example plist:
+  (:notes 3328 :journal-days 1477 :garden 2178 :bib 671
+   :notes-formatted \"3,328\" :journal-days-formatted \"1,477\"
+   :garden-formatted \"2,178\" :bib-formatted \"671\"
+   :computed-at \"2026-03-26 Thu 10:00\")"
+  (unless workflow-shared--being-data
+    (workflow-shared-compute-being-data))
+  (if as-json
+      (progn
+        (require 'json nil t)
+        (json-encode
+         `((notes        . ,(plist-get workflow-shared--being-data :notes))
+           (journal_days . ,(plist-get workflow-shared--being-data :journal-days))
+           (garden       . ,(plist-get workflow-shared--being-data :garden))
+           (bib          . ,(plist-get workflow-shared--being-data :bib))
+           (computed_at  . ,(plist-get workflow-shared--being-data :computed-at)))))
+    workflow-shared--being-data))
+
 (provide 'workflow-shared)
 ;;; workflow-shared.el ends here
