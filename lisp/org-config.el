@@ -440,6 +440,9 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
                org-download-yank
                org-download-screenshot)
     :config
+    ;; heading-lvl도 buffer-local — 둘 다 설정
+    ;; 기본값 0 = #+title로 서브디렉토리 생성, nil = 서브디렉토리 없음
+    (setq-default org-download-heading-lvl nil)
     (setq org-download-heading-lvl nil)
     (setq org-download-method 'directory) ; doom 'attach
     ;; org-download-image-dir is buffer-local (make-variable-buffer-local).
