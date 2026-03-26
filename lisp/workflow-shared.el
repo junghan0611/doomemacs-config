@@ -225,5 +225,14 @@ Example plist:
            (computed_at  . ,(plist-get workflow-shared--being-data :computed-at)))))
     workflow-shared--being-data))
 
+;;;; org-export-global-macros — 모든 org 파일에서 사용 가능한 매크로
+
+;; 파일별 #+MACRO: 선언 불필요. Doom GUI + denote-export-server 모두 적용.
+;; 사용법: {{{notes-count}}}, {{{journal-days}}}, {{{garden-count}}}
+(setq org-export-global-macros
+      '(("notes-count"  . "(eval (plist-get (workflow-shared-being-data) :notes-formatted))")
+        ("journal-days" . "(eval (plist-get (workflow-shared-being-data) :journal-days-formatted))")
+        ("garden-count" . "(eval (plist-get (workflow-shared-being-data) :garden-formatted))")))
+
 (provide 'workflow-shared)
 ;;; workflow-shared.el ends here
