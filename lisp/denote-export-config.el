@@ -501,11 +501,13 @@ plain text, consistent with org-export-with-broken-links 'mark setting."
 
 (defun my/org-rewrite-download-links (_backend)
   "Rewrite [[download:file.png]] to [[file:FULL-PATH]] before export.
-Resolves the filename against `org-download-image-dir'.
+Resolves the filename against `org-download-image-dir', with fallback
+to `org-attach-id-dir' (for files saved before the setq-default fix).
 Runs on a temporary export copy — original file is NOT modified."
   (let ((image-dir (or (and (boundp 'org-download-image-dir)
-                            org-download-image-dir)
+                            (default-value 'org-download-image-dir))
                        "."))
+        (attach-dir (and (boundp 'org-attach-id-dir) org-attach-id-dir))
         (changes 0))
     (save-excursion
       (goto-char (point-min))
@@ -514,7 +516,16 @@ Runs on a temporary export copy — original file is NOT modified."
               nil t)
         (let* ((filename (match-string 1))
                (desc-part (match-string 2))  ; includes brackets or nil
-               (full-path (expand-file-name filename image-dir))
+               (path-in-image-dir (expand-file-name filename image-dir))
+               (path-in-attach-dir (and attach-dir
+                                        (expand-file-name filename attach-dir)))
+               ;; Try image-dir first, then attach-dir (legacy fallback)
+               (full-path (cond
+                           ((file-exists-p path-in-image-dir) path-in-image-dir)
+                           ((and path-in-attach-dir
+                                 (file-exists-p path-in-attach-dir))
+                            path-in-attach-dir)
+                           (t path-in-image-dir))) ; default even if missing
                (replacement
                 (if desc-part
                     (format "[[file:%s]%s]" full-path desc-part)

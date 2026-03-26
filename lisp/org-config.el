@@ -440,11 +440,15 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
                org-download-yank
                org-download-screenshot)
     :config
-    (setq-default org-download-heading-lvl nil)
+    (setq org-download-heading-lvl nil)
     (setq org-download-method 'directory) ; doom 'attach
-    (setq-default org-download-image-dir "~/screenshot" ) ;; share all devieces
+    ;; IMPORTANT: setq (not setq-default) — org-download-image-dir is buffer-local.
+    ;; Doom's dragndrop.el sets it to org-attach-id-dir (.attach/) via setq.
+    ;; setq-default only changes the default, leaving buffer-local values intact.
+    ;; setq after Doom's :config ensures all buffers use ~/screenshot/.
+    (setq org-download-image-dir "~/screenshot") ;; share all devices
     (setq org-download-display-inline-images nil)
-    (setq org-download-timestamp"%Y%m%dT%H%M%S-") ;; denote id
+    (setq org-download-timestamp "%Y%m%dT%H%M%S-") ;; denote id
 
     (setq org-download-image-attr-list
           '("#+attr_html: :width 80% :align center"
