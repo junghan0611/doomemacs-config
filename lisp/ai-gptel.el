@@ -886,6 +886,232 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
       (process-send-string proc "{\"hook_event_name\":\"Stop\"}\n")
       (process-send-eof proc))))
 
+;;;; Gemini 이미지 생성
+
+;; gptel 의존성 없음 — url.el + json.el 만 사용
+;;
+;; [사용법]
+;;   M-x my/gemini-generate-image       → 프롬프트 입력, 비율 기본 16:9
+;;   C-u M-x my/gemini-generate-image   → 비율 선택 메뉴 포함
+;;
+;; [저장 위치] ~/screenshot/YYYYMMDDTHHMMSS--슬러그__brand_nanobanana.png
+;; [환경변수]  GEMINI_API_KEY  (~/.env.local 또는 export로 직접 설정)
+
+(defconst my/gemini-image-model "gemini-3.1-flash-image-preview"
+  "Gemini 이미지 생성 기본 모델. pi extension과 동일.")
+
+(defconst my/gemini-aspect-ratios
+  '("1:1" "16:9" "9:16" "4:3" "3:4" "3:2" "2:3")
+  "Gemini 이미지 생성 지원 비율 목록.")
+
+;;;;;; 헬퍼 함수
+
+(defun my/gemini--get-api-key ()
+  "GEMINI_API_KEY 반환. password-store 우선, 환경변수 폴백."
+  (or (ignore-errors (password-store-get "api/google/gemini-junghanacs"))
+      (getenv "GEMINI_API_KEY")))
+
+(defun my/gemini--kst-timestamp ()
+  "현재 KST 타임스탬프 반환 (Denote 형식: YYYYMMDDTHHMMSS).
+KST = UTC+9: 현재 시각에 9시간 더해 UTC 포맷으로 출력."
+  (format-time-string "%Y%m%dT%H%M%S"
+                      (time-add (current-time) (* 9 3600))
+                      t))
+
+(defun my/gemini--slugify (text &optional max-len)
+  "TEXT를 파일명용 슬러그로 변환. 최대 MAX-LEN자 (기본 30).
+한글+영숫자 허용 (Emacs에서 한글 프롬프트 사용하므로).
+Denote 파일명 규칙: YYYYMMDDTHHMMSS--한글-제목__태그.org"
+  (let* ((n (or max-len 30))
+         (s (downcase text)))
+    (setq s (replace-regexp-in-string "[^가-힣a-z0-9 ]" " " s))
+    (setq s (replace-regexp-in-string " +"              "-" s))
+    (setq s (replace-regexp-in-string "-+"              "-" s))
+    (setq s (replace-regexp-in-string "^-"              ""  s))
+    (when (> (length s) n)
+      (setq s (substring s 0 n)))
+    (setq s (replace-regexp-in-string "-$" "" s))
+    (if (string-empty-p s) "generated" s)))
+
+(defun my/gemini--mime-to-ext (mime-type)
+  "MIME-TYPE 문자열에서 파일 확장자 반환."
+  (let ((m (or mime-type "")))
+    (cond
+     ((string-match-p "jpeg\\|jpg" m) "jpg")
+     ((string-match-p "webp"       m) "webp")
+     ((string-match-p "gif"        m) "gif")
+     (t                               "png"))))
+
+;;;;;; 핵심 함수
+
+(defun my/gemini-generate-image (prompt &optional aspect-ratio)
+  "Gemini API로 이미지 생성, ~/screenshot/에 저장, 현재 위치에 org 링크 삽입.
+
+PROMPT: 생성할 이미지 설명.
+ASPECT-RATIO: 화면 비율 (기본 \"16:9\"). nil이면 기본값 사용.
+prefix arg (C-u): 비율 선택 메뉴를 표시한다.
+
+저장 파일명: YYYYMMDDTHHMMSS--슬러그__brand_nanobanana.png  (Denote 형식, KST)
+환경변수: GEMINI_API_KEY  (~/.env.local 또는 export로 설정)
+
+검증:
+  (my/gemini-generate-image \"a cute penguin\" \"16:9\")"
+  (interactive
+   (let* ((p (read-string "Prompt: "))
+          (r (if current-prefix-arg
+                 (completing-read "Aspect ratio: " my/gemini-aspect-ratios
+                                  nil t nil nil "16:9")
+               "16:9")))
+     (list p r)))
+  (require 'url)
+  (require 'json)
+  (let ((orig-buf (current-buffer))
+        (orig-pos (point)))
+
+    ;; ── 1. 입력 검증 ──────────────────────────────────────────────────────────
+    (when (string-empty-p (string-trim (or prompt "")))
+      (user-error "프롬프트가 비어있습니다"))
+
+    (let ((api-key (my/gemini--get-api-key)))
+    (unless api-key
+      (user-error "GEMINI_API_KEY가 없습니다. ~/.env.local에 GEMINI_API_KEY=... 를 추가하세요"))
+
+    ;; ── 2. 요청 구성 ──────────────────────────────────────────────────────────
+    (let* ((ratio   (or aspect-ratio "16:9"))
+           (model   my/gemini-image-model)
+           (api-url (format
+                     "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
+                     model api-key))
+           (body    (json-encode
+                     `((contents
+                        . [((role  . "user")
+                            (parts . [((text . ,prompt))]))])
+                       (generationConfig
+                        . ((responseModalities . ["TEXT" "IMAGE"])
+                           (imageConfig
+                            . ((aspectRatio . ,ratio))))))))
+           (url-request-method         "POST")
+           (url-request-extra-headers  '(("Content-Type" . "application/json")))
+           (url-request-data           (encode-coding-string body 'utf-8))
+           (url-show-status            nil))
+
+      (message "Gemini 이미지 생성 중... (모델: %s, 비율: %s)" model ratio)
+
+      ;; ── 3. HTTP 요청 ──────────────────────────────────────────────────────────
+      (let ((resp-buf
+             (condition-case err
+                 (url-retrieve-synchronously api-url t nil 60)
+               (error (user-error "HTTP 요청 실패: %s" (error-message-string err))))))
+        (unless resp-buf
+          (user-error "응답 없음: 타임아웃 또는 네트워크 문제"))
+
+        (unwind-protect
+            (with-current-buffer resp-buf
+              (goto-char (point-min))
+
+              ;; HTTP 상태코드 확인 (첫 번째 줄에서 200 여부 검사)
+              (let ((status (buffer-substring-no-properties
+                             (point-min) (line-end-position))))
+                (unless (string-match-p "200" status)
+                  (re-search-forward "^\r?\n" nil t)
+                  (let ((err-body (buffer-substring-no-properties (point) (point-max))))
+                    (user-error "HTTP 에러: %s\n%s"
+                                status
+                                (substring err-body 0 (min 300 (length err-body)))))))
+
+              ;; 헤더 건너뛰기 → JSON 본문으로 이동
+              (goto-char (point-min))
+              (re-search-forward "^\r?\n" nil t)
+
+              ;; ── 4. JSON 파싱 ────────────────────────────────────────────────
+              (let* ((json-object-type  'alist)
+                     (json-array-type   'vector)
+                     (json-key-type     'symbol)
+                     (data              (json-read))
+                     (api-err           (alist-get 'error          data))
+                     (feedback          (alist-get 'promptFeedback data))
+                     (block-reason      (and feedback
+                                             (alist-get 'blockReason feedback))))
+
+                ;; API 레벨 에러 (200 응답이지만 error 필드 있는 경우)
+                (when api-err
+                  (user-error "Gemini API 에러 [%s]: %s"
+                              (or (alist-get 'code    api-err) "?")
+                              (or (alist-get 'message api-err) "알 수 없는 에러")))
+
+                ;; 안전 정책 차단 (promptFeedback.blockReason)
+                (when block-reason
+                  (user-error "프롬프트 차단됨: %s  %s"
+                              block-reason
+                              (or (alist-get 'blockReasonMessage feedback) "")))
+
+                ;; ── 5. parts 추출 ──────────────────────────────────────────────
+                (let* ((candidates    (alist-get 'candidates data))
+                       (candidate     (and (vectorp candidates)
+                                           (> (length candidates) 0)
+                                           (aref candidates 0)))
+                       (content-node  (and candidate
+                                           (alist-get 'content candidate)))
+                       (parts         (and content-node
+                                           (alist-get 'parts content-node)))
+                       (finish-reason (and candidate
+                                           (alist-get 'finishReason candidate)))
+                       text-parts  ; (list of strings, 역순 수집)
+                       image-b64   ; base64 string
+                       image-mime) ; "image/png" 등
+
+                  (unless (and parts (vectorp parts) (> (length parts) 0))
+                    (user-error "응답에 parts 없음 (finishReason: %s)" finish-reason))
+
+                  ;; text / inlineData 파트 분리
+                  (seq-do (lambda (part)
+                            (when-let ((txt (alist-get 'text part)))
+                              (push (if (stringp txt) txt (format "%s" txt))
+                                    text-parts))
+                            (when-let ((inline (alist-get 'inlineData part)))
+                              (setq image-b64  (alist-get 'data     inline))
+                              (setq image-mime (alist-get 'mimeType inline))))
+                          parts)
+
+                  (unless image-b64
+                    (user-error "이미지 데이터 없음 (finishReason: %s). 안전 정책 차단 가능성 있음"
+                                (or finish-reason "unknown")))
+
+                  ;; ── 6. 파일 저장 ────────────────────────────────────────────
+                  (let* ((ts    (my/gemini--kst-timestamp))
+                         (slug  (my/gemini--slugify prompt))
+                         (ext   (my/gemini--mime-to-ext (or image-mime "image/png")))
+                         (fname (format "%s--%s__brand_nanobanana.%s" ts slug ext))
+                         (dir   (expand-file-name "~/screenshot/"))
+                         (fpath (expand-file-name fname dir)))
+                    (make-directory dir t)
+                    (let ((coding-system-for-write 'binary))
+                      (write-region (base64-decode-string
+                                     (if (stringp image-b64)
+                                         image-b64
+                                       (format "%s" image-b64)))
+                                    nil fpath))
+
+                    ;; ── 7. org 링크 삽입 (원래 버퍼의 커서 위치) ─────────────────
+                    (with-current-buffer orig-buf
+                      (goto-char orig-pos)
+                      (insert (format "[[file:%s]]\n" fpath))
+
+                      ;; ── 8. 인라인 이미지 표시 ──────────────────────────────────
+                      (when (derived-mode-p 'org-mode)
+                        (org-display-inline-images)))
+
+                    (message "✅ 이미지 생성 완료: %s%s"
+                             fname
+                             (if text-parts
+                                 (format " | %s"
+                                         (string-join (nreverse text-parts) " "))
+                               ""))))))
+
+          ;; 응답 버퍼 정리 (unwind-protect)
+          (when (buffer-live-p resp-buf)
+            (kill-buffer resp-buf))))))))
+
 ;;; Provide
 
 (provide 'ai-gptel)
