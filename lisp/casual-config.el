@@ -101,23 +101,12 @@
 
 ;;;; Context Menu & Anju
 
-;; context-menu-mode: 우클릭 컨텍스트 메뉴 (Emacs 28+)
-;; Doom Emacs에서 기본 비활성 → 글로벌로 켠다
-(context-menu-mode 1)
-
-;; org-mouse: org-mode에서 마우스 조작 강화
-;; NOTE: org 버퍼에서 버벅임 발생 → 당분간 비활성
-;; (after! org
-;;   (require 'org-mouse))
-
-;; anju: context-menu 확장 (같은 저자 — kickingvegas)
-(after! anju
-  (setq use-file-dialog nil))  ; nil = 미니버퍼 프롬프트 (안정적)
-
-(anju-init)
-
-;; C-x 1 → anju-toggle-one-window (delete-other-windows 대체)
-(keymap-global-set "C-x 1" #'anju-toggle-one-window)
+;; [DISABLED] 마우스 지원 안 함 — 에이전트 인터페이스로 대체
+;; context-menu, anju, org-mouse 모두 비활성
+;; (context-menu-mode 1)
+;; (after! anju (setq use-file-dialog nil))
+;; (anju-init)
+;; (keymap-global-set "C-x 1" #'anju-toggle-one-window)
 
 ;;;; provide
 
