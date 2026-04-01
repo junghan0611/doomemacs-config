@@ -45,7 +45,21 @@
 
   ;; Doom workspace(persp-mode) + consult-buffer에서 보이도록 real buffer 등록
   (add-hook 'telega-root-mode-hook #'doom-mark-buffer-as-real-h)
-  (add-hook 'telega-chat-mode-hook #'doom-mark-buffer-as-real-h))
+  (add-hook 'telega-chat-mode-hook #'doom-mark-buffer-as-real-h)
+
+  ;; WORKAROUND: telega 이벤트 핸들러에서 setTdlibParameters 전송 실패 시
+  ;; WaitTdlibParameters 상태에서 벗어나지 못하는 버그 우회
+  ;; TODO: telega upstream에서 수정되면 제거
+  (defun my/telega-fix-auth ()
+    "WaitTdlibParameters 상태에서 멈춤면 수동으로 setTdlibParameters 재전송."
+    (interactive)
+    (if (and (fboundp 'telega-server-live-p)
+             (telega-server-live-p)
+             (string= telega--auth-state "WaitTdlibParameters"))
+        (progn
+          (telega--setTdlibParameters)
+          (message "telega: setTdlibParameters 재전송 완료"))
+      (message "telega: 필요 없음 (상태: %s)" (or telega--auth-state "nil")))))
 
 ;;;; 봇 바로가기
 
@@ -93,6 +107,7 @@ telega가 실행 중이 아니면 먼저 시작한다."
 
 (map! :leader
       (:prefix ("j" . "pi-agent")
+       :desc "telega fix auth" "M-t" #'my/telega-fix-auth
        :desc "Telega start"    "t" #'telega
        :desc "Telega chat bot" "T" #'my/telega-chat-bot))
 
