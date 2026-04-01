@@ -243,6 +243,11 @@
   "Paths where denote rename (front-matter → filename sync) is allowed.
 Rename only changes filename, not file content. Weaker than write.")
 
+(defvar agent-server-dblock-paths
+  '("/home/junghan/org/")
+  "Paths where org dblock update is allowed.
+Dblock update only modifies #+BEGIN: ~ #+END: regions. Safe for all org files.")
+
 (defun agent-server--path-allowed-p (file mode)
   "Check if FILE access is allowed for MODE (read, write, or rename).
 Returns t if allowed, signals error if not."
@@ -252,6 +257,8 @@ Returns t if allowed, signals error if not."
                                  agent-server-denote-rename-paths
                                  agent-server-read-paths))
                   ('write agent-server-write-paths)
+                  ('dblock (append agent-server-write-paths
+                                   agent-server-dblock-paths))
                   ('rename (append agent-server-write-paths
                                    agent-server-denote-rename-paths))
                   (_ (error "Unknown mode: %s" mode)))))
@@ -453,8 +460,8 @@ Returns list of (ID TITLE TAGS FILE)."
 
 (defun agent-org-dblock-update (file)
   "Update all dynamic blocks in org FILE.
-Requires write access — dblock update modifies and saves the file."
-  (agent-server--path-allowed-p file 'write)
+Dblock update only modifies #+BEGIN: ~ #+END: regions."
+  (agent-server--path-allowed-p file 'dblock)
   (if (not (file-exists-p file))
       (format "ERROR: File not found: %s" file)
     (let ((buf (find-file-noselect file)))
