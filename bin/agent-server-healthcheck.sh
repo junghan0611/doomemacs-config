@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-AGENT_DAEMON="agent-server"
+AGENT_DAEMON="server"
 AGENT_SOCKET="/run/user/$(id -u)/emacs/$AGENT_DAEMON"
 AGENT_LOAD="$(dirname "$0")/agent-server.el"
 LOG="/tmp/agent-server-healthcheck.log"

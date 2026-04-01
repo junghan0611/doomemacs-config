@@ -16,7 +16,7 @@ PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"
 ORG_ROOT="$HOME/org"
 
 # Agent server
-AGENT_DAEMON="agent-server"
+AGENT_DAEMON="server"
 AGENT_LOAD="$BIN_DIR/agent-server.el"
 AGENT_SOCKET="/run/user/$(id -u)/emacs/$AGENT_DAEMON"
 

@@ -4,12 +4,14 @@
 
 ;;;; Single instance guard
 ;; 같은 server-name의 Emacs가 이미 실행 중이면 새 인스턴스를 시작하지 않음
-;; EMACS_SERVER_NAME 환경변수로 분리 가능 (30.2 "server" vs 31 IGC "doom-igc")
-;; batch/noninteractive에서는 스킵 (doom sync 등)
+;; 소켓 이름 규칙:
+;;   "server"  — agent daemon (에이전트가 -s server로 접속, 직관적 기본값)
+;;   "user"    — 힣의 GUI Emacs (i3 win+m, doom run)
+;;   "doom-igc" — Emacs 31 IGC 테스트 인스턴스
+;; EMACS_SERVER_NAME 환경변수로 오버라이드 가능
 (unless noninteractive
   (require 'server)
-  (when-let* ((name (getenv "EMACS_SERVER_NAME")))
-    (setq server-name name))
+  (setq server-name (or (getenv "EMACS_SERVER_NAME") "user"))
   (when (server-running-p)
     (message "Emacs server '%s' already running! Use emacsclient instead." server-name)
     (kill-emacs)))

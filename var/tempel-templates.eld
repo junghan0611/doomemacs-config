@@ -66,6 +66,7 @@ fundamental-mode ;; Available everywhere
 (did (format-time-string "%Y%m%d")) ; 20241122T
 (dayid (format-time-string "%Y%m%dT")) ; 20241122T
 (now (format-time-string "[%Y-%m-%d %a %H:%M]"))
+(ntoday (format-time-string "[%Y-%m-%d]"))
 ;; (format-time-string "%y-%m-%d %-I:%M %p ") ; 23-02-03 6:58 AM
 (nowl (format-time-string "- %y-%m-%d %-I:%M %p :: ")) ; - 23-02-03 6:58 AM ::
 

@@ -13,8 +13,8 @@
 ;;
 ;; Architecture:
 ;;   [Docker: OpenClaw] → emacsclient (Nix store mount)
-;;     → Unix socket /run/emacs/agent-server
-;;       → [Host: emacs --daemon=agent-server --load agent-server.el]
+;;     → Unix socket /run/emacs/server
+;;       → [Host: emacs --daemon=server --load agent-server.el]
 ;;
 ;; The agent uses `emacs_eval` (algal/openclaw-emacs-tools) to:
 ;;   1. Call predefined functions below
@@ -23,22 +23,22 @@
 ;;
 ;; Usage:
 ;;   # Start daemon
-;;   emacs --daemon=agent-server --load ~/repos/gh/doomemacs-config/bin/agent-server.el
+;;   emacs --daemon=server --load ~/repos/gh/doomemacs-config/bin/agent-server.el
 ;;
 ;;   # Test from host
-;;   emacsclient -s agent-server --eval '(agent-server-status)'
+;;   emacsclient -s server --eval '(agent-server-status)'
 ;;
 ;;   # Test from Docker (with Nix store mount)
-;;   /nix/store/.../emacsclient -s /run/emacs/agent-server --eval '(agent-server-status)'
+;;   /nix/store/.../emacsclient -s /run/emacs/server --eval '(agent-server-status)'
 ;;
 ;;   # Stop
-;;   emacsclient -s agent-server --eval '(kill-emacs)'
+;;   emacsclient -s server --eval '(kill-emacs)'
 
 ;;; Code:
 
 ;;;; Configuration
 
-(defvar agent-server-name "agent-server"
+(defvar agent-server-name "server"
   "Server name for the agent daemon.")
 
 (defvar agent-server-version "0.1.0"
@@ -485,8 +485,8 @@ Example return value:
    :computed-at \"2026-03-26 Thu 10:00\")
 
 Usage:
-  emacsclient -s agent-server --eval '(agent-being-data)'
-  emacsclient -s agent-server --eval '(agent-being-data t)'  ; JSON"
+  emacsclient -s server --eval '(agent-being-data)'
+  emacsclient -s server --eval '(agent-being-data t)'  ; JSON"
   (if (fboundp 'workflow-shared-being-data)
       (workflow-shared-being-data as-json)
     (message "[agent-server] WARNING: workflow-shared not loaded")
