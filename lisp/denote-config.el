@@ -36,28 +36,8 @@
   (setq denote-sort-components '(signature title keywords identifier))
   (setq denote-backlinks-show-context nil)
 
-  ;; denote-get-path-by-id 캐시: 호출마다 3300+ 파일 전체 스캔 → 95% CPU, 42% GC
-  ;; help-echo(hover) + ol-follow(클릭) 모두 이 함수를 거침
-  ;; ID→경로 매핑을 캐시해서 첫 조회만 스캔, 이후 즐시 반환
-  (defvar junghan/denote-path-cache (make-hash-table :test 'equal)
-    "Cache for denote ID to path mapping.")
-
-  (advice-add 'denote-get-path-by-id :around
-              (lambda (orig-fn id)
-                (or (gethash id junghan/denote-path-cache)
-                    (let ((path (funcall orig-fn id)))
-                      (when path
-                        (puthash id path junghan/denote-path-cache))
-                      path))))
-
-  ;; 캐시 초기화: 노트 생성/삭제/리네임 시
-  (defun junghan/denote-clear-path-cache (&rest _)
-    "Clear denote ID-to-path cache."
-    (clrhash junghan/denote-path-cache))
-  (advice-add 'denote :after #'junghan/denote-clear-path-cache)
-  (advice-add 'denote-rename-file :after #'junghan/denote-clear-path-cache)
-
-  ;; help-echo도 비활성화: 툴팁은 파일 경로만 보여주는 것이라 불필요
+  ;; [REMOVED] denote-get-path-by-id 캐시 — 파일명=자료구조이므로 캐시는 rename 시 stale
+  ;; 마우스 hover 성능 문제는 help-echo 비활성화로 충분
   (advice-add 'denote-link-ol-help-echo :override
               (lambda (_window _object _position) nil))
   (setq denote-sort-keywords t)
