@@ -494,12 +494,15 @@ NAME defaults to interactive input."
 
 (defun my/org--insert-screenshots-for-dates (date-strings label)
   "Insert screenshot links for DATE-STRINGS (YYYYMMDD list). LABEL for empty message."
-  (let* ((img-dir (expand-file-name "~/org/images/"))
+  (let* ((img-dir (expand-file-name "~/screenshot/"))
          (files (when (file-directory-p img-dir)
                   (seq-filter
                    (lambda (f)
-                     (seq-some (lambda (d) (string-prefix-p d (file-name-nondirectory f)))
-                               date-strings))
+                     (let ((name (file-name-nondirectory f)))
+                       (seq-some (lambda (d)
+                                   (or (string-prefix-p d name)        ; Denote: 20260401T...
+                                       (string-match-p (concat "_" d) name))) ; Android: Screenshot_20260401_...
+                                 date-strings)))
                    (directory-files img-dir t "\\.\\(png\\|jpg\\|jpeg\\|gif\\|webp\\)$"))))
          (sorted (seq-sort (lambda (a b) (string> a b)) files)))
     (if (null sorted)
