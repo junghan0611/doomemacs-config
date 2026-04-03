@@ -383,6 +383,8 @@
         "M-s <"   #'denote-rename-file-title
         ;; Link & clipboard
         "<f3>"    #'org-toggle-link-display
+        "<f4>"    #'org-toggle-inline-images
+
         "C-c M-y" #'org-download-clipboard
         "C-c o"   #'consult-org-heading
         "C-c y"   #'org-cliplink
