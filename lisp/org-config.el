@@ -249,7 +249,7 @@
 
   (if (display-graphic-p)
       (setq org-agenda-prefix-format
-            '((agenda . " %i %-7:c%?-12t% s ")
+            '((agenda . " %i %-12:c%?-12t% s ")
               (todo . " %i %-10:c %-5e %(gopar/get-schedule-or-deadline-if-available)")
               (tags . " %i %-12:c")
               (search . " %i %-12:c")))
@@ -305,7 +305,9 @@
                   (insert truncated
                           (make-string (max 1 (- win-width (length truncated) tag-len)) ?\s)
                           tag-str)))))
-          (forward-line 1)))))
+          (forward-line 1))))
+    ;; truncate로 재삽입된 태그에 org-tag face + 정렬 복원
+    (org-agenda-align-tags))
 
   (add-hook 'org-agenda-finalize-hook
             (lambda ()
