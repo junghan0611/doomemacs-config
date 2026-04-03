@@ -510,6 +510,31 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
 ;;  :backref-seperator ","
 ;;  :definition-structure #'+org-glossary--latex-cdef)
 
+;;;; Inline image preview — include linked images
+
+;; Doom's `+org--toggle-inline-images-in-subtree' calls `org-link-preview' with
+;; arg=nil, which skips links that have a description (e.g. [[file:img.jpg][name]]).
+;; Passing arg=1 sets include-linked, so description links also get previewed.
+(defadvice! +org--toggle-inline-images-include-linked-a (&optional beg end refresh)
+  "Include description links when toggling inline image preview."
+  :override #'+org--toggle-inline-images-in-subtree
+  (let* ((beg (or beg
+                  (if (org-before-first-heading-p)
+                      (save-excursion (point-min))
+                    (save-excursion (org-back-to-heading) (point)))))
+         (end (or end
+                  (if (org-before-first-heading-p)
+                      (save-excursion (org-next-visible-heading 1) (point))
+                    (save-excursion (org-end-of-subtree) (point)))))
+         (overlays (cl-remove-if-not (lambda (ov) (overlay-get ov 'org-image-overlay))
+                                     (ignore-errors (overlays-in beg end)))))
+    (dolist (ov overlays nil)
+      (delete-overlay ov)
+      (setq org-inline-image-overlays (delete ov org-inline-image-overlays)))
+    (when (or refresh (not overlays))
+      (org-link-preview 1 beg end)
+      t)))
+
 ;;; provide
 
 (provide 'org-config)
