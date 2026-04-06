@@ -239,6 +239,9 @@
 (require 'keybindings-denote-config)
 ;; (require 'casual-config)               ; casual transient UI (<f12>)
 (require 'termux-config)
+
+(require 'present-config)
+
 (require 'functions)
 
 ;;; overide doomemacs
