@@ -54,6 +54,11 @@ RE_HEADING_RELREF = re.compile(
     r'\{#[^}]*relref[^}]*\}'
 )
 
+# Anchor 내 relref noise 제거용 — section 있는 패턴 + section 없는 패턴
+RE_ANCHOR_RELREF = re.compile(
+    r'(\{#[^}]*?)--relref-(?:[a-z]*-)?([0-9t]+-dot-md)([^}]*\})'
+)
+
 
 def classify_target(target: str, content_dir: Path, file_index: dict) -> tuple[str, str]:
     """relref target을 분류하고 (category, detail)을 반환."""
@@ -166,6 +171,15 @@ def scan_file(filepath: Path, content_dir: Path, file_index: dict) -> list[dict]
 
 # ━━━ Fix logic ━━━
 
+def fix_heading_anchors(filepath: Path, apply: bool) -> int:
+    """heading anchor에서 --relref-section-id-dot-md noise 제거. Returns count."""
+    text = filepath.read_text(encoding="utf-8")
+    new_text, count = RE_ANCHOR_RELREF.subn(r'\1\3', text)
+    if count > 0 and apply:
+        filepath.write_text(new_text, encoding="utf-8")
+    return count
+
+
 def fix_file(filepath: Path, items: list[dict], apply: bool) -> tuple[int, int]:
     """파일의 DEAD/REWRITE 항목 수정. Returns (dead_count, rewrite_count)."""
     text = filepath.read_text(encoding="utf-8")
@@ -204,12 +218,13 @@ def main():
     parser.add_argument("content_dir", help="Hugo content 디렉토리 경로")
     parser.add_argument("--json", action="store_true", help="JSON 리포트 출력")
     parser.add_argument("--fix", action="store_true", help="수정 모드 (DEAD/REWRITE만)")
-    parser.add_argument("--apply", action="store_true", help="실제 파일 수정 (--fix 필요)")
+    parser.add_argument("--fix-anchors", action="store_true", help="heading anchor에서 relref noise 제거")
+    parser.add_argument("--apply", action="store_true", help="실제 파일 수정 (--fix/--fix-anchors 필요)")
     parser.add_argument("--category", help="특정 카테고리만 표시 (DEAD,REWRITE,...)")
     parser.add_argument("--summary", action="store_true", help="요약만 출력 (상세 생략)")
     args = parser.parse_args()
 
-    if args.apply and not args.fix:
+    if args.apply and not (args.fix or args.fix_anchors):
         print("❌ --apply는 --fix와 함께 사용하세요", file=sys.stderr)
         sys.exit(1)
 
@@ -243,6 +258,26 @@ def main():
             "items": [r for r in all_results if r["category"] != "ALIVE"],
         }
         print(json.dumps(output, ensure_ascii=False, indent=2))
+        return
+
+    # ━━━ Fix Anchors 모드 ━━━
+    if args.fix_anchors:
+        total_anchors = 0
+        files_modified = 0
+        for f in md_files:
+            count = fix_heading_anchors(f, args.apply)
+            if count > 0:
+                files_modified += 1
+                total_anchors += count
+                marker = "✓" if args.apply else "📄"
+                relpath = str(f.relative_to(content_dir))
+                print(f"  {marker} {relpath} (🔧{count})")
+        print()
+        if args.apply:
+            print(f"✅ anchor 정리 완료: {files_modified} 파일, {total_anchors} anchors")
+        else:
+            print(f"🔍 Dry-run: {files_modified} 파일, {total_anchors} anchors")
+            print(f"   실행: verify-relref.py {args.content_dir} --fix-anchors --apply")
         return
 
     # ━━━ Fix 모드 ━━━

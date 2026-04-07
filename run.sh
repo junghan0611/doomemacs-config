@@ -84,7 +84,8 @@ show_menu() {
   echo ""
   echo "  ${YELLOW}Verify${NC}"
   echo "    V) verify relref  (검증만)"
-  echo "    F) fix relref     (검증+수정)"
+  echo "    F) fix relref     (DEAD/REWRITE 수정)"
+  echo "    A) fix anchors    (heading anchor 정리)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run)"
@@ -265,10 +266,22 @@ cmd_verify_relref() {
   if [[ "$fix" == "--fix" ]]; then
     info "relref 검증 + 수정 (dry-run)"
     python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix
+    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors
     echo ""
     read -p "적용하시겠습니까? (y/N): " confirm
     if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
       python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix --apply
+      python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors --apply
+    else
+      info "취소됨"
+    fi
+  elif [[ "$fix" == "--fix-anchors" ]]; then
+    info "heading anchor 정리 (dry-run)"
+    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors
+    echo ""
+    read -p "적용하시겠습니까? (y/N): " confirm
+    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+      python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors --apply
     else
       info "취소됨"
     fi
@@ -393,7 +406,8 @@ cli_mode() {
       case "$action" in
         summary) cmd_verify_relref ;;
         fix)     cmd_verify_relref --fix ;;
-        *)       err "verify: summary|fix" ;;
+        anchors) cmd_verify_relref --fix-anchors ;;
+        *)       err "verify: summary|fix|anchors" ;;
       esac
       ;;
     help|--help|-h)
@@ -462,6 +476,7 @@ main() {
       v) "$IGC_SCRIPT" --version ;;
       V) cmd_verify_relref ;;
       F) cmd_verify_relref --fix ;;
+      A) cmd_verify_relref --fix-anchors ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
