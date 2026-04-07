@@ -13,6 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOOM_BIN="$HOME/.config/emacs/bin/doom"
 BIN_DIR="$SCRIPT_DIR/bin"
 PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"
+PYTHON_VERIFY="$BIN_DIR/verify-relref.py"
 ORG_ROOT="$HOME/org"
 
 # Agent server
@@ -22,6 +23,9 @@ AGENT_SOCKET="/run/user/$(id -u)/emacs/$AGENT_DAEMON"
 
 # Emacs 31 IGC
 IGC_SCRIPT="$BIN_DIR/emacs-igc.sh"
+
+# Hugo content dir
+HUGO_CONTENT_DIR="$HOME/repos/gh/notes/content"
 
 # Defaults
 DEFAULT_JOBS=4
@@ -77,6 +81,10 @@ show_menu() {
   echo "    x) agent stop"
   echo "    r) agent restart"
   echo "    e) agent eval"
+  echo ""
+  echo "  ${YELLOW}Verify${NC}"
+  echo "    V) verify relref  (검증만)"
+  echo "    F) fix relref     (검증+수정)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run)"
@@ -249,6 +257,26 @@ show_export_submenu() {
   esac
 }
 
+# ━━━ Verify ━━━
+
+cmd_verify_relref() {
+  local fix="${1:-}"
+  [[ -d "$HUGO_CONTENT_DIR" ]] || { err "content 디렉토리 없음: $HUGO_CONTENT_DIR"; return 1; }
+  if [[ "$fix" == "--fix" ]]; then
+    info "relref 검증 + 수정 (dry-run)"
+    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix
+    echo ""
+    read -p "적용하시겠습니까? (y/N): " confirm
+    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+      python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix --apply
+    else
+      info "취소됨"
+    fi
+  else
+    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --summary
+  fi
+}
+
 # ━━━ Agent ━━━
 
 cmd_agent_start() {
@@ -360,8 +388,16 @@ cli_mode() {
         *)       err "igc: run|debug|install|sync|update|env|doctor|kill|version" ;;
       esac
       ;;
+    verify)
+      local action="${1:-summary}"; shift || true
+      case "$action" in
+        summary) cmd_verify_relref ;;
+        fix)     cmd_verify_relref --fix ;;
+        *)       err "verify: summary|fix" ;;
+      esac
+      ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|igc> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|igc|verify> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -424,6 +460,8 @@ main() {
       D) "$IGC_SCRIPT" --doctor; read -p "계속하려면 Enter..."; continue ;;
       K) "$IGC_SCRIPT" --kill; read -p "계속하려면 Enter..."; continue ;;
       v) "$IGC_SCRIPT" --version ;;
+      V) cmd_verify_relref ;;
+      F) cmd_verify_relref --fix ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
