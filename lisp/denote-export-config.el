@@ -364,6 +364,21 @@ PARAMS: :from :to :excluded-dirs-regexp :id-only"
 ;;;; Section 2: Denote Link Conversion
 ;; Migrated from denote-hugo.el
 
+(defvar my/denote-export-allowed-dirs '("meta" "bib" "notes" "botlog" "test")
+  "Directories exported to Hugo. Denote links to other dirs become plain text.
+Must match subdirectory names under `denote-directory'.")
+
+(defun my/is-exported-dir-p (path)
+  "Check if PATH is in an exported directory.
+Returns non-nil if the parent directory of PATH is in
+`my/denote-export-allowed-dirs'.  Files not in these directories
+\(e.g. llmlog, office, private, journal\) will be rendered as
+plain text instead of Hugo relref links."
+  (let ((parent-dir (file-name-nondirectory
+                     (directory-file-name
+                      (file-name-directory path)))))
+    (member parent-dir my/denote-export-allowed-dirs)))
+
 (defun my/is-draft-file (path)
   "Check if the file at PATH is a draft."
   (string-match "_draft" path))
@@ -411,19 +426,20 @@ If USE-RELREF is non-nil, format it as a Hugo relref link."
     (format "[%s]" section)
     ;; (message "%s" (format "[%s]({{< relref \"%s/%s\" >}})" desc section uri))
 
-    ;; 내보낸 파일이 없는 경우 링크 만들지 않도록
-    ;; (if  (not (file-exists-p exportfilepath))
-    ;;     (format "[%s]" desc) ;; 내보낸 파일이 없다면 링크 만들지 마라
+    ;; Guard: 미내보내기 폴더(llmlog, office, private 등) → plain text
+    ;; 소스 경로 기반 판별이므로 내보내기 순서 무관, 성능 영향 0
+    (if (not (my/is-exported-dir-p path))
+        (format "[%s]" desc)
 
     (cond
      ;; 1) For files in Digital Garden for ALL
      ;; ((and (string-match "blog" org-hugo-base-dir) (or (my/is-docs-file path) (my/is-blog-file path))) ;;
      ((string-match "notes" org-hugo-base-dir) ;; for quartz
-      (if (or (my/is-draft-file path) (my/is-md-file path)) ; (my/is-llm-file path) (my/is-docs-file path) (my/is-blog-file path)
+      (if (or (my/is-draft-file path) (my/is-md-file path))
           (format "[%s]" desc)
         (if exportfilename
             ;; quartz doesn't support custom header
-            (format "[%s]({{< relref \"%s/%s\" >}})" desc section exportfilename) ; uri
+            (format "[%s]({{< relref \"%s/%s\" >}})" desc section exportfilename)
           (format "[%s]" desc))))
 
      ;; 2) For files in other directories based on org-hugo-base-dir
@@ -439,7 +455,7 @@ If USE-RELREF is non-nil, format it as a Hugo relref link."
      ;;    ))
      ;; Fallback
      (t (format "[%s]" desc)))
-    ;; ) ; end-of if
+    ) ;; end-of if (my/is-exported-dir-p)
     ))
 
 (defun my/denote-link-ol-export (link description format)
