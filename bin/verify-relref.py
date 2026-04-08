@@ -62,7 +62,12 @@ RE_ANCHOR_RELREF = re.compile(
 
 def classify_target(target: str, content_dir: Path, file_index: dict) -> tuple[str, str]:
     """relref target을 분류하고 (category, detail)을 반환."""
-    clean = target.lstrip("/")
+    # Split fragment (#h-UUID) from path before classification
+    if "#" in target:
+        target_path, _fragment = target.split("#", 1)
+    else:
+        target_path = target
+    clean = target_path.lstrip("/")
 
     # 1. ALIVE — 파일 존재
     if (content_dir / clean).is_file():
@@ -77,7 +82,7 @@ def classify_target(target: str, content_dir: Path, file_index: dict) -> tuple[s
             return ("VIRTUAL", "quartz tag route")
 
     # 3. basename 검색 — REWRITE 또는 AMBIGUOUS
-    bn = os.path.basename(target)
+    bn = os.path.basename(target_path)
     if bn in file_index:
         matches = file_index[bn]
         if len(matches) == 1:
