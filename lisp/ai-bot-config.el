@@ -25,10 +25,11 @@
 (use-package! telega
   :commands (telega)
   :init
-  ;; NixOS: tdlib 경로 자동 탐지 (.drv 제외, 실제 디렉토리만)
+  ;; NixOS: tdlib 경로 자동 탐지 — 버전순 정렬 후 최신 선택
   (setq telega-server-libs-prefix
-        (car (seq-filter #'file-directory-p
-                         (file-expand-wildcards "/nix/store/*-tdlib-*"))))
+        (car (last (sort (seq-filter #'file-directory-p
+                                     (file-expand-wildcards "/nix/store/*-tdlib-*"))
+                         #'string<))))
 
   :config
   ;; 봇 전용 최소 설정
