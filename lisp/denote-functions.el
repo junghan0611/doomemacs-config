@@ -105,14 +105,20 @@ Shows flat list of all notes without folder grouping."
 
 ;;;; Links & Store
 
-;; GFM compatible CUSTOM_ID: h:UUID → h-UUID
-;; denote upstream uses org-id-new "h" which produces "h:UUID"
-;; colon breaks github-slugger → use hyphen instead
-(advice-add 'denote-link-ol-get-id :filter-return
-            (lambda (id)
-              (if (and (stringp id) (string-prefix-p "h:" id))
-                  (concat "h-" (substring id 2))
-                id)))
+;; GFM compatible CUSTOM_ID: h-UUID (not h:UUID)
+;; denote upstream uses org-id-new "h" → "h:UUID" (colon breaks github-slugger)
+;; Override to use h-UUID format at creation time
+(defun denote-link-ol-get-id ()
+  "Get the CUSTOM_ID of the current entry.
+If the entry already has a CUSTOM_ID, return it as-is, else
+create a new one with h-UUID format (GFM slug-safe)."
+  (let* ((pos (point))
+         (id (org-entry-get pos "CUSTOM_ID")))
+    (if (and (stringp id) (string-match-p "\\S-" id))
+        id
+      (setq id (concat "h-" (org-id-uuid)))
+      (org-entry-put pos "CUSTOM_ID" id)
+      id)))
 
 ;;;###autoload
 (defun my/denote-org-store-link-to-heading (&optional arg)
