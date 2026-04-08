@@ -392,6 +392,14 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
   (setq org-journal-file-type 'weekly)
 
   (setq org-journal-tag-alist '(("meet" . ?m) ("dev" . ?d) ("idea" . ?i) ("emacs" . ?e) ("discuss" . ?c) ("1on1" . ?o))) ; default nil
+
+  ;; Auto-insert CUSTOM_ID h-YYYY-MM-DD on daily heading creation
+  ;; GFM/slug-safe anchor for cross-linking from other notes
+  (add-hook 'org-journal-after-header-create-hook
+            (lambda ()
+              (org-set-property
+               "CUSTOM_ID"
+               (format-time-string "h-%Y-%m-%d"))))
   )
 
 ;;;; citar

@@ -420,7 +420,7 @@ If USE-RELREF is non-nil, format it as a Hugo relref link."
          (exportfilepath (when (and exportfilename org-hugo-base-dir)
                            (expand-file-name exportfilename content-dir)))
          (uri (cond
-               (query (format "%s/%s" exportfilename query)) ; custom header
+               (query (format "%s%s" exportfilename query)) ; #h:UUID fragment
                (t (format "%s" exportfilename)))))
 
     (format "[%s]" section)
@@ -438,8 +438,8 @@ If USE-RELREF is non-nil, format it as a Hugo relref link."
       (if (or (my/is-draft-file path) (my/is-md-file path))
           (format "[%s]" desc)
         (if exportfilename
-            ;; quartz doesn't support custom header
-            (format "[%s]({{< relref \"%s/%s\" >}})" desc section exportfilename)
+            ;; uri includes #h:UUID fragment when query exists
+            (format "[%s]({{< relref \"%s/%s\" >}})" desc section uri)
           (format "[%s]" desc))))
 
      ;; 2) For files in other directories based on org-hugo-base-dir

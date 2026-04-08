@@ -105,6 +105,15 @@ Shows flat list of all notes without folder grouping."
 
 ;;;; Links & Store
 
+;; GFM compatible CUSTOM_ID: h:UUID → h-UUID
+;; denote upstream uses org-id-new "h" which produces "h:UUID"
+;; colon breaks github-slugger → use hyphen instead
+(advice-add 'denote-link-ol-get-id :filter-return
+            (lambda (id)
+              (if (and (stringp id) (string-prefix-p "h:" id))
+                  (concat "h-" (substring id 2))
+                id)))
+
 ;;;###autoload
 (defun my/denote-org-store-link-to-heading (&optional arg)
   "Store link with toggled `denote-org-store-link-to-heading' value.
