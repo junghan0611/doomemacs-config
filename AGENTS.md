@@ -104,14 +104,4 @@ feat: add EAF pyqterminal configuration
 
 **중요**: "Generated with Claude" 또는 "Co-Authored-By" 제외!
 
-## Issue Tracking
 
-This project uses **br** (beads_rust) for issue tracking.
-
-```bash
-br ready              # Find available work
-br show <id>          # View issue details
-br update <id> --status in_progress  # Claim work
-br close <id>         # Complete work
-br sync --flush-only  # Export JSONL (git commit separately)
-```

@@ -44,6 +44,27 @@
   ;; transient 메뉴 활성화 (magit 스타일)
   (telega-transient-keymaps-mode 1)
 
+  ;; D-Bus 알림 → dunst 연동 (봇 채팅 포함)
+  ;; 기본 telega-notifications-msg-notify-p는 (type private secret)만 허용하여
+  ;; bot 타입 채팅의 알림이 억제됨. bot 타입을 추가한 커스텀 predicate 사용.
+  (defun my/telega-notifications-msg-notify-p (msg)
+    "봇 채팅 알림을 포함하는 알림 predicate."
+    (let ((chat (telega-msg-chat msg)))
+      (unless (or (not (telega-chat-match-p chat
+                         '(or (type private secret bot) me-is-member)))
+                  (and (telega-chat-muted-p chat)
+                       (or (telega-chat-notification-setting
+                            chat :disable_mention_notifications)
+                           (not (plist-get msg :contains_unread_mention))))
+                  (telega-msg-seen-p msg chat)
+                  (with-telega-chatbuf chat
+                    (and (telega-chatbuf--msg-observable-p msg)
+                         (not (telega-chatbuf--history-state-get :newer-freezed)))))
+        t)))
+  (setq telega-notifications-msg-temex
+        '(call my/telega-notifications-msg-notify-p))
+  (telega-notifications-mode 1)
+
   ;; Doom workspace(persp-mode) + consult-buffer에서 보이도록 real buffer 등록
   (add-hook 'telega-root-mode-hook #'doom-mark-buffer-as-real-h)
   (add-hook 'telega-chat-mode-hook #'doom-mark-buffer-as-real-h)
