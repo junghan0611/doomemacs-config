@@ -118,6 +118,21 @@
   ;; pi 익스텐션 slash command → 미지원 (pi-acp 제한)
   (require 'agent-shell-pi)
 
+;;;; Korean Input Fix — comint 버퍼 한글 입력 보장
+
+  ;; shell-maker가 start-process로 hexl/cat 더미 프로세스를 생성할 때
+  ;; 버퍼가 unibyte로 전환되거나 프로세스 코딩이 잘못 설정될 수 있음.
+  ;; → 한글 UTF-8 바이트가 \353 \213 같은 옥탈로 표시되는 문제 발생.
+  (defun my/shell-maker-ensure-utf8 (&rest _)
+    "shell-maker 초기화 후 버퍼/프로세스 UTF-8 강제.
+shell-maker--initialize가 hexl/cat 더미 프로세스를 생성한 직후 실행."
+    (set-buffer-multibyte t)
+    (setq-local buffer-file-coding-system 'utf-8-unix)
+    (when-let ((proc (get-buffer-process (current-buffer))))
+      (set-process-coding-system proc 'utf-8-unix 'utf-8-unix)))
+
+  (advice-add 'shell-maker--initialize :after #'my/shell-maker-ensure-utf8)
+
 ;;;; Misc
 
   ;; agent-shell 버퍼를 실제 버퍼로 표시 (버퍼 목록에서 보이게)

@@ -31,11 +31,13 @@
 
 (set-selection-coding-system 'utf-8) ;; important
 (set-clipboard-coding-system 'utf-8)
-(setq coding-system-for-read 'utf-8)
-(setq coding-system-for-write 'utf-8)
 
-;; 멀티바이트 모드 활성화 (필요시)
-(set-buffer-multibyte t)
+;; NOTE: coding-system-for-read/write는 let-bind 전용 변수.
+;; 전역 setq하면 모든 파일/프로세스 I/O에서 자동 인코딩 탐지를 무시하여
+;; 바이너리 프로세스, comint, 이미지 등에서 부작용 발생 가능.
+;; prefer-coding-system + set-default-coding-systems로 이미 UTF-8이 기본값.
+;; (setq coding-system-for-read 'utf-8)  ; REMOVED — 부작용 방지
+;; (setq coding-system-for-write 'utf-8) ; REMOVED — 부작용 방지
 
 ;; Treat clipboard input as UTF-8 string first; compound text next, etc.
 (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
@@ -43,6 +45,10 @@
 (setq-default line-spacing 3)
 
 (setq system-time-locale "C") ;; 날짜 표시를 영어로한다. org mode에서 time stamp 날짜에 영향을 준다.
+
+;; IS-TERMUX: Doom에서 defconst로 정의됨. 미정의 환경(agent Emacs 등)에서 에러 방지.
+(defvar IS-TERMUX (bound-and-true-p IS-TERMUX)
+  "Doom Emacs IS-TERMUX 호환. 미정의 시 nil.")
 
 (when IS-TERMUX
   (setenv "LANG" "C.UTF-8")
@@ -133,6 +139,78 @@
     (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols") nil 'prepend))
 
   (add-hook 'after-setting-font-hook #'my/set-emoji-symbol-font))
+
+;;;; Raw UTF-8 Byte Reassembly (터미널 한글 깨짐 방지)
+
+;; 문제: SSH/터미널에서 한글 UTF-8 3바이트가 분할 도착하면
+;; Emacs 키보드 디코더가 조합 실패 → raw byte(\353 \213 등)로 버퍼에 삽입.
+;; 해결: after-change-functions에서 raw byte(eight-bit charset)를 감지,
+;; 연속 바이트를 수집하여 UTF-8로 재디코딩.
+
+(defvar-local korean/raw-byte-timer nil
+  "Raw byte 재조합 디바운스 타이머")
+
+(defun korean/eight-bit-char-p (ch)
+  "CH가 Emacs eight-bit 문자(디코딩 안 된 raw byte)이면 t."
+  (and ch (characterp ch) (>= ch #x3FFF80) (<= ch #x3FFFFF)))
+
+(defun korean/reassemble-raw-utf8-bytes (beg end _len)
+  "변경 영역 근처의 디코딩 안 된 raw UTF-8 바이트를 재조합.
+`after-change-functions'에서 호출됨."
+  (when korean/raw-byte-timer
+    (cancel-timer korean/raw-byte-timer))
+  (let ((buf (current-buffer)))
+    (setq korean/raw-byte-timer
+          (run-with-idle-timer
+           0.15 nil
+           (lambda ()
+             (when (buffer-live-p buf)
+               (with-current-buffer buf
+                 (korean/do-reassemble-raw-bytes
+                  (max (point-min) (- beg 10))
+                  (min (point-max) (+ end 10))))))))))
+
+(defun korean/do-reassemble-raw-bytes (search-beg search-end)
+  "SEARCH-BEG ~ SEARCH-END 범위에서 raw byte → UTF-8 재디코딩."
+  (save-excursion
+    (save-match-data
+      (let ((inhibit-modification-hooks t)
+            (count 0))
+        (goto-char search-beg)
+        (while (< (point) (min search-end (point-max)))
+          (if (korean/eight-bit-char-p (char-after))
+              (let ((start (point))
+                    (bytes nil))
+                ;; 연속 raw byte 수집
+                (while (and (< (point) (point-max))
+                            (korean/eight-bit-char-p (char-after)))
+                  (push (- (char-after) #x3FFF00) bytes)
+                  (forward-char 1))
+                (setq bytes (nreverse bytes))
+                ;; UTF-8로 디코딩 시도
+                (condition-case nil
+                    (let ((decoded (decode-coding-string
+                                    (apply #'unibyte-string bytes)
+                                    'utf-8)))
+                      (when (and (not (string-empty-p decoded))
+                                 ;; 디코딩 결과가 원래 바이트와 다르면 (즉, 실제로 디코딩됨)
+                                 (not (string-equal decoded
+                                                    (buffer-substring-no-properties start (point)))))
+                        (delete-region start (point))
+                        (insert decoded)
+                        (setq count (1+ count))
+                        ;; search-end 조정 (길이 변경)
+                        (setq search-end (+ search-end
+                                            (- (length decoded) (length bytes))))))
+                  (error nil))) ; 디코딩 실패 시 그대로 유지
+            (forward-char 1)))
+        (when (> count 0)
+          (message "한글 raw byte %d건 복원" count))))))
+
+(defun korean/fix-raw-bytes-in-buffer ()
+  "현재 버퍼 전체에서 raw byte를 UTF-8로 재디코딩 (수동 실행용)."
+  (interactive)
+  (korean/do-reassemble-raw-bytes (point-min) (point-max)))
 
 ;;;; NFD to NFC Normalization
 
@@ -277,10 +355,12 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
   :group 'korean
   (if global-korean-nfc-mode
       (progn
+        (add-hook 'after-change-functions #'korean/reassemble-raw-utf8-bytes)
         (add-hook 'after-change-functions #'korean/after-change-nfc-normalize)
         (add-hook 'before-save-hook #'korean/before-save-nfc-normalize)
-        (message "✅ 글로벌 한글 NFC 모드 활성화"))
+        (message "✅ 글로벌 한글 NFC 모드 활성화 (raw byte 재조합 포함)"))
     (progn
+      (remove-hook 'after-change-functions #'korean/reassemble-raw-utf8-bytes)
       (remove-hook 'after-change-functions #'korean/after-change-nfc-normalize)
       (remove-hook 'before-save-hook #'korean/before-save-nfc-normalize)
       (message "❌ 글로벌 한글 NFC 모드 비활성화"))))
@@ -290,15 +370,9 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
 
 ;;; 7. 자동 활성화
 
-;; Termux/Android에서는 항상 활성화 (IME가 NFD로 입력하는 경우가 많음)
-(when IS-TERMUX
-  (global-korean-nfc-mode 1)
-  (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
-
-;; 터미널 Emacs (-nw)에서도 활성화
+;; 터미널 Emacs에서는 항상 활성화 (NFC + raw byte 재조합)
 ;; GUI Emacs에서는 시스템 IME가 NFC로 정상 입력되므로 조건부
-(when (and (not IS-TERMUX)
-           (not (display-graphic-p)))
+(when (or IS-TERMUX (not (display-graphic-p)))
   (global-korean-nfc-mode 1)
   (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
 
@@ -307,163 +381,46 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
             (unless (display-graphic-p frame)
               (korean-nfc-mode 1))))
 
-;;; 8. 키바인딩 (옵션)
+;;; 8. 터미널 Emacs 입력기 전략
 
-;; (defun korean/setup-keybindings ()
-;;   "한글 변환 관련 키바인딩 설정"
-;;   (when (featurep 'evil)
-;;     ;; SPC m k로 korean 네임스페이스
-;;     (map! :localleader
-;;           :desc "한글 자모 → 음절 변환" "7 n" #'korean/convert-jamo-to-syllable
-;;           :desc "한글 NFC 모드 토글" "7 t" #'korean-nfc-mode)))
-
-;; (with-eval-after-load 'doom-keybinds
-;;   (korean/setup-keybindings))
-
-;;; 9. KKP (Kitty Keyboard Protocol) 한영 키 지원
+;; 핵심 원칙: 터미널 Emacs에서는 시스템 IME(kime/fcitx)를 쓰지 않고
+;; Emacs 내장 korean-hangul 입력기를 사용한다.
 ;;
-;; 필요한 키:
-;;   - S-SPC: Shift+Space (한영 전환)
-;;   - Alt_R: 시스템 언어 en일 때 한글 키 위치 (한영 전환)
-;;   - M-v: Meta+v (추가 시 사용)
+;; 이유: 시스템 IME는 터미널로 UTF-8 바이트를 보내는데,
+;; Emacs 이벤트 루프(타이머, 프로세스 출력)가 끼어들면
+;; 바이트가 분할 도착 → 디코딩 실패 → \353 \213 같은 깨진 문자.
+;; Emacs 입력기는 내부에서 ㄱ→가→간 조합하므로 바이트 문제가 없다.
 ;;
-;; 디버깅:
-;;   M-x korean/test-raw-input → 키 누르면 hex 시퀀스 확인
-;;   M-x kkp-status → KKP 활성화 상태 확인
+;; 사용법:
+;;   C-\      : 한영 전환 (Emacs 입력기 토글)
+;;   <menu>   : 한영 전환 (Caps Lock → Menu 매핑 시)
+;;
+;; kime는 English 상태로 두고, Emacs 입력기로 한글 입력한다.
 
-;; (defun korean/test-raw-input ()
-;;   "터미널에서 raw 키 입력 확인 (input-decode-map 우회).
-;; 새 키 추가 시 이 함수로 hex 시퀀스를 확인한 후 아래에 매핑 추가."
-;;   (interactive)
-;;   (let ((input-decode-map (make-sparse-keymap))
-;;         (events nil)
-;;         (key (read-event "Press a key (raw mode): "))
-;;         (timeout 0.5)
-;;         evt)
-;;     (push key events)
-;;     (while (setq evt (read-event nil nil timeout))
-;;       (push evt events)
-;;       (setq timeout 0.1))
-;;     (setq events (nreverse events))
-;;     (message "RAW events: %s\nHex: %s"
-;;              events
-;;              (mapconcat (lambda (e) (format "0x%x" e)) events " "))))
+(defun korean/evil-normal-deactivate-im ()
+  "Evil Normal 모드 진입 시 입력기 끄기."
+  (when current-input-method
+    (setq-local korean/saved-input-method current-input-method)
+    (deactivate-input-method)))
 
-;; (defun korean/setup-kkp-hangul-key ()
-;;   "KKP 키 매핑 설정: S-SPC, Alt_R (한글 키), M-v.
+(defun korean/evil-insert-restore-im ()
+  "Evil Insert 모드 진입 시 이전 입력기 복원."
+  (when (and (bound-and-true-p korean/saved-input-method)
+             (not current-input-method))
+    (activate-input-method korean/saved-input-method)))
 
-;; 주의:
-;;   - report-all-keys-as-escape-codes 플래그 사용 금지!
-;;     (a-z 키가 escape code로 전송되면 한글 입력 불가)
-;;   - modifyOtherKeys 호환 시퀀스만 사용
-;;   - 시스템 언어 en일 때 한글 키는 Alt_R로 전송됨"
-;;   (when (and (featurep 'kkp)
-;;              (not (display-graphic-p)))
+(defvar-local korean/saved-input-method nil
+  "Normal 모드 진입 전 활성 입력기 저장")
 
-;;     ;; ========================================
-;;     ;; Kitty term-keys 시퀀스 매핑 (함수 방식)
-;;     ;; ========================================
+(after! evil
+  (add-hook 'evil-normal-state-entry-hook #'korean/evil-normal-deactivate-im)
+  (add-hook 'evil-insert-state-entry-hook #'korean/evil-insert-restore-im))
 
-;;     ;; ESC 뒤에 오는 시퀀스를 읽어서 처리하는 함수
-;;     (define-key input-decode-map [?\e ?\x1f]
-;;                 (lambda (&optional _prompt)
-;;                   (let ((char (read-event nil nil 0.01)))
-;;                     (cond
-;;                      ;; P! 시퀀스 시작: S-SPC 또는 Hangul
-;;                      ((eq char ?P)
-;;                       (let ((next (read-event nil nil 0.01)))
-;;                         (cond
-;;                          ;; S-SPC: \x1b\x1fP!\x1f
-;;                          ((eq next ?!)
-;;                           (let ((end (read-event nil nil 0.01)))
-;;                             (if (eq end ?\x1f)
-;;                                 (kbd "S-SPC")
-;;                               [?\e ?\x1f ?P ?! end])))
-;;                          ;; Hangul: \x1b\x1fP`\x1f (96 = 백틱)
-;;                          ((eq next 96)
-;;                           (let ((end (read-event nil nil 0.01)))
-;;                             (if (eq end ?\x1f)
-;;                                 (kbd "<Hangul>")
-;;                               [?\e ?\x1f ?P 96 end])))
-;;                          ;; 다른 시퀀스
-;;                          (t [?\e ?\x1f ?P next]))))
-;;                      ;; 다른 시퀀스는 그대로 전달
-;;                      (t [?\e ?\x1f char])))))
+;;; 9. Android 특화 설정
 
-;;     ;; M-v: Meta+v (필요 시 추가)
-;;     ;; 대부분 터미널에서 M-v는 이미 작동하므로 명시적 매핑 불필요
-;;     ;; 작동 안 하면 아래 주석 해제:
-;;     ;; (define-key input-decode-map "\e[27;3;118~" (kbd "M-v"))  ; modifyOtherKeys
-
-;;     ;; Modifier 키 단독 입력 무시 (undefined 메시지 방지)
-;;     ;; (global-set-key (kbd "<SHIFT_L>") 'ignore)
-;;     ;; (global-set-key (kbd "<SHIFT_R>") 'ignore)
-;;     ;; (global-set-key (kbd "<Control_L>") 'ignore)
-;;     ;; (global-set-key (kbd "<Control_R>") 'ignore)
-;;     ;; (global-set-key (kbd "<Alt_L>") 'ignore)
-
-;;     (message "✅ KKP: S-SPC, Alt_R (Hangul) 매핑 완료")))
-
-;; KKP 로드 후 자동 실행
-;; (with-eval-after-load 'kkp
-;;   (korean/setup-kkp-hangul-key))
-
-;; (add-hook 'tty-setup-hook #'korean/setup-kkp-hangul-key)
-
-;;;; evil + hangul
-
-;; 4. Evil 모드 연동: 자동 한영 전환
-;; (after! evil
-;;   ;; 버퍼별 입력 메서드 상태 저장
-;;   (defvar-local my/saved-input-method nil
-;;     "Normal 모드 진입 전 입력 메서드 상태")
-
-;;   (defun my/evil-normal-state-korean-off (&rest _)
-;;     "Normal 모드 진입: 한글 OFF, 상태 저장"
-;;     (when (and (boundp 'current-input-method) current-input-method)
-;;       (setq my/saved-input-method current-input-method)
-;;       (deactivate-input-method)))
-
-;;   (defun my/evil-insert-state-korean-restore ()
-;;     "Insert 모드 진입: 이전 한글 상태 복원"
-;;     (when (and my/saved-input-method
-;;                (not current-input-method))
-;;       (activate-input-method my/saved-input-method)))
-
-;;   ;; Hook 등록
-;;   (add-hook 'evil-normal-state-entry-hook #'my/evil-normal-state-korean-off)
-;;   (add-hook 'evil-insert-state-entry-hook #'my/evil-insert-state-korean-restore)
-
-;;   ;; Evil escape 후에도 확실히 끄기
-;;   (advice-add 'evil-normal-state :after #'my/evil-normal-state-korean-off)
-
-;;   ;; Shift+Space 메시지 (motion/normal/visual 모드에서)
-;;   (mapc (lambda (mode)
-;;           (let ((keymap (intern (format "evil-%s-state-map" mode))))
-;;             (define-key (symbol-value keymap) [?\S- ]
-;;                         #'(lambda () (interactive)
-;;                             (message
-;;                              (format "Input method is disabled in %s state." evil-state))))))
-;;         '(motion normal visual))
-;;   )
-
-;; 5. Emacs 입력 메서드 추가 최적화
-;; (with-eval-after-load 'quail
-;;   ;; 한글 입력 모드 표시 (모드라인)
-;;   (setq-default mode-line-mule-info
-;;                 '((:eval (if current-input-method
-;;                              (propertize " [한] " 'face '(:foreground "green"))
-;;                            " [En] "))))
-
-;;   ;; 2벌식 기본 사용 (3벌식 원하면 변경)
-;;   ;; (setq default-korean-keyboard "390") ; 3벌식 최종
-;;   )
-
-;; 6. 안드로이드 Emacs 특화 설정 (해당시)
-;; (when (string-equal system-type "android")
-;;   ;; Android Emacs의 IME 간섭 차단
-;;   (setq overriding-text-conversion-style nil)
-;;   (setq-default text-conversion-style nil))
+(when (eq system-type 'android)
+  (setq overriding-text-conversion-style nil)
+  (setq-default text-conversion-style nil))
 
 (provide 'korean-input-config)
 
