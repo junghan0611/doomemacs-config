@@ -66,6 +66,7 @@
 ;; +korean-input-fix.el에서 Alt_R → <Hangul> 매핑 처리
 (global-set-key (kbd "<S-SPC>") 'toggle-input-method)  ; GUI 호환
 (global-set-key (kbd "<Hangul>") 'toggle-input-method) ; 한글 키 (Alt_R)
+(global-set-key (kbd "<Alt_R>") 'toggle-input-method) ; 한글 키 (Alt_R)
 (global-set-key (kbd "<menu>") 'toggle-input-method) ;; caps lock as <menu>
 (add-hook 'context-menu-mode-hook '(lambda () (define-key context-menu-mode-map (kbd "<menu>") #'toggle-input-method)))
 
@@ -142,33 +143,22 @@
 
 ;;;; Raw UTF-8 Byte Reassembly (터미널 한글 깨짐 방지)
 
-;; 문제: SSH/터미널에서 한글 UTF-8 3바이트가 분할 도착하면
-;; Emacs 키보드 디코더가 조합 실패 → raw byte(\353 \213 등)로 버퍼에 삽입.
-;; 해결: after-change-functions에서 raw byte(eight-bit charset)를 감지,
-;; 연속 바이트를 수집하여 UTF-8로 재디코딩.
-
-(defvar-local korean/raw-byte-timer nil
-  "Raw byte 재조합 디바운스 타이머")
+;; 문제: 시스템 IME(kime)가 터미널로 UTF-8 바이트를 보내면
+;; Emacs 이벤트 루프 인터럽트로 바이트 분할 → raw byte 깨짐 발생.
+;;
+;; 근본 해결: Emacs 내장 korean-hangul 입력기 사용 (섹션 8 참조).
+;; 이 함수는 kime 등 시스템 IME로 깨진 텍스트를 수동 복원하는 안전망.
+;;
+;; 사용법: M-x korean/fix-raw-bytes-in-buffer
+;;
+;; NOTE: 이전에 after-change-functions + idle-timer로 자동 실행했으나,
+;; 모든 버퍼(프로세스 포함)에서 발동 → 수천 건 메시지 폭탄 + 버벅임.
+;; 타이머 방식은 좌표 썩음(stale position), 마지막 변경만 생존 등 구조 문제.
+;; 자동 실행이 필요하면 before-save-hook 또는 post-self-insert-hook 검토.
 
 (defun korean/eight-bit-char-p (ch)
   "CH가 Emacs eight-bit 문자(디코딩 안 된 raw byte)이면 t."
   (and ch (characterp ch) (>= ch #x3FFF80) (<= ch #x3FFFFF)))
-
-(defun korean/reassemble-raw-utf8-bytes (beg end _len)
-  "변경 영역 근처의 디코딩 안 된 raw UTF-8 바이트를 재조합.
-`after-change-functions'에서 호출됨."
-  (when korean/raw-byte-timer
-    (cancel-timer korean/raw-byte-timer))
-  (let ((buf (current-buffer)))
-    (setq korean/raw-byte-timer
-          (run-with-idle-timer
-           0.15 nil
-           (lambda ()
-             (when (buffer-live-p buf)
-               (with-current-buffer buf
-                 (korean/do-reassemble-raw-bytes
-                  (max (point-min) (- beg 10))
-                  (min (point-max) (+ end 10))))))))))
 
 (defun korean/do-reassemble-raw-bytes (search-beg search-end)
   "SEARCH-BEG ~ SEARCH-END 범위에서 raw byte → UTF-8 재디코딩."
@@ -208,7 +198,8 @@
           (message "한글 raw byte %d건 복원" count))))))
 
 (defun korean/fix-raw-bytes-in-buffer ()
-  "현재 버퍼 전체에서 raw byte를 UTF-8로 재디코딩 (수동 실행용)."
+  "현재 버퍼 전체에서 raw byte를 UTF-8로 재디코딩.
+kime 등 시스템 IME로 깨진 한글을 수동 복원할 때 사용."
   (interactive)
   (korean/do-reassemble-raw-bytes (point-min) (point-max)))
 
@@ -355,12 +346,12 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
   :group 'korean
   (if global-korean-nfc-mode
       (progn
-        (add-hook 'after-change-functions #'korean/reassemble-raw-utf8-bytes)
+        ;; NOTE: raw byte 재조합은 자동 실행하지 않음 (M-x korean/fix-raw-bytes-in-buffer)
+        ;; (add-hook 'after-change-functions #'korean/reassemble-raw-utf8-bytes)
         (add-hook 'after-change-functions #'korean/after-change-nfc-normalize)
         (add-hook 'before-save-hook #'korean/before-save-nfc-normalize)
-        (message "✅ 글로벌 한글 NFC 모드 활성화 (raw byte 재조합 포함)"))
+        (message "✅ 글로벌 한글 NFC 모드 활성화"))
     (progn
-      (remove-hook 'after-change-functions #'korean/reassemble-raw-utf8-bytes)
       (remove-hook 'after-change-functions #'korean/after-change-nfc-normalize)
       (remove-hook 'before-save-hook #'korean/before-save-nfc-normalize)
       (message "❌ 글로벌 한글 NFC 모드 비활성화"))))

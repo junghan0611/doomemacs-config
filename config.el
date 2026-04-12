@@ -268,20 +268,37 @@
 
 ;;;; term-keys
 
-(use-package! clipetty
-  :hook (after-init . global-clipetty-mode)
+(use-package! term-keys
+  :unless window-system
   :config
-  (setq clipetty-assume-nested-mux nil))
+  (require 'term-keys-wezterm)
+  (unless (display-graphic-p)
+    (term-keys-mode t)))
+
+;; term-keys 시퀀스 \x1b\x1f (prefix) = C-M-_ → undo-fu가 가로채는 문제 방지
+(after! undo-fu
+  (define-key undo-fu-mode-map (kbd "C-M-_") nil))
+
+;; term-keys conf 재생성:
+;; (with-temp-buffer (insert (term-keys/wezterm-conf))
+;;   (write-region (point-min) (point-max) "~/term-keys-wezterm.lua"))
+;; (with-temp-buffer (insert (term-keys/kitty-conf))
+;;   (write-region (point-min) (point-max) "~/term-keys-kitty.conf"))
+
+;; (use-package! clipetty
+;;   :hook (after-init . global-clipetty-mode)
+;;   :config
+;;   (setq clipetty-assume-nested-mux nil))
 
 ;;;; Terminal Mode
 
-(unless (display-graphic-p) ; terminal
-  (setq visible-cursor nil)
-  (xterm-mouse-mode -1) ; important
-  (setq fast-but-imprecise-scrolling nil)
-  (setq hscroll-step 0)
-  (show-paren-mode -1)
-  )
+;; (unless (display-graphic-p) ; terminal
+;;   (setq visible-cursor nil)
+;;   (xterm-mouse-mode -1) ; important
+;;   (setq fast-but-imprecise-scrolling nil)
+;;   (setq hscroll-step 0)
+;;   (show-paren-mode -1)
+;;   )
 
 ;;; TODO Custom Integration
 

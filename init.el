@@ -133,7 +133,7 @@
 
        :os
        (:if IS-MAC macos)  ; improve compatibility with macOS
-       tty                 ; improve the terminal Emacs experience
+       (tty +osc)          ; improve the terminal Emacs experience
 
        :lang
        data              ; config/data formats

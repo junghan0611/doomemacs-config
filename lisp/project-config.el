@@ -109,9 +109,8 @@
 
 ;;;; tramp-rpc
 
-(use-package! msgpack) ;; msgpack (의존성)
-(use-package! tramp-rpc
-  :after tramp)
+;; (use-package! msgpack) ;; msgpack (의존성)
+;; (use-package! tramp-rpc :after tramp)
 
 ;;;; magit-gh
 

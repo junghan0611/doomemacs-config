@@ -90,7 +90,8 @@
 ;; (package! evil-mc :disable t)
 
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
-;; (package! kkp :disable t) ; conflict on term-keys
+(package! kkp :disable t) ; conflict with term-keys
+(package! term-keys :recipe (:host github :repo "junghan0611/term-keys"))
 
 ;;; module-emacs-config.el
 
@@ -131,7 +132,7 @@
 (package! tempel)
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
-(package! clipetty) ; osc52 support
+;; (package! clipetty) ; osc52 support
 (package! adoc-mode)
 
 (package! show-font) ; TODO
