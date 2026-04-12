@@ -364,7 +364,7 @@ PARAMS: :from :to :excluded-dirs-regexp :id-only"
 ;;;; Section 2: Denote Link Conversion
 ;; Migrated from denote-hugo.el
 
-(defvar my/denote-export-allowed-dirs '("meta" "bib" "notes" "botlog" "test")
+(defvar my/denote-export-allowed-dirs '("meta" "bib" "notes" "botlog" "journal" "test")
   "Directories exported to Hugo. Denote links to other dirs become plain text.
 Must match subdirectory names under `denote-directory'.")
 
