@@ -239,6 +239,7 @@
 (require 'keybindings-denote-config)
 ;; (require 'casual-config)               ; casual transient UI (<f12>)
 (require 'termux-config)
+(require 'tty-config)                 ; 터미널(TTY) 통합: term-keys, kitty-graphics, clipboard
 
 (require 'present-config)
 
@@ -255,51 +256,7 @@
 ;;   (setq fortune-dir (concat root-path "usr/share/games/fortunes/advice"))
 ;;   (setq fortune-file (concat root-path "usr/share/games/fortunes/advice")))
 
-;;;; xclip
-
-;; (use-package! xclip
-;;   :unless window-system
-;;   :config
-;;   (unless (display-graphic-p) ; terminal
-;;     (cond
-;;      ((executable-find "termux-setup-storage")
-;;       (setq xclip-method 'termux-clipboard-get)))
-;;     (xclip-mode 1)))
-
-;;;; term-keys
-
-(use-package! term-keys
-  :config
-  (require 'term-keys-wezterm)
-  ;; 데몬 모드: GUI로 시작해도 TTY 클라이언트 접속 시 term-keys 활성화
-  (term-keys-mode t))
-
-;; term-keys 시퀀스 \x1b\x1f (prefix) = C-M-_ → undo-fu가 가로채는 문제 방지
-;; Doom이 doom-first-buffer에서 undo-fu-mode 활성화 → keymap 재생성되므로
-;; after! 대신 모드 활성화 후 항상 unbind
-(add-hook! 'undo-fu-mode-hook
-  (define-key undo-fu-mode-map (kbd "C-M-_") nil))
-
-;; term-keys conf 재생성:
-;; (with-temp-buffer (insert (term-keys/wezterm-conf))
-;;   (write-region (point-min) (point-max) "~/term-keys-wezterm.lua"))
-;; (with-temp-buffer (insert (term-keys/kitty-conf))
-;;   (write-region (point-min) (point-max) "~/term-keys-kitty.conf"))
-
-;; (use-package! clipetty
-;;   :hook (after-init . global-clipetty-mode)
-;;   :config
-;;   (setq clipetty-assume-nested-mux nil))
-
-;;;; Terminal Mode
-
-;; (unless (display-graphic-p) ; terminal
-;;   (setq visible-cursor nil)
-;;   (xterm-mouse-mode -1) ; important
-;;   (setq fast-but-imprecise-scrolling nil)
-;;   (setq hscroll-step 0)
-;;   (show-paren-mode -1)
-;;   )
+;; term-keys, clipboard, kitty-graphics → lisp/tty-config.el 로 이동
 
 ;;; TODO Custom Integration
 

@@ -133,6 +133,7 @@
 (package! tempel-collection)
 (package! imenu-list :recipe (:host github :repo "junghan0611/imenu-list" :branch "master"))
 ;; (package! clipetty) ; osc52 support
+(package! kitty-graphics :recipe (:host github :repo "cashmeredev/kitty-graphics.el"))
 (package! adoc-mode)
 
 (package! show-font) ; TODO
