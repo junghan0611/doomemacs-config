@@ -71,9 +71,13 @@
   (setq doom-modeline-enable-word-count nil)
   (setq doom-modeline-continuous-word-count-modes '(markdown-mode gfm-mod)) ; org-mode
 
-  (setq doom-modeline-modal-icon (display-graphic-p))
-  (setq doom-modeline-major-mode-icon (display-graphic-p))
-  (setq doom-modeline-buffer-modification-icon (display-graphic-p))
+  ;; TTY 프레임에서 아이콘 끄기
+  ;; doom-modeline-icon-displayable-p가 nerd-icons만 체크하고 display-graphic-p를 안 보므로
+  ;; TTY에서도 아이콘이 뜨는 문제 → advice로 프레임별 분기
+  (advice-add 'doom-modeline-icon-displayable-p :around
+              (lambda (orig-fn &rest args)
+                "TTY 프레임에서는 아이콘 비활성화."
+                (and (display-graphic-p) (apply orig-fn args))))
 
   (setq doom-modeline-height 35)
   (setq doom-modeline-bar-width 4)

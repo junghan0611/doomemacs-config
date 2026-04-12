@@ -3,16 +3,27 @@
 ;;; Commentary:
 
 ;; 한글 입력 시스템 전체 설정
-;; - Input method: korean-hangul
-;; - 터미널 환경에서 NFD → NFC 실시간 변환
-;; - Termux/Kitty term-keys 프로토콜 지원
-;; - Evil 모드 연동
-;; - 폰트 및 이모지 설정
+;; - Input method: korean-hangul (Emacs 내장 입력기)
+;; - 터미널 한영키: term-keys + wezterm 조합으로 RightAlt/S-SPC 전달
+;; - Evil 모드 연동 (Normal→입력기 OFF, Insert→복원)
+;; - NFD→NFC: 수동 변환만 지원 (M-x korean/nfc-normalize-buffer)
+;; - 폰트/이모지: Noto Emoji + Symbola fallback
+;;
+;; 터미널 한영키 흐름:
+;;   Right Alt → xkb(us) Alt_R → fcitx5 통과 → wezterm RightAlt
+;;   → wezterm.lua SendString \x1b\x1f\x50\x60\x1f
+;;   → Emacs term-keys input-decode-map → <Hangul> → toggle-input-method
+;;
+;; 전제조건:
+;;   - fcitx5 기본그룹(Default/영어)로 두어야 Alt_R가 통과됨
+;;   - i3-fcitx5-group.sh가 wezterm 포커스 시 자동 전환
+;;   - undo-fu C-M-_ 충돌 해결 필수 (config.el 참조)
 ;;
 ;; References:
+;; - https://github.com/junghan0611/term-keys (Hangul → RIGHT_ALT/RightAlt 포크)
 ;; - https://github.com/wezterm/wezterm/issues/2482
 ;; - https://github.com/org-roam/org-roam/issues/1423
-;; - https://jyun.rbind.io/post/utf_hfs/
+;; - [[denote:20260410T203723][터미널 이맥스 한글 입력 삽질기]]
 
 ;;; Code:
 
@@ -100,8 +111,8 @@
     (unless (display-graphic-p) ; terminal
       ;; 터미널에서는 Noto Color Emoji 사용 (컬러 이모지 지원시)
       (set-fontset-font "fontset-default" 'emoji (font-spec :family "Noto Emoji") nil)
-      ;; 폴백 폰트 설정 (Noto Emoji가 없는 경우)
-      ;; (set-fontset-font "fontset-default" 'unicode (font-spec :family "DejaVu Sans Mono") nil 'append)
+      ;; Symbola: Noto Emoji에 없는 유니코드 보완 (U+1F5Ex 등)
+      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Symbola") nil 'append)
 
       ;; 터미널에서 폰트 스케일 조정 (이모지 크기 일정하게)
       (setq face-font-rescale-alist
@@ -110,9 +121,10 @@
               ("Noto Emoji" . 0.9)
               ("Symbola" . 0.9)))
 
-      ;; 이모지 문자의 너비를 2로 고정 (double-width)
-      ;; 주요 이모지 범위들
-      (dolist (range '((#x1F300 . #x1F6FF)  ; Misc Symbols and Pictographs
+      ;; 이모지/기호 너비를 2로 고정 (double-width) — 터미널 커서 위치 정합용
+      ;; NOTE: FE00-FE0F (Variation Selectors)는 결합문자(Mn)라 width 0이어야 함 → 제외
+      (dolist (range '((#x1F000 . #x1F0FF)  ; Mahjong, Domino, Playing Cards
+                       (#x1F300 . #x1F6FF)  ; Misc Symbols and Pictographs
                        (#x1F700 . #x1F77F)  ; Alchemical Symbols
                        (#x1F780 . #x1F7FF)  ; Geometric Shapes Extended
                        (#x1F900 . #x1F9FF)  ; Supplemental Symbols and Pictographs
@@ -120,20 +132,8 @@
                        (#x1FA70 . #x1FAFF)  ; Symbols and Pictographs Extended-A
                        (#x2600 . #x26FF)    ; Miscellaneous Symbols
                        (#x2700 . #x27BF)    ; Dingbats
-                       (#xFE00 . #xFE0F)    ; Variation Selectors
-                       (#x1F000 . #x1F02F)  ; Mahjong Tiles
-                       (#x1F030 . #x1F09F)  ; Domino Tiles
-                       (#x1F0A0 . #x1F0FF))) ; Playing Cards
-        (set-char-table-range char-width-table range 2))
-      ;; 특정 이모지들을 유니코드 코드포인트로 너비 설정
-      (dolist (codepoint '(#x1F600 #x1F603 #x1F604 #x1F601 #x1F606 #x1F605 #x1F602 #x1F923 #x1F60A #x1F607
-                           #x1F642 #x1F643 #x1F609 #x1F60C #x1F60D #x1F970 #x1F618 #x1F617 #x1F619 #x1F61A
-                           #x1F60B #x1F61B #x1F61C #x1F92A #x1F61D #x1F911 #x1F917 #x1F92D #x1F92B #x1F914
-                           #x1F525 #x1F4AF #x2728 #x2B50 #x1F31F #x1F4AB #x1F308 #x2600 #x1F31E #x1F31D
-                           #x2764 #x1F9E1 #x1F49B #x1F49A #x1F499 #x1F49C #x1F5A4 #x1F90D #x1F90E #x1F494
-                           #x2705 #x274C #x2B55 #x1F534 #x1F7E0 #x1F7E1 #x1F7E2 #x1F535 #x1F7E3 #x26AB
-                           #x26AA #x1F7E4 #x1F536 #x1F537 #x1F538 #x1F539 #x1F53A #x1F53B #x1F4A0 #x1F532))
-        (set-char-table-range char-width-table codepoint 2)))
+                       (#x2B50 . #x2B55)))  ; Misc Symbols and Arrows (⭐⭕)
+        (set-char-table-range char-width-table range 2)))
 
     (set-fontset-font t 'symbol (font-spec :family "Symbola") nil 'prepend)
     (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
@@ -344,33 +344,18 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
   :lighter " 한"
   :global t
   :group 'korean
-  (if global-korean-nfc-mode
-      (progn
-        ;; NOTE: raw byte 재조합은 자동 실행하지 않음 (M-x korean/fix-raw-bytes-in-buffer)
-        ;; (add-hook 'after-change-functions #'korean/reassemble-raw-utf8-bytes)
-        (add-hook 'after-change-functions #'korean/after-change-nfc-normalize)
-        (add-hook 'before-save-hook #'korean/before-save-nfc-normalize)
-        (message "✅ 글로벌 한글 NFC 모드 활성화"))
-    (progn
-      (remove-hook 'after-change-functions #'korean/after-change-nfc-normalize)
-      (remove-hook 'before-save-hook #'korean/before-save-nfc-normalize)
-      (message "❌ 글로벌 한글 NFC 모드 비활성화"))))
+  ;; Emacs 내장 입력기(korean-hangul)는 항상 NFC 출력 → 자동 변환 불필요
+  ;; NFD 정리 필요 시 M-x korean/nfc-normalize-buffer 명시 호출
+  (message "%s 한글 NFC 모드 (%s)" (if global-korean-nfc-mode "✅" "❌")
+           "M-x korean/nfc-normalize-buffer"))
 
 ;; 하위 호환성: 기존 korean-nfc-mode 호출 시 글로벌 모드로 리다이렉트
 (defalias 'korean-nfc-mode 'global-korean-nfc-mode)
 
-;;; 7. 자동 활성화
+;;; 7. NFC 모드
 
-;; 터미널 Emacs에서는 항상 활성화 (NFC + raw byte 재조합)
-;; GUI Emacs에서는 시스템 IME가 NFC로 정상 입력되므로 조건부
-(when (or IS-TERMUX (not (display-graphic-p)))
-  (global-korean-nfc-mode 1)
-  (add-hook 'find-file-hook #'korean/find-file-nfc-normalize))
-
-(add-hook 'after-make-frame-functions
-          (lambda (frame)
-            (unless (display-graphic-p frame)
-              (korean-nfc-mode 1))))
+;; Emacs 내장 입력기(korean-hangul)가 항상 NFC 출력하므로 자동 변환 불필요.
+;; NFD 정리 필요 시 M-x korean/nfc-normalize-buffer 명시 호출.
 
 ;;; 8. 터미널 Emacs 입력기 전략
 

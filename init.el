@@ -64,7 +64,6 @@
        :ui
        doom              ; what makes DOOM look the way it does
        dashboard              ; a nifty splash screen for Emacs
-       ;; doom-dashboard      ; (deprecated) replaced by :ui dashboard
        ;; doom-quit         ; DOOM quit-message prompts when you quit Emacs
        hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW/XXX/BUG
        ;; indent-guides     ; highlighted indent columns
@@ -74,7 +73,7 @@
        (popup +defaults) ; tame sudden yet inevitable temporary windows
        (:unless IS-TERMUX (smooth-scroll +interpolate)) ; So smooth you won't believe it's not butter
 
-       (:unless IS-EMACS31+ tabs) ; centaur-tabs — powerline 31 비호환
+       ;; (:unless IS-EMACS31+ tabs) ; centaur-tabs — powerline 31 비호환
        treemacs          ; a project drawer, like neotree but cooler
        vc-gutter         ; +pretty - vcs diff in the fringe
        ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB

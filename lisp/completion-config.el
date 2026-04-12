@@ -21,10 +21,9 @@
 ;; Tab 이 자동 완성이면 괄호 점프랑 충돌 난다. C-j/k C-n/p 는 직관적인 기본 설정이므로 건들이지 않는다.
 
 (after! corfu
-  ;; (setq corfu-auto-delay 0.5) ; doom 0.24
-  (setq corfu-auto-prefix 4) ; doom 2, default 3
-  ;; (setq corfu-preselect 'valid) ; doom 'prompt
-  ;; (setq tab-always-indent t) ; for jump-out-of-pair - doom 'complete
+  ;; Manual completion only — C-SPC로 명시 호출
+  ;; "modern editors have trained a bad habit into us all" — hlissner
+  (setq corfu-auto nil)
   (setq +corfu-want-minibuffer-completion nil) ; doom t
 
   (setq +corfu-want-tab-prefer-expand-snippets nil)
@@ -34,13 +33,6 @@
   ;; HACK: Prevent the annoting completion error when no `ispell' dictionary is set, prefer `cape-dict'
   (when (>= emacs-major-version 30)
     (setq text-mode-ispell-word-completion nil))
-
-  ;; IMO, modern editors have trained a bad habit into us all: a burning need for
-  ;; completion all the time -- as we type, as we breathe, as we pray to the
-  ;; ancient ones -- but how often do you *really* need that information? I say
-  ;; rarely. So opt for manual completion:
-  ;; doom/hlissner-dot-doom/config.el
-  ;; (setq corfu-auto nil)
 
   ;; default 'C-S-s'
   (define-key corfu-map (kbd "M-.") '+corfu-move-to-minibuffer)

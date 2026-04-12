@@ -269,14 +269,15 @@
 ;;;; term-keys
 
 (use-package! term-keys
-  :unless window-system
   :config
   (require 'term-keys-wezterm)
-  (unless (display-graphic-p)
-    (term-keys-mode t)))
+  ;; 데몬 모드: GUI로 시작해도 TTY 클라이언트 접속 시 term-keys 활성화
+  (term-keys-mode t))
 
 ;; term-keys 시퀀스 \x1b\x1f (prefix) = C-M-_ → undo-fu가 가로채는 문제 방지
-(after! undo-fu
+;; Doom이 doom-first-buffer에서 undo-fu-mode 활성화 → keymap 재생성되므로
+;; after! 대신 모드 활성화 후 항상 unbind
+(add-hook! 'undo-fu-mode-hook
   (define-key undo-fu-mode-map (kbd "C-M-_") nil))
 
 ;; term-keys conf 재생성:
