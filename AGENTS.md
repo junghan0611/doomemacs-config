@@ -1,34 +1,63 @@
-# Doomemacs-config AGENT 가이드
+# AGENTS.md — doomemacs-config Agent Guide
 
-## 프로젝트 개요
+You are the **담당자** (agent-in-charge) for this repository.
+This is not a toy dotfile. Read this before touching anything.
 
-- **리포지토리**: junghan0611/doomemacs-config
-- **목적**: 멀티 에이전트 중심 Doom Emacs 메인 설정
-- **스타일**: hlissner (Doom Emacs 메인테이너) 스타일 기반
-- **철학**: AI를 협력자로 대하는 "존재 대 존재 협업"
+## What This Repo Is
 
-## 핵심 원칙
+A 16K-line Doom Emacs configuration that serves as the **frontend for a human-agent collaborative ecosystem**. Emacs here is not just a text editor — it is the harness where:
 
-### 1. config.el은 로더로 유지
-- **내용**: 로딩 로직 + 최소 필수 설정만
-- **나머지**: 모두 lisp/ 또는 autoload/로 분리
-- `(load! "lisp/module-name")` 패턴 사용
+- **GLG (힣)** writes, thinks, and manages knowledge in org-mode
+- **Agents** (Entwurf, secretaries, 힣봇s) read/write the same org files, stamp agenda entries, publish to the digital garden
+- **Both sides share a single `org-agenda` timeline** via `workflow-shared.el`
 
-### 2. Outline 구조 (outli.el)
-```elisp
-;;; Level 1 섹션
-;;;; Level 2 서브섹션
+The agent server (`bin/agent-server.el`) exposes elisp APIs over socket `"server"`. The human uses socket `"user"`. They operate on the same `~/org/` corpus.
+
+## Architecture at a Glance
+
+```
+init.el                 # Doom modules + single-instance guard
+config.el               # Loader only — requires lisp/*.el
+├── lisp/ (39 files)    # One concern = one file
+├── bin/                # Standalone scripts (no Doom dependency)
+├── autoload/           # ;;;###autoload lazy functions
+├── run.sh              # Unified CLI/TUI: sync, export, agent, IGC
+└── flake.nix           # Emacs 31 IGC (MPS GC) via nix
 ```
 
-모든 `.el` 파일은 outline 구조로 관리
+## Code Organization Rules
 
-### 3. 파일 조직
-- **autoload/**: `;;;###autoload` 마커가 있는 함수들 (lazy loading)
-- **lisp/**: 독립적인 설정 라이브러리 (`(provide 'module-name)` 필수)
-- **bin/**: Doom 없이 독립 실행 가능한 스크립트
-- **한 기능 = 한 파일**: 설정이 여러 파일에 분산되지 않도록
+### config.el is a loader
 
-### 4. 파일 헤더 표준
+Only `(require ...)` and minimal glue. All logic lives in `lisp/`.
+
+### One concern = one file
+
+| Domain | File(s) |
+|--------|---------|
+| AI tools | `lisp/ai-*.el` (6 files) |
+| Org-mode | `lisp/org-config.el`, `org-functions.el` |
+| Denote | `lisp/denote-*.el` (4 files) |
+| Export pipeline | `lisp/denote-export-config.el` + `bin/denote-export*.{el,py,sh}` |
+| Korean input / fonts | `lisp/korean-input-config.el` |
+| Unicode (NBSP, ZWS) | `lisp/unicode-config.el` |
+| TTY (term-keys, kitty-graphics, clipboard) | `lisp/tty-config.el` |
+| Evil | `lisp/evil-config.el` |
+| Editing | `lisp/editing-config.el` |
+| UI / theme | `lisp/ui-config.el` |
+| Completion | `lisp/completion-config.el` |
+| Search | `lisp/search-config.el` |
+| Key bindings | `lisp/keybindings-config.el`, `keybindings-denote-config.el` |
+| tmux / Zellij | `lisp/tmux-config.el`, `zellij-config.el` |
+| RSS | `lisp/elfeed-config.el` |
+| Programming | `lisp/prog-mode-config.el` |
+| Termux/Android | `lisp/termux-config.el` |
+| Tab bar | `lisp/tab-bar-config.el` |
+| Presentation | `lisp/present-config.el` |
+| Human-Agent shared | `lisp/workflow-shared.el` |
+
+### File header standard
+
 ```elisp
 ;;; $DOOMDIR/lisp/module-name.el --- Description -*- lexical-binding: t; -*-
 
@@ -39,69 +68,91 @@
 
 ;;; Commentary:
 
-;; 모듈 설명
+;; Description of what this module does.
 
 ;;; Code:
 
-;;;; 섹션1
+;;;; Section 1
 
-;;;; 섹션2
+;;;; Section 2
 
 (provide 'module-name)
 ;;; module-name.el ends here
 ```
 
-## 작업 가이드
+### Outline structure (outli.el)
 
-### 새 설정 추가 시
+Every `.el` file uses outline headings:
 
-1. **어느 파일에 넣을까?**
-   - AI 도구 → `lisp/ai-*.el`
-   - Org 관련 → `lisp/org-config.el` (함수는 `org-functions.el`)
-   - Denote 관련 → `lisp/denote-*.el`
-   - Evil 관련 → `lisp/evil-config.el`
-   - 편집 관련 → `lisp/editing-config.el`
-   - UI/테마 → `lisp/ui-config.el`
-   - 한글 입력 → `lisp/korean-input-config.el`
-   - 유니코드 → `lisp/unicode-config.el`
-   - 완성 시스템 → `lisp/completion-config.el`
-   - 검색 → `lisp/search-config.el`
-   - 키바인딩 → `lisp/keybindings-config.el`
-   - tmux → `lisp/tmux-config.el`
-   - Zellij → `lisp/zellij-config.el`
-   - RSS → `lisp/elfeed-config.el`
-   - 프로그래밍 → `lisp/prog-mode-config.el`
-   - Export → `lisp/denote-export-config.el`
-   - Termux/Android → `lisp/termux-config.el`
-
-2. **함수인가?**
-   - `;;;###autoload` 필요 → `autoload/junghan.el`
-   - 내부 함수 → 해당 `lisp/*.el` 내부
-
-### 파일 추가 시
-
-1. lisp/ 또는 autoload/에 파일 생성
-2. 헤더 작성 (위 표준 따르기)
-3. `(provide 'module-name)` 추가
-4. `config.el`에 `(load! "lisp/module-name")` 추가
-5. Outline 구조 (`;;;`, `;;;;`) 유지
-
-### bin/ 스크립트 수정 시
-
-- `bin/denote-export.el`과 `lisp/denote-export-config.el`은 공유 로직
-- advice/설정 변경은 `denote-export-config.el`에 넣어야 양쪽 반영
-- `bin/denote-export.el`의 `get-org-hugo-section-from-path`에 새 폴더 추가 필수
-
-## Git 커밋 가이드
-
-### 커밋 메시지 스타일
-```
-feat: add EAF pyqterminal configuration
-
-- Korean input via x-gtk-use-native-input
-- Evil integration with SPC key handling
+```elisp
+;;; Level 1
+;;;; Level 2
 ```
 
-**중요**: "Generated with Claude" 또는 "Co-Authored-By" 제외!
+### Function placement
 
+- Needs `;;;###autoload`? → `autoload/junghan.el`
+- Internal to a module? → Inside that `lisp/*.el`
 
+## Emacs Server Sockets
+
+| Socket | Purpose | How it starts |
+|--------|---------|---------------|
+| `"user"` | GLG's GUI Emacs | `doom run` (Doom auto-calls `server-start` for GUI) |
+| `"server"` | Agent daemon | `run.sh agent start` (separate `--init-directory`) |
+| `"doom-igc"` | Emacs 31 IGC | `bin/emacs-igc.sh` |
+
+The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon instances (`emacs -nw`, `doom run`) run independently.
+
+## Key Workflows
+
+### Adding a new config module
+
+1. Create `lisp/my-feature-config.el` with header + `(provide 'my-feature-config)`
+2. Add `(require 'my-feature-config)` to `config.el`
+3. Maintain outline structure
+
+### Editing bin/ scripts
+
+- `bin/denote-export.el` and `lisp/denote-export-config.el` share logic
+- Advice/settings go in `denote-export-config.el` so both sides pick them up
+- New export folders → update `get-org-hugo-section-from-path` in `bin/denote-export.el`
+
+### Agent server
+
+```bash
+./run.sh agent start    # Start (checks stale socket)
+./run.sh agent status   # Health check
+./run.sh agent restart  # Stop + start
+./run.sh agent eval     # Interactive eval
+```
+
+### workflow-shared.el — the contract
+
+This file defines rules that **both** user Emacs and agent-server **must** agree on:
+
+| Setting | Why |
+|---------|-----|
+| `org-tag-re` | Tags allow only `[[:alnum:]@#%]+` — matches Denote filetags |
+| `org-agenda-files` | Dynamic: `_aprj` tagged files + `botlog/agenda/` + current journal |
+| Journal entry format | Active timestamps so entries appear in agenda |
+
+**Rule**: UI/theme/keybindings can differ. **Data read/write rules must be identical.**
+
+## Commit Messages
+
+```
+feat: add tty-config — term-keys, kitty-graphics, clipboard unified
+
+- daemon guard now daemon-only (emacs -nw allowed)
+- config.el terminal block → tty-config.el (45 lines removed)
+```
+
+**Never** include "Generated with Claude" or "Co-Authored-By".
+
+## Things to Watch
+
+- `doom sync` needed after `init.el` module changes, NOT for `config.el`/`lisp/` edits
+- `per-machine.el` is git-ignored — font/theme overrides go there
+- Emacs 31 IGC coexists with 30.2 via separate `EMACSDIR` and `server-name`
+- Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard

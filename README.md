@@ -1,282 +1,217 @@
 # doomemacs-config
 
-Multi-agent focused [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for AI-assisted workflows.
+> This is not just another Doom Emacs dotfile.
+> This is the frontend of a human-agent ecosystem where both sides share one org-agenda timeline,
+> publish to the same digital garden, and evolve the system together — in plain text.
 
-> "Being to Being Collaboration" — Treating AI as a collaborator, not just a tool.
+## How to Read This
+
+If you glance at `config.el` and think "just another messy dotfile" — look closer.
+
+**What you're seeing is a harness.** A 16K-line Emacs configuration where a human (GLG/힣) and AI agents operate on the same `~/org/` knowledge base of 3,300+ notes. They share a unified agenda. They stamp timestamps on the same datetree. The agents publish comments on the digital garden. The human refines, connects, and creates.
+
+The solutions here are not fancy. A 33-minute full export. Shell scripts calling Emacs daemons. Org files instead of databases. If you're looking for cutting-edge infrastructure, this will disappoint. But look at the layer above: **Emacs is a meta-editor. Org-mode is a meta-document format.** The point is not the speed of any single operation — it's that the entire system composes. Org files become Hugo pages, become semantic memory, become agent context, become new org files. The 33-minute export runs unattended while GLG sleeps; incremental runs finish in seconds.
+
+**This is one piece of a larger ecosystem.** The agent harness is [agent-config](https://github.com/junghan0611/agent-config) — that's where skills, delegation, semantic memory, and multi-agent orchestration live. Agents don't need Emacs. They use agent-config's toolset. But when they collaborate with GLG, they share this Emacs interface: the same org files, the same agenda, the same elisp APIs over sockets. Emacs is not a requirement — it's the meeting point. You don't have to use Emacs to work with this ecosystem. But this is where human and agent workflows converge.
+
+The "clunky terminal screens" you see? They are nodes in a living graph: Emacs → org-mode → Denote notes → Hugo [digital garden](https://github.com/junghanacs/notes.junghanacs.com) → semantic memory → agent skills → back to Emacs. Every ugly buffer is a connection point.
+
+**Why Emacs in a terminal matters**: This full Doom Emacs runs in TTY with clipboard integration, Korean input, and remote access over SSH — identical to GUI. An agent can spawn Emacs anywhere via `emacsclient`, eval elisp, read org files, stamp agenda entries. The terminal is not a limitation. It is the universal interface — the one that works on a laptop, a NUC, an Oracle ARM server, and a Galaxy Fold.
+
+**Why org-mode**: Org is the meta-document format. Through [memex-kb](https://github.com/junghan0611/memex-kb), org files convert to any format without Pandoc. Notes accumulate in Denote, export to the [garden](https://notes.junghanacs.com), get hierarchized by [andenken](https://github.com/junghan0611/andenken), and feed into semantic memory shared with agents. It is the protocol, not just a markup language.
 
 ## Overview
 
-A comprehensive Doom Emacs environment integrating AI agents (GPTel, Pi Coding Agent, Claude Code) with Denote-based knowledge management and Digital Garden publishing. Built for reproducibility across NixOS, Ubuntu, and Termux.
+A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-agent collaborative workflows, built on NixOS.
 
-### Highlights
-
-- **Multi-agent orchestration** via tmux/Zellij — human and AI share a single org-agenda timeline
-- **Denote export pipeline** — parallel multi-daemon org→Hugo conversion for 2,000+ notes
-- **Korean-first** — full hangul input, NFD→NFC, Sarasa/D2Coding fonts across all modes
-- **Cross-platform** — NixOS 25.11, Ubuntu 24.04, Termux (Galaxy Fold4)
-
-## Installation
-
-```bash
-# 1. Doom Emacs
-git clone https://github.com/doomemacs/doomemacs.git ~/doomemacs-starter
-
-# 2. This config
-mkdir -p ~/repos/gh/
-git clone https://github.com/junghan0611/doomemacs-config.git ~/repos/gh/doomemacs-config
-
-# 3. Sync
-DOOMDIR="$HOME/repos/gh/doomemacs-config" ~/doomemacs-starter/bin/doom sync
-```
-
-### Shell Aliases
-
-```bash
-alias esync='DOOMDIR="$HOME/repos/gh/doomemacs-config" $HOME/doomemacs-starter/bin/doom sync'
-alias e='DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run -nw'
-alias egui='DOOMDIR=$HOME/repos/gh/doomemacs-config $HOME/doomemacs-starter/bin/doom run'
-```
-
-### Emacs 31 IGC (Experimental)
-
-MPS/IGC garbage collector 빌드로 Emacs 31을 기존 30.2와 공존 운용:
-
-```bash
-# Nix flake 기반 빌드
-nix build .#emacs-igc
-
-# 통합 관리 스크립트
-./run.sh igc install    # 첫 설치 (sync + env + profile)
-./run.sh igc run        # GUI 실행
-./run.sh igc update     # 패키지 업데이트
-./run.sh igc debug      # --debug-init 에러 추적
-./run.sh igc doctor     # 상태 점검
-```
-
-> 30.2는 안정 버전으로 유지, 31은 프론트엔드 집중 사용.
-> centaur-tabs(powerline 의존)는 31에서 비활성화, 빌트인 tab-bar 사용.
+| | |
+|---|---|
+| **Emacs** | 30.2 (stable) + 31 IGC/MPS (experimental) |
+| **Framework** | Doom Emacs (hlissner style) |
+| **Notes** | 3,300+ Denote org-mode files in `~/org/` |
+| **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,100+ published |
+| **Platforms** | NixOS (laptop, NUC, Oracle ARM), Termux (Galaxy Fold4) |
+| **Lines** | ~16K across config + lisp + bin + scripts |
 
 ## Structure
 
 ```
 doomemacs-config/
-├── init.el              # Doom module declarations
-├── config.el            # Main configuration (loader, kept minimal)
+├── init.el              # Doom modules + single-instance guard
+├── config.el            # Loader — requires lisp/*.el, kept minimal
 ├── packages.el          # Package declarations
-├── custom.el            # Emacs customize (git-ignored)
-├── per-machine.el       # Machine-specific settings (git-ignored)
+├── per-machine.el       # Machine-specific (git-ignored)
 │
-├── lisp/                # Modular configuration (38 files)
-│   ├── ai-*.el              # AI/Agent (6 files)
-│   ├── denote-*.el          # Denote ecosystem (4 files)
-│   ├── org-*.el             # Org-mode (2 files)
-│   ├── keybindings-*.el     # Key bindings (2 files)
+├── lisp/                # Modular config (39 files, one concern each)
+│   ├── ai-*.el              # AI/Agent integration (6)
+│   ├── denote-*.el          # Denote ecosystem (4)
+│   ├── org-*.el             # Org-mode (2)
 │   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC
-│   ├── denote-export-config.el  # Hugo export + dblock advice
-│   ├── workflow-shared.el       # Human/Agent unified agenda
-│   ├── tmux-config.el          # tmux agent integration
-│   └── ...                     # 20+ more modules
+│   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
+│   ├── workflow-shared.el       # Human ↔ Agent shared contract
+│   └── ...                      # 25+ more modules
 │
-├── bin/                 # Standalone scripts (no Doom dependency)
-│   ├── denote-export.el         # Multi-daemon export server
-│   ├── denote-export.sh         # Parallel export wrapper
-│   ├── denote-export-parallel.py  # Python ProcessPoolExecutor
-│   ├── agent-server.el          # Agent RPC server
-│   └── edge-tts-convert.py     # TTS batch converter
+├── bin/                 # Standalone scripts
+│   ├── agent-server.el          # Agent RPC server (socket "server")
+│   ├── denote-export.el         # Multi-daemon export engine
+│   ├── denote-export-parallel.py  # Python parallel orchestrator
+│   ├── emacs-igc.sh             # Emacs 31 IGC launcher
+│   └── verify-relref.py         # Hugo relref link validator
 │
-└── autoload/            # Lazy-loaded functions (;;;###autoload)
+├── run.sh               # Unified CLI/TUI management
+└── flake.nix            # Emacs 31 IGC (MPS GC) Nix build
 ```
 
-## AI/Agent Integration
+## Human-Agent Unified Agenda
 
-| Module | Description | File |
-|--------|-------------|------|
-| **GPTel** | Claude, OpenAI, Gemini, local models | `ai-gptel.el` |
-| **Pi Coding Agent** | Lightweight AI agent via stdio RPC | `ai-pi-agent.el` |
-| **Agent Shell** | ACP protocol, agent-shell-manager | `ai-agent-shell.el` |
-| **Claude Code MCP** | MCP tool definitions | `+claude-code-ide-mcp-tools.el` |
-| **Bot Config** | Agent behavior & prompt management | `ai-bot-config.el` |
-| **ECA Whisper** | Speech-to-text | `ai-stt-eca-whisper.el` |
-| **Edge TTS** | Text-to-speech (22K) | `ai-tts-edge.el` |
-| **tmux/Zellij** | Terminal multiplexer agent workflows | `tmux-config.el`, `zellij-config.el` |
+The core design: **one timeline for both human and AI**.
 
-### Unified Agenda — Human & Agent Single Timeline
+`workflow-shared.el` is loaded by both user Emacs and `agent-server.el`. It defines:
 
-Human and AI agents share a single `org-agenda` timeline via `workflow-shared.el`. Both sides read/write `~/org/`, and the same agenda view is visible regardless of who calls it.
+- **Dynamic `org-agenda-files`** from `_aprj` tagged Denote files + botlog + journal
+- **Tag regex contract** — `[[:alnum:]@#%]+` only, matching Denote filetags
+- **Active timestamps** in journal entries for agenda visibility
 
-- **Dynamic `org-agenda-files`**: Built from `_aprj` tagged Denote files + `botlog/agenda/` + current journal
-- **Category-based identity**: `#+category: Human` / `#+category: Agent`
-- **Smart truncation**: Long agent entries auto-truncated to keep tags visible in split windows
+Agents stamp entries like:
 
-#### `workflow-shared.el` — 인간/에이전트 공유 설정
+```org
+**** pi-skills: feat: summarize skill :pi:commit:piskills:
+<2026-03-01 Sat 11:53>
+```
 
-Doom Emacs(사용자)와 `agent-server`(AI)가 **반드시 일치해야 하는** 설정을 한 곳에서 관리한다. 각 환경에서 org/denote 로드 이후에 평가된다.
+The same `org-agenda` view shows human tasks and agent activity side by side.
 
-| 환경 | 로딩 |
-|------|------|
-| Doom (사용자) | `config.el` → `(after! denote (require 'workflow-shared))` |
-| agent-server (AI) | `bin/agent-server.el` → `(load "lisp/workflow-shared.el")` |
+## Emacs Server Architecture
 
-**공유 항목:**
+Three isolated server sockets coexist:
 
-| 설정 | 목적 |
-|------|------|
-| `org-tag-re` 및 관련 regex | 태그에 `-`, `_` 불허. Denote filetags와 일관성 유지. `[[:alnum:]@#%]+` |
-| `org-agenda-files` 동적 구성 | `_aprj` 태그 + `botlog/agenda/` + 현재 주 journal |
-| `my/org-journal-new-entry` | active timestamp 삽입으로 journal → agenda 연동 |
+| Socket | Instance | Purpose |
+|--------|----------|---------|
+| `"user"` | Emacs 30.2 GUI | GLG's primary editor (doom run / emacsclient) |
+| `"server"` | Emacs 30.2 headless | Agent daemon — agents eval elisp via emacsclient |
+| `"doom-igc"` | Emacs 31 (MPS GC) | IGC experimental frontend |
 
-**원칙:** UI, 테마, 키바인딩은 각자 달라도 되지만, **데이터를 읽고 쓰는 규칙**(태그 파싱, agenda 범위, 타임스탬프 형식)은 반드시 동일해야 한다.
+Independent terminal instances (`emacs -nw`) run without connecting to any server.
 
-## Denote Export System
+## Denote Export Pipeline
 
-A multi-daemon parallel pipeline for exporting 2,000+ Denote org-mode notes to Hugo markdown for the [Digital Garden](https://notes.junghanacs.com).
-
-### Architecture
+Parallel multi-daemon pipeline exporting 2,000+ org notes to Hugo markdown:
 
 ```
 ~/org/{meta,bib,notes,botlog}/*.org
         │
-        ▼
-  denote-export.sh          # CLI entry point
+  denote-export-parallel.py    # Python ProcessPoolExecutor
         │
-        ▼
-  denote-export-parallel.py # Python ProcessPoolExecutor
+   ┌────┼────┐
+   d1   d2   dN               # N Emacs daemons (default 4-8)
+   └────┼────┘                 # ox-hugo + link conversion + security filters
         │
-        ├─ daemon-1 ─┐
-        ├─ daemon-2 ─┤  denote-export.el (Emacs daemons)
-        ├─ daemon-3 ─┤  • Doom straight.el package loading
-        └─ daemon-N ─┘  • ox-hugo export + link conversion
-                         • Security filters (ROT13, sensitive strings)
-        │
-        ▼
-  ~/sync/markdown/notes.junghanacs.com/content/{meta,bib,notes,botlog}/
+  ~/sync/markdown/.../content/
 ```
-
-### Usage
 
 ```bash
-# Export all (meta → bib → notes → botlog)
-bin/denote-export.sh all
-
-# Single folder
-bin/denote-export.sh botlog
-
-# Force full re-export (skip mtime check)
-bin/denote-export.sh all --force
-
-# Dblock update only
-bin/denote-export.sh dblock ~/org/meta
+./run.sh export all           # Incremental (mtime-based)
+./run.sh export all --force   # Full re-export
+./run.sh dblock all           # Update dynamic blocks only
 ```
 
-### Dblock Link Description — Citar-Style Dates
+Full export (~2,000 files, 8 daemons) takes ~33 min — runs unattended.
+Incremental export (daily use) finishes in seconds, processing only changed files.
 
-Custom advice on `denote-org--insert-links` provides folder prefix and citar-style date display:
+## AI/Agent Modules
 
-```org
-;; Format: folder/ title 'dateadded #datemodified
-- [[denote:20250904T075937][notes/ @힣: AI 에이전트 편재성 '2025-09-04 #2026-02-14]]
-- [[denote:20260307T131455][botlog/ SDF Zig 상태머신 리서치 '2026-03-07]]
-```
+| Module | File | Purpose |
+|--------|------|---------|
+| GPTel | `ai-gptel.el` | Multi-backend LLM (Claude, OpenAI, Gemini, local) |
+| Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
+| Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
+| Bot Config | `ai-bot-config.el` | Agent behavior & prompts |
+| ECA Whisper | `ai-stt-eca-whisper.el` | Speech-to-text |
+| Edge TTS | `ai-tts-edge.el` | Text-to-speech |
+| tmux | `tmux-config.el` | Terminal multiplexer orchestration |
 
-- `'YYYY-MM-DD` — dateadded (from Denote ID, zero cost)
-- `#YYYY-MM-DD` — datemodified (from `#+hugo_lastmod:`, 4KB read)
-- `folder/` prefix — multi-folder sort boundary visibility
+## Korean Input & TTY
 
-### Performance
+Full Korean support across GUI and terminal:
 
-| Folder | Files | Time (8 daemons) |
-|--------|-------|-------------------|
-| meta | 530 | ~9 min |
-| bib | 649 | ~11 min |
-| notes | 797 | ~13 min |
-| botlog | 11 | <1 min |
-| **Total** | **~2,000** | **~33 min** |
-
-## Korean Input
-
-Comprehensive Korean support in `korean-input-config.el`:
-
-- **Input method**: korean-hangul with Evil auto-switching
-- **Fonts**: Sarasa Gothic / D2Coding Nerd with proper CJK scaling
+- **Input**: korean-hangul with Evil auto-switching, abbrev expansion
+- **Fonts**: Sarasa Gothic / D2Coding Nerd with CJK scaling
 - **NFD→NFC**: macOS/Termux filename normalization
-- **Unicode**: NBSP handling, zero-width space for ox-hugo (`unicode-config.el`)
+- **TTY**: term-keys, kitty-graphics protocol, OSC 52 clipboard
+- **Unicode**: NBSP handling, zero-width space for ox-hugo
 
-## Key Bindings
+The terminal setup ensures `emacs -nw` over SSH has clipboard, Korean input, and full functionality — identical to GUI except for images.
 
-| Key | Action | Scope |
-|-----|--------|-------|
-| `M-\` | `other-window` | Global (vterm, dired, org, eaf) |
-| `M-u` / `M-v` | Scroll up/down | Global |
-| `SPC` | Doom leader | Context-aware |
+## Emacs 31 IGC (Experimental)
 
-Full bindings: `keybindings-config.el`, `keybindings-denote-config.el`
+MPS garbage collector build coexisting with stable 30.2:
 
-## Customization
+```bash
+./run.sh igc run        # GUI
+./run.sh igc tty        # Terminal (alias: eti)
+./run.sh igc install    # First setup
+./run.sh igc debug      # --debug-init
+```
 
-### Per-Machine Settings
+Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~/doomemacs-igc`) and server socket (`"doom-igc"`).
 
-Create `per-machine.el` (git-ignored):
+## run.sh — Unified Management
 
-```elisp
-;;; per-machine.el -*- lexical-binding: t; -*-
-(setq doom-font (font-spec :family "Sarasa Fixed K Nerd Font" :size 15.0))
-(setq doom-theme 'doom-one)
+```bash
+./run.sh                # Interactive TUI menu
+./run.sh sync           # doom sync
+./run.sh agent start    # Start agent server
+./run.sh export all     # Export all folders
+./run.sh igc tty        # IGC terminal mode
+./run.sh verify fix     # Fix broken Hugo relrefs
+```
+
+## Installation
+
+```bash
+# Doom Emacs
+git clone https://github.com/doomemacs/doomemacs.git ~/doomemacs
+
+# This config
+git clone https://github.com/junghan0611/doomemacs-config.git ~/repos/gh/doomemacs-config
+ln -s ~/repos/gh/doomemacs-config ~/.doom.d
+
+# Sync
+~/doomemacs/bin/doom sync
+```
+
+### Shell Aliases
+
+```bash
+alias et='emacs -nw'          # Emacs 30 terminal (standalone)
+alias eti='~/.doom.d/bin/emacs-igc.sh --nw'  # Emacs 31 IGC terminal
 ```
 
 ## Tested Environments
 
 | Platform | Emacs | Terminal | Status |
 |----------|-------|----------|--------|
-| NixOS 25.11 | 30.x | Ghostty | Primary |
-| Ubuntu 24.04 | 30.x | Kitty | Tested |
+| NixOS 25.11 | 30.2 + 31 IGC | Ghostty / WezTerm | Primary |
 | Termux (Android) | 30.x (nox) | Termux | Tested |
-
-## Changelog
-
-### 2026-03 — Botlog & Dblock Enhancement
-
-- **Botlog export**: Added `~/org/botlog` to Digital Garden pipeline
-- **Dblock citar-style dates**: `'dateadded #datemodified` with folder prefix
-- **denote-org advice**: Fixed upstream `include-date` file-type nil bug ([denote-org#21](https://github.com/protesilaos/denote-org/issues/21))
-- **Export exclusion**: `agenda/` subdirectory filtered from export
-
-### 2026-01 — Unified Agenda & Workflow
-
-- **Unified agenda**: Human & Agent single timeline (`workflow-shared.el`)
-- **Pi Coding Agent**: stdio RPC integration with Korean input
-- **Bot config**: Agent behavior management (`ai-bot-config.el`)
-
-### 2025-10 — Multi-Agent Architecture
-
-- **Modular expansion**: 14 → 38 files in `lisp/`
-- **tmux/Zellij integration**: Terminal multiplexer agent workflows
-- **Denote export pipeline**: Multi-daemon parallel processing
-- **Voice interfaces**: ECA Whisper (STT), Edge TTS (TTS)
-- **GPTel expansion**: 5K → 36K with multi-backend support
-
-### 2025-10-03 — v0.1.0 Initial Release
-
-- First public release: terminal-optimized Doom Emacs configuration
-- Evil + Corfu/Vertico completion, Denote ecosystem, Korean input
-- Platform support: Ubuntu, NixOS, Termux
-
-## License
-
-MIT License
-
-## Acknowledgments
-
-This configuration stands on the shoulders of:
-
-- [GNU Emacs](https://www.gnu.org/software/emacs/) — the extensible, self-documenting editor
-- [Org Mode](https://orgmode.org/) — your life in plain text
-- [Doom Emacs](https://github.com/doomemacs/doomemacs) — Henrik Lissner's opinionated Emacs framework
-- [Protesilaos Stavrou](https://protesilaos.com/) — Denote, standard-themes, modus-themes, ef-themes, and a philosophy of computing that inspires
-- [Pi Coding Agent](https://shittycodingagent.ai/) — Daniel Nouri's lightweight coding agent ([Emacs integration](https://danielnouri.org/notes/2025/12/30/an-emacs-mode-for-a-shitty-coding-agent/))
-- All open-source contributors whose packages make this ecosystem possible
 
 ## Links
 
-- [힣's Digital Garden](https://notes.junghanacs.com) — 2,000+ notes published from this setup
-- [GLG-Mono Font](https://github.com/junghan0611/GLG-Mono) — custom programming font
-- [NixOS Config](https://github.com/junghan0611/nixos-config) — reproducible system configuration
+- [Digital Garden](https://notes.junghanacs.com) — 2,100+ notes published from this setup
+- [Garden repo](https://github.com/junghanacs/notes.junghanacs.com) — Hugo source for the digital garden
+- [agent-config](https://github.com/junghan0611/agent-config) — Pi agent harness (skills, delegation, memory)
+- [memex-kb](https://github.com/junghan0611/memex-kb) — Org-mode → any format conversion
+- [andenken](https://github.com/junghan0611/andenken) — Note hierarchy → semantic memory
+- [nixos-config](https://github.com/junghan0611/nixos-config) — Reproducible system
+- [GLG-Mono](https://github.com/junghan0611/GLG-Mono) — Custom programming font
+
+## Acknowledgments
+
+- [GNU Emacs](https://www.gnu.org/software/emacs/) — the extensible, self-documenting editor
+- [Org Mode](https://orgmode.org/) — your life in plain text
+- [Doom Emacs](https://github.com/doomemacs/doomemacs) — Henrik Lissner's framework
+- [Protesilaos Stavrou](https://protesilaos.com/) — Denote, modus-themes, and a philosophy of computing
+- [Pi Coding Agent](https://shittycodingagent.ai/) — Daniel Nouri's coding agent harness
+
+## License
+
+MIT

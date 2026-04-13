@@ -88,7 +88,8 @@ show_menu() {
   echo "    A) fix anchors    (heading anchor 정리)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
-  echo "    i) igc run      (doom run)"
+  echo "    i) igc run      (doom run, GUI)"
+  echo "    t) igc tty      (doom run -nw, 터미널)"
   echo "    d) igc debug    (--debug-init)"
   echo "    I) igc install  (sync + env + profile)"
   echo "    S) igc sync     (doom sync)"
@@ -390,6 +391,7 @@ cli_mode() {
       local action="${1:-run}"; shift || true
       case "$action" in
         run)     "$IGC_SCRIPT" ;;
+        tty|nw)  "$IGC_SCRIPT" --nw ;;
         debug)   "$IGC_SCRIPT" --debug ;;
         install) "$IGC_SCRIPT" --install ;;
         sync)    "$IGC_SCRIPT" --sync ;;
@@ -466,6 +468,7 @@ main() {
       r) cmd_agent_stop; sleep 1; cmd_agent_start ;;
       e) cmd_agent_eval ;;
       i) "$IGC_SCRIPT"; read -p "계속하려면 Enter..."; continue ;;
+      t) "$IGC_SCRIPT" --nw; read -p "계속하려면 Enter..."; continue ;;
       d) "$IGC_SCRIPT" --debug; read -p "계속하려면 Enter..."; continue ;;
       I) "$IGC_SCRIPT" --install; read -p "계속하려면 Enter..."; continue ;;
       S) "$IGC_SCRIPT" --sync; read -p "계속하려면 Enter..."; continue ;;

@@ -226,8 +226,7 @@
 ;; (require 'sks-hub-nav)                 ; SKS Hub Zig 상태머신 네비게이션
 ;; (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
-(require 'project-config)               ; 고성능 TRAMP 백엔드 (RPC over SSH)
-;; (require 'eaf-config)                ; EAF (조건부 로딩)
+(require 'project-config)
 (load! "lisp/ai-gptel-local-proxy" nil t) ; 로컬 전용 프록시 (없으면 무시)
 (require 'elfeed-config)             ; elfeed + gptel 인라인 요약/번역 + remember
 (require 'zotero-config)             ; zotero translation server (조건부 로딩)
@@ -240,6 +239,7 @@
 ;; (require 'casual-config)               ; casual transient UI (<f12>)
 (require 'termux-config)
 (require 'tty-config)                 ; 터미널(TTY) 통합: term-keys, kitty-graphics, clipboard
+;; (require 'eaf-config)                ; EAF (조건부 로딩)
 
 (require 'present-config)
 
@@ -343,9 +343,8 @@ Returns t on success, nil if notify-send is not available."
 ;;   ;; Update every minute
 ;;   (run-at-time "1 min" 60 #'junghan/update-org-clocked-in-task-file))
 
-
-
 ;;; Workflow Shared (인간/에이전트 공유 — denote 이후 로드)
+
 (after! denote (require 'workflow-shared))
 
 ;;; END

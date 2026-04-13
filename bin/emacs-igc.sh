@@ -53,9 +53,13 @@ case "${1:-}" in
     unset EMACS_SERVER_NAME
     "${DOOM_BIN}" sync && "${DOOM_BIN}" env && "${DOOM_BIN}" profile sync --all
     ;;
+  --nw|--tty)
+    # 터미널 모드 — daemon 없이 독립 인스턴스
+    exec "${DOOM_BIN}" run -nw
+    ;;
   --direct)
-    # daemon 없이 직접 실행
-    exec "${DOOM_BIN}" run
+    # --nw의 이전 이름 (호환)
+    exec "${DOOM_BIN}" run -nw
     ;;
   --debug)
     # debug-init으로 직접 실행 — 에러 추적용
