@@ -14,6 +14,8 @@ The solutions here are not fancy. A 33-minute full export. Shell scripts calling
 
 **This is one piece of a larger ecosystem.** The agent harness is [agent-config](https://github.com/junghan0611/agent-config) — that's where skills, delegation, semantic memory, and multi-agent orchestration live. Agents don't need Emacs. They use agent-config's toolset. But when they collaborate with GLG, they share this Emacs interface: the same org files, the same agenda, the same elisp APIs over sockets. Emacs is not a requirement — it's the meeting point. You don't have to use Emacs to work with this ecosystem. But this is where human and agent workflows converge.
 
+And this timeline is not hidden inside Emacs. [geworfen](https://github.com/junghan0611/geworfen) throws it into the world — a WebTUI at [agenda.junghanacs.com](https://agenda.junghanacs.com) that renders the same `org-agenda` data live. Human journal entries, agent commit stamps, diary schedules — all on one public time axis. The same elisp function agents call, the same data the browser fetches.
+
 The "clunky terminal screens" you see? They are nodes in a living graph: Emacs → org-mode → Denote notes → Hugo [digital garden](https://github.com/junghanacs/notes.junghanacs.com) → semantic memory → agent skills → back to Emacs. Every ugly buffer is a connection point.
 
 **Why Emacs in a terminal matters**: This full Doom Emacs runs in TTY with clipboard integration, Korean input, and remote access over SSH — identical to GUI. An agent can spawn Emacs anywhere via `emacsclient`, eval elisp, read org files, stamp agenda entries. The terminal is not a limitation. It is the universal interface — the one that works on a laptop, a NUC, an Oracle ARM server, and a Galaxy Fold.
@@ -198,6 +200,7 @@ alias eti='~/.doom.d/bin/emacs-igc.sh --nw'  # Emacs 31 IGC terminal
 
 - [Digital Garden](https://notes.junghanacs.com) — 2,100+ notes published from this setup
 - [Garden repo](https://github.com/junghanacs/notes.junghanacs.com) — Hugo source for the digital garden
+- [geworfen](https://github.com/junghan0611/geworfen) — org-agenda live at [agenda.junghanacs.com](https://agenda.junghanacs.com)
 - [agent-config](https://github.com/junghan0611/agent-config) — Pi agent harness (skills, delegation, memory)
 - [memex-kb](https://github.com/junghan0611/memex-kb) — Org-mode → any format conversion
 - [andenken](https://github.com/junghan0611/andenken) — Note hierarchy → semantic memory
