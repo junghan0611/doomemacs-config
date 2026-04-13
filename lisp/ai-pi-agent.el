@@ -43,6 +43,7 @@
       (setq treesit-major-mode-remap-alist
             (assoc-delete-all 'markdown-mode treesit-major-mode-remap-alist))))
   :custom
+  (pi-coding-agent-extra-args '("--session-control"))
   (pi-coding-agent-input-window-height 10)
   (pi-coding-agent-tool-preview-lines 10)
   (pi-coding-agent-bash-preview-lines 5)
@@ -188,15 +189,11 @@ vertico/ivy 등 completing-read 프레임워크와 호환."
                             (t "—")))
                (model-short (if (string-empty-p model-name) "—"
                               (pi-coding-agent--shorten-model-name model-name)))
-               (last-usage pi-coding-agent--last-usage)
-               (context-tokens (when last-usage
-                                 (+ (or (plist-get last-usage :input) 0)
-                                    (or (plist-get last-usage :output) 0)
-                                    (or (plist-get last-usage :cacheRead) 0)
-                                    (or (plist-get last-usage :cacheWrite) 0))))
-               (context-window (or (plist-get model-obj :contextWindow) 0))
-               (context-pct (if (and context-tokens (> context-window 0))
-                                (format "%.0f%%" (* (/ (float context-tokens) context-window) 100))
+               ;; context usage: upstream이 --last-usage 제거 → --state :stats :contextUsage로 이동
+               (stats (plist-get state :stats))
+               (ctx (and stats (plist-get stats :contextUsage)))
+               (context-pct (if (and ctx (plist-get ctx :percent))
+                                (format "%.0f%%" (plist-get ctx :percent))
                               "—"))
                (proc pi-coding-agent--process)
                (alive (if (and proc (process-live-p proc)) "live" "dead")))
@@ -331,6 +328,17 @@ NO-WORKSPACE-SWITCH가 non-nil이면 workspace 전환 생략."
        :desc "Pi find session"    "f" #'my/pi-find
        :desc "Pi session manager" "l" #'my/pi-manager-toggle
        :desc "Pi quit session"    "q" #'my/pi-quit))
+
+;;;; 스크롤 동작 메모
+;;
+;; pi-coding-agent--with-scroll-preservation 매크로 (upstream ui.el):
+;; - chat 버퍼 point가 끝(point-max)이면 → 새 출력 따라 자동 스크롤
+;; - 사용자가 위로 스크롤했으면 → 그 위치 유지 (안 움직임)
+;;
+;; Evil normal 모드 주의:
+;; - G (버퍼 끝)에 있어야 팔로잉 모드. gg나 검색 후엔 G로 돌아와야 재개.
+;; - insert 모드에서는 point가 자연스럽게 끝에 있으므로 문제없음.
+;; - TODO: Evil에서 자동 팔로잉 토글 키바인딩 검토 (2026-04-13)
 
 ;;; Provide
 
