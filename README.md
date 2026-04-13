@@ -215,6 +215,42 @@ alias eti='~/.doom.d/bin/emacs-igc.sh --nw'  # Emacs 31 IGC terminal
 - [Protesilaos Stavrou](https://protesilaos.com/) — Denote, modus-themes, and a philosophy of computing
 - [Pi Coding Agent](https://shittycodingagent.ai/) — Daniel Nouri's coding agent harness
 
+## FAQ
+
+**Q: Emacs 인스턴스 여러 개 띄우면 메모리 문제 없나?**
+
+Measured on 27GB RAM laptop (2026-04-13):
+
+| Process | RSS |
+|---------|-----|
+| GUI Emacs (doom run, user server) | ~413 MB |
+| TTY Emacs + pi RPC (each) | ~360 MB + ~170 MB |
+| Agent server (headless) | ~124 MB |
+
+5 TTY instances (each with pi) ≈ 3.5 GB total. No issue on 27GB. Native-comp eln cache is shared across instances, so memory growth is sub-linear.
+
+**Q: Why `emacs -nw` instead of a terminal multiplexer + emacsclient?**
+
+Each standalone `emacs -nw` is a full Doom Emacs with its own pi coding agent. The `init.el` guard only blocks duplicate *daemons* — non-daemon instances run freely. This gives each terminal its own isolated agent session while sharing the same `~/org/` data.
+
+**Q: How does Korean input work in terminal Emacs over SSH?**
+
+Five layers, each solved independently:
+
+| Layer | Solution |
+|-------|----------|
+| Physical key → X11 | xkb `kr104`: Right Alt → `Alt_R` keysym |
+| X11 → Terminal | fcitx5 Default group (English) → passthrough |
+| Terminal → Escape seq | WezTerm: `RightAlt` → term-keys byte sequence |
+| Escape seq → Emacs event | term-keys input-decode-map → `<Hangul>` |
+| Emacs event → Korean text | `toggle-input-method` → `korean-hangul` (internal) |
+
+No OS IME inside Emacs. No NFD issues. Works identically over SSH + tmux. OSC 52 clipboard included. See `tty-config.el`, `korean-input-config.el`.
+
+**Q: 33 minutes for 2000 files? Really?**
+
+Full export runs 8 parallel Emacs daemons via Python ProcessPoolExecutor. Incremental (daily use) processes only changed files — typically seconds. The architecture trades single-run speed for composability: the same ox-hugo + Denote pipeline handles dblock updates, security filtering, and link conversion in one pass.
+
 ## License
 
 MIT
