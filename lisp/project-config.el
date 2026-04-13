@@ -108,9 +108,10 @@
         "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
 ;;;; tramp-rpc
-
-;; (use-package! msgpack) ;; msgpack (의존성)
-;; (use-package! tramp-rpc :after tramp)
+;; 패키지만 설치 (packages.el), use-package! 쓰지 않음.
+;; tramp-rpc는 ;;;###autoload로 /rpc: 접근 시에만 로드됨.
+;; :after tramp 으로 넣으면 TRAMP 로드 직후 전체 로딩 → 핸들러 충돌 → 이맥스 먹통.
+;; 사용법: /rpc:user@host:/path 로 접근하면 자동 로딩.
 
 ;;;; magit-gh
 

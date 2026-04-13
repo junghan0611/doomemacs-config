@@ -42,8 +42,10 @@
     (when (boundp 'treesit-major-mode-remap-alist)
       (setq treesit-major-mode-remap-alist
             (assoc-delete-all 'markdown-mode treesit-major-mode-remap-alist))))
+  :init
+  ;; defvar 이전에 setq — :custom은 defer 상태에서 패키지 로드 전까지 적용 안 됨
+  (setq pi-coding-agent-extra-args '("--session-control"))
   :custom
-  (pi-coding-agent-extra-args '("--session-control"))
   (pi-coding-agent-input-window-height 10)
   (pi-coding-agent-tool-preview-lines 10)
   (pi-coding-agent-bash-preview-lines 5)
