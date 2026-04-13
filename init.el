@@ -157,6 +157,7 @@
         )                     ; wander around notes
        (sh +lsp)                ; she sells {ba,z,fi}sh shells on the C xor
        (python +tree-sitter)
+       (lua +tree-sitter)
        (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
        (json +tree-sitter)  ; At least it ain't XML
        (janet +tree-sitter)  ; Fun fact: Janet is me!
@@ -165,7 +166,7 @@
        (yaml +tree-sitter) ; JSON, but readable
        (zig +tree-sitter +lsp)  ; C, but simpler
        (cc +tree-sitter)
-       ;; (kotlin +tree-sitter +lsp) ; Android/JVM Kotlin 개발
+       (kotlin +tree-sitter)
        (go +tree-sitter)
        (clojure +lsp) ; java with a lisp
        (scheme +mit) ; +racket ; a fully conniving family of lisps

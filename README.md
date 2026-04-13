@@ -245,7 +245,24 @@ Five layers, each solved independently:
 | Escape seq → Emacs event | term-keys input-decode-map → `<Hangul>` |
 | Emacs event → Korean text | `toggle-input-method` → `korean-hangul` (internal) |
 
-No OS IME inside Emacs. No NFD issues. Works identically over SSH + tmux. OSC 52 clipboard included. See `tty-config.el`, `korean-input-config.el`.
+No OS IME inside Emacs. No NFD issues. Works identically over SSH + tmux. See `tty-config.el`, `korean-input-config.el`.
+
+**Q: How does clipboard work in terminal Emacs?**
+
+Emacs 29+ built-in `xterm.el` OSC 52 via `send-string-to-terminal` (not clipetty).
+
+| Scenario | Method |
+|----------|--------|
+| Local TTY Emacs → system clipboard | xterm.el OSC 52 (`gui-set-selection`) |
+| System clipboard → Emacs | xclip (Doom `tty` module) |
+| SSH+tmux → local clipboard (Emacs) | xterm.el OSC 52 + tmux `allow-passthrough on` |
+| SSH+tmux copy-mode (non-Emacs) | WezTerm copy mode (OSC 52 not supported over SSH — [known issue](https://github.com/wezterm/wezterm/issues/764)) |
+
+WezTerm copy mode works everywhere. tmux's OSC 52 does not reach WezTerm over SSH — use WezTerm's built-in copy mode instead. Ghostty handles SSH OSC 52 natively.
+
+**Q: Why block cursor in normal mode, bar in insert?**
+
+DECSCUSR escape sequences in `tty-config.el` — 3 lines, no extra package. `evil-terminal-cursor-changer` disabled (was conflicting with term-keys/KKP).
 
 **Q: 33 minutes for 2000 files? Really?**
 
