@@ -58,17 +58,14 @@
       "s-[" (if (< emacs-major-version 31) #'centaur-tabs-backward #'tab-previous)
       "s-]" (if (< emacs-major-version 31) #'centaur-tabs-forward #'tab-next)
 
-      "M-\\" #'other-window
-
       ;; Winner
       "C-c <left>" #'winner-undo
       "C-c <right>" #'winner-redo
 
       ;; Minibuffer access
-      "M-0" #'switch-to-minibuffer)
+      "M-0" #'switch-to-minibuffer
 
-(map! :i "M-l" #'sp-forward-slurp-sexp
-      :i "M-\\" #'sp-forward-barf-sexp
+      :in "M-\\" #'other-window
       :n "] p" (cmd! (evil-forward-paragraph) (recenter))
       :n "[ p" (cmd! (evil-backward-paragraph) (recenter))
       :n "DEL" #'evil-switch-to-windows-last-buffer

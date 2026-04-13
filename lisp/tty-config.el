@@ -10,7 +10,7 @@
 ;; 터미널(TTY) Emacs를 위한 통합 설정.
 ;; - term-keys: WezTerm 키 시퀀스 (F1~F12, Hangul, S-SPC 등)
 ;; - kitty-graphics: 터미널 이미지 표시 (Kitty/Sixel protocol)
-;; - clipboard: OSC 52 (Doom tty +osc → clipetty)
+;; - clipboard: OSC 52 (Emacs 내장 xterm.el, clipetty 제거)
 ;;
 ;; vterm/eat 같은 터미널 에뮬레이터 설정과는 별개.
 ;; 이 파일은 "Emacs 자체가 TTY에서 돌아갈 때" 필요한 설정.
@@ -58,21 +58,23 @@
   (setq kitty-gfx-max-width 100
         kitty-gfx-max-height 35))
 
-;;;; clipboard — OSC 52
+;;;; clipboard — OSC 52 (Emacs 내장 xterm.el)
 
-;; Doom (tty +osc) → clipetty 자동 활성화. 별도 설정 불필요.
+;; clipetty 제거 — write-region + terminal-name=/dev/tty 문제 회피.
+;; Emacs 29+ 내장 xterm.el의 gui-backend-set-selection이 send-string-to-terminal로
+;; OSC 52를 보내므로 /dev/tty 문제 없음.
+;; ref: llmlog 20260413T124341 (emacs terminal-name /dev/tty 문제 조사)
+;;
 ;; WezTerm: OSC 52 기본 지원 (설정 없음)
 ;; tmux: set -g set-clipboard on / allow-passthrough on (shell.nix)
+(unless (display-graphic-p)
+  (set-terminal-parameter nil 'xterm--set-selection t))
 
-;; (use-package! xclip
-;;   :config
-;;   (unless (display-graphic-p)
-;;     (xclip-mode 1)))
+;;;; Evil cursor shape (DECSCUSR) — Normal=block, Insert=bar
 
-;; (use-package! clipetty
-;;   :hook (after-init . global-clipetty-mode)
-;;   :config
-;;   (setq clipetty-assume-nested-mux nil))
+(unless (display-graphic-p)
+  (add-hook 'evil-insert-state-entry-hook (lambda () (send-string-to-terminal "\e[6 q")))
+  (add-hook 'evil-insert-state-exit-hook  (lambda () (send-string-to-terminal "\e[2 q"))))
 
 (provide 'tty-config)
 ;;; tty-config.el ends here
