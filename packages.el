@@ -171,8 +171,11 @@
 (package! magit-gh)
 (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 (package! tmr) ;; TODO Time Management
-(package! msgpack)
-(package! tramp-rpc :recipe (:host github :repo "ArthurHeymans/emacs-tramp-rpc" :files ("lisp/*.el")))
+;; (package! msgpack)
+;; (package! tramp-rpc :recipe (:host github :repo "ArthurHeymans/emacs-tramp-rpc" :files ("lisp/*.el")))
+;; ↑ native-comp(eln) 순환 로딩 문제: tramp-rpc ↔ tramp-rpc-magit recursive load
+;; autoload만으로도 eln 캐시가 미리 컴파일되어 순환 발생. Doom 30.2 native-comp 비호환.
+;; upstream 이슈 해결 후 재시도. (2026-04-13)
 
 ;;;; Transient Menu
 

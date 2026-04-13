@@ -107,11 +107,13 @@
   (setq tramp-ssh-controlmaster-options
         "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
-;;;; tramp-rpc
-;; 패키지만 설치 (packages.el), use-package! 쓰지 않음.
-;; tramp-rpc는 ;;;###autoload로 /rpc: 접근 시에만 로드됨.
-;; :after tramp 으로 넣으면 TRAMP 로드 직후 전체 로딩 → 핸들러 충돌 → 이맥스 먹통.
-;; 사용법: /rpc:user@host:/path 로 접근하면 자동 로딩.
+;;;; tramp-rpc (DISABLED)
+;; native-comp(eln) 순환 로딩: tramp-rpc ↔ tramp-rpc-magit recursive load.
+;; autoload만으로도 eln 캐시가 미리 컴파일되어 doom-first-file-hook에서 터짐.
+;; 다음 두 가지 모두 막힘:
+;;   1) :after tramp → TRAMP 핸들러 충돌 → 이맥스 먹통
+;;   2) autoload only → eln 순환 로딩 → save-place-mode 에러
+;; upstream 이슈 해결 후 재시도. (2026-04-13)
 
 ;;;; magit-gh
 
