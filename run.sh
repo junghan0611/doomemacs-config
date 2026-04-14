@@ -14,6 +14,7 @@ DOOM_BIN="$HOME/.config/emacs/bin/doom"
 BIN_DIR="$SCRIPT_DIR/bin"
 PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"
 PYTHON_VERIFY="$BIN_DIR/verify-relref.py"
+CHECK_DESC="$BIN_DIR/check-description.sh"
 ORG_ROOT="$HOME/org"
 
 # Agent server
@@ -83,9 +84,10 @@ show_menu() {
   echo "    e) agent eval"
   echo ""
   echo "  ${YELLOW}Verify${NC}"
-  echo "    V) verify relref  (검증만)"
-  echo "    F) fix relref     (DEAD/REWRITE 수정)"
-  echo "    A) fix anchors    (heading anchor 정리)"
+  echo "    V) verify relref       (검증만)"
+  echo "    C) verify description  (description/abstract 검사)"
+  echo "    F) fix relref          (DEAD/REWRITE 수정)"
+  echo "    A) fix anchors         (heading anchor 정리)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run, GUI)"
@@ -291,6 +293,11 @@ cmd_verify_relref() {
   fi
 }
 
+cmd_verify_description() {
+  [[ -x "$CHECK_DESC" ]] || { err "스크립트 없음: $CHECK_DESC"; return 1; }
+  "$CHECK_DESC" "$@"
+}
+
 # ━━━ Agent ━━━
 
 cmd_agent_start() {
@@ -406,10 +413,11 @@ cli_mode() {
     verify)
       local action="${1:-summary}"; shift || true
       case "$action" in
-        summary) cmd_verify_relref ;;
-        fix)     cmd_verify_relref --fix ;;
-        anchors) cmd_verify_relref --fix-anchors ;;
-        *)       err "verify: summary|fix|anchors" ;;
+        summary)     cmd_verify_relref ;;
+        fix)         cmd_verify_relref --fix ;;
+        anchors)     cmd_verify_relref --fix-anchors ;;
+        description) cmd_verify_description "$@" ;;
+        *)           err "verify: summary|fix|anchors|description" ;;
       esac
       ;;
     help|--help|-h)
@@ -478,6 +486,7 @@ main() {
       K) "$IGC_SCRIPT" --kill; read -p "계속하려면 Enter..."; continue ;;
       v) "$IGC_SCRIPT" --version ;;
       V) cmd_verify_relref ;;
+      C) if ! cmd_verify_description; then warn "description/abstract 누락 항목 있음"; fi ;;
       F) cmd_verify_relref --fix ;;
       A) cmd_verify_relref --fix-anchors ;;
       0|q) echo ""; success "종료"; exit 0 ;;
