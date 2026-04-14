@@ -945,6 +945,27 @@ Export File Name is the denote identifier."
              "\n#+export_file_name: %s.md"
              (denote-retrieve-filename-identifier buffer-file-name)))))
 
+;;;; Section 8: Org Macro Helper Functions
+;; Functions for use in #+macro: directives in org files.
+;; @@hugo:...@@ (export snippets) do not expand org macros internally,
+;; so these helpers generate the full Hugo snippet string.
+
+(defun jh/weekly-journal-id ()
+  "Return the Denote identifier for this week's Monday journal.
+Format: YYYYMMDDTXXXXXX based on the most recent Monday."
+  (format-time-string
+   "%Y%m%dT000000"
+   (time-subtract (current-time)
+                  (days-to-time
+                   (1- (string-to-number (format-time-string "%u")))))))
+
+(defun jh/weekly-journal-hugo-link (text)
+  "Return a full Hugo export snippet linking TEXT to this week's journal.
+Intended for use in #+macro: weekly-journal-link."
+  (format "@@hugo:[%s]({{< relref \"/journal/%s\" >}})@@"
+          text
+          (jh/weekly-journal-id)))
+
 ;;;; pass CLI integration
 ;; Future enhancement: Integrate password-store for secret validation
 ;; (defun my/validate-secrets-before-export () ...)
