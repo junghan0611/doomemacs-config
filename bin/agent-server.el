@@ -558,6 +558,190 @@ org-journal 미로드 환경에서 직접 경로 계산.
                   (revert-buffer t t t)))
             (find-file-noselect true-path)))))))
 
+(defun agent-org-agenda--agenda-files-expanded ()
+  "Return `org-agenda-files' with directory entries expanded to .org files."
+  (cl-mapcan (lambda (entry)
+               (if (file-directory-p entry)
+                   (directory-files entry t "\\.org$")
+                 (list entry)))
+             org-agenda-files))
+
+(defun agent-org-agenda--normalize-timestamp (timestamp)
+  "Normalize TIMESTAMP for compact plain-text output."
+  (when timestamp
+    (string-trim
+     (replace-regexp-in-string
+      "\\(<[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\) [A-Za-z]\\{3\\}\\(?: [0-9]\\{2\\}:[0-9]\\{2\\}\\)?\\(>\\)"
+      "\\1\\2"
+      timestamp))))
+
+(defun agent-org-agenda--timestamp-at-point ()
+  "Return SCHEDULED/DEADLINE/first active timestamp for current entry."
+  (save-excursion
+    (let ((end (save-excursion (org-end-of-subtree t t)))
+          found)
+      (when (re-search-forward
+             "^[ 	]*\\(?:SCHEDULED:\\|DEADLINE:\\)[ 	]*\\(<[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}[^>\\n]*>\\(?:--<[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}[^>\\n]*>\\)?\\)"
+             end t)
+        (setq found (match-string-no-properties 1)))
+      (or found
+          (progn
+            (goto-char (line-end-position))
+            (when (re-search-forward
+                   "\\(<[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}[^>\\n]*>\\(?:--<[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}[^>\\n]*>\\)?\\)"
+                   end t)
+              (match-string-no-properties 1)))))))
+
+(defun agent-org-agenda--project-at-point ()
+  "Return ancestor level-2 project heading name at point, or nil.
+A project heading is a level-2 heading tagged with GH/WORK/3RD."
+  (save-excursion
+    (let ((project nil)
+          (project-tags '("GH" "WORK" "3RD")))
+      (while (and (not project) (org-up-heading-safe))
+        (when (and (= (org-outline-level) 2)
+                   (seq-some (lambda (tag)
+                               (member tag (org-get-tags nil t)))
+                             project-tags))
+          (setq project (org-get-heading t t t t))))
+      project)))
+
+(defun agent-org-agenda--todo-item-at-point ()
+  "Return plist describing current TODO entry, or nil if it is done."
+  (let ((todo (org-get-todo-state)))
+    (when (and todo (not (member todo org-done-keywords)))
+      (list :todo todo
+            :title (org-get-heading t t t t)
+            :priority (or (org-entry-get nil "PRIORITY")
+                          (char-to-string org-default-priority))
+            :timestamp (agent-org-agenda--normalize-timestamp
+                        (agent-org-agenda--timestamp-at-point))
+            :tags (org-get-tags nil t)
+            :project (agent-org-agenda--project-at-point)))))
+
+(defun agent-org-agenda--collect-todos (&optional project priority)
+  "Collect open TODO entries from `org-agenda-files'."
+  (let ((files (agent-org-agenda--agenda-files-expanded))
+        (wanted-project (and project (downcase project)))
+        (wanted-priority (and priority (upcase priority)))
+        items)
+    (dolist (file files)
+      (when (and (file-exists-p file) (not (file-directory-p file)))
+        (let* ((true-path (file-truename file))
+               (existing-buf (or (get-file-buffer file)
+                                 (get-file-buffer true-path)))
+               (buf (or existing-buf (find-file-noselect true-path))))
+          (unwind-protect
+              (with-current-buffer buf
+                (org-with-wide-buffer
+                 (goto-char (point-min))
+                 (org-map-entries
+                  (lambda ()
+                    (when-let* ((item (agent-org-agenda--todo-item-at-point))
+                                (item-project (plist-get item :project))
+                                (item-priority (plist-get item :priority)))
+                      (when (and (or (null wanted-project)
+                                     (and item-project
+                                          (string= (downcase item-project)
+                                                   wanted-project)))
+                                 (or (null wanted-priority)
+                                     (string= (upcase item-priority)
+                                              wanted-priority)))
+                        (push item items))))
+                  nil 'file)))
+            (unless existing-buf
+              (when (buffer-live-p buf)
+                (kill-buffer buf)))))))
+    items))
+
+(defun agent-org-agenda--priority-rank (priority)
+  "Return numeric sort rank for PRIORITY string."
+  (cond ((string= priority "A") 0)
+        ((string= priority "B") 1)
+        ((string= priority "C") 2)
+        ((string= priority "D") 3)
+        (t 9)))
+
+(defun agent-org-agenda--item< (a b)
+  "Sort predicate for todo item plists A and B."
+  (let ((a-project (or (plist-get a :project) "~"))
+        (b-project (or (plist-get b :project) "~"))
+        (a-priority (plist-get a :priority))
+        (b-priority (plist-get b :priority))
+        (a-ts (or (plist-get a :timestamp) ""))
+        (b-ts (or (plist-get b :timestamp) ""))
+        (a-title (plist-get a :title))
+        (b-title (plist-get b :title)))
+    (cond
+     ((not (string= a-project b-project))
+      (string< a-project b-project))
+     ((/= (agent-org-agenda--priority-rank a-priority)
+          (agent-org-agenda--priority-rank b-priority))
+      (< (agent-org-agenda--priority-rank a-priority)
+         (agent-org-agenda--priority-rank b-priority)))
+     ((not (string= a-ts b-ts))
+      (string< a-ts b-ts))
+     (t
+      (string< a-title b-title)))))
+
+(defun agent-org-agenda--format-item (item &optional indent)
+  "Format todo ITEM as one-line plain text."
+  (let* ((prefix (or indent ""))
+         (priority (plist-get item :priority))
+         (title (plist-get item :title))
+         (timestamp (plist-get item :timestamp))
+         (tags (plist-get item :tags))
+         (tags-text (when tags
+                      (format "  :%s:" (string-join tags ":")))))
+    (string-trim-right
+     (format "%s[#%s] %s%s%s"
+             prefix
+             priority
+             title
+             (if timestamp (format "  %s" timestamp) "")
+             (or tags-text "")))))
+
+(defun agent-org-agenda-todos (&optional project priority)
+  "프로젝트/우선순위로 필터링된 TODO 목록을 반환.
+PROJECT: heading 이름 (andenken, blog 등). nil이면 전체.
+PRIORITY: A, B, C. nil이면 전체.
+
+프로젝트 구분은 분신 어젠다 파일 내 level-2 heading의 태그(:GH:, :WORK:, :3RD:)가 달린
+heading 이름을 기준으로 합니다. 예: '** andenken :GH:' → project = andenken
+
+반환 형식은 기존 `agent-org-agenda-day'와 동일하게 plain text string."
+  (when (fboundp 'my/org-agenda-files-rebuild)
+    (my/org-agenda-files-rebuild))
+  (agent-org-agenda--ensure-journal)
+  (agent-org-agenda--refresh-buffers)
+  (set-frame-width nil 300)
+  (let* ((items (sort (agent-org-agenda--collect-todos project priority)
+                      #'agent-org-agenda--item<))
+         (buf (get-buffer-create " *agent-org-agenda-todos*")))
+    (with-current-buffer buf
+      (erase-buffer)
+      (if project
+          (if items
+              (dolist (item items)
+                (insert (agent-org-agenda--format-item item) "\n"))
+            (insert (format "No TODOs for project: %s" project)))
+        (if items
+            (let ((groups (sort (seq-group-by (lambda (item)
+                                                (or (plist-get item :project) "기타"))
+                                              items)
+                                (lambda (a b) (string< (car a) (car b))))))
+              (dolist (group groups)
+                (insert (format "%s (%d)\n" (car group) (length (cdr group))))
+                (dolist (item (cdr group))
+                  (insert (agent-org-agenda--format-item item "  ") "\n"))
+                (unless (eq group (car (last groups)))
+                  (insert "\n"))))
+          (insert "No open TODOs"))))
+    (with-current-buffer buf
+      (let ((content (buffer-substring-no-properties (point-min) (point-max))))
+        (kill-buffer buf)
+        content))))
+
 (defun agent-org-agenda-day (&optional date)
   "오늘(또는 DATE) 일간 agenda 뷰를 clean text로 반환.
 DATE는 \"-1\" (어제), \"+3\" (3일 후), \"2026-03-01\" 등.
@@ -855,7 +1039,7 @@ DESCRIPTION is the link text.  Returns OK/ERROR string."
 (message "[agent-server]      agent-denote-rename-bulk,")
 (message "[agent-server]      agent-org-dblock-update,")
 (message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
-(message "[agent-server]      agent-org-agenda-tags,")
+(message "[agent-server]      agent-org-agenda-tags, agent-org-agenda-todos,")
 (message "[agent-server]      agent-denote-keywords, agent-denote-add-history,")
 (message "[agent-server]      agent-denote-add-heading, agent-denote-add-link")
 (message "[agent-server] REPL: emacs_eval for runtime extension")

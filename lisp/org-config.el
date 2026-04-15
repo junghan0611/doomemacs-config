@@ -67,15 +67,22 @@
 
     ;; https://orgmode.org/worg/org-tutorials/org-custom-agenda-commands.html
     (setq org-agenda-custom-commands
-          '(("n" "Agenda / NEXT"
-             ((agenda "" nil)
-              (tags "INBOX+LEVEL=2|CATEGORY=\"Inbox\"+LEVEL=1")
-              (todo "NEXT" nil)
-              ;; (todo "TODO" nil) ;; 2024-03-18 add
-              ) nil)
-            (" " "Agenda and all TODOs" ; default' view
-             ((agenda "")
-              (alltodo "")))))
+          '(("d" "오늘 할 것"
+             ((agenda "" ((org-agenda-span 'day)))
+              (todo "NEXT" nil)))
+            ("w" "이번 주"
+             ((agenda "" ((org-agenda-span 'week)
+                           (org-agenda-start-on-weekday 1)))))
+            ("p" "프로젝트별 TODO"
+             ((tags-todo "GH"
+                         ((org-agenda-overriding-header "GitHub 프로젝트")))
+              (tags-todo "WORK"
+                         ((org-agenda-overriding-header "회사 프로젝트")))))
+            ("a" "우선순위 [#A]"
+             ((tags-todo "+PRIORITY=\"A\"")))
+            (" " "기본: 오늘 + NEXT"
+             ((agenda "" ((org-agenda-span 'day)))
+              (todo "NEXT" nil)))))
     )
 
 ;;;; custom agenda files
