@@ -43,6 +43,10 @@
   (setq denote-sort-keywords t)
   (setq denote-infer-keywords t)
   (setq denote-excluded-directories-regexp "screenshot")
+
+  ;; The default sequence scheme is `numeric'.
+  (setq denote-sequence-scheme 'alphanumeric)
+
   (setq denote-org-front-matter
         "#+title:      %1$s
 #+filetags:   %3$s
@@ -51,9 +55,14 @@
 #+identifier: %4$s
 #+export_file_name: %4$s.md
 #+description:
-#+hugo_tags: temp
 #+hugo_categories: Noname
-#+print_bibliography:\n* History\n- %2$s\n* Related-Notes\n\n")
+#+OPTIONS: toc:1
+#+begin_quote
+[!abstract] 이 노트에 대하여
+
+#+end_quote
+
+\n* #히스토리\n- %2$s\n* #관련메타\n- \n#+print_bibliography:\n\n* #관련노트\n\n")
 
   ;; Automatically rename Denote buffers using the `denote-rename-buffer-format'.
   (setq denote-prompts '(subdirectory title keywords)) ; These are the minimum viable prompts for notes

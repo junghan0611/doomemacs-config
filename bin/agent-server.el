@@ -167,6 +167,9 @@
 
 ;; Denote extensions
 (require 'denote-regexp nil t)
+(condition-case nil (require 'denote-sequence) (error nil))  ; signature(==) 파일 지원
+(when (featurep 'denote-sequence)
+  (setq denote-sequence-scheme 'alphanumeric))  ; 힣 설정과 동일 (1j, 0zt 등)
 (condition-case nil (require 'denote-org) (error nil))
 (condition-case nil (require 'denote-explore) (error nil))
 
@@ -305,7 +308,7 @@ Returns t if allowed, signals error if not."
           denote-directory
           (mapconcat #'symbol-name
                      (seq-filter (lambda (f) (featurep f))
-                                 '(org denote citar oc oc-csl denote-org denote-explore))
+                                 '(org denote citar oc oc-csl denote-sequence denote-org denote-explore))
                      " ")
           (emacs-uptime)))
 
@@ -408,12 +411,19 @@ Rename 후 검증: front-matter의 #+title, #+filetags 와 파일명이 일치�
         (denote-kill-buffers 'on-rename))
     (dolist (file files)
       (when (denote-file-has-identifier-p file)
-        (condition-case nil
-            (progn
-              (denote-rename-file-using-front-matter file)
-              (cl-incf renamed))
-          (user-error (cl-incf skipped))
-          (error (cl-incf errors)))))
+        ;; == (signature/sequence) 파일은 front matter에 #+signature: 없으면 건너뜀
+        ;; rename 시 sequence가 제거되는 것을 방지
+        (if (and (string-match "==" (file-name-nondirectory file))
+                 (not (with-temp-buffer
+                        (insert-file-contents file nil 0 500)
+                        (re-search-forward "^#\\+signature:" nil t))))
+            (cl-incf skipped)
+          (condition-case nil
+              (progn
+                (denote-rename-file-using-front-matter file)
+                (cl-incf renamed))
+            (user-error (cl-incf skipped))
+            (error (cl-incf errors))))))
     (format "Done: %d renamed, %d skipped, %d errors (total: %d files)"
             renamed skipped errors (length files))))
 
