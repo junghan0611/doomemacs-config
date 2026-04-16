@@ -345,7 +345,7 @@
         (insert (format "#+identifier: %s\n" suffix))
         (insert (format "#+export_file_name: %s.md\n" suffix))
         (insert (format "#+description: %s\n" suffix))
-        (insert (format "#+hugo_categories: Noname\n#+OPTIONS: toc:1\n"))
+        (insert (format "#+hugo_categories: Noname\n"))
 
         (insert (format "\n* 히스토리\n- %s Created!" (format-time-string "[%Y-%m-%d %a %H:%M]")))
         (insert (format "\n* 관련메타\n- \n#+print_bibliography:\n\n"))

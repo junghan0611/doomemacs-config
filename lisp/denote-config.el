@@ -56,7 +56,6 @@
 #+export_file_name: %4$s.md
 #+description:
 #+hugo_categories: Noname
-#+OPTIONS: toc:1
 #+begin_quote
 [!abstract] 이 노트에 대하여
 
