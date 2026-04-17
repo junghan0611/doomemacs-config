@@ -13,6 +13,13 @@
 (when (display-graphic-p) ; terminal
   (setq doom-font (font-spec :family "GLG Nerd Font Mono" :size 15.1)))
 
+;; Emoji: Noto Emoji(monochrome) 고정.
+;; Why: Doom 기본 fallback 리스트는 "Noto Color Emoji"가 "Noto Emoji"보다 앞이라,
+;; cl-find-if가 컬러 폰트를 먼저 잡아 'emoji fontset에 등록한다. 이후 prepend로
+;; Noto Emoji를 얹어도 컬러 폰트는 fontset에 남아 VS-16 이모지가 컬러로 폴백되며
+;; 글리프 크기가 들쭉날쭉해진다. doom-emoji-font를 명시하면 find-if가 스킵된다.
+(setq doom-emoji-font (font-spec :family "Noto Emoji"))
+
 ;; (setq doom-font (font-spec :family "Monoplex Nerd" :size 14.0)
 ;;       doom-big-font (font-spec :family "Monoplex Nerd" :size 24.0)
 ;;       doom-variable-pitch-font (font-spec :family "Pretendard Variable" :size 14.0)
