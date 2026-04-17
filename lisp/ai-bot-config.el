@@ -79,6 +79,78 @@
   (add-hook 'telega-root-mode-hook #'doom-mark-buffer-as-real-h)
   (add-hook 'telega-chat-mode-hook #'doom-mark-buffer-as-real-h)
 
+  ;; 메시지 본문 속 smart punctuation/bullet을 ASCII로 표시 치환.
+  ;; Why: "• " " ' ' — – …" 같은 문자가 CJK 폰트에서 2-cell로 잡혀
+  ;; 메시지 정렬이 깨진다. 원문은 손대지 않고 display-table로 보여주기만 바꾼다.
+  (defun my/telega-chat-display-table-setup ()
+    "Telega chat 버퍼에서 cell drift 유발 문자를 ASCII로 치환 표시."
+    (unless buffer-display-table
+      (setq buffer-display-table (make-display-table)))
+    (dolist (pair '((?\u2022 . "+")    ; • bullet
+                    (?\u201C . "\"")   ; " left double quote
+                    (?\u201D . "\"")   ; " right double quote
+                    (?\u2018 . "'")    ; ' left single quote
+                    (?\u2019 . "'")    ; ' right single quote
+                    (?\u2014 . "--")   ; — em dash
+                    (?\u2013 . "-")    ; – en dash
+                    (?\u2026 . "...")  ; … horizontal ellipsis
+                    (?\u00B7 . ".")))  ; · middle dot
+      (aset buffer-display-table (car pair)
+            (vconcat (mapcar (lambda (c) (make-glyph-code c)) (cdr pair))))))
+  (add-hook 'telega-chat-mode-hook #'my/telega-chat-display-table-setup)
+  (add-hook 'telega-root-mode-hook #'my/telega-chat-display-table-setup)
+
+  ;; Unicode Cell Drift 회피 — 이모지 심볼을 ASCII/박스문자로 대체.
+  ;; Why: telega 기본 심볼들(📎📷🎶📹⌛⛔⭐📌🔔 등)은 흑백 Noto Emoji로도
+  ;; 폰트별 advance width가 제각각이라 터미널·GUI에서 버퍼 정렬이 깨진다.
+  ;; chat-list와 메시지 본문에서 가장 자주 노출되는 심볼만 선별적으로 덮어쓴다.
+  (setq telega-symbol-attachment      "@"
+        telega-symbol-photo           "#"
+        telega-symbol-audio           "~"
+        telega-symbol-video           "v"
+        telega-symbol-game            "G"
+        telega-symbol-pending         "."
+        telega-symbol-checkmark       "v"
+        telega-symbol-heavy-checkmark "V"
+        telega-symbol-ton             "T"
+        telega-symbol-verified        "V"
+        telega-symbol-verified-by-bot "A+"
+        telega-symbol-failed          "!"
+        telega-symbol-star            "*"
+        telega-symbol-lightning       "~"
+        telega-symbol-location        "@"
+        telega-symbol-phone           "T"
+        telega-symbol-member          "u"
+        telega-symbol-contact         "C"
+        telega-symbol-play            ">"
+        telega-symbol-pause           "="
+        telega-symbol-invoice         "$"
+        telega-symbol-credit-card     "$"
+        telega-symbol-poll            "P"
+        telega-symbol-alarm           "a"
+        telega-symbol-dice            "D"
+        telega-symbol-folder          "/"
+        telega-symbol-multiple-folders "//"
+        telega-symbol-direct-messages ">>"
+        telega-symbol-pin             "*"
+        telega-symbol-lock            "L"
+        telega-symbol-flames          "~"
+        telega-symbol-eye             "o"
+        telega-symbol-keyboard        "K"
+        telega-symbol-bulp            "i"
+        telega-symbol-chat-list       "="
+        telega-symbol-bell            "!"
+        telega-symbol-favorite        "*"
+        telega-symbol-leave-comment   "c"
+        telega-symbol-timer           "t"
+        telega-symbol-distance        "d"
+        telega-symbol-reaction        "+"
+        telega-symbol-premium         "*"
+        telega-symbol-forum           "F"
+        telega-symbol-my-notes        "N"
+        telega-symbol-bot-menu        "="
+        telega-symbol-checklist       "[x]")
+
   ;; WORKAROUND: telega 이벤트 핸들러에서 setTdlibParameters 전송 실패 시
   ;; WaitTdlibParameters 상태에서 벗어나지 못하는 버그 우회
   ;; TODO: telega upstream에서 수정되면 제거

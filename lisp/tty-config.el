@@ -76,5 +76,18 @@
   (add-hook 'evil-insert-state-entry-hook (lambda () (send-string-to-terminal "\e[6 q")))
   (add-hook 'evil-insert-state-exit-hook  (lambda () (send-string-to-terminal "\e[2 q"))))
 
+;;;; Visual tweaks — GUI 감성의 터미널 분할선/모드라인
+
+;; 창 분할 세로선: ASCII '|' → U+2502 '│' (Box Drawings Light Vertical)
+;; 인접 글자와 붙지 않는 얇고 매끈한 경계 — TTY에서 GUI에 가까운 느낌.
+;; ref: https://www.masteringemacs.org/article/slimmer-emacs-kitty
+(unless (display-graphic-p)
+  (set-display-table-slot standard-display-table
+                          'vertical-border
+                          (make-glyph-code ?│)))
+
+;; 모드라인 끝 trailing space 제거 — GUI/TTY 공통 무해
+(setq mode-line-end-spaces nil)
+
 (provide 'tty-config)
 ;;; tty-config.el ends here
