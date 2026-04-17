@@ -104,9 +104,13 @@
     (when (display-graphic-p) ; gui
       (set-fontset-font t 'unicode (font-spec :family "Symbola") nil 'prepend) ;; 2024-09-16 테스트 -- 𝑀＜1
       (set-fontset-font t 'mathematical (font-spec :family "Symbola") nil 'prepend) ; best
-      ;; (set-fontset-font t 'emoji (font-spec :family "Noto Color Emoji") nil)
-      (set-fontset-font t 'emoji (font-spec :family "Noto Emoji") nil 'prepend) ; Top
-      )
+      ;; 기존 'emoji 폰트 폴백 전부 제거 후 Noto Emoji만 등록 —
+      ;; 시스템 fontconfig가 fontset에 심어둔 Noto Color Emoji를 명시적으로 쫓아낸다.
+      (set-fontset-font t 'emoji nil)
+      (set-fontset-font "fontset-default" 'emoji nil)
+      (set-fontset-font t 'emoji (font-spec :family "Noto Emoji"))
+      ;; Symbola 보조: Noto Emoji에 없는 유니코드 보완(흑백 유지)
+      (set-fontset-font t 'emoji (font-spec :family "Symbola") nil 'append))
 
     (unless (display-graphic-p) ; terminal
       ;; 터미널에서는 Noto Color Emoji 사용 (컬러 이모지 지원시)

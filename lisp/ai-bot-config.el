@@ -31,6 +31,16 @@
                                      (file-expand-wildcards "/nix/store/*-tdlib-*"))
                          #'string<))))
 
+  ;; Emoji OFF — defcustom 평가 전 pre-bind.
+  ;; Why: telega-customize.el의 telega-emoji-font-family defcustom이 초기화 시
+  ;; (font-family-list)로 "Noto Color Emoji"를 적극 선택한다. 이미지는 꺼져있지만
+  ;; 이 조회 과정에서 시스템 fontconfig가 컬러 이모지 폰트를 Emacs fontset에 캐싱하여,
+  ;; GUI Emacs 전체 이모지 렌더링이 컬러↔흑백으로 들쭉날쭉해진다.
+  ;; 변수를 미리 bind해두면 defcustom이 기본값 람다를 평가하지 않는다.
+  (setq telega-emoji-font-family nil
+        telega-emoji-use-images nil
+        telega-emoji-large-height nil)
+
   :config
   ;; 봇 전용 최소 설정
   (setq telega-completing-read-function #'completing-read
