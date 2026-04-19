@@ -58,70 +58,67 @@
   (setq kitty-gfx-max-width 100
         kitty-gfx-max-height 35))
 
-;;;; clipboard — OSC 52 (Emacs 내장 xterm.el)
+;;;; TTY 설정 진입점 — 타이밍 정렬
 
-;; clipetty 제거 — write-region + terminal-name=/dev/tty 문제 회피.
-;; Emacs 29+ 내장 xterm.el의 gui-backend-set-selection이 send-string-to-terminal로
-;; OSC 52를 보내므로 /dev/tty 문제 없음.
-;; ref: llmlog 20260413T124341 (emacs terminal-name /dev/tty 문제 조사)
+;; `display-graphic-p` 는 파일 로드 시점에 신뢰 불가.
+;;   - daemon 로드 시점: frame 자체가 없음 → 항상 t 반환
+;;   - non-daemon 로드 시점: Doom 이 이후 hook 단계에서 TTY 설정을 켬
+;;     * xterm-mouse-mode → tty-setup-hook (modules/os/tty/config.el)
+;;     * show-paren-mode  → doom-first-buffer-hook (doom-ui.el)
+;; 따라서 `(unless (display-graphic-p) ...)` 를 top-level 에서 실행하면
+;; Doom 이 뒤에 다시 켜 덮어쓴다. 모든 TTY 설정은 hook 으로 미루고,
+;; Doom 의 같은 hook 보다 뒤에 돌도록 :append 로 붙인다.
 ;;
-;; WezTerm: OSC 52 기본 지원 (설정 없음)
-;; tmux: set -g set-clipboard on / allow-passthrough on (shell.nix)
-(unless (display-graphic-p)
-  (set-terminal-parameter nil 'xterm--set-selection t))
+;; frame-local 설정(OSC 52, display-table, cursor shape, FE0F 숨김)도
+;; tty-setup-hook 에서 수행해 daemon + GUI/TTY 혼합 환경을 정상 처리.
+
+(defun +tty-setup ()
+  "TTY frame 전용 세팅. tty-setup-hook / doom-first-buffer-hook 에서 호출."
+  (when (not (display-graphic-p))
+    ;; OSC 52 selection (frame-local) — Emacs 29+ 내장 xterm.el 경로
+    (set-terminal-parameter nil 'xterm--set-selection t)
+    ;; 가벼움 — 에이전트 프론트엔드는 키보드-only
+    (xterm-mouse-mode -1)
+    (show-paren-mode -1)
+    ;; vertical-border: ASCII '|' → U+2502 '│' (GUI 감성의 얇은 경계)
+    (set-display-table-slot standard-display-table
+                            'vertical-border (make-glyph-code ?│))
+    ;; VS-16 (U+FE0F) 숨김 — per-grapheme-cluster 렌더 경로 차단
+    ;; WezTerm cell_widths(per-codepoint)만으론 드리프트 커버 불가.
+    ;; 버퍼 원문은 보존, 화면 송출에서만 제거.
+    ;; ref: llmlog 20260417T173916
+    (aset standard-display-table #xFE0F (vector))))
+
+(add-hook 'tty-setup-hook #'+tty-setup 'append)
+(add-hook 'doom-first-buffer-hook #'+tty-setup 'append)
+
+;;;; buffer-local vertical-border 패치
+
+;; org/markdown 등은 buffer-display-table 을 자기 용도로 세팅한다.
+;; 그러면 standard-display-table 의 vertical-border 슬롯이 묻히므로,
+;; 버퍼 로컬 테이블이 생성된 후 그 슬롯을 직접 덮어쓴다.
+;; 참고: display-table 해석 우선순위 — window > buffer > standard.
+(defun +tty-patch-vertical-border ()
+  "Patch vertical-border slot on current buffer's display-table, if any."
+  (when (and (not (display-graphic-p)) buffer-display-table)
+    (set-display-table-slot buffer-display-table
+                            'vertical-border (make-glyph-code ?│))))
+(add-hook 'after-change-major-mode-hook #'+tty-patch-vertical-border)
 
 ;;;; Evil cursor shape (DECSCUSR) — Normal=block, Insert=bar
 
-(unless (display-graphic-p)
-  (add-hook 'evil-insert-state-entry-hook (lambda () (send-string-to-terminal "\e[6 q")))
-  (add-hook 'evil-insert-state-exit-hook  (lambda () (send-string-to-terminal "\e[2 q"))))
+;; hook 은 GUI/TTY 공용으로 등록하되, 실행 시점에 current frame 이
+;; TTY 일 때만 escape 시퀀스를 송출한다. daemon + GUI/TTY 혼합 대응.
+(defun +tty-evil-cursor-insert ()
+  (unless (display-graphic-p) (send-string-to-terminal "\e[6 q")))
+(defun +tty-evil-cursor-normal ()
+  (unless (display-graphic-p) (send-string-to-terminal "\e[2 q")))
+(add-hook 'evil-insert-state-entry-hook #'+tty-evil-cursor-insert)
+(add-hook 'evil-insert-state-exit-hook  #'+tty-evil-cursor-normal)
 
-;;;; Visual tweaks — GUI 감성의 터미널 분할선/모드라인
+;;;; 모드라인 trailing space 제거 — GUI/TTY 공통 무해
 
-;; 창 분할 세로선: ASCII '|' → U+2502 '│' (Box Drawings Light Vertical)
-;; 인접 글자와 붙지 않는 얇고 매끈한 경계 — TTY에서 GUI에 가까운 느낌.
-;; ref: https://www.masteringemacs.org/article/slimmer-emacs-kitty
-;;
-;; Emacs 디스플레이 테이블 해석: window > buffer > standard (첫 non-nil 테이블).
-;; org/markdown 처럼 buffer-display-table 을 자기 용도로 세팅하는 모드에서는
-;; standard-display-table 의 vertical-border 슬롯이 묻힌다. 그래서 버퍼 로컬
-;; 테이블이 이미 있을 땐 그 슬롯을 직접 덮어써 준다.
-(unless (display-graphic-p)
-  (set-display-table-slot standard-display-table
-                          'vertical-border
-                          (make-glyph-code ?│))
-  (defun +tty-patch-vertical-border ()
-    "Patch vertical-border slot on current buffer's display-table, if any."
-    (when buffer-display-table
-      (set-display-table-slot buffer-display-table
-                              'vertical-border
-                              (make-glyph-code ?│))))
-  (add-hook 'after-change-major-mode-hook #'+tty-patch-vertical-border))
-
-;; 모드라인 끝 trailing space 제거 — GUI/TTY 공통 무해
 (setq mode-line-end-spaces nil)
-
-;;;; Lightweight TTY — 에이전트 프론트엔드는 키보드-only, 가벼움 우선
-
-;; 마우스 이벤트 처리 제거 — 에이전트 프론트엔드는 키보드로만 운용
-;; show-paren-mode 비활성 — org 읽기/쓰기 위주, paren highlight 비용 절감
-(unless (display-graphic-p)
-  (xterm-mouse-mode -1)
-  (show-paren-mode -1))
-
-;;;; VS-16 드리프트 우회 — FE0F 렌더링 숨김
-
-;; WezTerm cell_widths 는 per-codepoint. VS-16 (U+FE0F) 시퀀스는
-;; per-grapheme-cluster 렌더 경로라 cell_widths 를 우회할 수 있다.
-;; → WezTerm 레이어에서 완전 커버 불가.
-;;
-;; 대안: Emacs 가 터미널로 FE0F 를 아예 송출하지 않게 display-table 로 숨김.
-;; 버퍼 원문은 보존 (복사/저장/검색 모두 FE0F 유지). 화면만 base 단독으로.
-;; 결과: WezTerm 은 base 만 받아서 cell_widths 의 2셀 선언대로 렌더.
-;;
-;; ref: llmlog 20260417T173916 (유니코드 셀 드리프트)
-(unless (display-graphic-p)
-  (aset standard-display-table #xFE0F (vector)))
 
 (provide 'tty-config)
 ;;; tty-config.el ends here
