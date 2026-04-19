@@ -81,13 +81,33 @@
 ;; 창 분할 세로선: ASCII '|' → U+2502 '│' (Box Drawings Light Vertical)
 ;; 인접 글자와 붙지 않는 얇고 매끈한 경계 — TTY에서 GUI에 가까운 느낌.
 ;; ref: https://www.masteringemacs.org/article/slimmer-emacs-kitty
+;;
+;; Emacs 디스플레이 테이블 해석: window > buffer > standard (첫 non-nil 테이블).
+;; org/markdown 처럼 buffer-display-table 을 자기 용도로 세팅하는 모드에서는
+;; standard-display-table 의 vertical-border 슬롯이 묻힌다. 그래서 버퍼 로컬
+;; 테이블이 이미 있을 땐 그 슬롯을 직접 덮어써 준다.
 (unless (display-graphic-p)
   (set-display-table-slot standard-display-table
                           'vertical-border
-                          (make-glyph-code ?│)))
+                          (make-glyph-code ?│))
+  (defun +tty-patch-vertical-border ()
+    "Patch vertical-border slot on current buffer's display-table, if any."
+    (when buffer-display-table
+      (set-display-table-slot buffer-display-table
+                              'vertical-border
+                              (make-glyph-code ?│))))
+  (add-hook 'after-change-major-mode-hook #'+tty-patch-vertical-border))
 
 ;; 모드라인 끝 trailing space 제거 — GUI/TTY 공통 무해
 (setq mode-line-end-spaces nil)
+
+;;;; Lightweight TTY — 에이전트 프론트엔드는 키보드-only, 가벼움 우선
+
+;; 마우스 이벤트 처리 제거 — 에이전트 프론트엔드는 키보드로만 운용
+;; show-paren-mode 비활성 — org 읽기/쓰기 위주, paren highlight 비용 절감
+(unless (display-graphic-p)
+  (xterm-mouse-mode -1)
+  (show-paren-mode -1))
 
 (provide 'tty-config)
 ;;; tty-config.el ends here
