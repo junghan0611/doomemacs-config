@@ -109,5 +109,19 @@
   (xterm-mouse-mode -1)
   (show-paren-mode -1))
 
+;;;; VS-16 드리프트 우회 — FE0F 렌더링 숨김
+
+;; WezTerm cell_widths 는 per-codepoint. VS-16 (U+FE0F) 시퀀스는
+;; per-grapheme-cluster 렌더 경로라 cell_widths 를 우회할 수 있다.
+;; → WezTerm 레이어에서 완전 커버 불가.
+;;
+;; 대안: Emacs 가 터미널로 FE0F 를 아예 송출하지 않게 display-table 로 숨김.
+;; 버퍼 원문은 보존 (복사/저장/검색 모두 FE0F 유지). 화면만 base 단독으로.
+;; 결과: WezTerm 은 base 만 받아서 cell_widths 의 2셀 선언대로 렌더.
+;;
+;; ref: llmlog 20260417T173916 (유니코드 셀 드리프트)
+(unless (display-graphic-p)
+  (aset standard-display-table #xFE0F (vector)))
+
 (provide 'tty-config)
 ;;; tty-config.el ends here

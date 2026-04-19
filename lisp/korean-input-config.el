@@ -7,7 +7,7 @@
 ;; - 터미널 한영키: term-keys + wezterm 조합으로 RightAlt/S-SPC 전달
 ;; - Evil 모드 연동 (Normal→입력기 OFF, Insert→복원)
 ;; - NFD→NFC: 수동 변환만 지원 (M-x korean/nfc-normalize-buffer)
-;; - 폰트/이모지: Noto Emoji + Symbola fallback
+;; - 폰트/이모지: Noto Emoji + Noto Sans Symbols 1/2 + Noto Sans Math fallback
 ;;
 ;; 터미널 한영키 흐름:
 ;;   Right Alt → xkb(us) Alt_R → fcitx5 통과 → wezterm RightAlt
@@ -115,44 +115,61 @@
     (set-fontset-font "fontset-default" 'hangul (font-spec :family (face-attribute 'default :family)))
 
     (when (display-graphic-p) ; gui
-      (set-fontset-font t 'unicode (font-spec :family "Symbola") nil 'prepend) ;; 2024-09-16 테스트 -- 𝑀＜1
-      (set-fontset-font t 'mathematical (font-spec :family "Symbola") nil 'prepend) ; best
+      ;; Symbola 제거 — Noto 심볼 시리즈로 통합 fallback.
+      ;; prepend 누적: 마지막 prepend가 최우선. 아래 순서면
+      ;; Noto Sans Symbols → Symbols 2 → Math 순으로 조회.
+      (set-fontset-font t 'mathematical (font-spec :family "Noto Sans Math") nil 'prepend)
+      (set-fontset-font t 'unicode (font-spec :family "Noto Sans Math") nil 'prepend)
+      (set-fontset-font t 'unicode (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
+      (set-fontset-font t 'unicode (font-spec :family "Noto Sans Symbols") nil 'prepend)
       ;; 기존 'emoji 폰트 폴백 전부 제거 후 Noto Emoji만 등록 —
       ;; 시스템 fontconfig가 fontset에 심어둔 Noto Color Emoji를 명시적으로 쫓아낸다.
       (set-fontset-font t 'emoji nil)
       (set-fontset-font "fontset-default" 'emoji nil)
-      (set-fontset-font t 'emoji (font-spec :family "Noto Emoji"))
-      ;; Symbola 보조: Noto Emoji에 없는 유니코드 보완(흑백 유지)
-      (set-fontset-font t 'emoji (font-spec :family "Symbola") nil 'append))
+      (set-fontset-font t 'emoji (font-spec :family "Noto Emoji")))
 
     (unless (display-graphic-p) ; terminal
-      ;; 터미널에서는 Noto Color Emoji 사용 (컬러 이모지 지원시)
+      ;; 터미널에서는 Noto Emoji (monochrome) 사용
       (set-fontset-font "fontset-default" 'emoji (font-spec :family "Noto Emoji") nil)
-      ;; Symbola: Noto Emoji에 없는 유니코드 보완 (U+1F5Ex 등)
-      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Symbola") nil 'append)
+      ;; Symbola 제거 — Noto 시리즈로 유니코드 보완.
+      ;; append 순서가 조회 순서. Symbols(넓은 범위) → Symbols 2 → Math.
+      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Symbols") nil 'append)
+      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Symbols 2") nil 'append)
+      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Math") nil 'append)
 
-      ;; 터미널에서 폰트 스케일 조정 (이모지 크기 일정하게)
+      ;; 터미널 폰트 스케일 — 이모지만 0.9 로 축소 (인접 셀 침범 방지).
+      ;; Noto Sans Symbols/Math 는 산스 계열이라 모노 advance 근사, 스케일 불필요.
       (setq face-font-rescale-alist
-            '(
-              ;; ("Noto Color Emoji" . 0.9)
-              ("Noto Emoji" . 0.9)
-              ("Symbola" . 0.9)))
+            '(("Noto Emoji" . 0.9)))
 
       ;; 이모지/기호 너비를 2로 고정 (double-width) — 터미널 커서 위치 정합용
-      ;; NOTE: FE00-FE0F (Variation Selectors)는 결합문자(Mn)라 width 0이어야 함 → 제외
-      (dolist (range '((#x1F000 . #x1F0FF)  ; Mahjong, Domino, Playing Cards
+      ;; WezTerm cell_widths (configs/cell-widths.lua) 과 **동일 범위** 로 유지.
+      ;; 한쪽만 바꾸면 3층(Emacs/WezTerm/폰트) 합의 결렬 → 드리프트 재발.
+
+      ;; Variation Selectors (FE00-FE0F) — VS-16 (U+FE0F) 결합문자.
+      ;; Emacs 기본값이 0 이라고 가정하지 말고 방어적으로 명시.
+      ;; base(2) + FE0F(0) = 2 로 WezTerm cell_widths 과 정합.
+      (set-char-table-range char-width-table '(#xFE00 . #xFE0F) 0)
+
+      (dolist (range '((#x2300 . #x23FF)    ; Miscellaneous Technical (⌚⌛⏰⏳)
+                       (#x2190 . #x21FF)    ; Arrows
+                       (#x2460 . #x24FF)    ; Enclosed Alphanumerics
+                       (#x2600 . #x26FF)    ; Miscellaneous Symbols
+                       (#x2700 . #x27BF)    ; Dingbats
+                       (#x2B50 . #x2B55)    ; Misc Symbols and Arrows (⭐⭕)
+                       (#x1F000 . #x1F0FF)  ; Mahjong, Domino, Playing Cards
+                       (#x1F100 . #x1F1FF)  ; Enclosed Alphanumeric Supplement + Regional Indicators (국기)
                        (#x1F300 . #x1F6FF)  ; Misc Symbols and Pictographs
                        (#x1F700 . #x1F77F)  ; Alchemical Symbols
                        (#x1F780 . #x1F7FF)  ; Geometric Shapes Extended
                        (#x1F900 . #x1F9FF)  ; Supplemental Symbols and Pictographs
                        (#x1FA00 . #x1FA6F)  ; Chess Symbols
-                       (#x1FA70 . #x1FAFF)  ; Symbols and Pictographs Extended-A
-                       (#x2600 . #x26FF)    ; Miscellaneous Symbols
-                       (#x2700 . #x27BF)    ; Dingbats
-                       (#x2B50 . #x2B55)))  ; Misc Symbols and Arrows (⭐⭕)
+                       (#x1FA70 . #x1FAFF))) ; Symbols and Pictographs Extended-A
         (set-char-table-range char-width-table range 2)))
 
-    (set-fontset-font t 'symbol (font-spec :family "Symbola") nil 'prepend)
+    ;; 'symbol 대역 fallback — Symbola 제거, Noto Sans Math 추가.
+    ;; 최종 조회 순서: Noto Sans Symbols → Symbols 2 → Math.
+    (set-fontset-font t 'symbol (font-spec :family "Noto Sans Math") nil 'prepend)
     (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
     (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols") nil 'prepend))
 
