@@ -215,10 +215,10 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 
 (after! diff-hl
   (setq diff-hl-disable-on-remote t) ; default nil
-  (setq diff-hl-flydiff-delay 1.0)  ; doom 0.5, default: 0.3
-  ;; (remove-hook 'diff-hl-mode-hook #'diff-hl-flydiff-mode)
-  ;; (remove-hook 'diff-hl-flydiff-mode-hook #'+vc-gutter-init-flydiff-mode-h)
-  )
+  ;; flydiff (실시간 diff) 비활성 — after-change-functions 훅 + 1s 타이머
+  ;; 제거. diff-hl 자체는 유지되어 save/vc-refresh 시 gutter 갱신.
+  (remove-hook 'diff-hl-mode-hook #'diff-hl-flydiff-mode)
+  (remove-hook 'diff-hl-flydiff-mode-hook #'+vc-gutter-init-flydiff-mode-h))
 
 ;;;; Mouse buttons
 

@@ -111,48 +111,7 @@
   ;; (global-set-key (kbd "M-m") #'my/call-localleader)
   (evil-define-key '(normal visual) prog-mode-map (kbd "C-,") 'my/call-localleader))
 
-;;; better default
-
-;; 'tags-completion-at-point-function' break ten-glossary
-(setq-default completion-at-point-functions nil) ; important
-
-;; (setq-default display-line-numbers-width-start t) ; doom's default t
-(setq inhibit-compacting-font-caches t)
-
-;; Stop asking abount following symlinks to version controlled files
-(setq vc-follow-symlinks t)
-
-(progn
-  (global-auto-revert-mode 1) ;; 기본 활성화 (필수)
-  (setq auto-revert-verbose nil)
-  ;; VC 정보도 업데이트 (magit 상태 반영)
-  (setq auto-revert-check-vc-info t)
-  ;; 간격 (notify 사용시 fallback용)
-  (setq auto-revert-interval 5)
-
-  (let ((device (string-trim
-                 (shell-command-to-string "cat ~/.current-device 2>/dev/null"))))
-    (cond
-     ((string-equal-ignore-case device "termux")
-      (setq auto-revert-use-notify nil
-            auto-revert-avoid-polling nil))
-     ((cl-member device '("nuc" "laptop" "thinkpad") :test #'string-equal-ignore-case)
-      ;; OS 파일 알림 사용 (polling보다 빠르고 효율적)
-      (setq auto-revert-use-notify t
-            auto-revert-avoid-polling t))))
-  )
-
-;; default 120 emacs-29, 60 emacs-28
-(setq kill-ring-max 30) ; keep it small
-
-;; Disable .# lock files
-(setq create-lockfiles nil)
-
-;; Denote 23.9. Speed up backlinks’ buffer creation?
-;; Prefer ripgrep, then ugrep, and fall back to regular grep.
-(setq xref-search-program
-      (cond ((or (executable-find "ripgrep") (executable-find "rg")) 'ripgrep)
-            ((executable-find "ugrep") 'ugrep) (t 'grep)))
+;;; better default → lisp/defaults-config.el
 
 ;;; pass + auth (gptel 등에서 API 키 접근을 위해 즉시 로드)
 ;;
@@ -192,6 +151,7 @@
 
 (load! "+user-info")  ; no provide, keep load!
 
+(require 'defaults-config)           ; better defaults (auto-revert, xref, lockfiles 등)
 (require 'ui-config)
 (require 'evil-config)
 (require 'korean-input-config)

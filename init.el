@@ -72,7 +72,8 @@
        neotree           ; a project drawer, like NERDTree for vim
        ophints           ; highlight the region an operation acts on
        (popup +defaults) ; tame sudden yet inevitable temporary windows
-       (:unless IS-TERMUX (smooth-scroll +interpolate)) ; So smooth you won't believe it's not butter
+       ;; smooth-scroll: TTY 는 픽셀 보간 의미 없음. good-scroll 타이머/advice
+       ;; 비용만 발생. GUI 에서 ultra-scroll 만 필요하면 명시적으로 재활성.
 
        ;; (:unless IS-EMACS31+ tabs) ; centaur-tabs — powerline 31 비호환
        treemacs          ; a project drawer, like neotree but cooler

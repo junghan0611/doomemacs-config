@@ -9,11 +9,16 @@
 
 ;; 터미널(TTY) Emacs를 위한 통합 설정.
 ;; - term-keys: WezTerm 키 시퀀스 (F1~F12, Hangul, S-SPC 등)
-;; - kitty-graphics: 터미널 이미지 표시 (Kitty/Sixel protocol)
 ;; - clipboard: OSC 52 (Emacs 내장 xterm.el, clipetty 제거)
+;; - 성능: xterm-set-window-title off, mouse/paren off 등 경량화
 ;;
 ;; vterm/eat 같은 터미널 에뮬레이터 설정과는 별개.
 ;; 이 파일은 "Emacs 자체가 TTY에서 돌아갈 때" 필요한 설정.
+;;
+;; kitty-graphics 는 제외 — post-command-hook 에 +window-scroll/size/
+;; buffer-change-functions + 11개 org/image advice 를 건다. 에이전트
+;; 프론트엔드는 텍스트 중심이라 비용 대비 이득 없음. 필요시 수동으로
+;; M-x kitty-graphics-mode 토글.
 
 ;;; Code:
 
@@ -37,27 +42,6 @@
 ;; (with-temp-buffer (insert (term-keys/kitty-conf))
 ;;                   (write-region (point-min) (point-max) "~/term-keys-kitty.conf"))
 
-;;;; kitty-graphics — 터미널 이미지
-
-(use-package! kitty-graphics
-  :defer t
-  :init
-  ;; TTY 프레임에서만 활성화, tmux 안에서는 비활성화
-  ;; daemon 모드: GUI로 시작해도 TTY 클라이언트 접속 시 활성화
-  (defun +kitty-graphics-maybe-enable ()
-    "Enable kitty-graphics-mode only in TTY without tmux."
-    (when (and (not (display-graphic-p))
-               (not (getenv "TMUX")))
-      (require 'kitty-graphics)
-      (kitty-graphics-mode 1)))
-  (add-hook 'tty-setup-hook #'+kitty-graphics-maybe-enable)
-  ;; 비데몬 TTY 직접 실행 시에도 동작
-  (unless (daemonp)
-    (add-hook 'doom-first-buffer-hook #'+kitty-graphics-maybe-enable))
-  :config
-  (setq kitty-gfx-max-width 100
-        kitty-gfx-max-height 35))
-
 ;;;; TTY 설정 진입점 — 타이밍 정렬
 
 ;; `display-graphic-p` 는 파일 로드 시점에 신뢰 불가.
@@ -77,6 +61,9 @@
   (when (not (display-graphic-p))
     ;; OSC 52 selection (frame-local) — Emacs 29+ 내장 xterm.el 경로
     (set-terminal-parameter nil 'xterm--set-selection t)
+    ;; Emacs → 터미널 윈도우 타이틀 OSC 0/2 송출 비활성.
+    ;; tmux/WezTerm 이 이미 타이틀 관리하므로 중복. profile 에서 6% 점유.
+    (setq-default xterm-set-window-title nil)
     ;; 가벼움 — 에이전트 프론트엔드는 키보드-only
     (xterm-mouse-mode -1)
     (show-paren-mode -1)

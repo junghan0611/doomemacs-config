@@ -86,7 +86,8 @@
   (setq doom-modeline-window-width-limit (- fill-column 5))
 
   (setq doom-modeline-repl t)
-  (setq doom-modeline-github t)
+  ;; github notifications fetch: 30m 타이머 + 네트워크. magit/ghcli 로 충분.
+  (setq doom-modeline-github nil)
   (setq doom-modeline-lsp t)
   (setq doom-modeline-indent-info t)
   (setq doom-modeline-hud nil)
