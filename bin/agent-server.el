@@ -976,6 +976,176 @@ Returns OK/ERROR string."
                   (kill-buffer buf))))
           (error (format "ERROR: %s — %s" id (error-message-string err))))))))
 
+(defconst agent-server-front-matter-spec
+  '((:title . ("TITLE" . "#+title:      %s"))
+    (:filetags . ("FILETAGS" . "#+filetags:   %s"))
+    (:hugo_lastmod . ("HUGO_LASTMOD" . "#+hugo_lastmod: %s"))
+    (:date . ("DATE" . "#+date:       %s"))
+    (:description . ("DESCRIPTION" . "#+description: %s"))
+    (:reference . ("REFERENCE" . "#+reference:  %s")))
+  "Supported front-matter keys for `agent-denote-set-front-matter'.")
+
+(defun agent-server--front-matter-end ()
+  "Return end position of front matter / pre-heading region."
+  (save-excursion
+    (goto-char (point-min))
+    (if (re-search-forward "^\\* " nil t)
+        (line-beginning-position)
+      (point-max))))
+
+(defun agent-server--front-matter-line-regexp (key)
+  "Return regexp matching front matter line for KEY."
+  (format "^#\\+%s:.*$" (regexp-quote key)))
+
+(defun agent-server--front-matter-find-key (key)
+  "Return cons of line-beginning and line-end for front matter KEY, or nil."
+  (let ((end (agent-server--front-matter-end)))
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward (agent-server--front-matter-line-regexp key) end t)
+        (cons (line-beginning-position) (line-end-position))))))
+
+(defun agent-server--normalize-filetags (value)
+  "Normalize filetags VALUE to denote/org format :tag1:tag2:."
+  (let* ((raw-tags (cond
+                    ((null value) nil)
+                    ((stringp value)
+                     ;; POSIX whitespace + 콜론/콤마. 이전 "[: ,\\t\\n]+" 는
+                     ;; Emacs regex 의 `[...]` 안에서 글자 t/n/\ 를 구분자로 취급해
+                     ;; information/testing 같은 태그가 :es:forma:g:i:io: 로 파괴됨.
+                     (split-string value "[[:space:]:,]+" t))
+                    ((listp value)
+                     (mapcar (lambda (x) (format "%s" x)) value))
+                    (t (list (format "%s" value)))))
+         (tags (sort (delete-dups (mapcar #'downcase raw-tags)) #'string<)))
+    (dolist (tag tags)
+      (unless (string-match-p "\\`[a-z0-9]+\\'" tag)
+        (error "Invalid filetag: %s" tag)))
+    (if tags
+        (format ":%s:" (string-join tags ":"))
+      "")))
+
+(defun agent-server--normalize-reference (value)
+  "Normalize reference VALUE to semicolon-separated string."
+  (let* ((parts (cond
+                 ((null value) nil)
+                 ((stringp value)
+                  (split-string value "[;,]\\s-*" t "\\s-*"))
+                 ((listp value)
+                  (mapcar (lambda (x) (string-trim (format "%s" x))) value))
+                 (t (list (format "%s" value)))))
+         (refs (delete-dups (seq-filter (lambda (s) (not (string-empty-p s))) parts))))
+    (string-join refs ";")))
+
+(defun agent-server--front-matter-format-value (keyword value)
+  "Format VALUE for front matter KEYWORD."
+  (pcase keyword
+    (:filetags (agent-server--normalize-filetags value))
+    (:reference (agent-server--normalize-reference value))
+    (_ (format "%s" value))))
+
+(defun agent-server--set-front-matter-line (keyword value)
+  "Set front matter KEYWORD to VALUE, creating the line if needed."
+  (let* ((spec (alist-get keyword agent-server-front-matter-spec))
+         (key (car spec))
+         (template (cdr spec))
+         (line (format template (agent-server--front-matter-format-value keyword value)))
+         (existing (agent-server--front-matter-find-key key)))
+    (if existing
+        (save-excursion
+          (goto-char (car existing))
+          (delete-region (car existing) (cdr existing))
+          (insert line))
+      (let* ((keys (mapcar #'car agent-server-front-matter-spec))
+             (inserted nil)
+             (target-index (cl-position keyword keys)))
+        (dotimes (i target-index)
+          (let* ((prev-keyword (nth (- target-index i 1) keys))
+                 (prev-spec (alist-get prev-keyword agent-server-front-matter-spec))
+                 (prev-key (car prev-spec))
+                 (prev-existing (agent-server--front-matter-find-key prev-key)))
+            (when (and (not inserted) prev-existing)
+              (goto-char (cdr prev-existing))
+              (insert "\n" line)
+              (setq inserted t))))
+        (unless inserted
+          (goto-char (point-min))
+          (insert line "\n"))))))
+
+(defconst agent-server--front-matter-control-keys '(:rename)
+  "Control keywords accepted by `agent-denote-set-front-matter' that are not
+front matter fields themselves.
+:rename — non-nil → denote-rename-file-using-front-matter 를 FM 갱신 후 자동 실행.")
+
+(defun agent-denote-set-front-matter (id &rest plist)
+  "Set selected front matter keys of denote file ID.
+
+Supported front matter keys:
+  :title, :filetags, :description, :reference, :date, :hugo_lastmod.
+Missing keys are created. Existing keys are replaced.
+
+Control keys (not front matter fields):
+  :rename — non-nil 이면 FM 갱신 후 파일명을 front matter 에 맞게 자동 재생성.
+            rename 실패는 FM 성공을 덮지 않음 → OK + WARN 병합 반환."
+  (let ((supported (mapcar #'car agent-server-front-matter-spec))
+        (control agent-server--front-matter-control-keys)
+        (seen nil)
+        (rest plist))
+    (when (or (null plist) (null (cdr plist)))
+      (error "No front matter updates provided"))
+    (while rest
+      (let ((keyword (car rest)))
+        (unless (keywordp keyword)
+          (error "Front matter keys must be keywords: %s" keyword))
+        (unless (or (memq keyword supported) (memq keyword control))
+          (error "Unsupported front matter key: %s" keyword))
+        (when (memq keyword supported)
+          (push keyword seen))
+        (setq rest (cddr rest))))
+    (when (null seen)
+      (error "No front matter fields to update (only control keys provided)"))
+    (let ((file (denote-get-path-by-id id))
+          (rename-p (plist-get plist :rename)))
+      (if (not file)
+          (format "ERROR: No denote file for ID %s" id)
+        (agent-server--denote-append-allowed-p file)
+        (condition-case err
+            (let* ((buf (find-file-noselect file))
+                   (fm-result
+                    (unwind-protect
+                        (with-current-buffer buf
+                          (unless (derived-mode-p 'org-mode)
+                            (org-mode))
+                          (save-excursion
+                            (dolist (keyword (mapcar #'car agent-server-front-matter-spec))
+                              (when (plist-member plist keyword)
+                                (agent-server--set-front-matter-line
+                                 keyword
+                                 (plist-get plist keyword))))
+                            (save-buffer)
+                            (format
+                             "OK: Updated front matter (%s) in %s"
+                             (string-join
+                              (mapcar (lambda (k) (substring (symbol-name k) 1))
+                                      (nreverse seen))
+                              ", ")
+                             (file-name-nondirectory file))))
+                      (when (buffer-live-p buf)
+                        (kill-buffer buf)))))
+              (if rename-p
+                  ;; ID 는 rename 해도 불변 — 현재 경로 재조회 후 rename 시도.
+                  ;; 실패해도 FM 는 이미 저장됨 → 분리 보고.
+                  (let* ((current-file (denote-get-path-by-id id))
+                         (rename-result
+                          (condition-case rerr
+                              (agent-denote-rename-by-front-matter current-file)
+                            (error (format "WARN: rename failed — %s"
+                                           (error-message-string rerr))))))
+                    (format "%s; %s" fm-result rename-result))
+                fm-result))
+          (error
+           (format "ERROR: %s — %s" id (error-message-string err))))))))
+
 (defun agent-denote-add-link (id target-id description)
   "Add a denote link to file ID, pointing to TARGET-ID.
 
@@ -999,7 +1169,9 @@ DESCRIPTION is the link text.  Returns OK/ERROR string."
                       (save-excursion
                         (goto-char (point-min))
                         (let ((link-text (format "- [[denote:%s][%s]]\n" target-id description))
-                              (related-re "^\\*+ \\(?:관련\\(?: 노트\\)?\\|Related\\)"))
+                              ;; \\s- : 공백 syntax 클래스. "[ \\t]" 은 `[...]` 안에서 글자 t 를
+                              ;; 매칭해 "관련test" 를 오매칭.
+                              (related-re "^\\*+ \\(관련 노트\\|관련\\|Related\\)\\(\\s-\\|$\\)"))
                           (if (re-search-forward related-re nil t)
                               ;; Found related heading — append after last item
                               (progn
@@ -1037,6 +1209,7 @@ DESCRIPTION is the link text.  Returns OK/ERROR string."
 (message "[agent-server]      agent-denote-search, agent-citar-lookup,")
 (message "[agent-server]      agent-denote-rename-by-front-matter,")
 (message "[agent-server]      agent-denote-rename-bulk,")
+(message "[agent-server]      agent-denote-set-front-matter,")
 (message "[agent-server]      agent-org-dblock-update,")
 (message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
 (message "[agent-server]      agent-org-agenda-tags, agent-org-agenda-todos,")
