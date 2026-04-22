@@ -71,7 +71,7 @@
 
   (require 'agent-shell-manager)
   (setq agent-shell-manager-side 'bottom)  ; Options: 'left, 'right, 'top, 'bottom
-  (map! :in "s-;" #'agent-shell-manager-toggle)
+  (map! :in "C-'" #'agent-shell-manager-toggle)
   (map! :map agent-shell-mode-map
         :i "RET" #'+default/newline-below
         :inv "M-RET" #'comint-send-input

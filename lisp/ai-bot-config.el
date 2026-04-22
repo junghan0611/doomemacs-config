@@ -100,10 +100,16 @@
   (add-hook 'telega-chat-mode-hook #'my/telega-chat-display-table-setup)
   (add-hook 'telega-root-mode-hook #'my/telega-chat-display-table-setup)
 
-  ;; Unicode Cell Drift 회피 — 이모지 심볼을 ASCII/박스문자로 대체.
-  ;; Why: telega 기본 심볼들(📎📷🎶📹⌛⛔⭐📌🔔 등)은 흑백 Noto Emoji로도
-  ;; 폰트별 advance width가 제각각이라 터미널·GUI에서 버퍼 정렬이 깨진다.
-  ;; chat-list와 메시지 본문에서 가장 자주 노출되는 심볼만 선별적으로 덮어쓴다.
+  ;; Unicode Cell Drift 회피 — telega 심볼을 ASCII 로 대체.
+  ;;
+  ;; Why: telega 기본 심볼(📎📷🎶📹⌛⛔⭐📌🔔 등)은 폰트별 advance width 가 제각각이라
+  ;; 터미널·GUI 에서 chat-list/메시지 정렬이 쉽게 깨진다. cell-widths.lua 와 Emacs
+  ;; char-width-table 로 대부분 2-cell 잡히고 FE0F/composition 도 TTY 에서 끊었지만,
+  ;; 폰트 단계(특히 GUI fontconfig, non-WezTerm 터미널)에서 여전히 드리프트 가능.
+  ;; telega 는 가장 자주 깨지는 지점이므로 defensive remap 유지.
+  ;;
+  ;; 변수 출처: telega-customize.el (telega.el upstream).
+  ;; 공식 이름 기준으로 매핑 — dice/timer 같은 오타 변수명은 upstream 과 동기화.
   (setq telega-symbol-attachment      "@"
         telega-symbol-photo           "#"
         telega-symbol-audio           "~"
@@ -114,7 +120,7 @@
         telega-symbol-heavy-checkmark "V"
         telega-symbol-ton             "T"
         telega-symbol-verified        "V"
-        telega-symbol-verified-by-bot "A+"
+        ;; telega-symbol-verified-by-bot — 기본값이 이미 (propertize "A+" ...) 라 redundant
         telega-symbol-failed          "!"
         telega-symbol-star            "*"
         telega-symbol-lightning       "~"
@@ -128,7 +134,8 @@
         telega-symbol-credit-card     "$"
         telega-symbol-poll            "P"
         telega-symbol-alarm           "a"
-        telega-symbol-dice            "D"
+        ;; telega-symbol-dice-list: 7-요소 리스트 (generic + face-1..6)
+        telega-symbol-dice-list       (list "D" "1" "2" "3" "4" "5" "6")
         telega-symbol-folder          "/"
         telega-symbol-multiple-folders "//"
         telega-symbol-direct-messages ">>"
@@ -142,7 +149,7 @@
         telega-symbol-bell            "!"
         telega-symbol-favorite        "*"
         telega-symbol-leave-comment   "c"
-        telega-symbol-timer           "t"
+        telega-symbol-timer-clock     "t"   ; 구: telega-symbol-timer (오타)
         telega-symbol-distance        "d"
         telega-symbol-reaction        "+"
         telega-symbol-premium         "*"

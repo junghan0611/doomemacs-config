@@ -44,6 +44,26 @@
 
 (setq default-input-method "korean-hangul")
 (set-language-environment "Korean")
+
+;; char-width-table 좁히기 — "왜 둘 다 필요한가"
+;;
+;; Korean 언어 환경이 use-cjk-char-width-table 로 EA Ambiguous 전체를 2-cell 로
+;; 올려버린다(역사적으로 한·영 혼용 표 정렬을 위한 디폴트). 지금 워크플로에선
+;; em-dash(—)·hyphen 계열·Box Drawing(─│) 이 1-cell 이길 원함.
+;;
+;; 중요: 이건 WezTerm 과 "중복" 이 아니라 "합의".
+;;   GUI Emacs  → 이 char-width-table 만이 레이아웃을 결정. WezTerm 무관.
+;;   TTY Emacs  → Emacs 가 "컬럼 N+1에 그려라"할 때 쓰는 기준이 이 테이블.
+;;                터미널 실제 렌더 폭과 다르면 커서·다음 글자 침범 발생.
+;;                즉 WezTerm cell-widths.lua 와 이 테이블이 **같은 값**이어야 함.
+;;   한쪽만 바꾸면 TTY 드리프트 재발. 둘 다 1 로 맞춰야 정합.
+;;
+;; 비-WezTerm 터미널(Termux/S26 네이티브/kitty/foot 등):
+;;   대부분 dash·Box Drawing 을 1-cell, 이모지 범위를 2-cell 로 렌더 → 이 테이블
+;;   값이 "공약수" 역할. WezTerm 없이도 합리적.
+(set-char-table-range char-width-table '(#x2010 . #x2015) 1)  ; ‐‑‒–—― (dash 계열)
+(set-char-table-range char-width-table '(#x2500 . #x257F) 1)  ; ─│┌┐└┘├┤ (Box Drawing)
+
 (set-keyboard-coding-system 'utf-8)
 (setq locale-coding-system 'utf-8)
 

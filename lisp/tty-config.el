@@ -53,8 +53,32 @@
 ;; Doom 이 뒤에 다시 켜 덮어쓴다. 모든 TTY 설정은 hook 으로 미루고,
 ;; Doom 의 같은 hook 보다 뒤에 돌도록 :append 로 붙인다.
 ;;
-;; frame-local 설정(OSC 52, display-table, cursor shape, FE0F 숨김)도
-;; tty-setup-hook 에서 수행해 daemon + GUI/TTY 혼합 환경을 정상 처리.
+;; frame-local 설정(OSC 52, display-table, cursor shape)은 tty-setup-hook 에서
+;; 수행해 daemon + GUI/TTY 혼합 환경을 정상 처리.
+
+(defun +tty-wezterm-p ()
+  "현재 TTY가 WezTerm 경로면 t.
+
+TERM_PROGRAM=WezTerm 을 1차 기준으로 사용한다. 노트북 TTY 경로를 우선 겨냥한
+최소 워크어라운드이며, native terminal/Termux 는 추후 별도 검토한다."
+  (string-equal (getenv "TERM_PROGRAM") "WezTerm"))
+
+(defun +tty-wezterm-strip-vs16 ()
+  "WezTerm TTY 버퍼에서 VS-16 auto-composition 을 끈다.
+
+WezTerm #7570 회피용 최소 조치:
+- FE0F 는 화면에서만 숨김 (원문 보존)
+- FE0F 트리거 auto-composition 만 버퍼 로컬로 비활성화
+
+BMP→SMP remap 은 여기서 하지 않는다. 흔한 케이스는 telega 쪽 display-table
+우회가 담당하고, 일반 텍스트는 base glyph 로 안전하게 남긴다."
+  (when (and (not (display-graphic-p)) (+tty-wezterm-p))
+    (unless standard-display-table
+      (setq standard-display-table (make-display-table)))
+    (aset standard-display-table #xFE0F [])
+    (setq-local composition-function-table
+                (copy-sequence composition-function-table))
+    (set-char-table-range composition-function-table #xFE0F nil)))
 
 (defun +tty-setup ()
   "TTY frame 전용 세팅. tty-setup-hook / doom-first-buffer-hook 에서 호출."
@@ -67,30 +91,29 @@
     ;; 가벼움 — 에이전트 프론트엔드는 키보드-only
     (xterm-mouse-mode -1)
     (show-paren-mode -1)
+    (unless standard-display-table
+      (setq standard-display-table (make-display-table)))
     ;; vertical-border: ASCII '|' → U+2502 '│' (GUI 감성의 얇은 경계)
     (set-display-table-slot standard-display-table
                             'vertical-border (make-glyph-code ?│))
-    ;; VS-16 (U+FE0F) 숨김 — per-grapheme-cluster 렌더 경로 차단
-    ;; WezTerm cell_widths(per-codepoint)만으론 드리프트 커버 불가.
-    ;; 버퍼 원문은 보존, 화면 송출에서만 제거.
-    ;; ref: llmlog 20260417T173916
-    (aset standard-display-table #xFE0F (vector))))
+    (+tty-wezterm-strip-vs16)))
 
 (add-hook 'tty-setup-hook #'+tty-setup 'append)
 (add-hook 'doom-first-buffer-hook #'+tty-setup 'append)
 
-;;;; buffer-local vertical-border 패치
+;;;; buffer-local vertical-border / VS-16 패치
 
 ;; org/markdown 등은 buffer-display-table 을 자기 용도로 세팅한다.
 ;; 그러면 standard-display-table 의 vertical-border 슬롯이 묻히므로,
 ;; 버퍼 로컬 테이블이 생성된 후 그 슬롯을 직접 덮어쓴다.
 ;; 참고: display-table 해석 우선순위 — window > buffer > standard.
-(defun +tty-patch-vertical-border ()
-  "Patch vertical-border slot on current buffer's display-table, if any."
+(defun +tty-patch-buffer-locals ()
+  "Patch buffer-local display/composition settings for TTY buffers."
   (when (and (not (display-graphic-p)) buffer-display-table)
     (set-display-table-slot buffer-display-table
-                            'vertical-border (make-glyph-code ?│))))
-(add-hook 'after-change-major-mode-hook #'+tty-patch-vertical-border)
+                            'vertical-border (make-glyph-code ?│)))
+  (+tty-wezterm-strip-vs16))
+(add-hook 'after-change-major-mode-hook #'+tty-patch-buffer-locals)
 
 ;;;; Evil cursor shape (DECSCUSR) — Normal=block, Insert=bar
 
