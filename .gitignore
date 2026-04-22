@@ -1,11 +1,11 @@
 # System files
+.beads
 .DS_Store
 .idea
 *.log
 tmp/
 deprecated
 .efrit
-.beads/.br_history
 
 __pycache__
 
@@ -48,4 +48,3 @@ qtermwidget/
 docs/plans
 
 *.db
-.beads/.br_history/
