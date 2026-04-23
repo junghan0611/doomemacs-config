@@ -64,6 +64,34 @@
 (set-char-table-range char-width-table '(#x2010 . #x2015) 1)  ; ‐‑‒–—― (dash 계열)
 (set-char-table-range char-width-table '(#x2500 . #x257F) 1)  ; ─│┌┐└┘├┤ (Box Drawing)
 
+;; 이모지/기호 2-cell widen — configs/cell-widths.lua 와 **동일 범위**.
+;; 원래 my/set-emoji-symbol-font 안 after-setting-font-hook 에 있었으나, 부트
+;; 타이밍에 따라 1F5E9(🗩)·1F5EA(🗪)·1F6FD-1F6FF 등 일부 codepoint 가 실제로는
+;; w=1 로 남는 현상 관찰 → 하위 sub-table 이 이미 singleton 을 쥐고 있으면
+;; set-char-table-range 가 cons range 전체를 덮지 못하는 경우가 있다.
+;;
+;; 따라서:
+;; 1. top-level 에서 deterministic 하게 실행 (font hook 의존 제거)
+;; 2. aset 반복으로 codepoint 별 강제 쓰기 → sub-table singleton 우회
+;;
+;; VS-16 (FE0F) 결합문자는 width 0. base(2) + FE0F(0) = 2 로 정합.
+(set-char-table-range char-width-table '(#xFE00 . #xFE0F) 0)
+
+(dolist (range '((#x2190 . #x21FF)    ; Arrows
+                 (#x2300 . #x23FF)    ; Miscellaneous Technical (⌚⌛⏰⏳)
+                 (#x2460 . #x24FF)    ; Enclosed Alphanumerics
+                 (#x2600 . #x26FF)    ; Miscellaneous Symbols
+                 (#x2700 . #x27BF)    ; Dingbats
+                 (#x2B50 . #x2B55)    ; ⭐⭕
+                 (#x1F000 . #x1F0FF)  ; Mahjong/Domino/Playing Cards
+                 (#x1F100 . #x1F1FF)  ; Enclosed Alphanumeric Supplement + Regional Indicators
+                 (#x1F300 . #x1F6FF)  ; Misc Symbols and Pictographs
+                 (#x1F700 . #x1F7FF)  ; Alchemical / Geometric Shapes Ext
+                 (#x1F900 . #x1F9FF)  ; Supplemental Symbols and Pictographs
+                 (#x1FA00 . #x1FAFF))) ; Chess + Symbols and Pictographs Ext-A
+  (cl-loop for c from (car range) to (cdr range)
+           do (aset char-width-table c 2)))
+
 (set-keyboard-coding-system 'utf-8)
 (setq locale-coding-system 'utf-8)
 
@@ -162,30 +190,9 @@
       (setq face-font-rescale-alist
             '(("Noto Emoji" . 0.9)))
 
-      ;; 이모지/기호 너비를 2로 고정 (double-width) — 터미널 커서 위치 정합용
-      ;; WezTerm cell_widths (configs/cell-widths.lua) 과 **동일 범위** 로 유지.
-      ;; 한쪽만 바꾸면 3층(Emacs/WezTerm/폰트) 합의 결렬 → 드리프트 재발.
-
-      ;; Variation Selectors (FE00-FE0F) — VS-16 (U+FE0F) 결합문자.
-      ;; Emacs 기본값이 0 이라고 가정하지 말고 방어적으로 명시.
-      ;; base(2) + FE0F(0) = 2 로 WezTerm cell_widths 과 정합.
-      (set-char-table-range char-width-table '(#xFE00 . #xFE0F) 0)
-
-      (dolist (range '((#x2300 . #x23FF)    ; Miscellaneous Technical (⌚⌛⏰⏳)
-                       (#x2190 . #x21FF)    ; Arrows
-                       (#x2460 . #x24FF)    ; Enclosed Alphanumerics
-                       (#x2600 . #x26FF)    ; Miscellaneous Symbols
-                       (#x2700 . #x27BF)    ; Dingbats
-                       (#x2B50 . #x2B55)    ; Misc Symbols and Arrows (⭐⭕)
-                       (#x1F000 . #x1F0FF)  ; Mahjong, Domino, Playing Cards
-                       (#x1F100 . #x1F1FF)  ; Enclosed Alphanumeric Supplement + Regional Indicators (국기)
-                       (#x1F300 . #x1F6FF)  ; Misc Symbols and Pictographs
-                       (#x1F700 . #x1F77F)  ; Alchemical Symbols
-                       (#x1F780 . #x1F7FF)  ; Geometric Shapes Extended
-                       (#x1F900 . #x1F9FF)  ; Supplemental Symbols and Pictographs
-                       (#x1FA00 . #x1FA6F)  ; Chess Symbols
-                       (#x1FA70 . #x1FAFF))) ; Symbols and Pictographs Extended-A
-        (set-char-table-range char-width-table range 2)))
+      ;; NOTE: char-width-table widen 은 top-level 로 이동 (file 상단 참조).
+      ;; font hook 타이밍 의존 문제 해결 + aset 로 sub-table singleton 우회.
+      )
 
     ;; 'symbol 대역 fallback — Symbola 제거, Noto Sans Math 추가.
     ;; 최종 조회 순서: Noto Sans Symbols → Symbols 2 → Math.
