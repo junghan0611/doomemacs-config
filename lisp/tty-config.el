@@ -80,6 +80,11 @@ BMP→SMP remap 은 여기서 하지 않는다. 흔한 케이스는 telega 쪽 d
                 (copy-sequence composition-function-table))
     (set-char-table-range composition-function-table #xFE0F nil)))
 
+(defun +tty-safe-ellipsis-setup ()
+  "TTY에서 prompt truncation ellipsis만 ASCII로 고정한다."
+  ;; consult/minibuffer 경로의 `…' 폭 드리프트만 최소 수정으로 회피.
+  (setq truncate-string-ellipsis "..."))
+
 (defun +tty-setup ()
   "TTY frame 전용 세팅. tty-setup-hook / doom-first-buffer-hook 에서 호출."
   (when (not (display-graphic-p))
@@ -91,6 +96,7 @@ BMP→SMP remap 은 여기서 하지 않는다. 흔한 케이스는 telega 쪽 d
     ;; 가벼움 — 에이전트 프론트엔드는 키보드-only
     (xterm-mouse-mode -1)
     (show-paren-mode -1)
+    (+tty-safe-ellipsis-setup)
     (unless standard-display-table
       (setq standard-display-table (make-display-table)))
     ;; vertical-border: ASCII '|' → U+2502 '│' (GUI 감성의 얇은 경계)
@@ -100,6 +106,27 @@ BMP→SMP remap 은 여기서 하지 않는다. 흔한 케이스는 telega 쪽 d
 
 (add-hook 'tty-setup-hook #'+tty-setup 'append)
 (add-hook 'doom-first-buffer-hook #'+tty-setup 'append)
+
+;;;; consult prompt ellipsis — TTY에서 ASCII로 고정
+
+(after! consult
+  (defun +tty-consult-left-truncate-file-a (orig-fn file)
+    "TTY에서 consult 경로 축약 ellipsis를 ASCII로 치환한다."
+    (let ((out (funcall orig-fn file)))
+      (if (display-graphic-p)
+          out
+        (replace-regexp-in-string "…" "..." out t t))))
+
+  (defun +tty-consult-directory-prompt-a (orig-fn prompt dir)
+    "TTY에서 consult 디렉토리 prompt의 hardcoded ellipsis를 ASCII로 치환한다."
+    (pcase-let ((`(,prompt-str ,paths ,edir) (funcall orig-fn prompt dir)))
+      (if (display-graphic-p)
+          (list prompt-str paths edir)
+        (list (replace-regexp-in-string "…" "..." prompt-str t t)
+              paths edir))))
+
+  (advice-add 'consult--left-truncate-file :around #'+tty-consult-left-truncate-file-a)
+  (advice-add 'consult--directory-prompt :around #'+tty-consult-directory-prompt-a))
 
 ;;;; buffer-local vertical-border / VS-16 패치
 

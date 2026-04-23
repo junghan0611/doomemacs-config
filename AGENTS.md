@@ -156,3 +156,4 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 - `per-machine.el` is git-ignored — font/theme overrides go there
 - Emacs 31 IGC coexists with 30.2 via separate `EMACSDIR` and `server-name`
 - Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard
+- WezTerm + terminal Emacs + built-in Korean input is a custom path; if minibuffer/search prompt spacing breaks, inspect TTY width drift first — especially hardcoded Unicode ellipsis (`…`) in Consult prompt/path truncation before blaming Hangul input
