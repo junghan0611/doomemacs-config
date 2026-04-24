@@ -31,7 +31,7 @@
       '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
       '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified))))
 
-;;;; celestial-mode-line
+;;;; celestial-mode-line — GUI only
 
 (use-package! celestial-mode-line
   :after time
@@ -41,8 +41,11 @@
         '((sunrise . "🌅") (sunset . "🌃")))
   (setq celestial-mode-line-phase-representation-alist
         '((0 . "🌚") (1 . "🌛") (2 . "🌝") (3 . "🌜")))
-  :config (celestial-mode-line-start-timer)
-  )
+  :config
+  ;; TTY 에서 타이머 비활성 — 이모지 heavy string 을 쓸 곳이 없고
+  ;; global-mode-string 에서도 렌더되지 않음.
+  (when (display-graphic-p)
+    (celestial-mode-line-start-timer)))
 
 ;;;; custom tab-bar global-mode-string
 
@@ -66,18 +69,13 @@
 ;;;;###autoload
   (defun my/load-global-mode-string ()
     (interactive)
-
-    ;; (message "my/load-global-mode-string")
-    (when (not (bound-and-true-p display-time-mode))
-      (display-time-mode t))
-
-    ;; (when (fboundp 'display-time-mode)
-    ;;   (display-time-mode t))
-
-    (setq global-mode-string (remove 'display-time-string global-mode-string))
-    (setq global-mode-string '("" celestial-mode-line-string display-time-string))
-
-    (tab-bar-mode +1))
+    ;; TTY: tab-bar/global-mode-string/display-time 모두 skip — 모드라인 공간 절약
+    (when (display-graphic-p)
+      (unless (bound-and-true-p display-time-mode)
+        (display-time-mode t))
+      (setq global-mode-string (remove 'display-time-string global-mode-string))
+      (setq global-mode-string '("" celestial-mode-line-string display-time-string))
+      (tab-bar-mode +1)))
 
   (add-hook 'doom-after-init-hook #'my/load-global-mode-string 80)
   (add-hook 'doom-after-reload-hook #'my/load-global-mode-string)
