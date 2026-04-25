@@ -138,7 +138,7 @@
 
 (package! show-font) ; TODO
 (package! info+) ; TODO
-(package! list-unicode-display)
+;; (package! list-unicode-display)
 
 ;;;; prog-mode-config.el
 
@@ -159,7 +159,6 @@
 
 ;;;; editing-config.el
 
-(package! markdown-indent-mode :recipe (:host github :repo "whhone/markdown-indent-mode"))
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 (package! pinentry)

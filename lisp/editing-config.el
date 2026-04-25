@@ -226,12 +226,6 @@ only those in the selected frame."
   (setq adoc-imenu-generic-expression
         '(("Sections" "^=+ +\\(.+\\)$" 1))))
 
-;;;; markdown
-
-;; markdown-indent-mode: org-indent-mode와 동일한 시각적 계층 구조
-(use-package! markdown-indent-mode
-  :hook (markdown-mode . markdown-indent-mode))
-
 ;;;; provide
 
 (provide 'editing-config)
