@@ -165,7 +165,7 @@
        (javascript +tree-sitter) ; all(hope(abandon(ye(who(enter(here))))))
        (web +tree-sitter) ; the tubes
        (yaml +tree-sitter) ; JSON, but readable
-       (zig +tree-sitter +lsp)  ; C, but simpler
+       (zig +tree-sitter)  ; C, but simpler
        (cc +tree-sitter)
        (kotlin +tree-sitter)
        (go +tree-sitter)
