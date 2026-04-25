@@ -142,6 +142,10 @@
 
 ;;;; prog-mode-config.el
 
+;; emacs-reformatter upstream renamed master→main (zig-mode dependency)
+(package! reformatter
+  :recipe (:host github :repo "purcell/emacs-reformatter" :branch "main"))
+
 ;; (unpin! clojure-mode)
 (package! aggressive-indent)
 ;; (package! org-linenote) ; require lsp-mode
