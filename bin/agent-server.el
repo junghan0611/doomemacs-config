@@ -539,7 +539,12 @@ org-journal 미로드 환경에서 직접 경로 계산.
   "Agenda 파일 버퍼를 디스크에서 갱신. 외부 변경 반영.
 버퍼가 없으면 열어서 최신 상태로 로드 (첫 호출 시 필요).
 디렉토리 항목은 내부 .org 파일로 확장.
-~/org → ~/sync/org symlink 환경: file-truename으로 버퍼 탐색."
+~/org → ~/sync/org symlink 환경: file-truename으로 버퍼 탐색.
+
+revert-buffer는 buffer-local 변수(특히 `org-category')를 다시 채워주지
+않는다. 매주 새 journal 파일에서 #+CATEGORY 가 인식되지 않아 agenda
+prefix가 파일명으로 깨지던 사고(2026-04-27)를 막기 위해, revert 또는
+첫 visit 직후 `org-set-regexps-and-options'를 명시 호출한다."
   (let ((files (cl-mapcan
                 (lambda (entry)
                   (if (file-directory-p entry)
@@ -555,8 +560,10 @@ org-journal 미로드 환경에서 직접 경로 계산.
           (if buf
               (with-current-buffer buf
                 (when (not (buffer-modified-p))
-                  (revert-buffer t t t)))
-            (find-file-noselect true-path)))))))
+                  (revert-buffer t t t)
+                  (org-set-regexps-and-options)))
+            (with-current-buffer (find-file-noselect true-path)
+              (org-set-regexps-and-options))))))))
 
 (defun agent-org-agenda--agenda-files-expanded ()
   "Return `org-agenda-files' with directory entries expanded to .org files."
