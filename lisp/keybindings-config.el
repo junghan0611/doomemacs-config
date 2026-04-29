@@ -301,7 +301,15 @@
         "RET" #'toc-org-markdown-follow-thing-at-point
         "-" #'markdown-insert-list-item
         ";" #'my/clear-nbsp-and-ascii-punctuations
-        ":" #'my/insert-nbsp-simple-all))
+        ":" #'my/insert-nbsp-simple-all)
+
+  (map! :map markdown-mode-map
+        ;; :i "<tab>" #'completion-at-point
+        ;; :i "TAB" #'completion-at-point
+        :ni "M-*" #'tempel-insert
+        :ni "M-g 1" #'bh/insert-inactive-timestamp
+        )
+  )
 
 ;;;;; Dired
 
