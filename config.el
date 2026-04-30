@@ -76,6 +76,17 @@
 
 ;;; GENERAL SETTINGS
 
+;;; Pi daemon bootstrap
+
+(when (and (daemonp)
+           (string= server-name "pi")
+           (not (featurep 'agent-server)))
+  (setq agent-server-enable-socket nil)
+  (let ((agent-server-file (expand-file-name "bin/agent-server.el" doom-user-dir)))
+    (when (file-exists-p agent-server-file)
+      (load agent-server-file nil t)
+      (message "[pi] agent-server API loaded into daemon '%s'" server-name))))
+
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type 'relative)

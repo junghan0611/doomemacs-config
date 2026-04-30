@@ -22,6 +22,11 @@ AGENT_DAEMON="server"
 AGENT_LOAD="$BIN_DIR/agent-server.el"
 AGENT_SOCKET="/run/user/$(id -u)/emacs/$AGENT_DAEMON"
 
+# Pi full Doom daemon (TTY emacsclient attach target)
+PI_DAEMON="pi"
+PI_SOCKET="/run/user/$(id -u)/emacs/$PI_DAEMON"
+PI_CLIENT="emacsclient -s $PI_DAEMON"
+
 # Emacs 31 IGC
 IGC_SCRIPT="$BIN_DIR/emacs-igc.sh"
 
@@ -82,6 +87,13 @@ show_menu() {
   echo "    x) agent stop"
   echo "    r) agent restart"
   echo "    e) agent eval"
+  echo ""
+  echo "  ${YELLOW}Pi Emacs${NC} (full Doom daemon)"
+  echo "    P) pi start"
+  echo "    L) pi status"
+  echo "    X) pi stop"
+  echo "    R) pi restart"
+  echo "    T) pi tty client"
   echo ""
   echo "  ${YELLOW}Verify${NC}"
   echo "    V) verify relref       (검증만)"
@@ -351,6 +363,64 @@ cmd_agent_eval() {
   emacsclient -s "$AGENT_DAEMON" --eval "$expr"
 }
 
+cmd_pi_start() {
+  if [[ -S "$PI_SOCKET" ]]; then
+    if timeout 5 $PI_CLIENT --eval '(+ 1 1)' &>/dev/null; then
+      success "이미 실행 중 (socket: $PI_SOCKET)"
+      return 0
+    else
+      warn "Stale 소켓 감지 — 정리 후 재시작"
+      rm -f "$PI_SOCKET"
+    fi
+  fi
+
+  info "Pi Emacs daemon 시작..."
+  EMACS_SERVER_NAME="$PI_DAEMON" emacs --daemon="$PI_DAEMON" 2>&1 | tail -5
+
+  local retries=20
+  while (( retries > 0 )); do
+    if timeout 5 $PI_CLIENT --eval '(format "pi-ready:%s" server-name)' &>/dev/null; then
+      success "Pi Emacs daemon 시작됨"
+      return 0
+    fi
+    sleep 0.5
+    retries=$((retries - 1))
+  done
+
+  err "Pi Emacs daemon 시작 확인 실패"
+  return 1
+}
+
+cmd_pi_stop() {
+  if [[ ! -S "$PI_SOCKET" ]]; then
+    info "Pi Emacs daemon이 실행 중이 아님"
+    return 0
+  fi
+  timeout 5 $PI_CLIENT --eval '(kill-emacs)' 2>/dev/null || true
+  sleep 0.5
+  [[ -S "$PI_SOCKET" ]] && rm -f "$PI_SOCKET" && warn "Stale 소켓 제거됨"
+  success "Pi Emacs daemon 중지됨"
+}
+
+cmd_pi_status() {
+  if [[ -S "$PI_SOCKET" ]]; then
+    local result
+    result=$(timeout 5 $PI_CLIENT --eval '(list :server server-name :daemon (daemonp) :default-directory default-directory)' 2>/dev/null)
+    success "Pi Emacs daemon 실행 중"
+    echo "$result"
+  else
+    warn "Pi Emacs daemon이 실행 중이 아님"
+  fi
+}
+
+cmd_pi_tty() {
+  if [[ ! -S "$PI_SOCKET" ]]; then
+    cmd_pi_start
+  fi
+  info "Pi Emacs TTY client 접속 (-s $PI_DAEMON)"
+  emacsclient -t -s "$PI_DAEMON"
+}
+
 # ━━━ CLI Mode (비대화) ━━━
 
 cli_mode() {
@@ -394,6 +464,18 @@ cli_mode() {
         *)       err "agent: start|stop|restart|status|eval" ;;
       esac
       ;;
+    pi)
+      local action="${1:-status}"; shift || true
+      case "$action" in
+        start)   cmd_pi_start ;;
+        stop)    cmd_pi_stop ;;
+        restart) cmd_pi_stop; sleep 1; cmd_pi_start ;;
+        status)  cmd_pi_status ;;
+        tty|client) cmd_pi_tty ;;
+        eval)    emacsclient -s "$PI_DAEMON" --eval "$@" ;;
+        *)       err "pi: start|stop|restart|status|tty|client|eval" ;;
+      esac
+      ;;
     igc)
       local action="${1:-run}"; shift || true
       case "$action" in
@@ -421,7 +503,7 @@ cli_mode() {
       esac
       ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|igc|verify> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|igc|verify> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -475,6 +557,11 @@ main() {
       x) cmd_agent_stop ;;
       r) cmd_agent_stop; sleep 1; cmd_agent_start ;;
       e) cmd_agent_eval ;;
+      P) cmd_pi_start ;;
+      L) cmd_pi_status ;;
+      X) cmd_pi_stop ;;
+      R) cmd_pi_stop; sleep 1; cmd_pi_start ;;
+      T) cmd_pi_tty ;;
       i) "$IGC_SCRIPT"; read -p "계속하려면 Enter..."; continue ;;
       t) "$IGC_SCRIPT" --nw; read -p "계속하려면 Enter..."; continue ;;
       d) "$IGC_SCRIPT" --debug; read -p "계속하려면 Enter..."; continue ;;

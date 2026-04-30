@@ -44,6 +44,9 @@
 (defvar agent-server-version "0.1.0"
   "Version of agent-server.el.")
 
+(defvar agent-server-enable-socket t
+  "When non-nil, start the Emacs server socket for agent-server.")
+
 ;; Minimize startup
 (defvar agent-server--original-gc-threshold gc-cons-threshold)
 (setq gc-cons-threshold most-positive-fixnum)
@@ -1206,29 +1209,12 @@ DESCRIPTION is the link text.  Returns OK/ERROR string."
 
 (setq agent-server-ready t)
 
-(message "[agent-server] ========================================")
-(message "[agent-server] READY — v%s" agent-server-version)
-(message "[agent-server] Server: %s" agent-server-name)
-(message "[agent-server] Org: %s" (org-version))
-(message "[agent-server] Denote dir: %s" denote-directory)
-(message "[agent-server] API: agent-server-status, agent-org-read-file,")
-(message "[agent-server]      agent-org-get-headings, agent-org-get-properties,")
-(message "[agent-server]      agent-denote-search, agent-citar-lookup,")
-(message "[agent-server]      agent-denote-rename-by-front-matter,")
-(message "[agent-server]      agent-denote-rename-bulk,")
-(message "[agent-server]      agent-denote-set-front-matter,")
-(message "[agent-server]      agent-org-dblock-update,")
-(message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
-(message "[agent-server]      agent-org-agenda-tags, agent-org-agenda-todos,")
-(message "[agent-server]      agent-denote-keywords, agent-denote-add-history,")
-(message "[agent-server]      agent-denote-add-heading, agent-denote-add-link")
-(message "[agent-server] REPL: emacs_eval for runtime extension")
-(message "[agent-server] ========================================")
+(load (expand-file-name "agent-server-socket.el"
+                        (file-name-directory (or load-file-name buffer-file-name)))
+      nil t)
 
-;; Server socket (daemon mode auto-creates, but explicit for clarity)
-(unless noninteractive
-  (server-start)
-  (message "[agent-server] Socket created"))
+(when (fboundp 'agent-server-start-socket)
+  (agent-server-start-socket))
 
 (provide 'agent-server)
 ;;; agent-server.el ends here
