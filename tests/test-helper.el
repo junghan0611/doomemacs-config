@@ -1,6 +1,6 @@
 ;;; test-helper.el --- Test helper for doomemacs-config -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; Maintainer: Junghan Kim <junghanacs@gmail.com>

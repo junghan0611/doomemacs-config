@@ -1,6 +1,6 @@
 ;;; test-denote-export.el --- Tests for denote-export system -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;;; Commentary:
 

@@ -1,6 +1,6 @@
 ;;; $DOOMDIR/lisp/ai-pi-agent.el --- Pi Coding Agent Configuration -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; URL: https://github.com/junghan0611/doomemacs-config
@@ -44,7 +44,7 @@
             (assoc-delete-all 'markdown-mode treesit-major-mode-remap-alist))))
   :init
   ;; defvar 이전에 setq — :custom은 defer 상태에서 패키지 로드 전까지 적용 안 됨
-  (setq pi-coding-agent-extra-args '("--session-control"))
+  (setq pi-coding-agent-extra-args '("--entwurf-control"))
   :custom
   (pi-coding-agent-input-window-height 10)
   (pi-coding-agent-tool-preview-lines 10)

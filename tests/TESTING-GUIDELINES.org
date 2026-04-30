@@ -38,7 +38,7 @@ tests/
 #+begin_src elisp
 ;;; test-<module-name>.el --- Tests for <module> -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;;; Commentary:
 

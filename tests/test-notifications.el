@@ -1,6 +1,6 @@
 ;;; test-notifications.el --- Tests for notification system -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;;; Commentary:
 
