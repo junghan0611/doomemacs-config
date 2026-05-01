@@ -33,7 +33,7 @@
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 ;; (setq display-line-numbers-type t)
-(remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode)
+;; (remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode)
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -94,7 +94,6 @@
 ;; /doom/high-school-macos-emacs-dev-env/doom/init.el
 (setq-default x-stretch-cursor t) ; make the cursor wide over tabs, etc.
 (setq undo-limit 80000000) ; Raise undo-limit to 80Mb
-(setq truncate-string-ellipsis "…") ; Unicode ellispis are nicer than "...", and also save /precious/ space
 
 ;; When I bring up Doom's scratch buffer with SPC x, it's often to play with
 ;; elisp or note something down (that isn't worth an entry in my notes). I can
@@ -102,7 +101,7 @@
 (setq doom-scratch-initial-major-mode 'emacs-lisp-mode)
 
 ;; Set initial buffer to org
-(setq initial-major-mode #'emacs-lisp-mode); text-mode
+(setq initial-major-mode #'text-mode)
 
 ;;; Leader key
 
