@@ -1,6 +1,6 @@
 ;;; $DOOMDIR/lisp/keybindings-denote-config.el --- Denote Keybindings -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; URL: https://github.com/junghan0611/doomemacs-config

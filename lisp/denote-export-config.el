@@ -1,6 +1,6 @@
 ;;; +denote-export-config.el --- Denote to Hugo Export System -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; URL: https://github.com/junghanacs/doomemacs-config
 ;; Version: 1.0.0
