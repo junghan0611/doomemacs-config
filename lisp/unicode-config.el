@@ -1,6 +1,6 @@
 ;;; $DOOMDIR/lisp/unicode-config.el --- UI Configuration -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; URL: https://github.com/junghan0611/doomemacs-config
@@ -117,21 +117,25 @@
   (interactive)
   (insert (completing-read "Select unicode: " my/unicode-notetaking-circle)))
 
-;;;; keybindings
+;;;; Keybindings
 
-(after! vertico
-  (evil-define-key '(insert normal) text-mode-map (kbd "M-M") #'my/insert-unicode-notetaking)
-  (evil-define-key '(insert normal) text-mode-map (kbd "M-N") #'my/insert-unicode-notetaking-circle)
-  (evil-define-key '(insert normal) text-mode-map (kbd "M-m") #'my/insert-white-space)
+;; M-M : my/insert-unicode-notetaking         — text/minibuffer/vertico/grep
+;; M-N : my/insert-unicode-notetaking-circle  — text/minibuffer/vertico
+;; M-m (zero-width space) is bound in denote-export-config.el (single source)
 
-  (define-key minibuffer-mode-map (kbd "M-M") #'my/insert-unicode-notetaking) ; needed
-  (require 'grep)
-  (define-key grep-mode-map (kbd "M-M") #'my/insert-unicode-notetaking) ; needed
-  (define-key vertico-map (kbd "M-M") #'my/insert-unicode-notetaking)
-  (define-key minibuffer-mode-map (kbd "M-N") #'my/insert-unicode-notetaking-circle) ; needed
-
-  (define-key vertico-map (kbd "M-N") #'my/insert-unicode-notetaking-circle)
-  )
+(map! (:map text-mode-map
+       :i "M-M" #'my/insert-unicode-notetaking
+       :i "M-N" #'my/insert-unicode-notetaking-circle)
+      (:map minibuffer-mode-map
+            "M-M" #'my/insert-unicode-notetaking
+            "M-N" #'my/insert-unicode-notetaking-circle)
+      (:after vertico
+       :map vertico-map
+       "M-M" #'my/insert-unicode-notetaking
+       "M-N" #'my/insert-unicode-notetaking-circle)
+      (:after grep
+       :map grep-mode-map
+       "M-M" #'my/insert-unicode-notetaking))
 
 ;;; provide
 
