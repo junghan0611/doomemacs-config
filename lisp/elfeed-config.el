@@ -72,16 +72,21 @@
   ;; (setq elfeed-tube-invidious-url "https://vid.puffyan.us")
   (setq elfeed-tube-captions-languages '("en" "ko" "englsh (auto generated)")))
 
-;;;;; Elfeed-web (웹 인터페이스)
+;;;;; Elfeed-web (웹 인터페이스) — 비활성
 
-(let ((elfeed-web-dir (expand-file-name "lisp/elfeed-web" doom-user-dir)))
-  (when (file-directory-p elfeed-web-dir)
-    (when (locate-library "simple-httpd")
-      (require 'simple-httpd)
-      (load! "elfeed-web/elfeed-web"))))
-
-;; 외부 기기에서 접속 허용
-;; (setq httpd-host "0.0.0.0")
+;; 2026-05-06: 비활성. upstream에서 elfeed-web이 별도 repo로 분리됨
+;; (emacs-elfeed/elfeed-web). 로컬 카피 lisp/elfeed-web/ 는 보존하되,
+;; with-elfeed-web macro 제거 등 upstream 변경과 동기화가 필요해 일단 끔.
+;; 재활성 시 emacs-elfeed/elfeed-web 의 최신 파일로 lisp/elfeed-web/ 갱신.
+;;
+;; (let ((elfeed-web-dir (expand-file-name "lisp/elfeed-web" doom-user-dir)))
+;;   (when (file-directory-p elfeed-web-dir)
+;;     (when (locate-library "simple-httpd")
+;;       (require 'simple-httpd)
+;;       (load! "elfeed-web/elfeed-web"))))
+;;
+;; ;; 외부 기기에서 접속 허용
+;; ;; (setq httpd-host "0.0.0.0")
 
 ;;;; 본문 검색 (elfeed-deref 기반 - archive.gz 호환)
 
