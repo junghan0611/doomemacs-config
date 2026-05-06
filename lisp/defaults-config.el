@@ -68,5 +68,15 @@
             ((executable-find "ugrep") 'ugrep)
             (t 'grep)))
 
+;;;; persp-mode 세션 자동저장 — user 데몬만
+
+;; pi 같은 보조 데몬도 doom config 을 풀로드하여 동일한 persp-save-dir
+;; (~/.config/emacs/.local/state/workspaces/autosave) 를 공유한다. 종료
+;; 순서에 따라 user 의 워크스페이스가 빈 pi 세션에 덮어쓰일 위험이 있어
+;; user 인스턴스에서만 자동저장을 활성화한다.
+;; server-name 은 init.el 에서 EMACS_SERVER_NAME 환경변수로 결정.
+(unless (equal server-name "user")
+  (setq persp-auto-save-opt 0))
+
 (provide 'defaults-config)
 ;;; defaults-config.el ends here
