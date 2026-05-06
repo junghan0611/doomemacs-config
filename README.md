@@ -127,7 +127,7 @@ Incremental export (daily use) finishes in seconds, processing only changed file
 | GPTel | `ai-gptel.el` | Multi-backend LLM (Claude, OpenAI, Gemini, local) |
 | Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
-| Bot Config | `ai-bot-config.el` | Agent behavior & prompts |
+| Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
 | ECA Whisper | `ai-stt-eca-whisper.el` | Speech-to-text |
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | Terminal multiplexer orchestration |
