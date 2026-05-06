@@ -77,7 +77,7 @@
   (org-tree-slide-mode 1)
   ;; 시각 설정 (Doom +present 훅이 처리 못하는 경우 보완)
   (text-scale-set my/present-text-scale)
-  (hide-mode-line-mode 1)
+  (mode-line-invisible-mode 1)
   (set-window-fringes nil 0 0)
   (message "🎤 C-→ 다음 / C-← 이전 / SPC j p q 종료"))
 
@@ -87,7 +87,7 @@
   (setq my/present--active nil)
   (org-tree-slide-mode -1)
   (text-scale-set 0)
-  (hide-mode-line-mode -1)
+  (mode-line-invisible-mode -1)
   ;; 탭바 복원
   (when (fboundp 'centaur-tabs-mode)
     (centaur-tabs-mode 1))

@@ -67,20 +67,20 @@
 
     ;; https://orgmode.org/worg/org-tutorials/org-custom-agenda-commands.html
     (setq org-agenda-custom-commands
-          '(("d" "오늘 할 것"
+          '(("d" "Today"
              ((agenda "" ((org-agenda-span 'day)))
               (todo "NEXT" nil)))
-            ("w" "이번 주"
+            ("w" "This week"
              ((agenda "" ((org-agenda-span 'week)
                            (org-agenda-start-on-weekday 1)))))
-            ("p" "프로젝트별 TODO"
+            ("p" "TODOs by project"
              ((tags-todo "GH"
-                         ((org-agenda-overriding-header "GitHub 프로젝트")))
+                         ((org-agenda-overriding-header "GitHub projects")))
               (tags-todo "WORK"
-                         ((org-agenda-overriding-header "회사 프로젝트")))))
-            ("a" "우선순위 [#A]"
+                         ((org-agenda-overriding-header "Work projects")))))
+            ("a" "Priority [#A]"
              ((tags-todo "+PRIORITY=\"A\"")))
-            (" " "기본: 오늘 + NEXT"
+            (" " "Default: Today + NEXT"
              ((agenda "" ((org-agenda-span 'day)))
               (todo "NEXT" nil)))))
     )

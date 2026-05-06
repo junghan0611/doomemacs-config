@@ -60,7 +60,6 @@
 (package! opencl-mode :disable t)
 
 (package! diredfl :disable t) ; conflict @denote
-(package! dirvish :disable t)
 (package! code-review :disable t) ; not working
 
 ;; checkers
@@ -80,8 +79,6 @@
 (package! solaire-mode :disable t)
 (package! mixed-pitch :disable t)
 ;; (package! ace-window :disable t)
-
-(package! treemacs-nerd-icons :disable t)
 
 ;; (package! corfu-popupinfo :disable t)
 

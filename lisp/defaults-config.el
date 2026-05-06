@@ -42,16 +42,14 @@
 ;; 간격 (notify 사용 시 fallback 용)
 (setq auto-revert-interval 5)
 
-(let ((device (string-trim
-               (shell-command-to-string "cat ~/.current-device 2>/dev/null"))))
-  (cond
-   ((string-equal-ignore-case device "termux")
-    (setq auto-revert-use-notify nil
-          auto-revert-avoid-polling nil))
-   ((cl-member device '("nuc" "laptop" "thinkpad") :test #'string-equal-ignore-case)
-    ;; OS 파일 알림 사용 (polling 보다 빠르고 효율적)
-    (setq auto-revert-use-notify t
-          auto-revert-avoid-polling t))))
+(cond
+ ((equal my/current-device "termux")
+  (setq auto-revert-use-notify nil
+        auto-revert-avoid-polling nil))
+ ((member my/current-device '("nuc" "laptop" "thinkpad"))
+  ;; OS 파일 알림 사용 (polling 보다 빠르고 효율적)
+  (setq auto-revert-use-notify t
+        auto-revert-avoid-polling t)))
 
 ;;;; kill-ring / lockfiles
 

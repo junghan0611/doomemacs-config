@@ -27,6 +27,14 @@
 (defvar IS-EMACS31+
   (>= emacs-major-version 31))
 
+(defvar my/current-device
+  (let ((f "~/.current-device"))
+    (when (file-exists-p f)
+      (string-trim
+       (with-temp-buffer (insert-file-contents f) (buffer-string)))))
+  "Device id from ~/.current-device (nuc|laptop|thinkpad|termux|oracle).
+nil if file missing.")
+
 (when IS-TERMUX
   (setq root-path "/data/data/com.termux/files/"))
 
@@ -69,14 +77,14 @@
        hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW/XXX/BUG
        ;; indent-guides     ; highlighted indent columns
        modeline          ; snazzy, Atom-inspired modeline, plus API
-       neotree           ; a project drawer, like NERDTree for vim
+       ;; neotree           ; sidebar — :emacs dired/dirvish 로 대체
        ophints           ; highlight the region an operation acts on
        (popup +defaults) ; tame sudden yet inevitable temporary windows
        ;; smooth-scroll: TTY 는 픽셀 보간 의미 없음. good-scroll 타이머/advice
        ;; 비용만 발생. GUI 에서 ultra-scroll 만 필요하면 명시적으로 재활성.
 
        ;; (:unless IS-EMACS31+ tabs) ; centaur-tabs — powerline 31 비호환
-       treemacs          ; a project drawer, like neotree but cooler
+       ;; treemacs          ; LSP 안 쓰면 가치 절반 — :emacs dired/dirvish 로 대체
        vc-gutter         ; +pretty - vcs diff in the fringe
        ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB
        (window-select +numbers) ; visually switch windows

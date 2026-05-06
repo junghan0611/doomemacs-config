@@ -223,8 +223,10 @@ and if it is set to nil, then it would forcefully create the ID."
   (+workspace/new-named "feed")
   (elfeed)
 
-  ;; (+workspace/new-named "bot")
-  ;; (telega)
+  ;; telega 는 thinkpad 에만 활성. 다른 디바이스에선 tdlib 미설치.
+  (when (equal my/current-device "thinkpad")
+    (+workspace/new-named "bot")
+    (telega))
 
   (+workspace/switch-to-0))
 

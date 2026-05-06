@@ -83,17 +83,12 @@
 
 ;;;; F1-12: Function Keys
 
-;;;;; treemacs - f8
+;;;;; dirvish-side - f8
 
-(when (modulep! :ui treemacs)
-  (map!
-   "<f8>"   #'+treemacs/toggle
-   "<C-f8>" #'treemacs-find-file
-   "<M-f8>" #'treemacs-select-window
-   (:map treemacs-mode-map
-         "." #'consult-line)
-   (:map evil-treemacs-state-map
-         "." #'consult-line)))
+;; treemacs/neotree 제거 후 사이드바는 dirvish-side 로 대체.
+;; dirvish 자체는 :emacs dired 모듈에서 자동 활성 — `SPC f j' 등으로 dired 호출 시
+;; 모던 UI 가 자동 적용. F8 은 사이드바가 가끔 필요할 때만.
+(map! "<f8>" #'dirvish-side)
 
 ;;;;; imenu-list - f9
 
@@ -117,7 +112,7 @@
 
 (map! :leader
       (:prefix "b"
-       :desc "Dashboard" "h" #'+doom-dashboard/open
+       :desc "Dashboard" "h" #'+dashboard/open
        :desc "Switch to Scratch" "s" #'scratch-buffer
        :desc "Kill all dired buffers" "D" #'my/dired-kill-all-buffers))
 
@@ -210,12 +205,11 @@
 
 ;;;;; 'p' project
 
-;; Toggle treemacs project browser from project menu
+;; SPC p t 자리는 비워둠 — 필요시 dirvish-side 또는 다른 명령에 매핑.
 (after! projectile
   (map! :leader
         (:prefix "p"
-         "t" nil  ; disable project todos key binding
-         :desc "Treemacs browser" "t" #'+treemacs/toggle)))
+         "t" nil)))  ; disable project todos key binding
 
 ;;;; Key Functions
 

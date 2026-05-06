@@ -42,6 +42,8 @@
 
   (setq +evil-want-o/O-to-continue-comments nil) ; doom t
   (setq +default-want-RET-continue-comments nil) ; doom t
+  ;; electric-indent-mode가 켜진 버퍼에서의 새 RET 메커니즘 (Doom 26.06+)
+  (setq +electric-continue-comments nil) ; doom t
 
   (setq evil-want-fine-undo t) ; doom 'nil
 

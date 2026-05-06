@@ -24,6 +24,12 @@
 ;; 새 :ui dashboard 모듈 사용 (+dashboard-* 접두사)
 (setq +dashboard-ascii-banner-fn nil)
 
+;; 위젯 정렬 — Doom 26.06+ `+dashboard-anchor` (vertical . horizontal)
+;; 기본 (center . center). 변경 옵션:
+;;   (top . center)    — fortune이 화면 최상단에 박힘
+;;   (bottom . center) — 모든 위젯이 화면 하단에 정렬
+;;   (* . left|right)  — 좌/우 정렬
+
 ;; Dashboard 위젯 구성
 (setq +dashboard-functions
       '(my/dashboard-widget-fortune ;; fortune
@@ -32,25 +38,45 @@
         +dashboard-widget-loaded
         +dashboard-widget-footer))
 
+;; shortmenu 항목 — Doom 기본 7개 중 실제로 쓰는 3개만 남김.
+;; - Reload last session: persp-mode autosave 파일 로드 (doom/quickload-session)
+;; - Open project: projectile 프로젝트 스위치
+;; - Jump to bookmark: 즐겨찾는 위치
+;; (setq +dashboard-menu-sections
+;;       '(("Reload last session"
+;;          :icon (nerd-icons-octicon "nf-oct-history" :face '+dashboard-menu-title)
+;;          :when (cond ((modulep! :ui workspaces)
+;;                       (file-exists-p (expand-file-name persp-auto-save-fname persp-save-dir)))
+;;                      ((require 'desktop nil t)
+;;                       (file-exists-p (desktop-full-file-name))))
+;;          :action doom/quickload-session)
+;;         ("Open project"
+;;          :icon (nerd-icons-octicon "nf-oct-briefcase" :face '+dashboard-menu-title)
+;;          :action projectile-switch-project)
+;;         ("Jump to bookmark"
+;;          :icon (nerd-icons-octicon "nf-oct-bookmark" :face '+dashboard-menu-title)
+;;          :action bookmark-jump)))
+
 ;; Fortune 위젯: Kevin Kelly 명언 또는 fortune 명령어 출력
 (defun my/dashboard-widget-fortune ()
   "Display fortune quote or Kevin Kelly's wisdom."
-  (let* ((quotestring
-          (if (executable-find "fortune")
-              ;; fortune 명령어가 있으면 사용, termux는 -c 옵션이 없으므로 조건부 처리
-              (let ((fortune-cmd (if IS-TERMUX
-                                     "fortune"  ; termux: simple fortune
-                                   "fortune ~/.fortunes/advice"))) ; NixOS: ~/.fortunes/advice (Kevin Kelly)
-                (string-join
-                 (mapcar
-                  (lambda (l) (concat "\n " (string-fill l 72)))
-                  (string-lines
-                   (shell-command-to-string fortune-cmd)))))
-            ;; fortune 없으면 Kevin Kelly 기본 명언
-            "\n The only way to fight against getting old is to remain astonished.
+  (let ((body
+         (if (executable-find "fortune")
+             ;; fortune 명령어가 있으면 사용, termux는 -c 옵션이 없으므로 조건부 처리
+             (let ((fortune-cmd (if IS-TERMUX
+                                    "fortune"  ; termux: simple fortune
+                                  "fortune ~/.fortunes/advice"))) ; NixOS: ~/.fortunes/advice (Kevin Kelly)
+               (string-join
+                (mapcar (lambda (l) (string-fill l 72))
+                        (string-lines
+                         (shell-command-to-string fortune-cmd)))
+                "\n"))
+           ;; fortune 없으면 Kevin Kelly 기본 명언
+           "The only way to fight against getting old is to remain astonished.
                                                       - Kevin Kelly")))
-    ;; 새 dashboard의 +dashboard-insert-centered 사용 (pixel-width 기반 센터링)
-    (+dashboard-insert-centered quotestring)))
+    ;; +dashboard-insert: +dashboard-anchor 의 horizontal 정렬을 따름
+    ;; (구 +dashboard-insert-centered 는 obsolete — 강제 center)
+    (+dashboard-insert body)))
 
 ;;;; visual-line-mode
 
