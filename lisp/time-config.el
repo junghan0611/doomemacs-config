@@ -30,9 +30,7 @@
 ;; (setq display-time-interval 30) ; default 60
 (setq display-time-default-load-average nil)
 
-;; NOTE 2022-09-21: For all those, I have implemented my own solution
-;; that also shows the number of new items, although it depends on
-;; notmuch: the `notmuch-indicator' package.
+;; mail indicator 비활성 (이메일은 Emacs 밖에서 본다)
 (setq display-time-mail-directory nil)
 (setq display-time-mail-function nil)
 (setq display-time-use-mail-icon nil)

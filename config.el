@@ -230,53 +230,6 @@
 
 ;;; TODO Custom Integration
 
-;;;; MU4e
-
-;; (after! mu4e
-;;   (setq mu4e-maildir "~/Maildir"
-;;         mu4e-get-mail-command "mbsync -a"
-;;         mu4e-update-interval (* 60 60 3)))  ; 3H 마다 자동 동기화
-
-;;;; DONT  Notmuch 이메일 설정
-
-(after! notmuch
-  ;; 다중 계정 설정
-  (setq notmuch-identities
-        '("jhkim2@goqual.com"
-          "junghanacs@gmail.com"))
-
-  ;; FCC (보낸 메일 저장 위치)
-  (setq notmuch-fcc-dirs
-        '(("jhkim2@goqual.com" . "work/[Gmail]/&yVwwYA-")
-          ("junghanacs@gmail.com" . "personal/[Gmail]/Sent Mail")))
-
-  ;; 메일 발송 설정
-  (setq message-send-mail-function 'message-send-mail-with-sendmail
-        sendmail-program "/usr/bin/msmtp"
-        message-sendmail-extra-arguments '("--read-envelope-from")
-        message-sendmail-f-is-evil t)
-
-  ;; 동기화 명령
-  (setq +notmuch-sync-backend "mbsync -a")
-
-  ;; 저장된 검색
-  (setq notmuch-saved-searches
-        '((:name "📧 Work Inbox"
-           :query "tag:inbox AND to:jhkim2@goqual.com"
-           :key "w")
-          (:name "📧 Personal Inbox"
-           :query "tag:inbox AND to:junghanacs@gmail.com"
-           :key "p")
-          (:name "📬 Unread"
-           :query "tag:unread"
-           :key "u")
-          (:name "📤 Sent"
-           :query "tag:sent"
-           :key "s")
-          (:name "🗓️ Today"
-           :query "date:today"
-           :key "t"))))
-
 ;;;; Notification System (dunst via notify-send)
 
 (defun my/notify (title message &optional urgency duration)

@@ -181,8 +181,8 @@ nil if file missing.")
        (scheme +mit) ; +racket ; a fully conniving family of lisps
        ess
 
-       :email
-       (notmuch +org)
+       ;; :email 비활성 — 이메일은 Emacs 밖에서 본다.
+       ;; (notmuch +org)
        ;; (mu4e +org +gmail +mbsync)
 
        :app
