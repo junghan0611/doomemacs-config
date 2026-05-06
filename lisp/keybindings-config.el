@@ -90,6 +90,15 @@
 ;; 모던 UI 가 자동 적용. F8 은 사이드바가 가끔 필요할 때만.
 (map! "<f8>" #'dirvish-side)
 
+;; dirvish-mode-map 이 가로채는 메인 시나리오 키 보호:
+;;   M-e — denote 핵심 keymap (lisp/keybindings-denote-config.el)
+;;   M-s — 글로벌 search prefix (consult-line 등)
+;; dirvish-emerge-menu / dirvish-setup-menu 는 ? (dirvish-dispatch) 또는 M-x 로 접근.
+(after! dirvish
+  (map! :map dirvish-mode-map
+        "M-e" nil
+        "M-s" nil))
+
 ;;;;; imenu-list - f9
 
 (after! imenu-list
