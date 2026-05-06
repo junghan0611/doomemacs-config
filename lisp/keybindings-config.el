@@ -93,11 +93,13 @@
 ;; dirvish-mode-map 이 가로채는 메인 시나리오 키 보호:
 ;;   M-e — denote 핵심 keymap (lisp/keybindings-denote-config.el)
 ;;   M-s — 글로벌 search prefix (consult-line 등)
+;; Doom 원본이 `:ng' (evil normal + god) 로 매핑해 evil 보조 keymap 에
+;; 들어가므로, state 미명시 unbind 만으론 부족. 같은 :ng 로 unbind.
 ;; dirvish-emerge-menu / dirvish-setup-menu 는 ? (dirvish-dispatch) 또는 M-x 로 접근.
 (after! dirvish
   (map! :map dirvish-mode-map
-        "M-e" nil
-        "M-s" nil))
+        :ng "M-e" nil
+        :ng "M-s" nil))
 
 ;;;;; imenu-list - f9
 
