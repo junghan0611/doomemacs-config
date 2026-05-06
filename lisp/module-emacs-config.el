@@ -17,7 +17,34 @@
 
 ;;; Code:
 
-;;;; dired
+;;;; dired + dirvish — Doom 기본 (DOOM-NATIVE)
+
+;; Doom :emacs dired 모듈은 +dirvish 플래그 없이도 dirvish 를 자동으로
+;; minor augmentation 으로 끼워 넣는다 (preview, icons, mode-line 정보).
+;; 풀 dirvish 인터페이스 (Ranger 풍 멀티 패널) 가 필요하면 init.el 에서
+;; `(dired +dirvish)' 로 플래그 활성. 지금은 기본만 사용.
+;;
+;; 진입:
+;;   `SPC f j' / `SPC f d' / `M-x dired RET' → 자동으로 dirvish UI 적용
+;;   `<f8>'                                  → dirvish-side 사이드바
+;;
+;; 핵심 키 (dirvish-mode-map 안):
+;;   ?            dirvish-dispatch — 모든 기능 진입점 (transient menu)
+;;   F            dirvish-layout-toggle — 1/2/3 panel
+;;   TAB / gl     dirvish-subtree-toggle
+;;   h / l        dired-up-directory / dired-find-file
+;;   y l/n/p/r/y  yank submap (path/name 복사)
+;;   M-n          dirvish-narrow (filter)
+;;   M-m          dirvish-mark-menu
+;;
+;; 보호된 키 (lisp/keybindings-config.el 에서 unbind):
+;;   M-e — denote core keymap
+;;   M-s — 글로벌 search prefix
+;;   각각 dispatch (?) 메뉴 또는 M-x 로 접근.
+;;
+;; 비활성:
+;;   neotree, treemacs — dired/dirvish 로 대체. SPC f * 시리즈가 더 빠름.
+;;   diredfl  — denote 와 충돌 (packages.el)
 
 (after! dired
   (setq dired-make-directory-clickable t) ; Emacs 29.1, doom t
