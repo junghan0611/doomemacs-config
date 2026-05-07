@@ -20,7 +20,7 @@
 ;;; Code:
 
 (use-package! ghostel
-  :commands (ghostel)
+  :commands (ghostel ghostel-project my/pi-ghostel-start)
   :if (and (fboundp 'module-load)
            module-file-suffix
            (not (bound-and-true-p IS-TERMUX)))
@@ -38,11 +38,74 @@
   ;; Keep side effects opt-in during evaluation.
   ;; (setq ghostel-enable-osc52 t)
   ;; (setq ghostel-tramp-shell-integration t)
-  )
+
+  ;;; project.el integration — C-x p p picks "Ghostel" alongside Doom defaults.
+  (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
+
+  ;;; Whitelist additional elisp callbacks for `ghostel_cmd' shell helper.
+  ;; Default: find-file, find-file-other-window, dired, dired-other-window, message.
+  ;; Add Doom-specific commands we want callable from inside the terminal.
+  (with-eval-after-load 'ghostel
+    (dolist (cmd '(("magit-status-setup-buffer" magit-status-setup-buffer)
+                   ("dired-jump"                 dired-jump)
+                   ("+default/find-file-under-here" +default/find-file-under-here)))
+      (add-to-list 'ghostel-eval-cmds cmd)))
+
+  ;;; OSC 9;4 progress protocol — claude code, codex, pi CLI all emit this.
+  ;; spinner.el ships with magit; default to spinner if loadable, else text.
+  (when (locate-library "spinner")
+    (setq ghostel-progress-function #'ghostel-spinner-progress
+          ghostel-spinner-type 'progress-bar)))
 
 (use-package! evil-ghostel
   :after (ghostel evil)
   :hook (ghostel-mode . evil-ghostel-mode))
+
+
+;;; Pi CLI in ghostel — replacing pi-coding-agent package on -nw
+
+(defcustom my/pi-ghostel-args
+  '("--entwurf-control" "--emacs-agent-socket" "pi")
+  "Args passed to the `pi' CLI when launched via `my/pi-ghostel-start'."
+  :type '(repeat string)
+  :group 'ghostel)
+
+(defun my/pi-ghostel--inject-env ()
+  "Inject env vars expected by pi when running inside ghostel.
+Transiently hooked by `my/pi-ghostel-start' onto `ghostel-pre-spawn-hook'."
+  (setenv "PI_EMACS_AGENT_SOCKET" "pi"))
+
+(defun my/pi-ghostel-start (&optional new-buffer)
+  "Open a ghostel buffer at project root and start `pi' inside.
+With prefix arg NEW-BUFFER, force a fresh ghostel buffer.
+
+Replaces the `pi-coding-agent' Emacs package on TTY (-nw) instances:
+ghostel handles the terminal mirroring, OSC 9;4 progress, OSC 8 hyperlinks,
+OSC 133 prompt markers, and Korean IME (via our fork).  Pi just runs as
+its own CLI."
+  (interactive "P")
+  (let ((ghostel-pre-spawn-hook
+         (cons #'my/pi-ghostel--inject-env ghostel-pre-spawn-hook)))
+    (if new-buffer
+        (let ((current-prefix-arg '(4)))
+          (call-interactively #'ghostel-project))
+      (call-interactively #'ghostel-project)))
+  (let ((buf (current-buffer))
+        (cmd (concat "pi "
+                     (mapconcat #'shell-quote-argument
+                                my/pi-ghostel-args " ")
+                     "\n")))
+    (run-with-timer
+     0.4 nil
+     (lambda ()
+       (when (and (buffer-live-p buf)
+                  (with-current-buffer buf
+                    (derived-mode-p 'ghostel-mode)))
+         (with-current-buffer buf
+           (ghostel-send-string cmd)))))))
+
+(map! :leader
+      :desc "Pi (ghostel)" "j SPC" #'my/pi-ghostel-start)
 
 (provide 'term-config)
 ;;; term-config.el ends here
