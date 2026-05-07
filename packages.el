@@ -89,6 +89,13 @@
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
 (package! kkp :disable t) ; conflict with term-keys
 (package! term-keys :recipe (:host github :repo "junghan0611/term-keys"))
+(package! ghostel
+  :recipe (:host github :repo "junghan0611/ghostel"
+           :branch "fix/korean-ime-commit"))
+(package! evil-ghostel
+  :recipe (:host github :repo "junghan0611/ghostel"
+           :branch "fix/korean-ime-commit"
+           :files ("extensions/evil-ghostel/evil-ghostel.el")))
 
 ;;; module-emacs-config.el
 
