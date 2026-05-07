@@ -54,7 +54,12 @@
   (pi-coding-agent-visit-file-other-window t)
   :config
   (add-hook 'pi-coding-agent-chat-mode-hook #'doom-mark-buffer-as-real-h)
-  (add-hook 'pi-coding-agent-input-mode-hook #'doom-mark-buffer-as-real-h))
+  (add-hook 'pi-coding-agent-input-mode-hook #'doom-mark-buffer-as-real-h)
+  ;; 스트리밍/렌더링 비용이 큰 Pi 버퍼에서는 line numbers를 끈다.
+  (add-hook 'pi-coding-agent-chat-mode-hook
+            (lambda () (display-line-numbers-mode -1)))
+  (add-hook 'pi-coding-agent-input-mode-hook
+            (lambda () (display-line-numbers-mode -1))))
 
 ;;;; 유틸리티
 
