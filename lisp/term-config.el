@@ -59,7 +59,15 @@
 
 (use-package! evil-ghostel
   :after (ghostel evil)
-  :hook (ghostel-mode . evil-ghostel-mode))
+  :hook (ghostel-mode . evil-ghostel-mode)
+  :config
+  ;; Route insert-state ESC to the PTY in every ghostel buffer.
+  ;; Claude Code, codex, pi all expose their own vim-style mode that
+  ;; expects ESC to reach them; alt-screen apps (vim, htop) need it too.
+  ;; Use `,.' (evil-escape) for Emacs evil normal state, `C-c C-t' for
+  ;; scrollback (`ghostel-copy-mode').  `evil-ghostel-toggle-send-escape'
+  ;; switches modes per buffer when needed.
+  (setq evil-ghostel-escape 'terminal))
 
 
 ;;; Pi CLI in ghostel — replacing pi-coding-agent package on -nw
