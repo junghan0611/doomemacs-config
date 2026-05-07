@@ -84,6 +84,8 @@ ghostel handles the terminal mirroring, OSC 9;4 progress, OSC 8 hyperlinks,
 OSC 133 prompt markers, and Korean IME (via our fork).  Pi just runs as
 its own CLI."
   (interactive "P")
+  ;; Ensure `ghostel-pre-spawn-hook' and friends are defined before we let-bind.
+  (require 'ghostel)
   (let ((ghostel-pre-spawn-hook
          (cons #'my/pi-ghostel--inject-env ghostel-pre-spawn-hook)))
     (if new-buffer
