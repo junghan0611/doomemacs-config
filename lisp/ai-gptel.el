@@ -142,7 +142,7 @@
           :host "openrouter.ai"
           :endpoint "/api/v1/chat/completions"
           :stream t
-          :key (lambda () (password-store-get "work/api/openrouter/devteam-goqual-backup"))
+          :key (lambda () (password-store-get "work/api/openrouter/junghanacs/gptel"))
           :models gptel--openrouter-models))
   (setq gptel-openrouter-chat-model 'openai/gpt-5.1-chat) ; < 1.0s latency
   (setq gptel-openrouter-flash-model 'google/gemini-3-flash-preview) ; 3.8s bench, best speed+quality
@@ -210,9 +210,9 @@
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
   (setq gptel--system-message user-llm-system-prompt)
 
-  ;; Magit 백엔드 (항상 OpenRouter - 웹검색 불필요)
-  (setq gptel-magit-backend gptel-openrouter-backend)
-  (setq gptel-magit-model gptel-openrouter-flash-model)
+  ;; Magit 백엔드 (DeepSeek - 웹검색 불필요)
+  (setq gptel-magit-backend gptel-deepseek-backend)
+  (setq gptel-magit-model 'deepseek-v4-flash)
 
   ;; Claude-Code 서버 상태 확인
   (defun gptel--claude-code-server-available-p ()
@@ -226,17 +226,22 @@
             (and (search-forward "healthy" nil t) t)))
       (error nil)))
 
-  ;; 기본 백엔드: Claude-Code 서버 감지 → 있으면 사용, 없으면 OpenRouter
-  (if (gptel--claude-code-server-available-p)
-      (progn
-        (setq gptel-backend gptel-claude-code-backend)
-        (setq gptel-model 'claude-sonnet-4-6)
-        (message "gptel: Claude-Code 서버 감지 → 기본 백엔드로 설정"))
-    (setq gptel-backend gptel-openrouter-backend)
-    (setq gptel-model gptel-openrouter-chat-model)
-    (message "gptel: Claude-Code 서버 없음 → OpenRouter 사용"))
+  ;; 기본 백엔드: DeepSeek 고정.
+  ;; OpenRouter / Claude-Code wrapper / Claude-Code 서버는 키·서비스가
+  ;; 항상 살아있지 않아 기본값으로는 부적합. DeepSeek는 회사 키로
+  ;; 안정 동작하므로 부팅 후 바로 채팅 가능.
+  ;; 다른 백엔드는 `my/gptel-switch-to-*` 명령으로 수동 전환.
+  (setq gptel-backend gptel-deepseek-backend)
+  (setq gptel-model 'deepseek-v4-pro)
 
   ;; 수동 백엔드 전환
+  (defun my/gptel-switch-to-deepseek ()
+    "Switch gptel backend to DeepSeek (default)."
+    (interactive)
+    (setq gptel-backend gptel-deepseek-backend)
+    (setq gptel-model 'deepseek-chat)
+    (message "Switched to DeepSeek backend"))
+
   (defun my/gptel-switch-to-claude-code ()
     "Switch gptel backend to Claude-Code (requires server running)."
     (interactive)
@@ -262,8 +267,8 @@
   ;; M-RET 채팅 버퍼로 이어서 질문
   ;; C-g   닫기
 
-  (setq gptel-quick-backend gptel-openrouter-backend)
-  (setq gptel-quick-model gptel-openrouter-flash-model)
+  (setq gptel-quick-backend gptel-deepseek-backend)
+  (setq gptel-quick-model 'deepseek-chat)
   (setq gptel-quick-word-count 30) ; 기본 12 → 30 (한글 ~15자 분량)
   (setq gptel-quick-timeout 15)    ; 기본 10 → 15초
   (setq gptel-quick-display nil)   ; use echo area

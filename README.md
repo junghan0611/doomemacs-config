@@ -85,15 +85,16 @@ The same `org-agenda` view shows human tasks and agent activity side by side.
 
 ## Emacs Server Architecture
 
-Three isolated server sockets coexist:
+Four isolated server sockets coexist. Daily use is **one GUI + many TTY clients attached to the `pi` daemon**:
 
 | Socket | Instance | Purpose |
 |--------|----------|---------|
-| `"user"` | Emacs 30.2 GUI | GLG's primary editor (doom run / emacsclient) |
-| `"server"` | Emacs 30.2 headless | Agent daemon — agents eval elisp via emacsclient |
-| `"doom-igc"` | Emacs 31 (MPS GC) | IGC experimental frontend |
+| `"user"` | Emacs 30.2 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
+| `"pi"` | Emacs 30.2 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
+| `"server"` | Emacs 30.2 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
+| `"doom-igc"` | Emacs 31 (MPS GC) | IGC experimental frontend (`./run.sh igc run`) |
 
-Independent terminal instances (`emacs -nw`) run without connecting to any server.
+Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
 
 ## Denote Export Pipeline
 
@@ -128,7 +129,7 @@ Incremental export (daily use) finishes in seconds, processing only changed file
 | Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
-| ECA Whisper | `ai-stt-eca-whisper.el` | Speech-to-text |
+| Whisper STT | `ai-stt-whisper.el` | Speech-to-text via Groq whisper-large-v3 |
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | Terminal multiplexer orchestration |
 
@@ -162,7 +163,9 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 ```bash
 ./run.sh                # Interactive TUI menu
 ./run.sh sync           # doom sync
-./run.sh agent start    # Start agent server
+./run.sh agent start    # Start agent RPC daemon (socket "server")
+./run.sh pi start       # Start pi Doom daemon (socket "pi")
+./run.sh pi tty         # Attach a new TTY client to the pi daemon
 ./run.sh export all     # Export all folders
 ./run.sh igc tty        # IGC terminal mode
 ./run.sh verify fix     # Fix broken Hugo relrefs
@@ -185,9 +188,18 @@ ln -s ~/repos/gh/doomemacs-config ~/.doom.d
 ### Shell Aliases
 
 ```bash
-alias et='emacs -nw'          # Emacs 30 terminal (standalone)
-alias eti='~/.doom.d/bin/emacs-igc.sh --nw'  # Emacs 31 IGC terminal
+# Daily use — daemon attach
+alias ecs='emacsclient -s user -t'             # Attach TTY client to GUI Emacs (user daemon)
+alias ep='~/.doom.d/run.sh pi tty'             # Attach TTY client to pi daemon (full Doom)
+alias es='~/.doom.d/run.sh agent restart'      # Restart agent RPC daemon (socket "server")
+alias eip='~/.doom.d/run.sh igc run'           # Emacs 31 IGC GUI
+
+# Standalone (fallback)
+alias et='emacs -nw'                           # Emacs 30 terminal, no daemon
+alias eti='~/.doom.d/bin/emacs-igc.sh --nw'    # Emacs 31 IGC terminal, no daemon
 ```
+
+**Typical session**: launch `doom run` once for the GUI, run `./run.sh pi start`, then open WezTerm tabs and type `ep` in each. All tabs share the same pi daemon — config edits, packages, native-comp eln cache, even open buffers are shared. Agent RPC runs in a separate `server` daemon so it never blocks the editor.
 
 ## Tested Environments
 
@@ -219,19 +231,24 @@ alias eti='~/.doom.d/bin/emacs-igc.sh --nw'  # Emacs 31 IGC terminal
 
 **Q: Emacs 인스턴스 여러 개 띄우면 메모리 문제 없나?**
 
-Measured on 27GB RAM laptop (2026-04-13):
+Daemon-attach 모델로 바꾼 뒤(2026-05) 메모리 풋프린트가 크게 줄었다. WezTerm 탭을 N개 열어도 Emacs 프로세스는 늘지 않고 `emacsclient -t` 클라이언트만 추가된다.
 
 | Process | RSS |
 |---------|-----|
-| GUI Emacs (doom run, user server) | ~413 MB |
-| TTY Emacs + pi RPC (each) | ~360 MB + ~170 MB |
-| Agent server (headless) | ~124 MB |
+| GUI Emacs (`doom run`, user daemon) | ~413 MB |
+| Pi Emacs daemon (full Doom, all TTY tabs share) | ~360 MB |
+| `emacsclient -t` (per terminal tab) | < 5 MB |
+| Agent RPC daemon (`server` socket, headless) | ~124 MB |
 
-5 TTY instances (each with pi) ≈ 3.5 GB total. No issue on 27GB. Native-comp eln cache is shared across instances, so memory growth is sub-linear.
+이전 standalone 모델에서는 TTY 탭마다 ~360 MB짜리 Doom 프로세스를 새로 띄웠다. 5탭이면 ≈ 1.8 GB. 지금은 5탭 = `360 MB + 5 × 5 MB` ≈ 385 MB. Native-comp eln 캐시는 어차피 공유되지만 Doom 초기화 비용 자체가 한 번으로 줄어드는 게 더 큰 차이다.
 
-**Q: Why `emacs -nw` instead of a terminal multiplexer + emacsclient?**
+**Q: Why `pi` daemon + `emacsclient -t` instead of standalone `emacs -nw` per tab?**
 
-Each standalone `emacs -nw` is a full Doom Emacs with its own pi coding agent. The `init.el` guard only blocks duplicate *daemons* — non-daemon instances run freely. This gives each terminal its own isolated agent session while sharing the same `~/org/` data.
+원래는 탭마다 `emacs -nw`를 standalone으로 띄웠다. 각 인스턴스가 자기 pi coding agent 세션을 갖는 장점은 있었지만 — Doom init이 매번 돌고, 패키지 캐시·테마·열린 버퍼가 격리됐다.
+
+지금은 `./run.sh pi start`로 띄운 한 개의 full Doom daemon에 모든 터미널이 attach한다. 한 탭에서 연 버퍼가 다른 탭에서 그대로 보이고, gptel 세션·pi agent shell·org-agenda가 공유된다. agent RPC는 별도 `server` daemon으로 격리해 편집 작업과 서로 블로킹하지 않는다.
+
+Standalone `emacs -nw`는 fallback으로 남겨뒀다 (`et` alias) — daemon이 죽거나 격리된 환경이 필요할 때 쓴다.
 
 **Q: How does Korean input work in terminal Emacs over SSH?**
 

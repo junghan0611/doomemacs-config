@@ -440,27 +440,7 @@ SHOW-PROGRESS가 non-nil이면 진행 상황 버퍼를 표시."
                        (message "TTS 저장 및 재생: %s" output-file))
                    (message "TTS 저장 실패")))))))))
 
-;;;; ECA/GPTel 통합
-
-;;;###autoload
-(defun edge-tts-speak-eca-last-response ()
-  "ECA 채팅의 마지막 응답을 음성으로 읽기."
-  (interactive)
-  (require 'eca nil t)
-  (if (and (fboundp 'eca-session) (eca-session))
-      (let* ((session-id (eca--session-id (eca-session)))
-             (eca-buf (get-buffer (format "<eca-chat:%s>" session-id))))
-        (if eca-buf
-            (with-current-buffer eca-buf
-              (save-excursion
-                (goto-char (point-max))
-                (let ((end (point))
-                      (start (or (re-search-backward "^assistant: " nil t)
-                                 (point-min))))
-                  (when (> end start)
-                    (edge-tts-speak (buffer-substring-no-properties start end))))))
-          (message "ECA 채팅 버퍼를 찾을 수 없습니다.")))
-    (message "ECA 세션이 없습니다.")))
+;;;; GPTel 통합
 
 ;;;###autoload
 (defun edge-tts-speak-gptel-last-response ()
@@ -499,7 +479,6 @@ SHOW-PROGRESS가 non-nil이면 진행 상황 버퍼를 표시."
 ;; AI 채팅 응답 읽기
 (map! :leader
       (:prefix ("=" . "AI")
-       :desc "TTS: ECA 응답" "t" #'edge-tts-speak-eca-last-response
        :desc "TTS: GPTel 응답" "T" #'edge-tts-speak-gptel-last-response))
 
 ;; 전역 키바인딩 (선택적)
@@ -532,7 +511,6 @@ SHOW-PROGRESS가 non-nil이면 진행 상황 버퍼를 표시."
 ;;   SPC - c     오래된 파일 삭제
 ;;
 ;; AI 채팅 통합:
-;;   SPC = t     ECA 마지막 응답 읽기
 ;;   SPC = T     GPTel 마지막 응답 읽기
 ;;
 ;; 필수 패키지:

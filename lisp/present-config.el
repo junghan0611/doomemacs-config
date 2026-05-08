@@ -13,7 +13,7 @@
 ;;
 ;; 컨셉:
 ;;   PPT 없이 Emacs org-tree-slide로 발표한다.
-;;   에이전트(pi/eca)가 별도 프레임이나 터미널에서 대기하며
+;;   에이전트(pi)가 별도 프레임이나 터미널에서 대기하며
 ;;   Q&A 시 실시간 보조한다.
 ;;
 ;; 아키텍처:
@@ -23,7 +23,7 @@
 ;; 기존 자산:
 ;;   - org-tree-slide: Doom +present 모듈 (init.el)
 ;;   - pi-coding-agent: ai-pi-agent.el (SPC j)
-;;   - whisper STT: ai-stt-eca-whisper.el (M-a)
+;;   - whisper STT: ai-stt-whisper.el (M-a)
 ;;   - edge-tts: ai-tts-edge.el (SPC -)
 ;;
 ;; 히스토리:

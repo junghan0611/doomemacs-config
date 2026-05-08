@@ -232,10 +232,12 @@
 (package! telega)
 (package! ement)
 
-;;;; ai-stt-eca-whisper.el
+;;;; ai-stt-whisper.el
 
 (package! whisper :recipe (:host github :repo "natrys/whisper.el"))
-(package! eca :recipe (:host github :repo "editor-code-assistant/eca-emacs" :files ("*.el")))
+
+;;;; misc AI helpers
+
 (package! semext :recipe (:host github :repo "ahyatt/semext"))
 
 ;;;; elfeed-config.el
