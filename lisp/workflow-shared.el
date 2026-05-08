@@ -21,6 +21,14 @@
 
 ;;; Code:
 
+;;;; org-todo-keywords — 인간/에이전트 공통
+
+;; doom org-config.el에도 동일 정의가 있으나, agent-server는 doom config을
+;; 로드하지 않아 데몬에 빈 default(`TODO|DONE`)만 들어간다. DONT가 todo-state로
+;; 인식되지 않아 agent-server.el의 `org-agenda-skip-function-global`도 무력화.
+;; 공유 정신에 맞춰 여기서 setq — 인간 측은 같은 값이라 영향 없음.
+(setq org-todo-keywords '((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d)" "DONT(o)")))
+
 ;;;; org-tag-re — 태그에 하이픈/밑줄 불허
 
 ;; Denote filetags와 일관성 유지: [a-z0-9] only.

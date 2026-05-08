@@ -576,6 +576,13 @@ prefix가 파일명으로 깨지던 사고(2026-04-27)를 막기 위해, revert 
                  (list entry)))
              org-agenda-files))
 
+(defun agent-org-agenda--skip-dont ()
+  "Skip entries in DONT state.
+DONT은 done-keyword지만 SCHEDULED가 붙으면 어젠다에 계속 노출된다.
+agent용 어젠다에서만 가린다 — 인간 doom 어젠다는 영향 없음."
+  (when (string= (org-get-todo-state) "DONT")
+    (or (outline-next-heading) (point-max))))
+
 (defun agent-org-agenda--normalize-timestamp (timestamp)
   "Normalize TIMESTAMP for compact plain-text output."
   (when timestamp
@@ -769,6 +776,7 @@ Human + Agent + Diary 통합 타임라인.
   (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
         (org-agenda-tags-column 140)  ;; 태그를 140컬럼에 좌측정렬 (일관된 위치)
+        (org-agenda-skip-function-global #'agent-org-agenda--skip-dont)
         ;; 카테고리 전체 출력: Agent(T), Agent(O), Human 등
         (org-agenda-prefix-format
          '((agenda  . " %i %-10:c%?-12t% s")
@@ -793,6 +801,7 @@ Human + Agent + Diary 통합 타임라인.
   (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
         (org-agenda-tags-column -300)
+        (org-agenda-skip-function-global #'agent-org-agenda--skip-dont)
         (org-agenda-prefix-format
          '((agenda  . " %i %-10:c%?-12t% s")
            (todo    . " %i %-10:c")
@@ -812,7 +821,8 @@ Human + Agent + Diary 통합 타임라인.
   "태그 MATCH 조건으로 필터링된 agenda 뷰 반환.
 예: \"commit\", \"pi|botlog\", \"+emacs-draft\"."
   (let ((org-agenda-sticky nil)
-        (org-agenda-window-setup 'current-window))
+        (org-agenda-window-setup 'current-window)
+        (org-agenda-skip-function-global #'agent-org-agenda--skip-dont))
     (org-tags-view nil match)
     (let ((content (buffer-substring-no-properties (point-min) (point-max))))
       (kill-buffer)
