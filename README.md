@@ -229,9 +229,9 @@ alias eti='~/.doom.d/bin/emacs-igc.sh --nw'    # Emacs 31 IGC terminal, no daemo
 
 ## FAQ
 
-**Q: Emacs 인스턴스 여러 개 띄우면 메모리 문제 없나?**
+**Q: Doesn't running multiple Emacs instances waste memory?**
 
-Daemon-attach 모델로 바꾼 뒤(2026-05) 메모리 풋프린트가 크게 줄었다. WezTerm 탭을 N개 열어도 Emacs 프로세스는 늘지 않고 `emacsclient -t` 클라이언트만 추가된다.
+After switching to the daemon-attach model (2026-05) the memory footprint dropped sharply. Opening N WezTerm tabs no longer spawns N Emacs processes — only `emacsclient -t` clients are added.
 
 | Process | RSS |
 |---------|-----|
@@ -240,15 +240,15 @@ Daemon-attach 모델로 바꾼 뒤(2026-05) 메모리 풋프린트가 크게 줄
 | `emacsclient -t` (per terminal tab) | < 5 MB |
 | Agent RPC daemon (`server` socket, headless) | ~124 MB |
 
-이전 standalone 모델에서는 TTY 탭마다 ~360 MB짜리 Doom 프로세스를 새로 띄웠다. 5탭이면 ≈ 1.8 GB. 지금은 5탭 = `360 MB + 5 × 5 MB` ≈ 385 MB. Native-comp eln 캐시는 어차피 공유되지만 Doom 초기화 비용 자체가 한 번으로 줄어드는 게 더 큰 차이다.
+The old standalone model spawned a fresh ~360 MB Doom process per TTY tab — five tabs ≈ 1.8 GB. Now five tabs cost `360 MB + 5 × 5 MB` ≈ 385 MB. The native-comp eln cache was already shared, but the bigger win is paying the Doom init cost only once.
 
 **Q: Why `pi` daemon + `emacsclient -t` instead of standalone `emacs -nw` per tab?**
 
-원래는 탭마다 `emacs -nw`를 standalone으로 띄웠다. 각 인스턴스가 자기 pi coding agent 세션을 갖는 장점은 있었지만 — Doom init이 매번 돌고, 패키지 캐시·테마·열린 버퍼가 격리됐다.
+Originally each tab launched its own standalone `emacs -nw`. The upside was a dedicated pi coding agent session per instance — but Doom init ran every time, and the package cache, theme, and open buffers were isolated.
 
-지금은 `./run.sh pi start`로 띄운 한 개의 full Doom daemon에 모든 터미널이 attach한다. 한 탭에서 연 버퍼가 다른 탭에서 그대로 보이고, gptel 세션·pi agent shell·org-agenda가 공유된다. agent RPC는 별도 `server` daemon으로 격리해 편집 작업과 서로 블로킹하지 않는다.
+Now a single full Doom daemon started by `./run.sh pi start` accepts attach from every terminal. A buffer opened in one tab is visible in another, and gptel sessions, the pi agent shell, and org-agenda are shared. Agent RPC runs in a separate `server` daemon so editing and agent traffic never block each other.
 
-Standalone `emacs -nw`는 fallback으로 남겨뒀다 (`et` alias) — daemon이 죽거나 격리된 환경이 필요할 때 쓴다.
+Standalone `emacs -nw` is kept as a fallback (`et` alias) — useful when the daemon is down or an isolated environment is needed.
 
 **Q: How does Korean input work in terminal Emacs over SSH?**
 
