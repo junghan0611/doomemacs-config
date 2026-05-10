@@ -92,15 +92,19 @@ def build_basename_index(search_dirs):
 
 
 def categorize(src: str, idx: dict):
-    """(category, info) — info는 REWRITE면 Path, AMBIGUOUS면 list[Path]."""
+    """(category, info) — info는 REWRITE면 Path, AMBIGUOUS면 list[Path].
+
+    is_broken / UNKNOWN 둘 다 basename lookup을 시도한다. UNKNOWN 패턴(`assets/`,
+    `img/`, 상대경로 등)도 SEARCH_DIRS 어딘가에 같은 basename 파일이 있으면
+    REWRITE로 승격 — Hugo가 풀 수 있는 /images/ 경로로 정정 가능."""
     if is_alive(src):
         return ("ALIVE", None)
-    if not is_broken(src):
-        return ("UNKNOWN", None)
     basename = Path(src).name
     matches = idx.get(basename, [])
+    broken = is_broken(src)
     if not matches:
-        return ("DEAD", None)
+        # 알려진 broken 패턴이면 DEAD, 그 외는 UNKNOWN으로 분리
+        return ("DEAD" if broken else "UNKNOWN", None)
     if len(matches) == 1:
         return ("REWRITE", matches[0])
     # 여러 매치라도 sha256가 모두 동일하면 (마이그레이션 잔재) 첫 매치로 정정.
