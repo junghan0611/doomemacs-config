@@ -37,14 +37,17 @@ from pathlib import Path
 
 HOME = Path.home()
 
-# 깨진 figure src의 basename을 찾을 디렉토리
+# REWRITE 시 파일 복사 대상 (Quartz static/)
+STATIC_IMAGES = HOME / "repos" / "gh" / "notes" / "static" / "images"
+
+# 깨진 figure src의 basename을 찾을 디렉토리.
+# 우선순위: 이미 가든에 복사된 파일 → 원본 source. STATIC_IMAGES가 먼저면
+# "이전 export에서 이미 옮겨진 파일"이 잡혀서 file copy 없이 src 치환만 한다.
 SEARCH_DIRS = [
+    STATIC_IMAGES,                # 이미 가든 측에 복사된 파일 (가장 흔한 경우)
     HOME / "screenshot",          # org-download-image-dir
     HOME / "org" / ".attach",     # org-attach-id-dir
 ]
-
-# REWRITE 시 파일 복사 대상 (Quartz static/)
-STATIC_IMAGES = HOME / "repos" / "gh" / "notes" / "static" / "images"
 
 # Hugo figure shortcode: {{< figure src="..." ... >}}
 FIGURE_RE = re.compile(r'\{\{<\s*figure\s+src="([^"]+)"[^>]*>\}\}')
