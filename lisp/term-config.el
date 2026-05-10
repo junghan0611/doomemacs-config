@@ -19,14 +19,19 @@
 
 ;;; Code:
 
+;; Experimental — on-demand only.  Loaded lazily via `:commands`/`:defer';
+;; invoke explicitly through `M-x ghostel`, `M-x ghostel-project`, or
+;; `M-x my/pi-ghostel-start' when you want it.  No leader binding and no
+;; project-switch entry on purpose — vterm stays the stable daily driver,
+;; ghostel is a "I want to test something" detour.  Re-enable the
+;; commented hooks below once daily-use signal accumulates.
 (use-package! ghostel
+  :defer t
   :commands (ghostel ghostel-project my/pi-ghostel-start)
   :if (and (fboundp 'module-load)
            module-file-suffix
            (not (bound-and-true-p IS-TERMUX)))
   :init
-  ;; Experimental ghostty/libghostty-vt surface for terminal-path checks.
-  ;; Keep Doom's vterm as the stable baseline; use ghostel only when needed.
   (setq ghostel-module-auto-install 'ask)
   :config
   (setq ghostel-shell (or explicit-shell-file-name
@@ -39,8 +44,9 @@
   ;; (setq ghostel-enable-osc52 t)
   ;; (setq ghostel-tramp-shell-integration t)
 
-  ;;; project.el integration — C-x p p picks "Ghostel" alongside Doom defaults.
-  (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
+  ;;; project.el integration — disabled while ghostel is experimental.
+  ;; Re-enable once daily-use signal accumulates.
+  ;; (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
 
   ;;; Whitelist additional elisp callbacks for `ghostel_cmd' shell helper.
   ;; Default: find-file, find-file-other-window, dired, dired-other-window, message.
@@ -114,8 +120,10 @@ its own CLI."
          (with-current-buffer buf
            (ghostel-send-string cmd)))))))
 
-(map! :leader
-      :desc "Pi (ghostel)" "j SPC" #'my/pi-ghostel-start)
+;; Leader binding parked while ghostel is experimental.
+;; Invoke via `M-x my/pi-ghostel-start' when you want to test it.
+;; (map! :leader
+;;       :desc "Pi (ghostel)" "j SPC" #'my/pi-ghostel-start)
 
 (provide 'term-config)
 ;;; term-config.el ends here
