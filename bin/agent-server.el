@@ -776,6 +776,10 @@ Human + Agent + Diary 통합 타임라인.
   (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
         (org-agenda-tags-column 140)  ;; 태그를 140컬럼에 좌측정렬 (일관된 위치)
+        ;; #+filetags(상속) + heading tags(자체)가 함께 표시되면 두 그룹 사이에
+        ;; 빈 slot이 끼어 `::` 가 박힘. agent용 텍스트 출력에서는 노이즈이고
+        ;; 후속 파서(geworfen parse-tags)에 빈 element가 섞이므로 끈다.
+        (org-agenda-show-inherited-tags nil)
         (org-agenda-skip-function-global #'agent-org-agenda--skip-dont)
         ;; 카테고리 전체 출력: Agent(T), Agent(O), Human 등
         (org-agenda-prefix-format
@@ -801,6 +805,8 @@ Human + Agent + Diary 통합 타임라인.
   (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
         (org-agenda-tags-column -300)
+        ;; inherited filetags + heading tags 빈 slot `::` 제거 (issue #7).
+        (org-agenda-show-inherited-tags nil)
         (org-agenda-skip-function-global #'agent-org-agenda--skip-dont)
         (org-agenda-prefix-format
          '((agenda  . " %i %-10:c%?-12t% s")
@@ -822,6 +828,8 @@ Human + Agent + Diary 통합 타임라인.
 예: \"commit\", \"pi|botlog\", \"+emacs-draft\"."
   (let ((org-agenda-sticky nil)
         (org-agenda-window-setup 'current-window)
+        ;; inherited filetags + heading tags 빈 slot `::` 제거 (issue #7).
+        (org-agenda-show-inherited-tags nil)
         (org-agenda-skip-function-global #'agent-org-agenda--skip-dont))
     (org-tags-view nil match)
     (let ((content (buffer-substring-no-properties (point-min) (point-max))))
