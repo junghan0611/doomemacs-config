@@ -58,7 +58,9 @@ doomemacs-config/
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
 │   ├── emacs-igc.sh             # Emacs 31 IGC launcher
-│   └── verify-relref.py         # Hugo relref link validator
+│   ├── verify-relref.py         # Hugo relref link validator + fixer
+│   ├── verify-figures.py        # Figure src validator + fixer (Hugo + markdown)
+│   └── check-description.sh     # description / abstract 누락 검사
 │
 ├── run.sh               # Unified CLI/TUI management
 └── flake.nix            # Emacs 31 IGC (MPS GC) Nix build
@@ -166,10 +168,36 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 ./run.sh agent start    # Start agent RPC daemon (socket "server")
 ./run.sh pi start       # Start pi Doom daemon (socket "pi")
 ./run.sh pi tty         # Attach a new TTY client to the pi daemon
-./run.sh export all     # Export all folders
+./run.sh export all     # Export all folders (incremental)
+./run.sh export all --force  # Force re-export
 ./run.sh igc tty        # IGC terminal mode
-./run.sh verify fix     # Fix broken Hugo relrefs
+./run.sh verify         # Verify garden content (relref + description + figures)
+./run.sh fix            # Fix issues (relref + anchors + figures, step-by-step y/N)
 ```
+
+### Garden Verify / Fix
+
+가든 export 후 콘텐츠 품질 검증 / 정정. TUI Verify 섹션의 V/F 두 키로 통합.
+
+**`./run.sh verify`** — read-only 검증 3단계:
+
+| 단계 | 도구 | 검사 항목 |
+|------|------|----------|
+| relref | `verify-relref.py --summary` | ALIVE / VIRTUAL / REWRITE / DEAD / AMBIGUOUS / MALFORMED |
+| description | `check-description.sh` | botlog/notes/bib `#+description:` / abstract callout 누락 |
+| figures | `verify-figures.py` | ALIVE / REWRITE / AMBIGUOUS / DEAD / UNKNOWN<br/>Hugo `{{< figure src=…>}}` + Markdown `![](…)` 둘 다 |
+
+**`./run.sh fix`** — 단계별 dry-run 후 y/N 적용:
+
+| 단계 | 동작 |
+|------|------|
+| relref | DEAD/MALFORMED → plain text 치환, REWRITE → 경로 정정 |
+| anchors | heading anchor 정리 (`{#h-…}` → GFM 호환) |
+| figures | REWRITE → 소스 파일을 `notes/static/images/` 로 복사 + markdown src 를 `/images/{basename}` 로 치환 |
+
+`verify-figures.py` SEARCH_DIRS 우선순위: `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. 이전 export에서 이미 정착된 파일이 먼저 잡혀 복사 없이 src 치환만 일어난다 (sha256 동일 시 SKIP-IDENT).
+
+**잔존 broken** (DEAD / UNKNOWN) 는 소스 파일 자체가 없는 경우 — 원본 org 파일에서 사용자가 결정 (figure 제거 / 새 스크린샷 첨부).
 
 ## Installation
 

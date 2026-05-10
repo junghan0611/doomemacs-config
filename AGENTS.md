@@ -129,15 +129,53 @@ The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-da
 
 ### workflow-shared.el — the contract
 
-This file defines rules that **both** user Emacs and agent-server **must** agree on:
+This file defines rules that **all three context** — user Emacs (GUI), agent-server,
+**denote-export 데몬** — must agree on. 데몬은 Doom 모듈을 로드하지 않으므로,
+GUI 에서만 자동으로 잡히는 설정은 여기에 SSOT로 두고 명시 적용해야 한다.
 
 | Setting | Why |
 |---------|-----|
 | `org-tag-re` | Tags allow only `[[:alnum:]@#%]+` — matches Denote filetags |
 | `org-agenda-files` | Dynamic: `_aprj` tagged files + `botlog/agenda/` + current journal |
+| `org-todo-keywords` | TODO/NEXT/DONE/DONT(o) — agent-server가 DONT skip 하려면 데몬도 인식 필요 |
+| `my/org-download-image-dir` | `[[download:foo.png]]` 해석 (`~/screenshot/`). GUI는 Doom org-download `:config`, 데몬은 SSOT applier |
+| `my/org-attach-id-dir` | `[[attachment:foo.png]]` 해석 (`~/org/.attach/`). GUI는 Doom lang/org 모듈, 데몬은 SSOT applier |
 | Journal entry format | Active timestamps so entries appear in agenda |
 
 **Rule**: UI/theme/keybindings can differ. **Data read/write rules must be identical.**
+
+**SSOT 적용 패턴**:
+```elisp
+;; lisp/workflow-shared.el
+(defvar my/X "...")
+(defun my/apply-X () (setq-default X my/X) (setq X my/X))
+
+;; lisp/org-config.el (GUI)         → (require 'workflow-shared) + (my/apply-X)
+;; bin/denote-export.el (데몬)      → workflow-shared 로드 직후 (my/apply-X)
+;; bin/agent-server.el (데몬)        → workflow-shared 로드 직후 (my/apply-X)
+```
+
+같은 패턴으로 누락된 buffer-local 변수가 더 발견되면 같은 자리에 추가.
+
+### Garden Verify / Fix — `./run.sh verify` and `./run.sh fix`
+
+가든 export 후 콘텐츠 품질 검증 / 정정 흐름. 두 키로 통합:
+
+| 단계 | verify | fix |
+|------|--------|-----|
+| **relref** | `verify-relref.py --summary` (link 카테고리 카운트) | `--fix --apply` (DEAD/REWRITE/MALFORMED → plain text 또는 정정) |
+| **anchors** | (verify에 포함) | `--fix-anchors --apply` (heading anchor 정리) |
+| **description** | `check-description.sh` (botlog 우선, 누락만 경고) | (verify-only) |
+| **figures** | `verify-figures.py` (figure shortcode + markdown `![]()` 둘 다) | `--fix --apply` (REWRITE → 소스 → static/images 복사 + src 치환) |
+
+**figure 검증 카테고리**:
+- `ALIVE` — `/images/...` / `https://...` (정상)
+- `REWRITE` — broken 패턴이지만 SEARCH_DIRS에서 basename 매칭 → 자동 정정 가능
+- `AMBIGUOUS` — 여러 매치, sha 다름 → 수동 확인
+- `DEAD` — 알려진 broken 패턴(`/home/...`, `~/...` 등), 매치 0
+- `UNKNOWN` — 비표준 패턴(`assets/`, `img/`, 상대경로 등), 매치 0
+
+**SEARCH_DIRS** (verify-figures.py): `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. 이전 export에서 이미 옮겨진 파일이 우선 잡혀 file copy 없이 src 치환만 일어남.
 
 ## Commit Messages
 
@@ -157,3 +195,5 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 - Emacs 31 IGC coexists with 30.2 via separate `EMACSDIR` and `server-name`
 - Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard
 - WezTerm + terminal Emacs + built-in Korean input is a custom path; if minibuffer/search prompt spacing breaks, inspect TTY width drift first — especially hardcoded Unicode ellipsis (`…`) in Consult prompt/path truncation before blaming Hangul input
+- **헤드리스 데몬은 Doom 모듈을 로드하지 않는다** (`bin/denote-export.el`, `bin/agent-server.el`). buffer-local org 변수(`org-attach-id-dir`, `org-download-image-dir` 등)가 GUI에서만 자동으로 잡히는 경우 가든에 broken figure가 누적된다. `workflow-shared.el`에 SSOT applier로 두고 양쪽에서 호출 — 회귀 시 첫 의심 지점. (사례: 2026-05-10 commit b348898 / d8b977a)
+- 가든 broken은 빌드를 깨지 않는다. `./run.sh verify` → `./run.sh fix` 흐름으로 주기적 청소
