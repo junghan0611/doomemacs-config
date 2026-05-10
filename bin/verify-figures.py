@@ -46,7 +46,13 @@ SEARCH_DIRS = [
 # REWRITE 시 파일 복사 대상 (Quartz static/)
 STATIC_IMAGES = HOME / "repos" / "gh" / "notes" / "static" / "images"
 
+# Hugo figure shortcode: {{< figure src="..." ... >}}
 FIGURE_RE = re.compile(r'\{\{<\s*figure\s+src="([^"]+)"[^>]*>\}\}')
+
+# Markdown image: ![alt](url "title")
+# - 코드블럭/인라인 코드 안에 있는 건 못 가린다 (대부분의 경우 문제되지 않음).
+# - alt text는 [], url은 () 안. URL에는 공백 + " title" 같은 게 올 수 있어 첫 token만.
+MD_IMG_RE = re.compile(r'!\[[^\]]*\]\(\s*([^\s)]+)')
 
 
 # ━━━ Categorization ━━━
@@ -104,7 +110,11 @@ def categorize(src: str, idx: dict):
 # ━━━ Scanning ━━━
 
 def scan(content_dir: Path, idx: dict):
-    """list of (md_path, line_num, src, category, info)."""
+    """list of (md_path, line_num, src, category, info, syntax).
+
+    syntax: "figure" (Hugo shortcode) | "md-img" (markdown ![](...)).
+    Tracking the syntax matters for REWRITE — fix는 두 형태를 별도로 치환한다.
+    """
     items = []
     for md in sorted(content_dir.rglob("*.md")):
         try:
@@ -116,7 +126,12 @@ def scan(content_dir: Path, idx: dict):
             src = m.group(1)
             category, info = categorize(src, idx)
             line_num = text.count("\n", 0, m.start()) + 1
-            items.append((md, line_num, src, category, info))
+            items.append((md, line_num, src, category, info, "figure"))
+        for m in MD_IMG_RE.finditer(text):
+            src = m.group(1)
+            category, info = categorize(src, idx)
+            line_num = text.count("\n", 0, m.start()) + 1
+            items.append((md, line_num, src, category, info, "md-img"))
     return items
 
 
@@ -131,40 +146,45 @@ def rel_to_content(md: Path, content_dir: Path) -> str:
 
 def report_summary(items, content_dir: Path):
     counts = defaultdict(int)
-    for _, _, _, cat, _ in items:
+    by_syntax = defaultdict(lambda: defaultdict(int))
+    for _, _, _, cat, _, syntax in items:
         counts[cat] += 1
+        by_syntax[syntax][cat] += 1
     total = sum(counts.values())
 
-    print("=== figure src verify ===")
+    print("=== figure / image src verify ===")
     print(f"  total      : {total}")
     for cat in ["ALIVE", "REWRITE", "AMBIGUOUS", "DEAD", "UNKNOWN"]:
         n = counts.get(cat, 0)
         marker = "✓" if cat == "ALIVE" else ("⚠" if cat == "REWRITE" else "✗")
         if n > 0:
             print(f"  {marker} {cat:10s}: {n}")
+    # syntax 분포 (디버깅 도움)
+    print(f"  ┕ figure shortcode : {sum(by_syntax['figure'].values())}")
+    print(f"  ┕ markdown ![]()   : {sum(by_syntax['md-img'].values())}")
 
-    problems = [it for it in items if it[3] not in ("ALIVE",)]
+    problems = [it for it in items if it[3] != "ALIVE"]
     if not problems:
         print()
-        print("✅ 모든 figure src 정상")
+        print("✅ 모든 image/figure src 정상")
         return 0
 
     print()
     print(f"--- 상세 ({len(problems)}건) ---")
-    for md, line, src, cat, info in problems:
+    for md, line, src, cat, info, syntax in problems:
         rel = rel_to_content(md, content_dir)
+        tag = "fig" if syntax == "figure" else "md "
         if cat == "REWRITE":
-            print(f"  [{cat:10s}] {rel}:{line}")
+            print(f"  [{cat:10s}] [{tag}] {rel}:{line}")
             print(f"               src      = {src}")
             print(f"               source   = {info}")
         elif cat == "AMBIGUOUS":
-            print(f"  [{cat:10s}] {rel}:{line}  src={src}  ({len(info)} matches)")
+            print(f"  [{cat:10s}] [{tag}] {rel}:{line}  src={src}  ({len(info)} matches)")
             for m in info:
                 print(f"               - {m}")
         else:
-            print(f"  [{cat:10s}] {rel}:{line}  src={src}")
+            print(f"  [{cat:10s}] [{tag}] {rel}:{line}  src={src}")
 
-    # exit code: REWRITE 만 있으면 0 (--fix 로 정리 가능), DEAD/AMBIGUOUS 있으면 1
     return 0 if (counts.get("DEAD", 0) + counts.get("AMBIGUOUS", 0) + counts.get("UNKNOWN", 0)) == 0 else 1
 
 
@@ -174,14 +194,14 @@ def report_fix(items, content_dir: Path, apply: bool) -> int:
         print("REWRITE 대상 없음")
         return 0
 
-    print(f"=== figure REWRITE: {len(rewrites)}건 ===")
+    print(f"=== REWRITE: {len(rewrites)}건 ===")
     if apply:
         STATIC_IMAGES.mkdir(parents=True, exist_ok=True)
 
     # md 파일별로 묶어서 한 번에 치환
     by_md = defaultdict(list)
-    for md, line, src, cat, source_path in rewrites:
-        by_md[md].append((line, src, source_path))
+    for md, line, src, cat, source_path, syntax in rewrites:
+        by_md[md].append((line, src, source_path, syntax))
 
     conflicts = 0
     copied = 0
@@ -192,10 +212,11 @@ def report_fix(items, content_dir: Path, apply: bool) -> int:
         rel = rel_to_content(md, content_dir)
         text = md.read_text(encoding="utf-8") if apply else None
         any_replaced = False
-        for line, src, source_path in entries:
+        for line, src, source_path, syntax in entries:
             basename = source_path.name
             target = STATIC_IMAGES / basename
             new_src = f"/images/{basename}"
+            tag = "fig" if syntax == "figure" else "md "
 
             action = "COPY"
             if target.exists():
@@ -204,7 +225,7 @@ def report_fix(items, content_dir: Path, apply: bool) -> int:
                 else:
                     action = "CONFLICT"
 
-            print(f"  [{action:11s}] {rel}:{line}")
+            print(f"  [{action:11s}] [{tag}] {rel}:{line}")
             print(f"                src   = {src}")
             print(f"                src→  = {new_src}")
             if action == "CONFLICT":
@@ -218,7 +239,8 @@ def report_fix(items, content_dir: Path, apply: bool) -> int:
                     copied += 1
                 else:
                     skipped += 1
-                # 같은 src 가 여러 번 나올 수 있어 replace 그대로
+                # src 문자열이 같으면 figure shortcode와 markdown 양쪽 다 한 번에 정정됨.
+                # 같은 src 가 여러 위치에 나와도 모두 치환된다.
                 if src in text:
                     text = text.replace(src, new_src)
                     any_replaced = True
@@ -234,7 +256,6 @@ def report_fix(items, content_dir: Path, apply: bool) -> int:
     else:
         print(f"--apply 추가 시 적용. 충돌 예상 {conflicts}건.")
 
-    # exit code: 충돌이 있으면 1, 아니면 0
     return 1 if conflicts > 0 else 0
 
 
