@@ -233,6 +233,28 @@ Example plist:
            (computed_at  . ,(plist-get workflow-shared--being-data :computed-at)))))
     workflow-shared--being-data))
 
+;;;; org-download — 이미지 디렉토리 SSOT
+;; GUI Emacs(lisp/org-config.el)와 headless export 데몬(bin/denote-export.el via
+;; lisp/denote-export-config.el)이 동일한 디렉토리를 봐야 [[download:foo.png]]
+;; 링크가 양쪽에서 같은 파일로 풀린다.
+;;
+;; 데몬은 org-config.el을 로드하지 않으므로, 이 변수를 SSOT로 두고 양쪽이
+;; my/apply-org-download-image-dir 함수를 통해 동일한 값을 적용한다.
+
+(defvar my/org-download-image-dir
+  (expand-file-name "~/screenshot/")
+  "SSOT for `org-download-image-dir'.
+GUI Emacs and headless export daemon must agree on this path so
+[[download:foo.png]] links resolve identically in either context.")
+
+(defun my/apply-org-download-image-dir ()
+  "Apply `my/org-download-image-dir' to `org-download-image-dir'.
+`org-download-image-dir' is buffer-local (make-variable-buffer-local),
+so both the default value and the current-buffer value need to be set.
+Idempotent — safe to call multiple times."
+  (setq-default org-download-image-dir my/org-download-image-dir)
+  (setq         org-download-image-dir my/org-download-image-dir))
+
 ;;;; org-export-global-macros — 모든 org 파일에서 사용 가능한 매크로
 
 ;; 파일별 #+MACRO: 선언 불필요. Doom GUI + denote-export-server 모두 적용.

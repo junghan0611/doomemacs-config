@@ -292,7 +292,16 @@
   (if (file-exists-p shared)
       (progn
         (load shared t t)
-        (message "[Server] ✓ workflow-shared loaded"))
+        (message "[Server] ✓ workflow-shared loaded")
+        ;; org-download-image-dir SSOT 적용 — GUI Emacs와 동일 경로 (~/screenshot/).
+        ;; 데몬은 lisp/org-config.el을 로드하지 않으므로 여기서 직접 적용해야
+        ;; my/org-rewrite-download-links의 fallback이 [[download:foo.png]]를
+        ;; 정상적으로 ~/screenshot/foo.png 로 풀어낼 수 있다.
+        (when (fboundp 'my/apply-org-download-image-dir)
+          (my/apply-org-download-image-dir)
+          (message "[Server] ✓ org-download-image-dir = %s"
+                   (and (boundp 'org-download-image-dir)
+                        org-download-image-dir))))
     (message "[Server] WARNING: workflow-shared.el not found at %s" shared)))
 
 ;; Fix 1: initialize-templates를 호출하기 전에 전역 org-macro-templates를 캡처하여

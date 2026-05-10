@@ -519,11 +519,20 @@ plain text, consistent with org-export-with-broken-links 'mark setting."
   "Rewrite [[download:file.png]] to [[file:FULL-PATH]] before export.
 Resolves the filename against `org-download-image-dir', with fallback
 to `org-attach-id-dir' (for files saved before the setq-default fix).
-Runs on a temporary export copy — original file is NOT modified."
+Runs on a temporary export copy — original file is NOT modified.
+
+The headless export daemon (bin/denote-export.el) does NOT load
+lisp/org-config.el, so `org-download-image-dir' may be unbound here.
+We rely on `my/org-download-image-dir' (workflow-shared.el SSOT) as
+the authoritative fallback so GUI Emacs and the daemon resolve the
+same path."
   (let ((image-dir (or (and (boundp 'org-download-image-dir)
                             ;; Try default-value first, then current value
                             (or (default-value 'org-download-image-dir)
                                 org-download-image-dir))
+                       ;; SSOT fallback — daemon path
+                       (and (boundp 'my/org-download-image-dir)
+                            my/org-download-image-dir)
                        "."))
         (attach-dir (and (boundp 'org-attach-id-dir) org-attach-id-dir))
         (changes 0))
