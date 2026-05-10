@@ -301,7 +301,15 @@
           (my/apply-org-download-image-dir)
           (message "[Server] ✓ org-download-image-dir = %s"
                    (and (boundp 'org-download-image-dir)
-                        org-download-image-dir))))
+                        org-download-image-dir)))
+        ;; org-attach-id-dir SSOT — Doom org 모듈이 GUI에서만 설정하므로 데몬에
+        ;; 명시 적용. [[attachment:foo.png]] 링크가 ~/org/.attach/{ID}/foo.png
+        ;; 으로 정상 풀려 ox-hugo가 /images/foo.png 로 출력하게 만든다.
+        (when (fboundp 'my/apply-org-attach-id-dir)
+          (my/apply-org-attach-id-dir)
+          (message "[Server] ✓ org-attach-id-dir = %s"
+                   (and (boundp 'org-attach-id-dir)
+                        org-attach-id-dir))))
     (message "[Server] WARNING: workflow-shared.el not found at %s" shared)))
 
 ;; Fix 1: initialize-templates를 호출하기 전에 전역 org-macro-templates를 캡처하여

@@ -255,6 +255,27 @@ Idempotent — safe to call multiple times."
   (setq-default org-download-image-dir my/org-download-image-dir)
   (setq         org-download-image-dir my/org-download-image-dir))
 
+;;;; org-attach — ID 디렉토리 SSOT
+;; Doom Emacs의 lang/org 모듈이 ~/org/.attach/ 로 자동 설정하지만 (modules/lang/
+;; org/config.el:471), headless export 데몬은 Doom 모듈을 로드하지 않아 org
+;; 기본값으로 떨어진다. 결과: [[attachment:foo.png]] 링크가 ID 기반으로
+;; 잘못된 디렉토리에서 풀려 ox-hugo가 절대경로를 figure src에 박는다.
+;; (회귀 시점: 2025-10-27 7a2175b 헤드리스 데몬 export 도입)
+
+(defvar my/org-attach-id-dir
+  (expand-file-name ".attach/" (file-name-as-directory
+                                (expand-file-name "~/org/")))
+  "SSOT for `org-attach-id-dir' — points at ~/org/.attach/.
+GUI Emacs (Doom org module) sets this automatically; the headless
+export daemon does not, so we apply it explicitly via
+`my/apply-org-attach-id-dir'.")
+
+(defun my/apply-org-attach-id-dir ()
+  "Apply `my/org-attach-id-dir' to `org-attach-id-dir'.
+Idempotent; safe even when Doom has already set the value."
+  (setq-default org-attach-id-dir my/org-attach-id-dir)
+  (setq         org-attach-id-dir my/org-attach-id-dir))
+
 ;;;; org-export-global-macros — 모든 org 파일에서 사용 가능한 매크로
 
 ;; 파일별 #+MACRO: 선언 불필요. Doom GUI + denote-export-server 모두 적용.

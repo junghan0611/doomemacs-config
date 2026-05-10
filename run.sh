@@ -14,6 +14,7 @@ DOOM_BIN="$HOME/.config/emacs/bin/doom"
 BIN_DIR="$SCRIPT_DIR/bin"
 PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"
 PYTHON_VERIFY="$BIN_DIR/verify-relref.py"
+PYTHON_FIGURES="$BIN_DIR/verify-figures.py"
 CHECK_DESC="$BIN_DIR/check-description.sh"
 ORG_ROOT="$HOME/org"
 
@@ -96,10 +97,8 @@ show_menu() {
   echo "    T) pi tty client"
   echo ""
   echo "  ${YELLOW}Verify${NC}"
-  echo "    V) verify relref       (검증만)"
-  echo "    C) verify description  (description/abstract 검사)"
-  echo "    F) fix relref          (DEAD/REWRITE 수정)"
-  echo "    A) fix anchors         (heading anchor 정리)"
+  echo "    V) verify  (relref + description + figures, 검증만)"
+  echo "    F) fix     (relref + anchors + figures, 단계별 y/N)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run, GUI)"
@@ -274,40 +273,78 @@ show_export_submenu() {
 }
 
 # ━━━ Verify ━━━
+# V/F 두 키로 통합된 검증/수정 파이프라인.
+# 각 단계는 독립적이라 한 단계만 적용/취소 가능.
 
-cmd_verify_relref() {
-  local fix="${1:-}"
-  [[ -d "$HUGO_CONTENT_DIR" ]] || { err "content 디렉토리 없음: $HUGO_CONTENT_DIR"; return 1; }
-  if [[ "$fix" == "--fix" ]]; then
-    info "relref 검증 + 수정 (dry-run)"
-    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix
-    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors
-    echo ""
-    read -p "적용하시겠습니까? (y/N): " confirm
-    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-      python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix --apply
-      python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors --apply
-    else
-      info "취소됨"
-    fi
-  elif [[ "$fix" == "--fix-anchors" ]]; then
-    info "heading anchor 정리 (dry-run)"
-    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors
-    echo ""
-    read -p "적용하시겠습니까? (y/N): " confirm
-    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-      python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors --apply
-    else
-      info "취소됨"
-    fi
-  else
-    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --summary
+_verify_step_relref_summary() {
+  info "[1/3] relref 검증"
+  python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --summary || true
+}
+
+_verify_step_description() {
+  info "[2/3] description/abstract 검사"
+  if ! "$CHECK_DESC"; then
+    warn "description/abstract 누락 항목 있음"
   fi
 }
 
-cmd_verify_description() {
-  [[ -x "$CHECK_DESC" ]] || { err "스크립트 없음: $CHECK_DESC"; return 1; }
-  "$CHECK_DESC" "$@"
+_verify_step_figures_summary() {
+  info "[3/3] figure src 검증"
+  python3 "$PYTHON_FIGURES" "$HUGO_CONTENT_DIR" || true
+}
+
+_fix_step_relref() {
+  info "[1/3] relref 수정 (dry-run)"
+  python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix || true
+  echo ""
+  read -p "relref 수정 적용? (y/N): " c
+  if [[ "$c" =~ ^[Yy]$ ]]; then
+    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix --apply
+  else
+    info "relref 적용 취소"
+  fi
+}
+
+_fix_step_anchors() {
+  info "[2/3] heading anchor 정리 (dry-run)"
+  python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors || true
+  echo ""
+  read -p "anchor 정리 적용? (y/N): " c
+  if [[ "$c" =~ ^[Yy]$ ]]; then
+    python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors --apply
+  else
+    info "anchor 적용 취소"
+  fi
+}
+
+_fix_step_figures() {
+  info "[3/3] figure src 정정 (dry-run)"
+  python3 "$PYTHON_FIGURES" "$HUGO_CONTENT_DIR" --fix || true
+  echo ""
+  read -p "figure 경로 정정 + 정적 복사 적용? (y/N): " c
+  if [[ "$c" =~ ^[Yy]$ ]]; then
+    python3 "$PYTHON_FIGURES" "$HUGO_CONTENT_DIR" --fix --apply
+  else
+    info "figure 적용 취소"
+  fi
+}
+
+cmd_verify() {
+  [[ -d "$HUGO_CONTENT_DIR" ]] || { err "content 디렉토리 없음: $HUGO_CONTENT_DIR"; return 1; }
+  _verify_step_relref_summary
+  echo ""
+  _verify_step_description
+  echo ""
+  _verify_step_figures_summary
+}
+
+cmd_fix() {
+  [[ -d "$HUGO_CONTENT_DIR" ]] || { err "content 디렉토리 없음: $HUGO_CONTENT_DIR"; return 1; }
+  _fix_step_relref
+  echo ""
+  _fix_step_anchors
+  echo ""
+  _fix_step_figures
 }
 
 # ━━━ Agent ━━━
@@ -492,18 +529,10 @@ cli_mode() {
         *)       err "igc: run|debug|install|sync|update|env|doctor|kill|version" ;;
       esac
       ;;
-    verify)
-      local action="${1:-summary}"; shift || true
-      case "$action" in
-        summary)     cmd_verify_relref ;;
-        fix)         cmd_verify_relref --fix ;;
-        anchors)     cmd_verify_relref --fix-anchors ;;
-        description) cmd_verify_description "$@" ;;
-        *)           err "verify: summary|fix|anchors|description" ;;
-      esac
-      ;;
+    verify) cmd_verify ;;
+    fix)    cmd_fix ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|igc|verify> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|igc|verify|fix> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -572,10 +601,8 @@ main() {
       D) "$IGC_SCRIPT" --doctor; read -p "계속하려면 Enter..."; continue ;;
       K) "$IGC_SCRIPT" --kill; read -p "계속하려면 Enter..."; continue ;;
       v) "$IGC_SCRIPT" --version ;;
-      V) cmd_verify_relref ;;
-      C) if ! cmd_verify_description; then warn "description/abstract 누락 항목 있음"; fi ;;
-      F) cmd_verify_relref --fix ;;
-      A) cmd_verify_relref --fix-anchors ;;
+      V) cmd_verify ;;
+      F) cmd_fix ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
