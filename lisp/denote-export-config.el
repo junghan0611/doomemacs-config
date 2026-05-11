@@ -653,10 +653,17 @@ The plain-text filter only sees the first fragment, producing:
 This final-output filter detects the pattern and extends the span:
   <span class=\"org-hashtag\">#인식의_그물망</span>
 
+Additionally, when a paragraph starts with `<' (e.g. the first
+hashtag span on a line of `#서문 #서론 ...'), ox-hugo escapes it
+to `\\<' to prevent CommonMark from treating it as a raw HTML
+block.  But Quartz (remark/micromark) interprets `\\<' as a literal
+`<' character per CommonMark spec, breaking the span.  We surgically
+unescape only our own `org-hashtag' / `org-mention' span openers.
+
 Runs in `org-export-filter-final-output-functions' (after all
 transcoders and element filters have completed)."
   (when (org-export-derived-backend-p backend 'hugo)
-    ;; Repeatedly extend — handles multiple underscores: #a_b_c
+    ;; 1. Repeatedly extend — handles multiple underscores: #a_b_c
     (let ((re (format "<span class=\"%s\">\\([^<]+\\)</span>\\(_[가-힣A-Za-z0-9_.-]*\\)"
                       my/org-hugo-hashtag-class)))
       (while (string-match re text)
@@ -666,6 +673,12 @@ transcoders and element filters have completed)."
                             (match-string 1 text)
                             (match-string 2 text))
                     t nil text))))
+    ;; 2. Unescape ox-hugo's paragraph-leading `\<' for our own spans.
+    ;;    Narrow target: only `org-hashtag' / `org-mention' classes.
+    (setq text (replace-regexp-in-string
+                "\\\\<span class=\"\\(org-hashtag\\|org-mention\\)\">"
+                "<span class=\"\\1\">"
+                text))
     text))
 
 (add-to-list 'org-export-filter-final-output-functions
