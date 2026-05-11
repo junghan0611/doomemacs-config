@@ -20,7 +20,9 @@ DOOM_BIN="${EMACSDIR}/bin/doom"
 # GC root를 만들어 nix-gc에서 보호 (--no-link은 GC root 없음 → 삭제됨)
 GC_ROOT="$HOME/.local/state/nix/gcroots/emacs-igc"
 mkdir -p "$(dirname "$GC_ROOT")"
-IGC_STORE=$(nix build "${DOOMDIR}#emacs-igc" --out-link "$GC_ROOT" --print-out-paths 2>/dev/null)
+# stderr는 살려둔다 — 캐시 miss 시 빌드 진행이 안 보이면 hang 처럼 느껴짐
+echo "[emacs-igc] resolving emacs-igc store path (nix build, may take a while on cache miss)..." >&2
+IGC_STORE=$(nix build "${DOOMDIR}#emacs-igc" --out-link "$GC_ROOT" --print-out-paths)
 IGC_EMACS="${IGC_STORE}/bin/emacs"
 IGC_CLIENT="${IGC_STORE}/bin/emacsclient"
 
