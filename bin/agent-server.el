@@ -256,8 +256,16 @@ Dblock update only modifies #+BEGIN: ~ #+END: regions. Safe for all org files.")
 
 (defun agent-server--path-allowed-p (file mode)
   "Check if FILE access is allowed for MODE (read, write, or rename).
-Returns t if allowed, signals error if not."
+Returns t if allowed, signals error if not.
+
+Dual-attempt symlink/truename handling: both FILE and each whitelist
+PREFIX are normalized via `expand-file-name' AND `file-truename', and
+the check passes if any input form prefix-matches any whitelist form.
+Caller may pass either the symlink path (e.g. /home/junghan/org/...) or
+its truename (e.g. /home/junghan/sync/org/...); whitelist defvars may
+likewise be registered in either form without breaking access."
   (let* ((expanded (expand-file-name file))
+         (truename (file-truename expanded))
          (paths (pcase mode
                   ('read (append agent-server-write-paths
                                  agent-server-denote-rename-paths
@@ -269,10 +277,15 @@ Returns t if allowed, signals error if not."
                                    agent-server-denote-rename-paths))
                   (_ (error "Unknown mode: %s" mode)))))
     (unless (cl-some (lambda (prefix)
-                       (string-prefix-p (expand-file-name prefix) expanded))
+                       (let* ((p-exp (expand-file-name prefix))
+                              (p-true (file-truename p-exp)))
+                         (or (string-prefix-p p-exp expanded)
+                             (string-prefix-p p-true expanded)
+                             (string-prefix-p p-exp truename)
+                             (string-prefix-p p-true truename))))
                      paths)
-      (error "ACCESS DENIED: %s not allowed for %s. Allowed: %S"
-             expanded mode paths))
+      (error "ACCESS DENIED: %s (truename: %s) not allowed for %s. Allowed: %S"
+             expanded truename mode paths))
     t))
 
 ;; Override dangerous built-ins when called from agent context
@@ -848,13 +861,24 @@ Separate from `agent-server-write-paths' — append-only is safer than overwrite
 
 (defun agent-server--denote-append-allowed-p (file)
   "Check if FILE allows denote append operations.
-FILE must be a denote file (has identifier) under `agent-server-denote-append-paths'."
-  (let ((expanded (expand-file-name file)))
+FILE must be a denote file (has identifier) under `agent-server-denote-append-paths'.
+
+Dual-attempt symlink/truename handling — see `agent-server--path-allowed-p'.
+Both FILE and each whitelist PREFIX are checked via `expand-file-name' and
+`file-truename' to absorb /home/junghan/org/ ↔ /home/junghan/sync/org/."
+  (let* ((expanded (expand-file-name file))
+         (truename (file-truename expanded)))
     (unless (and (denote-file-has-identifier-p expanded)
                  (cl-some (lambda (prefix)
-                            (string-prefix-p (expand-file-name prefix) expanded))
+                            (let* ((p-exp (expand-file-name prefix))
+                                   (p-true (file-truename p-exp)))
+                              (or (string-prefix-p p-exp expanded)
+                                  (string-prefix-p p-true expanded)
+                                  (string-prefix-p p-exp truename)
+                                  (string-prefix-p p-true truename))))
                           agent-server-denote-append-paths))
-      (error "APPEND DENIED: %s is not a denote file under allowed paths" expanded))
+      (error "APPEND DENIED: %s (truename: %s) is not a denote file under allowed paths: %S"
+             expanded truename agent-server-denote-append-paths))
     t))
 
 (defun agent-denote-keywords ()
