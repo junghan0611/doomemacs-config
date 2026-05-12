@@ -192,7 +192,7 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 | 단계 | 동작 |
 |------|------|
 | relref | DEAD/MALFORMED → plain text 치환, REWRITE → 경로 정정 |
-| anchors | heading anchor 정리 (`{#h-…}` → GFM 호환) |
+| anchors | ox-hugo 누출 anchor 정리: `{#title--relref-section-id-dot-md}` → `{#title}` (link 내장 헤딩에서 transcoded markdown이 슬러그에 섞이는 회귀 보정) |
 | figures | REWRITE → 소스 파일을 `notes/static/images/` 로 복사 + markdown src 를 `/images/{basename}` 로 치환 |
 
 `verify-figures.py` SEARCH_DIRS 우선순위: `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. 이전 export에서 이미 정착된 파일이 먼저 잡혀 복사 없이 src 치환만 일어난다 (sha256 동일 시 SKIP-IDENT).
