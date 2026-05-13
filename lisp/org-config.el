@@ -15,6 +15,22 @@
 
 ;;; Code:
 
+;;;; HACK: daemon에서 doom :lang org localleader 복원
+;; doom-incremental-first-idle-timer = 0 (daemonp)이라 :lang org가 evil/general
+;; state override가 wire 되기 전에 +org-init-keybinds-h 를 부른다. setq 부분만
+;; 살고 (map! :map org-mode-map :localleader ...)가 org-mode-map에 안착하지 못한다.
+;; doom 자신의 컨벤션(doom-keybinds.el:80, doom-lib.el:301-304)에 맞춰 데몬에서는
+;; 첫 frame 시점에 한 번 더 돌려 살린다. 함수는 idempotent.
+(when (daemonp)
+  (defun my/pi-restore-org-keybinds-h ()
+    "Re-run `+org-init-keybinds-h' after first frame on daemon startup."
+    (when (fboundp '+org-init-keybinds-h)
+      (+org-init-keybinds-h))
+    (remove-hook 'server-after-make-frame-hook
+                 #'my/pi-restore-org-keybinds-h))
+  (add-hook 'server-after-make-frame-hook
+            #'my/pi-restore-org-keybinds-h 'append))
+
 ;;;; org
 
 ;; (require 'ob-tangle)

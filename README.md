@@ -98,6 +98,31 @@ Four isolated server sockets coexist. Daily use is **one GUI + many TTY clients 
 
 Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
 
+## pi-shell-acp Integration
+
+This config is the editor surface that [pi-shell-acp](https://github.com/junghan0611/pi-shell-acp) targets. pi-shell-acp is my ACP bridge between [pi](https://github.com/dnouri/pi-coding-agent) (the harness) and Claude/Codex/Gemini backends — it spawns coding agents that read org files, eval elisp, stamp agenda entries, and write to the shared Denote corpus, all through `emacsclient` against the `server` socket.
+
+The bridge accepts `--emacs-agent-socket` and forwards it to ACP children as `PI_EMACS_AGENT_SOCKET`:
+
+```elisp
+;; pi-coding-agent buffer config
+(setq pi-coding-agent-extra-args
+      '("--entwurf-control" "--emacs-agent-socket" "server"))
+```
+
+```bash
+# Skills inside the agent then call Emacs without hardcoding a socket
+emacsclient -s "${PI_EMACS_AGENT_SOCKET:-server}" --eval '(agent-denote-add-history ...)'
+```
+
+The socket split is intentional:
+
+- **`server`** — agent RPC daemon (`bin/agent-server.el`). Headless, loaded by `./run.sh agent start`. Agents do CRUD here so they never block the editor.
+- **`pi`** — human TTY attach (`./run.sh pi tty`, `ep` alias). Full Doom. This is where GLG actually writes.
+- **`user`** — GUI Emacs for visual work (Magit graphs, ePub, image-heavy org).
+
+Because the primary editor surface is `emacs -nw` / `emacsclient -t`, every keybinding has to survive in TTY frames. Cases like `:lang org`'s `,` localleader being silently dropped under `emacs --daemon` (fixed in [org-config.el](lisp/org-config.el) by deferring `+org-init-keybinds-h` to `server-after-make-frame-hook`, the same pattern doom itself uses in [`doom-keybinds.el:80`](https://github.com/doomemacs/doomemacs/blob/master/lisp/doom-keybinds.el)) are taken seriously here — not as Emacs trivia, but because the terminal is the surface agents and humans both touch.
+
 ## Denote Export Pipeline
 
 Parallel multi-daemon pipeline exporting 2,000+ org notes to Hugo markdown:
