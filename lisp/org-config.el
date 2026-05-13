@@ -72,7 +72,7 @@
               (todo "NEXT" nil)))
             ("w" "This week"
              ((agenda "" ((org-agenda-span 'week)
-                           (org-agenda-start-on-weekday 1)))))
+                          (org-agenda-start-on-weekday 1)))))
             ("p" "TODOs by project"
              ((tags-todo "GH"
                          ((org-agenda-overriding-header "GitHub projects")))
@@ -202,19 +202,19 @@
 
   (setq org-tag-alist (quote (
                               (:startgroup) ;; Action
-                              ("later" . ?.)
-                              ("now" . ?,)
+                              ("LATER" . ?.)
+                              ("NOW" . ?,)
                               (:endgroup)
-                              ("important" . ?i) ; 별도 처리
-                              ("waiting" . ?w)
-                              ("next" . ?n)
+                              ("IMPORTANT" . ?i) ; 별도 처리
+                              ("WAITING" . ?w)
+                              ("NEXT" . ?n)
                               ("hold" . ?h)
                               ;; ("crypt" . ?E)
-                              ("note" . ?o)
                               ("noexport" . ?x)
                               ("nonum" . ?u)
                               ("ATTACH" . ?a)
-                              ("latest" . ?l) ;; latest version
+                              ("LLMLOG" . ?l)
+                              ("PROMPT" . ?p)
                               )))
 
   (add-to-list 'org-tags-exclude-from-inheritance "projects") ; projects 왜 구분했었지?
