@@ -107,6 +107,7 @@ nil if file missing.")
        electric          ; smarter, keyword-based electric-indent
        eww               ; the internet is gross
        ibuffer           ; +icons - interactive buffer management
+       tramp             ; sensible remote-file defaults + TRAMP perf tweaks
        undo              ; persistent, smarter undo for your inevitable mistakes
        vc                ; version-control and Emacs, sitting in a tree
 

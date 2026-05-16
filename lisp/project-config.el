@@ -107,13 +107,15 @@
   (setq tramp-ssh-controlmaster-options
         "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
-;;;; tramp-rpc (DISABLED)
-;; native-comp(eln) 순환 로딩: tramp-rpc ↔ tramp-rpc-magit recursive load.
-;; autoload만으로도 eln 캐시가 미리 컴파일되어 doom-first-file-hook에서 터짐.
-;; 다음 두 가지 모두 막힘:
-;;   1) :after tramp → TRAMP 핸들러 충돌 → 이맥스 먹통
-;;   2) autoload only → eln 순환 로딩 → save-place-mode 에러
-;; upstream 이슈 해결 후 재시도. (2026-04-13)
+;;;; tramp-rpc
+;; upstream recursive load 이슈는 해결됨. tramp 2.8.1.4+ 전제.
+;; Doom :emacs tramp 모듈이 기본 성능 설정을 담당하고,
+;; 여기서는 ssh ControlMaster/ControlPath 정책만 유지.
+;; straight git checkout 환경에서는 기본값(auto)이 소스 빌드를 선호하므로,
+;; 이 설정은 release artifact를 우선 사용해 이종 아키텍처(aarch64 등)도
+;; 로컬 Rust 빌드 없이 바로 배포되게 한다.
+(after! tramp-rpc
+  (setq tramp-rpc-deploy-git-build-policy 'release))
 
 ;;;; magit-gh
 
