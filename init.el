@@ -189,7 +189,7 @@ nil if file missing.")
        :app
        calendar
        ;; emms
-       ;; everywhere        ; *leave* Emacs!? You must be joking
+       everywhere        ; popup Emacs frame for system-wide quick edits
        ;; irc               ; how neckbeards socialize
        (rss +org +youtube)        ; emacs as an RSS reader
 
