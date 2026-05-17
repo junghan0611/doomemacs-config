@@ -28,6 +28,7 @@
 (use-package! ghostel
   :defer t
   :commands (ghostel ghostel-project my/pi-ghostel-start)
+  :hook (ghostel-mode . doom-mark-buffer-as-real-h)
   :if (and (fboundp 'module-load)
            module-file-suffix
            (not (bound-and-true-p IS-TERMUX)))

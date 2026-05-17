@@ -484,6 +484,21 @@
 ;; ~/sync/man/dotsamples/doom/agzam-dot-doom/modules/custom/completion/config.el
 (after! embark
 
+  ;; (1) upstream `embark-collect--outline-string`은 `(string #x210000)` —
+  ;; Unicode 범위(#x10FFFF) 밖이라 UTF-8 인코딩 시 깨진다. 유효한 Plane 16
+  ;; private-use scalar로 교체해 ghostel/-nw에서 안전하게.
+  (setq embark-collect--outline-string (string #x10FFFD))
+
+  ;; (2) TTY 폭 어긋남: `embark--truncate-target`이 하드코딩 "…"(EAW Ambiguous)를
+  ;; 쓴다. CJK 혼합에서 드리프트 → ASCII로 override. 그 외 글리프는 노출 빈도가
+  ;; 낮아 건드리지 않는다.
+  (defun my/embark--truncate-target (target)
+    (unless (stringp target) (setq target (format "%s" target)))
+    (if (string-match-p "\n" target)
+        (concat (car (split-string target "\n" 'omit-nulls "\\s-*")) "...")
+      target))
+  (advice-add 'embark--truncate-target :override #'my/embark--truncate-target)
+
   (require 'org)
   ;; (setq embark-cycle-key "C-;"
   ;;       embark-confirm-act-all nil)
