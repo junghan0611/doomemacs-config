@@ -24,6 +24,7 @@ SSOT: bin/site-policy.el — host-aliases 한 줄 추가하면 즉시 반영.
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 from collections import defaultdict
@@ -193,7 +194,105 @@ def scan_file(filepath: Path, content_dir: Path, policy: dict) -> list[dict]:
 # ━━━ Fixer ━━━
 
 # Categories that can be auto-fixed
-FIXABLE = {"HOST_ALIAS", "INTERNAL_PATH", "ORPHAN"}
+FIXABLE = {"HOST_ALIAS", "INTERNAL_PATH", "ORPHAN", "GITHUB_404"}
+
+
+# ━━━ lychee integration ━━━
+
+def find_lychee() -> list[str] | None:
+    """Return the command prefix to invoke lychee, or None if unavailable.
+    Prefers lychee on PATH; falls back to `nix shell nixpkgs#lychee --command lychee`."""
+    if shutil.which("lychee"):
+        return ["lychee"]
+    if shutil.which("nix"):
+        return ["nix", "shell", "nixpkgs#lychee", "--command", "lychee"]
+    return None
+
+
+def collect_github_urls(content_dir: Path, github_user: str) -> dict[str, list[str]]:
+    """Walk content_dir, collect unique github.com/USER URLs → list of file refs."""
+    pat = re.compile(rf"https?://github\.com/{re.escape(github_user)}/[^\s)\]\"']+")
+    out: dict = defaultdict(list)
+    for md in content_dir.rglob("*.md"):
+        try:
+            text = md.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        for m in pat.finditer(text):
+            url = m.group(0).rstrip(".,;)")
+            # Drop fragment for lychee — GitHub returns same status w/wo
+            base = url.split("#", 1)[0]
+            out[base].append(str(md.relative_to(content_dir)))
+    return out
+
+
+def check_urls_with_lychee(urls: list[str], policy: dict) -> set[str] | None:
+    """Pipe URLs to lychee via stdin, return 404/410 set or None on failure."""
+    bin_cmd = find_lychee()
+    if bin_cmd is None:
+        print("⚠ lychee not found (need: nix develop OR install lychee)", file=sys.stderr)
+        return None
+    if not urls:
+        return set()
+    max_red = (policy.get("lychee") or {}).get("max-redirects", 5)
+    cmd = bin_cmd + [
+        "--no-progress", "--format", "json",
+        "--max-redirects", str(max_red),
+        "-",
+    ]
+    print(f"   lychee 검증: {len(urls)} URLs...", file=sys.stderr)
+    try:
+        result = subprocess.run(
+            cmd, input="\n".join(urls),
+            capture_output=True, text=True, timeout=600,
+        )
+    except subprocess.TimeoutExpired:
+        print("⚠ lychee timeout (600s)", file=sys.stderr)
+        return None
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        print(f"⚠ lychee output parse failed: {result.stderr[:200]}", file=sys.stderr)
+        return None
+    failed: set = set()
+    for _src, items in (data.get("error_map") or {}).items():
+        for item in items:
+            url = item.get("url") or ""
+            status = item.get("status") or {}
+            code = status.get("code") if isinstance(status, dict) else None
+            if code in (404, 410):
+                failed.add(url)
+    print(f"   lychee 결과: {data.get('successful', 0)} OK, "
+          f"{len(failed)} 404/410, {data.get('errors', 0)} errors total",
+          file=sys.stderr)
+    return failed
+
+
+def scan_file_for_404(filepath: Path, content_dir: Path, failed_urls: set) -> list[dict]:
+    """Find positions of known-404 URLs in filepath."""
+    results = []
+    try:
+        text = filepath.read_text(encoding="utf-8")
+    except Exception:
+        return results
+    relpath = str(filepath.relative_to(content_dir))
+    for m in RE_MD_LINK.finditer(text):
+        desc, target = m.group(1), m.group(2)
+        target_no_frag = target.split("#", 1)[0]
+        if target_no_frag in failed_urls:
+            results.append({
+                "file": relpath,
+                "category": "GITHUB_404",
+                "detail": "github URL returns 404/410",
+                "target": target,
+                "desc": desc[:80],
+                "line": text[:m.start()].count("\n") + 1,
+                "match_start": m.start(),
+                "match_end": m.end(),
+                "match_text": m.group(0),
+                "pattern": "link",
+            })
+    return results
 
 
 def fix_file(filepath: Path, items: list[dict], policy: dict, apply: bool) -> dict:
@@ -226,6 +325,9 @@ def fix_file(filepath: Path, items: list[dict], policy: dict, apply: bool) -> di
         elif cat == "ORPHAN":
             # Strip brackets, keep inside as plain text
             new_chunk = item["desc"]
+        elif cat == "GITHUB_404":
+            # 404/410 GitHub URL — keep description, drop the link
+            new_chunk = item["desc"]
         else:
             continue
         text = text[:start] + new_chunk + text[end:]
@@ -245,6 +347,7 @@ ICONS = {
     "PRIVATE_ENDPOINT": "🟠",
     "URL_CRED": "🔐",
     "ORPHAN": "🔴",
+    "GITHUB_404": "💀",
     "ERROR": "❌",
 }
 
@@ -259,6 +362,8 @@ def main():
     parser.add_argument("--fix", action="store_true", help="수정 모드 (FIXABLE만)")
     parser.add_argument("--apply", action="store_true", help="실제 파일 수정 (--fix 필요)")
     parser.add_argument("--category", help="특정 카테고리만 표시 (콤마 구분)")
+    parser.add_argument("--lychee", action="store_true",
+                        help="lychee로 GitHub URL 200 OK 검증 (네트워크 호출, 수십 초~분 소요)")
     args = parser.parse_args()
 
     if args.apply and not args.fix:
@@ -285,6 +390,14 @@ def main():
     all_results: list[dict] = []
     for f in md_files:
         all_results.extend(scan_file(f, content_dir, policy))
+
+    # Optional second pass: lychee check on github.com/USER URLs
+    if args.lychee:
+        url_refs = collect_github_urls(content_dir, policy.get("github-user", ""))
+        failed_set = check_urls_with_lychee(list(url_refs.keys()), policy)
+        if failed_set:
+            for f in md_files:
+                all_results.extend(scan_file_for_404(f, content_dir, failed_set))
 
     stats: dict = defaultdict(int)
     for r in all_results:
@@ -358,7 +471,7 @@ def main():
     print("═══ Content 검증 리포트 (Stage 3) ═══")
     print()
     print(f"총 검출: {len(all_results)}")
-    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "ERROR"]:
+    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "GITHUB_404", "ERROR"]:
         n = stats.get(cat, 0)
         if n:
             icon = ICONS.get(cat, "?")
@@ -374,7 +487,7 @@ def main():
 
     # Detail per category
     print()
-    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN"]:
+    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "GITHUB_404"]:
         items = [r for r in all_results if r["category"] == cat]
         if not items:
             continue

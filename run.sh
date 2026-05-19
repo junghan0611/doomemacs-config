@@ -298,8 +298,8 @@ _verify_step_figures_summary() {
 }
 
 _verify_step_content() {
-  info "[4/4] content 위생 검증 (host alias, internal path, private endpoint, url cred)"
-  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --summary || true
+  info "[4/4] content 위생 검증 (host alias / internal path / endpoint / cred / 404)"
+  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --summary --lychee || true
 }
 
 _fix_step_relref() {
@@ -339,12 +339,12 @@ _fix_step_figures() {
 }
 
 _fix_step_content() {
-  info "[4/4] content 위생 정정 (dry-run)"
-  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix || true
+  info "[4/4] content 위생 정정 (dry-run, lychee 포함)"
+  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --lychee || true
   echo ""
   read -p "content 위생 정정 적용? (y/N): " c
   if [[ "$c" =~ ^[Yy]$ ]]; then
-    python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --apply
+    python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --lychee --apply
   else
     info "content 적용 취소"
   fi

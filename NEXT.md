@@ -159,6 +159,18 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 
 1. ✓ Stage 1a — PoC 1파일 + ~/org 전체 dry-run 완료
 2. ✓ Stage 1a `--apply` — ~/sync/org 일관 변환 + 커밋 (476c774)
-3. **Stage 3 구현** ← 다음 자리. lychee + 패턴 6종 검증/정정
-4. 가든 재export → Stage 3로 broken catch
-5. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호
+3. ✓ Stage 3 PoC — `verify-content.py` 패턴 매칭 + run.sh [4/4] 통합 (2cf5878)
+4. ✓ Stage 3 lychee — GITHUB_404 카테고리 통합. nix shell 폴백 지원.
+   - 첫 가든 검증: 1 HOST_ALIAS + 28 INTERNAL_PATH + 5 GITHUB_404 (lychee 264 URL 중 13개 404, md link 형태 5개 검출)
+5. **fix --apply** (사용자 결정) — 가든에서 직접 정정. 또는 가든 재export 우선.
+6. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호
+
+### Stage 3 Follow-up
+
+- **ORPHAN 카테고리 정교화** — 현재 비활성. 정규식 너무 광범위. 필요 조건:
+  - 코드 펜스 ``` ... ``` 안 제외
+  - inline code `...` 안 제외
+  - Hugo shortcode `{{< ... >}}` 안 제외
+  - description signature (denote-id, 화살표 →, 한글 어미 등) 필요
+- **lychee 13 vs 5 갭** — url_refs는 13건 404인데 md link 매칭은 5건만. 차이 원인: 일부 URL이 bare 형태(괄호 없이 평문)거나 reference 정의에 있음. scan_file_for_404를 bare URL도 잡도록 확장.
+- **GitHub token 활용** — rate limit 대비. site-policy.el에 token 옵션 추가, env var `GITHUB_TOKEN` 우선.
