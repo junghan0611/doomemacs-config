@@ -155,23 +155,57 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 4. **Stage 2 — `lisp/denote-export-config.el` export hook**. Stage 1 변환 함수 재사용 (신규 노트도 export 시 자동 일관성). lychee 호출은 안 함 (Stage 3 영역).
 5. **D — 메타 4줄 silently drop** (TOP 회귀). 콘텐츠 손실이라 별도 작업.
 
+
+### 도구 관할 + 빈자리 (2026-05-19 리뷰)
+
+> 정체성: 링크 위생 문제를 **해결**한 것이 아니라 **다룰 수 있는 운영 표면을 세운 것**. Stage 1~3 tooling landed.
+
+각 도구의 jurisdiction과 silent 회귀 위험 빈자리:
+
+| 도구 | 자리 | 잡는 것 | 못 잡음 (회귀 위험) |
+|------|------|---------|---------------------|
+| fix-org-links.el | ~/org 정정 | `~/repos/gh/REPO[/path][::N]` → GitHub URL, host alias, `#LN` | 그 외 file: 경로, denote 깨짐, image, ORPHAN |
+| verify-org-links.py | ~/org 검증 (read-only) | `[[github.com/USER/...]]` 404/410 | bare URL, ref-style, image, file:, GitHub 외 도메인 |
+| verify-relref.py | 가든 relref | `{{< relref >}}` 6 카테고리, anchor 누출 | relref 외 md link, 외부 URL, 이미지 |
+| verify-figures.py | 가든 figure | figure shortcode + `![](src)` 5 카테고리 | ox-hugo silent transform (query-string, NFD/NFC), 외부 이미지 404 |
+| check-description.sh | 가든 frontmatter | description/abstract 누락 | 내용 품질 |
+| verify-content.py | 가든 콘텐츠 위생 | HOST_ALIAS, INTERNAL_PATH, PRIVATE_ENDPOINT, URL_CRED, GITHUB_404 (md link만) | ORPHAN(비활성), bare URL, ref-style, image, GitHub 외 외부 URL, rate-limit inconclusive |
+
+**빈자리 — 어느 도구도 잡지 못하는 회귀** (다음 follow-up 우선순위):
+
+1. **bare URL 404** (md link 형태 아닌 평문 `https://...`) — verify-content/verify-org-links 둘 다 미검출. lychee scan 확장 필요.
+2. **reference-style link** (`[text][ref]` + `[ref]: url`) — 패턴 자체 미인식.
+3. **GitHub 외 외부 URL 404** (notion.so, slack archive, 블로그 등) — lychee `--include` 좁힘이라 미검사. 우선순위는 낮음 (대량 외부 검사는 rate-limit/timeout 영향).
+4. **외부 이미지 404** (`![alt](https://example.com/img.png)`) — figure pipeline 영역인데 외부 검증 안 함.
+5. **frontmatter 안의 URL** — yaml 안은 어느 도구도 안 봄.
+6. **ox-hugo silent transform** — figure src에 query-string 추가, 한글 NFD/NFC 깨짐 같은 silent 회귀. UNKNOWN으로 잡힐 수도 ALIVE로 잘못 잡힐 수도.
+
+### Follow-up 우선순위
+
+**높음 (운영 직타)**
+- **GitHub token 활용** — `GITHUB_TOKEN` env 또는 site-policy.el로. rate-limit으로 877 inconclusive였던 ~/org 검증을 완전판으로. 안 하면 매 호출 신뢰도 떨어짐.
+- **bare URL + reference-style 검출 확장** — verify-content.py에 패턴 추가. 회귀 빈자리 #1 #2 즉시 메움.
+- **ORPHAN 정교화** — 현재 비활성. 정교화 후 켜야 비공개 denote 잔재 잡힘. 조건:
+  - 코드 펜스 ``` ... ``` 안 제외
+  - inline code `...` 안 제외
+  - Hugo shortcode `{{< ... >}}` 안 제외
+  - description signature (denote-id, 화살표 →, 한글 어미 등)
+
+**중간 (가든 위생 강화)**
+- **외부 URL 404 옵션** — lychee `--include` 제한 풀고 전 URL 검사 모드. cron/주기 실행으로 분리.
+- **외부 이미지 404** — verify-figures.py 확장 또는 verify-content.py에 image 카테고리.
+- **ox-hugo silent transform regression test** — figure src 변환 사례 모음 + 비교 스크립트.
+
+**낮음 (응집 정리)**
+- **verify-org-links.py를 Stage 1.5로 명시** — 응집 미학 흐려짐 인정. 도구 헤더/메뉴 주석 갱신.
+- **Stage 2 export-time hook** — Stage 1 함수 재사용. 신규 노트가 자동으로 일관성 유지.
+
 ### Stage 순서 — 첫 가동 시 (현황)
 
 1. ✓ Stage 1a — PoC 1파일 + ~/org 전체 dry-run 완료
 2. ✓ Stage 1a `--apply` — ~/sync/org 일관 변환 + 커밋 (476c774)
 3. ✓ Stage 3 PoC — `verify-content.py` 패턴 매칭 + run.sh [4/4] 통합 (2cf5878)
-4. ✓ Stage 3 lychee — GITHUB_404 카테고리 통합. nix shell 폴백 지원. (d092647)
-5. ✓ 가든 사용자 수동 정리 + 재export — verify 0건 도달. 11 파일 가든 modified 미커밋 (사용자 작업).
-6. ✓ ~/org 매핑 출력 + verify-org-links — verify-content 출력에 ~/org 원본 위치 한 줄, `./run.sh fix-org --check`로 ~/org GitHub URL 직접 lychee 검증.
-   - 첫 ~/org 검증: 1418 unique URL → 84 404/410 broken, 877 errors (rate limit). 사용자가 ~/org에서 직접 분류 결정.
-7. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호
-
-### Stage 3 Follow-up
-
-- **ORPHAN 카테고리 정교화** — 현재 비활성. 정규식 너무 광범위. 필요 조건:
-  - 코드 펜스 ``` ... ``` 안 제외
-  - inline code `...` 안 제외
-  - Hugo shortcode `{{< ... >}}` 안 제외
-  - description signature (denote-id, 화살표 →, 한글 어미 등) 필요
-- **lychee 13 vs 5 갭** — url_refs는 13건 404인데 md link 매칭은 5건만. 차이 원인: 일부 URL이 bare 형태(괄호 없이 평문)거나 reference 정의에 있음. scan_file_for_404를 bare URL도 잡도록 확장.
-- **GitHub token 활용** — rate limit 대비. site-policy.el에 token 옵션 추가, env var `GITHUB_TOKEN` 우선.
+4. ✓ Stage 3 lychee — GITHUB_404 카테고리 통합 (d092647)
+5. ✓ 가든 사용자 수동 정리 + 재export — verify 0건. notes repo 11 파일 미커밋 (사용자 작업)
+6. ✓ ~/org 매핑 + verify-org-links — 1418 URL → 84 broken, 877 inconclusive (d71b3c5)
+7. → **다음**: GitHub token 활용 또는 bare URL 확장 (회귀 빈자리 메움)
