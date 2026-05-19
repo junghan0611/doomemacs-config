@@ -228,24 +228,40 @@ def collect_github_urls(content_dir: Path, github_user: str) -> dict[str, list[s
 
 
 def check_urls_with_lychee(urls: list[str], policy: dict) -> set[str] | None:
-    """Pipe URLs to lychee via stdin, return 404/410 set or None on failure."""
+    """Pipe URLs to lychee via stdin, return 404/410 set or None on failure.
+    Honors GITHUB_TOKEN (or GITHUB_PERSONAL_ACCESS_TOKEN) for rate-limit relief."""
     bin_cmd = find_lychee()
     if bin_cmd is None:
         print("⚠ lychee not found (need: nix develop OR install lychee)", file=sys.stderr)
         return None
     if not urls:
         return set()
-    max_red = (policy.get("lychee") or {}).get("max-redirects", 5)
-    cmd = bin_cmd + [
-        "--no-progress", "--format", "json",
-        "--max-redirects", str(max_red),
-        "-",
-    ]
-    print(f"   lychee 검증: {len(urls)} URLs...", file=sys.stderr)
+    lyc = policy.get("lychee") or {}
+    cmd = bin_cmd + ["--no-progress", "--format", "json"]
+    cmd += ["--max-redirects", str(lyc.get("max-redirects", 5))]
+    if lyc.get("max-concurrency"):
+        cmd += ["--max-concurrency", str(lyc["max-concurrency"])]
+    if lyc.get("max-retries"):
+        cmd += ["--max-retries", str(lyc["max-retries"])]
+    if lyc.get("retry-wait-time"):
+        cmd += ["--retry-wait-time", str(lyc["retry-wait-time"])]
+    if lyc.get("cache"):
+        cmd += ["--cache"]
+    cmd += ["-"]
+    # Pass-through GitHub token to lychee env (lychee auto-reads GITHUB_TOKEN).
+    # Accept both GITHUB_TOKEN and GITHUB_PERSONAL_ACCESS_TOKEN names.
+    env = os.environ.copy()
+    token = env.get("GITHUB_TOKEN") or env.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+    token_note = ""
+    if token:
+        env["GITHUB_TOKEN"] = token
+        token_note = " (GitHub token: ON)"
+    print(f"   lychee 검증: {len(urls)} URLs...{token_note}", file=sys.stderr)
     try:
         result = subprocess.run(
             cmd, input="\n".join(urls),
             capture_output=True, text=True, timeout=600,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         print("⚠ lychee timeout (600s)", file=sys.stderr)

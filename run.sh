@@ -51,6 +51,13 @@ success() { echo "${GREEN}✓${NC} $*"; }
 warn()    { echo "${YELLOW}⚠${NC} $*"; }
 err()     { echo "${RED}✗${NC} $*"; }
 
+# Load secrets (e.g. GITHUB_PERSONAL_ACCESS_TOKEN) on demand.
+# Used only by lychee-invoking steps so we don't leak env in unrelated commands.
+load_env_local() {
+  # shellcheck disable=SC1090
+  [[ -r "$HOME/.env.local" ]] && source "$HOME/.env.local" 2>/dev/null || true
+}
+
 # Cleanup daemons on interrupt
 cleanup() {
   echo ""
@@ -300,6 +307,7 @@ _verify_step_figures_summary() {
 
 _verify_step_content() {
   info "[4/4] content 위생 검증 (host alias / internal path / endpoint / cred / 404)"
+  load_env_local
   python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --summary --lychee || true
 }
 
@@ -341,6 +349,7 @@ _fix_step_figures() {
 
 _fix_step_content() {
   info "[4/4] content 위생 정정 (dry-run, lychee 포함)"
+  load_env_local
   python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --lychee || true
   echo ""
   read -p "content 위생 정정 적용? (y/N): " c
@@ -363,6 +372,7 @@ cmd_fix_org() {
   for arg in "$@"; do
     if [[ "$arg" == "--check" ]]; then
       info "fix-org --check (~/org GitHub URL lychee 검증): ${target}"
+      load_env_local
       python3 "$BIN_DIR/verify-org-links.py" "$target"
       return
     fi

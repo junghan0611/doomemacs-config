@@ -65,9 +65,16 @@
     (orphan-bracket . nil)
 
     ;; lychee options — Stage 3.
+    ;; max-concurrency: GitHub secondary abuse rate limit 회피. 기본 128은
+    ;;   대량 검증에서 abuse detection 걸린다. 16~32가 안전.
+    ;; cache: 동일 URL 재검증 시 디스크 캐시(.lycheecache) 사용. 1d 기본.
     (lychee
      . ((skip . ("mailto:" "tel:"))
-        (max-redirects . 5))))
+        (max-redirects . 5)
+        (max-concurrency . 16)
+        (max-retries . 3)
+        (retry-wait-time . 5)
+        (cache . t))))
   "Garden hygiene policy SSOT.
 See file commentary for consumers.")
 
