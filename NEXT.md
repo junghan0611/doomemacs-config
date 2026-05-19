@@ -160,10 +160,11 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 1. ✓ Stage 1a — PoC 1파일 + ~/org 전체 dry-run 완료
 2. ✓ Stage 1a `--apply` — ~/sync/org 일관 변환 + 커밋 (476c774)
 3. ✓ Stage 3 PoC — `verify-content.py` 패턴 매칭 + run.sh [4/4] 통합 (2cf5878)
-4. ✓ Stage 3 lychee — GITHUB_404 카테고리 통합. nix shell 폴백 지원.
-   - 첫 가든 검증: 1 HOST_ALIAS + 28 INTERNAL_PATH + 5 GITHUB_404 (lychee 264 URL 중 13개 404, md link 형태 5개 검출)
-5. **fix --apply** (사용자 결정) — 가든에서 직접 정정. 또는 가든 재export 우선.
-6. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호
+4. ✓ Stage 3 lychee — GITHUB_404 카테고리 통합. nix shell 폴백 지원. (d092647)
+5. ✓ 가든 사용자 수동 정리 + 재export — verify 0건 도달. 11 파일 가든 modified 미커밋 (사용자 작업).
+6. ✓ ~/org 매핑 출력 + verify-org-links — verify-content 출력에 ~/org 원본 위치 한 줄, `./run.sh fix-org --check`로 ~/org GitHub URL 직접 lychee 검증.
+   - 첫 ~/org 검증: 1418 unique URL → 84 404/410 broken, 877 errors (rate limit). 사용자가 ~/org에서 직접 분류 결정.
+7. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호
 
 ### Stage 3 Follow-up
 

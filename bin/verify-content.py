@@ -23,6 +23,7 @@ SSOT: bin/site-policy.el — host-aliases 한 줄 추가하면 즉시 반영.
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -341,6 +342,48 @@ def fix_file(filepath: Path, items: list[dict], policy: dict, apply: bool) -> di
 
 # ━━━ Main ━━━
 
+# ━━━ ~/org origin mapping ━━━
+# Map garden detection → source .org file via denote ID, so the user can
+# jump straight to ~/org for manual edit (e.g. private-repo URLs, .gitignored
+# files, rename cases — anything the automatic fixer can't decide).
+
+ORG_ROOT = Path(os.environ.get("ORG_ROOT", os.path.expanduser("~/org"))).resolve()
+
+_ORG_SOURCE_CACHE: dict[str, str | None] = {}
+
+
+def find_org_source(garden_relpath: str) -> str | None:
+    """Map garden md path → ~/org source file path via denote ID."""
+    if garden_relpath in _ORG_SOURCE_CACHE:
+        return _ORG_SOURCE_CACHE[garden_relpath]
+    result: str | None = None
+    parts = Path(garden_relpath).parts
+    if parts:
+        filename = parts[-1]
+        m = re.match(r"^(\d{8}T\d{6})\.md$", filename)
+        if m and ORG_ROOT.is_dir():
+            denote_id = m.group(1)
+            # Try same subdir first (most common: botlog→botlog, notes→notes, ...)
+            candidates = []
+            if len(parts) > 1:
+                same = ORG_ROOT.joinpath(*parts[:-1])
+                if same.is_dir():
+                    candidates.extend(same.glob(f"{denote_id}--*.org"))
+            # Fallback: scan top-level ~/org subdirs for the denote-id
+            if not candidates:
+                for f in ORG_ROOT.rglob(f"{denote_id}--*.org"):
+                    candidates.append(f)
+                    break
+            if candidates:
+                # Display as "<subdir>/<filename>" relative to ORG_ROOT
+                try:
+                    result = str(candidates[0].relative_to(ORG_ROOT))
+                except ValueError:
+                    result = str(candidates[0])
+    _ORG_SOURCE_CACHE[garden_relpath] = result
+    return result
+
+
 ICONS = {
     "HOST_ALIAS": "🔵",
     "INTERNAL_PATH": "🟡",
@@ -429,6 +472,9 @@ def main():
                 pretty = " ".join(f"{ICONS.get(c, '?')}{counts[c]}" for c in counts)
                 print(f"  {marker} {relpath}  ({pretty})")
                 if not args.apply:
+                    org_src = find_org_source(relpath)
+                    if org_src:
+                        print(f"    → ~/org: {org_src}")
                     for i in items:
                         if i["category"] in FIXABLE:
                             print(f"    {ICONS.get(i['category'], '?')} "
@@ -498,6 +544,9 @@ def main():
         for item in items[:30]:
             print(f"  {item['file']}:{item['line']}")
             print(f"    {item['match_text'][:120]}")
+            org_src = find_org_source(item['file'])
+            if org_src:
+                print(f"    → ~/org: {org_src}")
         if len(items) > 30:
             print(f"  ... +{len(items) - 30} more (use --category={cat} for full)")
         print()

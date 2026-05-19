@@ -101,8 +101,9 @@ show_menu() {
   echo "    V) verify  (relref + description + figures + content, 검증만)"
   echo "    F) fix     (relref + anchors + figures + content, 단계별 y/N)"
   echo ""
-  echo "  ${YELLOW}Org Hygiene${NC} (~/org 원본 — site-policy.yaml SSOT 기반)"
+  echo "  ${YELLOW}Org Hygiene${NC} (~/org 원본 — site-policy.el SSOT 기반)"
   echo "    O) fix-org    (link 정정, dry-run + --apply)"
+  echo "       CLI: ./run.sh fix-org --check  (~/org GitHub URL lychee 검증, read-only)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run, GUI)"
@@ -351,8 +352,21 @@ _fix_step_content() {
 }
 
 cmd_fix_org() {
-  local target="${1:-$HOME/org}"
-  shift 2>/dev/null || true
+  local target="$HOME/org"
+  # Pick first non-option arg as target (anything not starting with --)
+  if [[ -n "$1" && "$1" != --* ]]; then
+    target="$1"
+    shift
+  fi
+
+  # --check: ~/org GitHub URL lychee 검증 (read-only, 변환 없음)
+  for arg in "$@"; do
+    if [[ "$arg" == "--check" ]]; then
+      info "fix-org --check (~/org GitHub URL lychee 검증): ${target}"
+      python3 "$BIN_DIR/verify-org-links.py" "$target"
+      return
+    fi
+  done
 
   # If --apply passed explicitly, run once and done.
   for arg in "$@"; do
