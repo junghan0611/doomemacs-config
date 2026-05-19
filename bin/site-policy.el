@@ -68,13 +68,17 @@
     ;; max-concurrency: GitHub secondary abuse rate limit 회피. 기본 128은
     ;;   대량 검증에서 abuse detection 걸린다. 16~32가 안전.
     ;; cache: 동일 URL 재검증 시 디스크 캐시(.lycheecache) 사용. 1d 기본.
+    ;; cache-exclude-status: 404를 캐시하지 않는다. agenda-stamp가 박는
+    ;;   commit URL은 push 사이클 사이에 일시적으로 404 → 200으로 바뀐다.
+    ;;   캐시되면 push 후에도 false positive 지속.
     (lychee
      . ((skip . ("mailto:" "tel:"))
         (max-redirects . 5)
         (max-concurrency . 16)
         (max-retries . 3)
         (retry-wait-time . 5)
-        (cache . t))))
+        (cache . t)
+        (cache-exclude-status . "404"))))
   "Garden hygiene policy SSOT.
 See file commentary for consumers.")
 

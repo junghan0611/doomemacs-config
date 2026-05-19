@@ -247,6 +247,8 @@ def check_urls_with_lychee(urls: list[str], policy: dict) -> set[str] | None:
         cmd += ["--retry-wait-time", str(lyc["retry-wait-time"])]
     if lyc.get("cache"):
         cmd += ["--cache"]
+    if lyc.get("cache-exclude-status"):
+        cmd += ["--cache-exclude-status", str(lyc["cache-exclude-status"])]
     cmd += ["-"]
     # Pass-through GitHub token to lychee env (lychee auto-reads GITHUB_TOKEN).
     # Accept both GITHUB_TOKEN and GITHUB_PERSONAL_ACCESS_TOKEN names.
@@ -272,16 +274,25 @@ def check_urls_with_lychee(urls: list[str], policy: dict) -> set[str] | None:
         print(f"⚠ lychee output parse failed: {result.stderr[:200]}", file=sys.stderr)
         return None
     failed: set = set()
+    status_dist: dict = defaultdict(int)
     for _src, items in (data.get("error_map") or {}).items():
         for item in items:
             url = item.get("url") or ""
             status = item.get("status") or {}
             code = status.get("code") if isinstance(status, dict) else None
+            text = status.get("text", "") if isinstance(status, dict) else ""
+            # Bucket: numeric code OR error text (timeout/dns/etc.)
+            bucket = str(code) if code else (text.split(":")[0][:30] if text else "unknown")
+            status_dist[bucket] += 1
             if code in (404, 410):
                 failed.add(url)
     print(f"   lychee 결과: {data.get('successful', 0)} OK, "
           f"{len(failed)} 404/410, {data.get('errors', 0)} errors total",
           file=sys.stderr)
+    if status_dist:
+        dist_str = ", ".join(f"{k}={v}" for k, v in sorted(
+            status_dist.items(), key=lambda x: -x[1])[:6])
+        print(f"   errors 분포: {dist_str}", file=sys.stderr)
     return failed
 
 
