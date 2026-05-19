@@ -7,5 +7,156 @@
 
 ---
 
-(현재 비어있음 — 2026-05-14 pi daemon localleader 회복 fix 적용 완료. 다음 작업
-시작 시 후속 항목 발견되면 여기 추가.)
+## TOP — 가든 missing link 후속 검증 확장 (2026-05-19 발견)
+
+샘플: `/home/junghan/sync/org/botlog/20260517T211731--§lifetract...org` →
+`~/repos/gh/notes/content/botlog/20260517T211731.md`
+
+`run.sh verify`/`fix`가 relref만 본다. 다음 4종은 못 잡는다 — SEO에 직타.
+
+| 패턴 | 예시 (md 라인) | 잡을 자리 |
+|------|----------------|-----------|
+| **A. `[label](~/repos/gh/xxx)`** 홈경로 markdown URL | `[lifetract](~/repos/gh/lifetract)` L137, `[nixos-config](~/repos/gh/nixos-config)` L135 | (1) Org 단 `[[file:~/repos/gh/REPO]]` → `[[https://github.com/junghan0611/REPO]]` rewrite hook (ox-hugo before-processing), 또는 (2) verify-relref.py 확장: standard md link regex `\]\((~\|/home/junghan\|file:)` 카테고리 추가 |
+| **B. 사라진 알리아스 호스트** (`*.junghanacs.com`) | `https://geworfen.junghanacs.com` L113 → 실제 `agent.junghanacs.com` | host alias map (yaml/json) + verifier. Org 본문도 같이 점검할 수 있게 — denote-export hook로 사전 변환이 깔끔 |
+| **C. dangling bracket** (`[desc]` 뒤에 `(`/`{` 없음) | L19, L32, L44 — 비공개 llmlog denote 링크가 가든에 export 안 돼 description만 남음 | verify-relref.py에 카테고리 `ORPHAN` 추가. `[!abstract]` 같은 callout/list marker는 제외. fix는 plain text 치환 (`[X]` → `X`) |
+| **D. 메타 줄 silently drop** | Org L28-31 4개 메타(#건강/#워크플로우/#데이터로그/#데이터베이스) → md에 자취 없음. 대상 메타 md 4개는 가든에 **존재** | export 파이프라인 회귀. `denote-export.el` + ox-hugo 단에서 어떤 단계가 list item을 통째로 삼키는지 추적. 우선 1개 repro부터 |
+
+### 작업 순서 제안
+
+1. **D 먼저** — 회귀라 콘텐츠 손실. repro는 메타 8줄짜리 `20260517T211731.org` 하나 export → 4줄 사라지는 단계 식별. ox-hugo `--verbose` 또는 `org-export-before-processing-hook` 뒤 buffer dump.
+2. **A — Org-side rewrite hook**: `lisp/denote-export-config.el` Section 2.3 (`my/org-rewrite-download-links`) 옆에 `my/org-rewrite-repo-file-links` 추가. `[[file:~/repos/gh/REPO/...]]` → `[[https://github.com/junghan0611/REPO/tree/main/...]]`. 단, `[[file:~/screenshot/]]` / `[[file:~/org/.attach/]]` 같은 첨부는 건드리지 말 것 (이미 figure 파이프라인이 잡음).
+3. **B — host alias yaml**: `bin/host-alias.yaml` SSOT 한 파일. `geworfen.junghanacs.com: agent.junghanacs.com` 같이. verify-relref.py가 외부 URL도 한 번 훑어보게 확장. fix-mode는 자동 치환.
+4. **C — ORPHAN 카테고리**: verify-relref.py에 dangling bracket scanner 추가. 일반 list item `- text` 와 `[!abstract]` callout, footnote `[^1]`, image alt `![alt]` 는 negative-lookahead로 제외.
+
+### 안 잡을 부분 (의식적 제외)
+
+- 외부 URL의 진짜 404 (geworfen은 alias라 잡지만, 살아있는 외부 도메인의 404는 별도 link checker 영역).
+- Org-mode 안의 `[[denote:UUID]]` 자체 무결성 (denotecli 영역).
+
+---
+
+## TOP-2 — 가든 위생 통합 검증 (보안 + SEO + link rot)
+
+링크 위생은 SEO만의 문제가 아니다. **내부 경로 노출 / 사라진 서브도메인 / URL 내 credential**은 보안 카테고리. notes 리포에 `gitleaks`(`.gitleaks.toml`)는 이미 있지만 secret 한정 — link 위생은 빈자리.
+
+### 응집 원칙 — 검증은 doomemacs-config에서 끝낸다
+
+notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-config는 작성/내보내기 인프라라 안정적이다. 따라서:
+
+- **검증 도구 의존성**: `flake.nix` devshell ← 여기서 lychee/python3+pyyaml 핀.
+- **검증 진입점**: `./run.sh verify` / `./run.sh fix` 단 하나. 외부 cron / 별도 CI 없음.
+- **검증 코드**: `bin/verify-*.py` ← 이미 자리 잡힌 패턴 확장.
+- **정책 SSOT**: `bin/site-policy.yaml` ← Org-side hook과 md verifier가 같은 파일을 읽음.
+- **notes 리포 의무**: `lint.sh` gitleaks 유지(secret은 콘텐츠 위생). link 검증은 가져오지 않는다.
+
+### 도구 지도 (참고용 — 채택 도구만 응집)
+
+| 도구 | 영역 | 채택 | 자리 |
+|------|------|------|------|
+| `gitleaks` (이미 있음, `notes/lint.sh`) | secrets | 그대로 | notes 측 |
+| **lychee** (Rust) | 외부 link rot, redirect/deprecated 자동 추적, fragment까지 | ✓ | `flake.nix` devshell → `run.sh` 호출 |
+| **자체 `verify-content.py`** (신규) | 가든 특화 패턴 매칭 | ✓ | `bin/` |
+| `htmltest` / `markdown-link-check` | (lychee와 영역 중복) | ✗ | — |
+
+### 도구로 못 잡는 — 가든 특화 패턴 (`verify-content.py` 영역)
+
+1. **내부 경로 노출** — `~/repos/`, `/home/junghan/`, `file:///` (호스트 정보 누출 = 보안)
+2. **사설 endpoint** — `localhost:`, `127.0.0.1`, `192.168.`, `10.\d`, `172.(1[6-9]\|2\d\|3[01])\.` (사설망 노출 = 보안)
+3. **사라진 자기 서브도메인** — `geworfen.junghanacs.com` 같은 alias rot (subdomain takeover 가능성 = 보안)
+4. **URL 내 credential** — `https?://[^/]+:[^@/]+@` (basic auth 누출 = 보안)
+5. **dangling bracket** — `[desc]` 뒤 target 없음 (도구는 못 잡음. 깨진 링크조차 아닌 텍스트 잔재)
+6. **deprecated 자기 도메인** — `*.junghanacs.com` 의 옛 alias map (자체 운영 SSOT만 안다)
+
+### 세 자리 — Org 원본 + Org export hook + md 검증
+
+> 핵심: **Org 원본 파일도 깨졌다.** export hook은 temp buffer만 변환 → GUI Emacs / denotecli / semantic-memory가 원본 읽을 때 여전히 깨진 링크. 따라서 **원본 일괄 정정이 먼저** 필요. export hook은 신규 작성 노트 안전망.
+
+**Stage 1 — Org 원본 일괄 정정** (`bin/fix-org-links.el` 신규)
+- emacs batch 실행. denote-export.el daemon 인프라 재활용.
+- `bin/site-policy.yaml` SSOT 읽음 (Stage 2/3과 공유).
+- 변환 규칙 (확정):
+  - `[[file:~/repos/gh/REPO]]` → `[[https://github.com/junghan0611/REPO]]`
+  - `[[file:~/repos/gh/REPO/path/to/file.el]]` → `[[https://github.com/junghan0611/REPO/blob/main/path/to/file.el]]`
+  - `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]`, `[[file:~/org/...denote-id...]]` 는 **제외** (figure / attach / denote 내부 링크 보호)
+  - `https://geworfen.junghanacs.com` → `https://agent.junghanacs.com` 등 host alias 적용
+- 동작 방식 (확정): **dry-run 기본 + `--apply` 옵션**. `verify-relref.py --fix` 패턴 답습.
+  - `./run.sh fix-org` → 변경 후보 모두 출력 → `y/N` → `./run.sh fix-org --apply`
+- 안전:
+  - `[[denote:UUID]]` 링크는 절대 건드리지 않음
+  - 본문 code/verbatim/src block 내부는 제외 (Org parser 사용, 단순 regex 아님)
+  - dry-run 출력에 파일별 before/after diff
+- 호출 빈도: yaml에 alias 한 줄 추가될 때마다 일괄 재실행 (idempotent).
+
+**Stage 2 — Org export-time hook** (신규 작성 노트 안전망)
+- `lisp/denote-export-config.el` Section 2.3 옆에 hook 두 개:
+  - `my/org-rewrite-repo-file-links` — Stage 1과 동일 변환 규칙, temp buffer에 적용
+  - `my/org-rewrite-host-alias` — `site-policy.yaml` 의 host_aliases 사전 치환
+- 같은 SSOT 읽음. Stage 1이 빠진 사이에 작성된 신규 노트도 export 시점에 보호.
+- yaml 로드는 `defvar` 캐시 (worker당 1회).
+
+**Stage 3 — md-side 검증** (가든 회귀 잡이)
+- `bin/verify-content.py` 신설. `bin/site-policy.yaml` SSOT 읽음:
+  ```yaml
+  internal_paths: ["^~/repos/", "^/home/junghan/", "^file://"]
+  private_endpoints: ["localhost", "127\\.0\\.0\\.1", "192\\.168\\.", "10\\.", "172\\.(1[6-9]|2\\d|3[01])\\."]
+  host_aliases:
+    "geworfen.junghanacs.com": "agent.junghanacs.com"
+  deprecated_hosts: []          # 완전히 사라진 도메인 — 추후 확장
+  credential_in_url: "://[^/]+:[^@/]+@"
+  orphan_bracket: true          # dangling [desc] 검출 토글
+  lychee:
+    skip: ["mailto:", "tel:"]
+    max_redirects: 5
+  ```
+- `./run.sh verify` 흐름 (확장):
+  - [1/4] relref (`verify-relref.py --summary`) — 기존
+  - [2/4] description (`check-description.sh`) — 기존
+  - [3/4] figures (`verify-figures.py`) — 기존
+  - **[4/4] content + lychee (`verify-content.py`)** — 신규. 패턴 6종 + 외부 link rot 통합.
+- `./run.sh fix` 흐름 (확장):
+  - [1/4] relref → [2/4] anchors → [3/4] figures (기존)
+  - **[4/4] content** — host alias 자동 치환, dangling bracket → plain text. lychee 결과는 보고만(자동 외부 URL 수정은 안 함).
+
+### SSOT 한 줄 추가 → 세 자리 즉시 반영
+
+`bin/site-policy.yaml` 에 alias 한 줄 추가 →
+- **Stage 1** (`fix-org-links.el --apply`) 재실행 → 원본 ~/org 일괄 정정
+- **Stage 2** (export hook) → 다음 export부터 신규 노트 자동 보호
+- **Stage 3** (`verify-content.py`) → 가든 md 회귀 잡음 + 자동 정정
+
+이 SSOT가 핵심. 시간이 갈수록 alias map은 자라는 자산.
+
+### 진행 상태 (2026-05-19)
+
+**완료**
+- `bin/site-policy.el` — SSOT 초안 (host-aliases, github-user/branch, internal-paths, private-endpoints, credential-in-url, orphan-bracket, lychee)
+- `bin/fix-org-links.el` — Stage 1a emacs batch fixer. org-element 기반 (denote/code/verbatim/src-block 자동 보호). dry-run + `--apply` + 로컬 부재 ⚠ 표시. `::N` → `#LN` 라인 anchor 보존.
+- `run.sh fix-org` / TUI `O` — 실제 호출, dry-run 후 `y/N` prompt
+- `flake.nix` — lychee + python3-pyyaml devshell 추가
+- 첫 `~/org` dry-run: 17 files, 59 changes, ⚠ 6건 로컬 부재 (orgmode-skills, family-config 등 미동기화 repo)
+
+### 설계 결정 — 검증 자리 분리 (2026-05-19)
+
+~/org 원본과 가든 출력물은 다른 자리다:
+
+| 자리 | 목적 | 깨진 GitHub URL 정책 |
+|------|------|----------------------|
+| **~/org 원본** | 사람이 보는 자리 / 도구 입력 | **일관성 우선**. file: → GitHub URL로 통일. push 안 됐어도 그대로 둠. 나중에 push되면 자동 회복. |
+| **가든 (`notes/content/`)** | 외부 공개 / SEO / 보안 | **퍼블리시 차단 우선**. 404는 plain text로 떨어뜨림 (description만 남김) |
+
+따라서 Stage 1b (별도 verify-org-links 도구)는 **만들지 않음**. 같은 lychee 검증을 가든 측 Stage 3 (`verify-content.py`)에서 한 번에 잡으면 구현 줄어들고 응집도 맞다. ~/org 원본은 깨끗하게 일관성만 유지.
+
+**다음 작업 자리**
+1. **Stage 1a `--apply` + git commit** — ~/org 원본 일관 변환. 로컬 부재 6건도 그대로 변환 (가든 측이 막을 자리).
+2. **D — 메타 4줄 silently drop** (TOP 회귀). 콘텐츠 손실이라 별도 작업.
+3. 영향받은 노트 재export → 가든 deploy
+4. **Stage 3 — `bin/verify-content.py`** 신규. `site-policy.el` SSOT 읽음. 패턴 6종 + **lychee로 가든 md 내 GitHub URL 200 OK 검증**. `--fix`는 404 → plain text 정정. `./run.sh verify` / `fix` 단계 [4/4] 추가.
+5. **Stage 2 — `lisp/denote-export-config.el` export hook**. Stage 1 변환 함수 재사용 (신규 노트도 export 시 자동 일관성). lychee 호출은 안 함 (Stage 3 영역).
+
+### Stage 순서 — 첫 가동 시 (계획)
+
+1. ✓ Stage 1a — PoC 1파일 + ~/org 전체 dry-run 완료
+2. **Stage 1a `--apply`** ← 다음 자리. ~/org 원본 일관 변환 + 커밋
+3. 가든 재export → 영향 노트만 또는 전체
+4. **Stage 3** 구현 → lychee가 가든 측 404 + 패턴 6종 정정
+5. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호

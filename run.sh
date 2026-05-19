@@ -96,9 +96,12 @@ show_menu() {
   echo "    R) pi restart"
   echo "    T) pi tty client"
   echo ""
-  echo "  ${YELLOW}Verify${NC}"
+  echo "  ${YELLOW}Verify${NC} (가든 md — notes 리포)"
   echo "    V) verify  (relref + description + figures, 검증만)"
   echo "    F) fix     (relref + anchors + figures, 단계별 y/N)"
+  echo ""
+  echo "  ${YELLOW}Org Hygiene${NC} (~/org 원본 — site-policy.yaml SSOT 기반)"
+  echo "    O) fix-org    (link 정정, dry-run + --apply)"
   echo ""
   echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
   echo "    i) igc run      (doom run, GUI)"
@@ -329,6 +332,32 @@ _fix_step_figures() {
   fi
 }
 
+cmd_fix_org() {
+  local target="${1:-$HOME/org}"
+  shift 2>/dev/null || true
+
+  # If --apply passed explicitly, run once and done.
+  for arg in "$@"; do
+    if [[ "$arg" == "--apply" ]]; then
+      info "fix-org --apply: ${target}"
+      emacs --batch -Q --load "$BIN_DIR/fix-org-links.el" -- "$target" "$@"
+      return
+    fi
+  done
+
+  # Default flow: dry-run → prompt → apply
+  info "fix-org dry-run: ${target}"
+  emacs --batch -Q --load "$BIN_DIR/fix-org-links.el" -- "$target" "$@"
+  echo ""
+  read -p "위 변경 적용? (y/N): " c
+  if [[ "$c" =~ ^[Yy]$ ]]; then
+    info "fix-org --apply: ${target}"
+    emacs --batch -Q --load "$BIN_DIR/fix-org-links.el" -- "$target" --apply "$@"
+  else
+    info "취소"
+  fi
+}
+
 cmd_verify() {
   [[ -d "$HUGO_CONTENT_DIR" ]] || { err "content 디렉토리 없음: $HUGO_CONTENT_DIR"; return 1; }
   _verify_step_relref_summary
@@ -529,10 +558,11 @@ cli_mode() {
         *)       err "igc: run|debug|install|sync|update|env|doctor|kill|version" ;;
       esac
       ;;
-    verify) cmd_verify ;;
-    fix)    cmd_fix ;;
+    verify)  cmd_verify ;;
+    fix)     cmd_fix ;;
+    fix-org) cmd_fix_org "$@" ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|igc|verify|fix> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|igc|verify|fix|fix-org> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -603,6 +633,7 @@ main() {
       v) "$IGC_SCRIPT" --version ;;
       V) cmd_verify ;;
       F) cmd_fix ;;
+      O) cmd_fix_org ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac
