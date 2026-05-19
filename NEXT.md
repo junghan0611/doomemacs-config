@@ -160,6 +160,8 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 
 > 정체성: 링크 위생 문제를 **해결**한 것이 아니라 **다룰 수 있는 운영 표면을 세운 것**. Stage 1~3 tooling landed.
 
+> **신뢰 조건 — `GITHUB_TOKEN`**: verify-org-links / verify-content의 lychee 기반 GitHub URL 검증은 token 없으면 **참고용 (advisory)** 이다. token 없이 나온 broken은 secondary abuse rate-limit으로 잘못 분류된 false positive를 다수 포함한다 (실측: ~/org 1420 URL 검증 시 token 없음 411 OK / 84 broken vs token+튜닝 1247 OK / 81 broken — broken 23 → 81로 늘었지만 의미는 정반대로, 이전 84 중 다수가 false positive였다는 뜻). **실제 ~/org 분류 작업은 token 있는 conclusive run 기준으로 한다.**
+
 각 도구의 jurisdiction과 silent 회귀 위험 빈자리:
 
 | 도구 | 자리 | 잡는 것 | 못 잡음 (회귀 위험) |

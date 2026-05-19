@@ -7,6 +7,14 @@ read-only 도구. 자동 정정 안 함 — broken URL을 file:line으로 보고
 
 verify-content.py의 lychee 헬퍼를 그대로 재사용. site-policy.el SSOT 공유.
 
+⚠ 신뢰 조건 — GITHUB_TOKEN:
+    token 없으면 결과는 **참고용 (advisory)** 이다. GitHub secondary abuse
+    rate-limit으로 broken 다수가 false positive (~/org 1420 URL 기준
+    token 없음 84 broken vs token+튜닝 81 broken — 23 → 81 사이 차이가
+    rate-limit으로 잘못 분류된 자리). 실제 ~/org 분류 작업은 token 있는
+    conclusive run 기준으로 한다. run.sh `fix-org --check` 흐름은
+    ~/.env.local 자동 source.
+
 Usage:
     verify-org-links.py [ORG_DIR]
     ./run.sh fix-org --check
