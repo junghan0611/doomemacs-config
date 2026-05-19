@@ -128,12 +128,14 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 
 ### 진행 상태 (2026-05-19)
 
-**완료**
+**Stage 1a 완료**
 - `bin/site-policy.el` — SSOT 초안 (host-aliases, github-user/branch, internal-paths, private-endpoints, credential-in-url, orphan-bracket, lychee)
-- `bin/fix-org-links.el` — Stage 1a emacs batch fixer. org-element 기반 (denote/code/verbatim/src-block 자동 보호). dry-run + `--apply` + 로컬 부재 ⚠ 표시. `::N` → `#LN` 라인 anchor 보존.
+- `bin/fix-org-links.el` — emacs batch fixer. org-element 기반 (denote/code/verbatim/src-block 자동 보호). dry-run + `--apply` + 로컬 부재 ⚠ 표시. `::N` → `#LN` 라인 anchor 보존.
 - `run.sh fix-org` / TUI `O` — 실제 호출, dry-run 후 `y/N` prompt
 - `flake.nix` — lychee + python3-pyyaml devshell 추가
-- 첫 `~/org` dry-run: 17 files, 59 changes, ⚠ 6건 로컬 부재 (orgmode-skills, family-config 등 미동기화 repo)
+- **`~/sync/org` 일괄 변환 적용 완료**: 17 files, 59 changes, ⚠ 6건 로컬 부재 (orgmode-skills, family-config 등 미동기화 repo — Stage 3가 가든 측에서 떨어뜨림)
+- **doomemacs-config 커밋**: `476c774` feat(hygiene): add fix-org Stage 1a
+- 잔재 검수: `~/sync/org` 전수에서 `[[file:~/repos/gh/...]]` 패턴 **0건**
 
 ### 설계 결정 — 검증 자리 분리 (2026-05-19)
 
@@ -147,16 +149,16 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 따라서 Stage 1b (별도 verify-org-links 도구)는 **만들지 않음**. 같은 lychee 검증을 가든 측 Stage 3 (`verify-content.py`)에서 한 번에 잡으면 구현 줄어들고 응집도 맞다. ~/org 원본은 깨끗하게 일관성만 유지.
 
 **다음 작업 자리**
-1. **Stage 1a `--apply` + git commit** — ~/org 원본 일관 변환. 로컬 부재 6건도 그대로 변환 (가든 측이 막을 자리).
-2. **D — 메타 4줄 silently drop** (TOP 회귀). 콘텐츠 손실이라 별도 작업.
-3. 영향받은 노트 재export → 가든 deploy
-4. **Stage 3 — `bin/verify-content.py`** 신규. `site-policy.el` SSOT 읽음. 패턴 6종 + **lychee로 가든 md 내 GitHub URL 200 OK 검증**. `--fix`는 404 → plain text 정정. `./run.sh verify` / `fix` 단계 [4/4] 추가.
-5. **Stage 2 — `lisp/denote-export-config.el` export hook**. Stage 1 변환 함수 재사용 (신규 노트도 export 시 자동 일관성). lychee 호출은 안 함 (Stage 3 영역).
+1. **`~/sync/org` 커밋** (별도 repo, 사용자가 직접) — 17 파일 변환 결과 영구화
+2. **Stage 3 — `bin/verify-content.py`** 신규. `site-policy.el` SSOT 읽음. 패턴 6종 + **lychee로 가든 md 내 GitHub URL 200 OK 검증**. `--fix`는 404 → plain text 정정. `./run.sh verify` / `fix` 단계 [4/4] 추가.
+3. 영향받은 노트 재export → 가든 deploy → Stage 3가 broken 6건 정리
+4. **Stage 2 — `lisp/denote-export-config.el` export hook**. Stage 1 변환 함수 재사용 (신규 노트도 export 시 자동 일관성). lychee 호출은 안 함 (Stage 3 영역).
+5. **D — 메타 4줄 silently drop** (TOP 회귀). 콘텐츠 손실이라 별도 작업.
 
-### Stage 순서 — 첫 가동 시 (계획)
+### Stage 순서 — 첫 가동 시 (현황)
 
 1. ✓ Stage 1a — PoC 1파일 + ~/org 전체 dry-run 완료
-2. **Stage 1a `--apply`** ← 다음 자리. ~/org 원본 일관 변환 + 커밋
-3. 가든 재export → 영향 노트만 또는 전체
-4. **Stage 3** 구현 → lychee가 가든 측 404 + 패턴 6종 정정
+2. ✓ Stage 1a `--apply` — ~/sync/org 일관 변환 + 커밋 (476c774)
+3. **Stage 3 구현** ← 다음 자리. lychee + 패턴 6종 검증/정정
+4. 가든 재export → Stage 3로 broken catch
 5. Stage 2 hook 활성화 → 이후 신규 노트 자동 보호

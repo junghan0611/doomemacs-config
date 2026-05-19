@@ -15,6 +15,7 @@ BIN_DIR="$SCRIPT_DIR/bin"
 PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"
 PYTHON_VERIFY="$BIN_DIR/verify-relref.py"
 PYTHON_FIGURES="$BIN_DIR/verify-figures.py"
+PYTHON_CONTENT="$BIN_DIR/verify-content.py"
 CHECK_DESC="$BIN_DIR/check-description.sh"
 ORG_ROOT="$HOME/org"
 
@@ -97,8 +98,8 @@ show_menu() {
   echo "    T) pi tty client"
   echo ""
   echo "  ${YELLOW}Verify${NC} (가든 md — notes 리포)"
-  echo "    V) verify  (relref + description + figures, 검증만)"
-  echo "    F) fix     (relref + anchors + figures, 단계별 y/N)"
+  echo "    V) verify  (relref + description + figures + content, 검증만)"
+  echo "    F) fix     (relref + anchors + figures + content, 단계별 y/N)"
   echo ""
   echo "  ${YELLOW}Org Hygiene${NC} (~/org 원본 — site-policy.yaml SSOT 기반)"
   echo "    O) fix-org    (link 정정, dry-run + --apply)"
@@ -280,24 +281,29 @@ show_export_submenu() {
 # 각 단계는 독립적이라 한 단계만 적용/취소 가능.
 
 _verify_step_relref_summary() {
-  info "[1/3] relref 검증"
+  info "[1/4] relref 검증"
   python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --summary || true
 }
 
 _verify_step_description() {
-  info "[2/3] description/abstract 검사"
+  info "[2/4] description/abstract 검사"
   if ! "$CHECK_DESC"; then
     warn "description/abstract 누락 항목 있음"
   fi
 }
 
 _verify_step_figures_summary() {
-  info "[3/3] figure src 검증"
+  info "[3/4] figure src 검증"
   python3 "$PYTHON_FIGURES" "$HUGO_CONTENT_DIR" || true
 }
 
+_verify_step_content() {
+  info "[4/4] content 위생 검증 (host alias, internal path, private endpoint, url cred)"
+  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --summary || true
+}
+
 _fix_step_relref() {
-  info "[1/3] relref 수정 (dry-run)"
+  info "[1/4] relref 수정 (dry-run)"
   python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix || true
   echo ""
   read -p "relref 수정 적용? (y/N): " c
@@ -309,7 +315,7 @@ _fix_step_relref() {
 }
 
 _fix_step_anchors() {
-  info "[2/3] heading anchor 정리 (dry-run)"
+  info "[2/4] heading anchor 정리 (dry-run)"
   python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --fix-anchors || true
   echo ""
   read -p "anchor 정리 적용? (y/N): " c
@@ -321,7 +327,7 @@ _fix_step_anchors() {
 }
 
 _fix_step_figures() {
-  info "[3/3] figure src 정정 (dry-run)"
+  info "[3/4] figure src 정정 (dry-run)"
   python3 "$PYTHON_FIGURES" "$HUGO_CONTENT_DIR" --fix || true
   echo ""
   read -p "figure 경로 정정 + 정적 복사 적용? (y/N): " c
@@ -329,6 +335,18 @@ _fix_step_figures() {
     python3 "$PYTHON_FIGURES" "$HUGO_CONTENT_DIR" --fix --apply
   else
     info "figure 적용 취소"
+  fi
+}
+
+_fix_step_content() {
+  info "[4/4] content 위생 정정 (dry-run)"
+  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix || true
+  echo ""
+  read -p "content 위생 정정 적용? (y/N): " c
+  if [[ "$c" =~ ^[Yy]$ ]]; then
+    python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --apply
+  else
+    info "content 적용 취소"
   fi
 }
 
@@ -365,6 +383,8 @@ cmd_verify() {
   _verify_step_description
   echo ""
   _verify_step_figures_summary
+  echo ""
+  _verify_step_content
 }
 
 cmd_fix() {
@@ -374,6 +394,8 @@ cmd_fix() {
   _fix_step_anchors
   echo ""
   _fix_step_figures
+  echo ""
+  _fix_step_content
 }
 
 # ━━━ Agent ━━━

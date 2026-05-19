@@ -43,18 +43,26 @@
         "^file://"))
 
     ;; Private endpoints — Stage 3 detection only.
+    ;; IPv4 dotted-quad required to avoid DOI prefixes like 10.1103, 10.1080.
     (private-endpoints
      . ("\\<localhost\\>"
         "\\<127\\.0\\.0\\.1\\>"
-        "\\<192\\.168\\."
-        "\\<10\\.[0-9]"
-        "\\<172\\.\\(?:1[6-9]\\|2[0-9]\\|3[01]\\)\\."))
+        "\\<192\\.168\\.\\([0-9]\\{1,3\\}\\)\\.\\([0-9]\\{1,3\\}\\)\\>"
+        "\\<10\\.\\([0-9]\\{1,3\\}\\)\\.\\([0-9]\\{1,3\\}\\)\\.\\([0-9]\\{1,3\\}\\)\\>"
+        "\\<172\\.\\(?:1[6-9]\\|2[0-9]\\|3[01]\\)\\.\\([0-9]\\{1,3\\}\\)\\.\\([0-9]\\{1,3\\}\\)\\>"))
 
     ;; URL with embedded credentials — Stage 3.
     (credential-in-url . "://[^/[:space:]]+:[^@/[:space:]]+@")
 
     ;; Dangling [desc] without target — Stage 3.
-    (orphan-bracket . t)
+    ;; Disabled until heuristics tighten — current regex catches general
+    ;; bracketed text (e.g. [중요], [참고], reference-link defs, table cells)
+    ;; alongside actual orphaned denote descriptions. Needs:
+    ;;   - skip inside code fences ```...``` and inline code `...`
+    ;;   - skip Hugo shortcode {{< ... >}} interiors
+    ;;   - require a description signature (denote-id, →, longer text, ...)
+    ;; See NEXT.md Stage 3 follow-up.
+    (orphan-bracket . nil)
 
     ;; lychee options — Stage 3.
     (lychee
