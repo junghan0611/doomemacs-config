@@ -58,8 +58,12 @@ doomemacs-config/
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
 │   ├── emacs-igc.sh             # Emacs 31 IGC launcher
+│   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
+│   ├── site-policy.el           # SSOT for host aliases, internal-path patterns, lychee opts
 │   ├── verify-relref.py         # Hugo relref link validator + fixer
 │   ├── verify-figures.py        # Figure src validator + fixer (Hugo + markdown)
+│   ├── verify-content.py        # Garden content hygiene (host alias, internal path, GitHub 404)
+│   ├── verify-org-links.py      # Stage 1.5 — ~/org GitHub URL lychee verify (read-only)
 │   └── check-description.sh     # description / abstract 누락 검사
 │
 ├── run.sh               # Unified CLI/TUI management
@@ -188,41 +192,96 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 ## run.sh — Unified Management
 
 ```bash
-./run.sh                # Interactive TUI menu
-./run.sh sync           # doom sync
-./run.sh agent start    # Start agent RPC daemon (socket "server")
-./run.sh pi start       # Start pi Doom daemon (socket "pi")
-./run.sh pi tty         # Attach a new TTY client to the pi daemon
-./run.sh export all     # Export all folders (incremental)
-./run.sh export all --force  # Force re-export
-./run.sh igc tty        # IGC terminal mode
-./run.sh verify         # Verify garden content (relref + description + figures)
-./run.sh fix            # Fix issues (relref + anchors + figures, step-by-step y/N)
+./run.sh                       # Interactive TUI menu
+./run.sh sync                  # doom sync
+./run.sh agent start           # Start agent RPC daemon (socket "server")
+./run.sh pi start              # Start pi Doom daemon (socket "pi")
+./run.sh pi tty                # Attach a new TTY client to the pi daemon
+./run.sh export all            # Export all folders (incremental)
+./run.sh export all --force    # Force re-export
+./run.sh igc tty               # IGC terminal mode
+./run.sh verify                # Verify garden md ([1/4]~[4/4], read-only)
+./run.sh fix                   # Fix garden md ([1/4]~[4/4], step-by-step y/N)
+./run.sh fix-org               # Rewrite ~/org link patterns (dry-run + y/N + --apply)
+./run.sh fix-org --check       # Verify ~/org GitHub URLs with lychee (read-only)
 ```
 
 ### Garden Verify / Fix
 
-가든 export 후 콘텐츠 품질 검증 / 정정. TUI Verify 섹션의 V/F 두 키로 통합.
+가든 export 후 콘텐츠 품질 검증 / 정정. TUI Verify 섹션의 V/F 두 키로 통합. 4단계:
 
-**`./run.sh verify`** — read-only 검증 3단계:
+**`./run.sh verify`** — read-only 검증 [1/4]~[4/4]:
 
 | 단계 | 도구 | 검사 항목 |
 |------|------|----------|
-| relref | `verify-relref.py --summary` | ALIVE / VIRTUAL / REWRITE / DEAD / AMBIGUOUS / MALFORMED |
-| description | `check-description.sh` | botlog/notes/bib `#+description:` / abstract callout 누락 |
-| figures | `verify-figures.py` | ALIVE / REWRITE / AMBIGUOUS / DEAD / UNKNOWN<br/>Hugo `{{< figure src=…>}}` + Markdown `![](…)` 둘 다 |
+| [1/4] relref | `verify-relref.py --summary` | ALIVE / VIRTUAL / REWRITE / DEAD / AMBIGUOUS / MALFORMED |
+| [2/4] description | `check-description.sh` | botlog/notes/bib `#+description:` / abstract callout 누락 |
+| [3/4] figures | `verify-figures.py` | ALIVE / REWRITE / AMBIGUOUS / DEAD / UNKNOWN — Hugo `{{< figure src=…>}}` + Markdown `![](…)` 둘 다 |
+| [4/4] content | `verify-content.py --lychee` | HOST_ALIAS / INTERNAL_PATH / PRIVATE_ENDPOINT / URL_CRED / GITHUB_404 (+ ORPHAN, 현재 비활성) |
 
 **`./run.sh fix`** — 단계별 dry-run 후 y/N 적용:
 
 | 단계 | 동작 |
 |------|------|
-| relref | DEAD/MALFORMED → plain text 치환, REWRITE → 경로 정정 |
-| anchors | ox-hugo 누출 anchor 정리: `{#title--relref-section-id-dot-md}` → `{#title}` (link 내장 헤딩에서 transcoded markdown이 슬러그에 섞이는 회귀 보정) |
-| figures | REWRITE → 소스 파일을 `notes/static/images/` 로 복사 + markdown src 를 `/images/{basename}` 로 치환 |
+| [1/4] relref | DEAD/MALFORMED → plain text 치환, REWRITE → 경로 정정 |
+| [2/4] anchors | ox-hugo 누출 anchor 정리: `{#title--relref-section-id-dot-md}` → `{#title}` (link 내장 헤딩에서 transcoded markdown이 슬러그에 섞이는 회귀 보정) |
+| [3/4] figures | REWRITE → 소스 파일을 `notes/static/images/` 로 복사 + markdown src 를 `/images/{basename}` 로 치환 |
+| [4/4] content | HOST_ALIAS 자동 alias 치환 / INTERNAL_PATH·GITHUB_404 → plain text. lychee로 `github.com/USER/*` URL 200 OK 검증. `site-policy.el` SSOT |
 
 `verify-figures.py` SEARCH_DIRS 우선순위: `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. 이전 export에서 이미 정착된 파일이 먼저 잡혀 복사 없이 src 치환만 일어난다 (sha256 동일 시 SKIP-IDENT).
 
-**잔존 broken** (DEAD / UNKNOWN) 는 소스 파일 자체가 없는 경우 — 원본 org 파일에서 사용자가 결정 (figure 제거 / 새 스크린샷 첨부).
+`verify-content.py` 출력은 각 검출에 `→ ~/org: <path>` 매핑 한 줄을 같이 표시 — 사용자가 emacs에서 즉시 열어 수정.
+
+**lychee 운영 노트**:
+- `GITHUB_PERSONAL_ACCESS_TOKEN` (또는 `GITHUB_TOKEN`) 권장. `~/.env.local` 에 두면 `run.sh`의 verify/fix [4/4]와 `fix-org --check`이 자동 source. token 없는 결과는 advisory — secondary abuse rate-limit으로 다수가 false positive (실측 84 → 1).
+- `.lycheecache` 1d 캐시 + `cache-exclude-status: "404"` 안전망 — agenda-stamp가 박는 SHA URL은 push 사이클로 404 → 200 변하므로 캐시 false positive 회피.
+- `max-concurrency: 16` (기본 128은 abuse detection).
+
+**잔존 broken** (DEAD / UNKNOWN / GITHUB_404 등) 는 원본 org 파일에서 사용자가 결정 (figure 제거 / 새 스크린샷 / private 표기 / plain text / rename).
+
+### Org Hygiene — `./run.sh fix-org`
+
+~/org 원본 link 정정 (Stage 1). 가든 export hook 옆의 SSOT 변환:
+
+| 케이스 | 변환 |
+|--------|------|
+| `[[file:~/repos/gh/REPO]]` | `[[https://github.com/junghan0611/REPO]]` |
+| `[[file:~/repos/gh/REPO/path/file.el]]` | `[[https://github.com/junghan0611/REPO/blob/main/path/file.el]]` |
+| `[[file:~/repos/gh/REPO/file.el::N]]` | `[[https://github.com/junghan0611/REPO/blob/main/file.el#LN]]` (라인 anchor 보존) |
+| `[[https://OLD.junghanacs.com][...]]` | `site-policy.el` `host-aliases` 사전 치환 |
+
+**보호 영역** (절대 건드리지 않음): `[[denote:UUID]]`, `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]`, `[[file:~/org/...]]`, code / verbatim / src-block 내부 (org-element 기반이라 자동).
+
+**모드**:
+- `O` / `./run.sh fix-org` — dry-run → y/N → apply. 로컬 부재는 ⚠ 표시
+- `./run.sh fix-org --apply` — prompt 없이 직접
+- `./run.sh fix-org --check` — 변환 안 함. ~/org의 `[[https://github.com/USER/...]]` URL을 lychee로 검증, broken을 file:line으로 보고 (사용자가 ~/org에서 직접 분류)
+
+**SSOT**: `bin/site-policy.el` 한 줄 추가 → fix-org / verify-content / verify-org-links 세 도구가 동시에 인지.
+
+### Garden Deploy Workflow
+
+전체 export 후 표준 운영 흐름:
+
+```
+Phase           Command                                  Purpose
+─────           ───────                                  ───────
+1. Org 위생     O ) ./run.sh fix-org                     ~/repos/gh/ file: → GitHub URL
+   (선택)         CLI: ./run.sh fix-org --check          broken GitHub URL 검출 (token 필요)
+
+2. Export       7 ) ./run.sh export <dir>                증분
+                8 ) ./run.sh export <dir> --force        전체 재구축
+                9 ) submenu                              폴더별 증분/전체
+
+3. 가든 검증    V ) ./run.sh verify                      [1/4]~[4/4] 검증
+
+4. 가든 정정    F ) ./run.sh fix                         단계별 y/N. 자동 가능만 적용
+
+5. 사용자 분류  (emacs에서 ~/org 직접)                   verify 출력의 → ~/org 매핑 따라
+
+6. Deploy       cd ~/repos/gh/notes && git push          가든 배포
+                cd ~/sync/org && git push                ~/org 변경 같이
+```
 
 ## Installation
 
