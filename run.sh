@@ -362,8 +362,9 @@ _fix_step_content() {
 
 cmd_fix_org() {
   local target="$HOME/org"
-  # Pick first non-option arg as target (anything not starting with --)
-  if [[ -n "$1" && "$1" != --* ]]; then
+  # Pick first non-option arg as target (anything not starting with --).
+  # Use ${1:-} so nounset (set -u) doesn't trip when called from TUI (no args).
+  if [[ -n "${1:-}" && "$1" != --* ]]; then
     target="$1"
     shift
   fi
