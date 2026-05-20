@@ -146,11 +146,11 @@ elfeed-deref를 사용하여 archive.gz에서도 컨텐츠를 읽음."
 
 (defvar +elfeed-gptel-backend nil
   "elfeed 요약/번역용 gptel 백엔드.
-nil이면 OpenRouter 사용 (Gemini Flash 기본).")
+nil이면 OpenAI-sub (ChatGPT 구독) 사용. 없으면 현재 gptel-backend.")
 
 (defvar +elfeed-gptel-model nil
   "elfeed 요약/번역용 gptel 모델.
-nil이면 gptel-openrouter-flash-model 사용.")
+nil이면 gpt-5.4-mini 사용.")
 
 (defvar +elfeed-max-entry-length 3000
   "LLM에 보낼 엔트리 텍스트 최대 길이.")
@@ -211,13 +211,12 @@ Translate the following article to natural Korean.
 (defun +elfeed--gptel-request (prompt system-msg callback)
   "PROMPT를 gptel로 비동기 전송, 결과를 CALLBACK에 전달.
 SYSTEM-MSG는 시스템 프롬프트.
-기본: OpenRouter Gemini Flash (속도 3.9초, 품질 충분)."
+기본: OpenAI-sub gpt-5.4-mini (구독 활용, 빠른 응답)."
   (let ((gptel-backend (or +elfeed-gptel-backend
-                           gptel-openrouter-backend
+                           gptel-openai-sub-backend
                            gptel-backend))
         (gptel-model (or +elfeed-gptel-model
-                         gptel-openrouter-flash-model
-                         gptel-model)))
+                         'gpt-5.4-mini)))
     (gptel-request prompt
       :system system-msg
       :callback (lambda (response info)

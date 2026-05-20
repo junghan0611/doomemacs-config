@@ -12,7 +12,7 @@
 ;; 구조:
 ;;   1. Evil Collection 설정
 ;;   2. gptel 코어 (use-package!)
-;;      - 백엔드: DeepSeek, OpenRouter, Claude-Code
+;;      - 백엔드: OpenAI-sub (기본, gpt-5.4), OpenRouter, Claude-Code
 ;;      - gptel-org, gptel-quick, gptel-prompt
 ;;   3. 버퍼 요약/번역 (+gptel-buffer)
 ;;   4. Embark + gptel 통합
@@ -65,12 +65,12 @@
 
 ;;;;; 백엔드 (Backends)
 
-;;;;;; DeepSeek
+;;;;;; DeepSeek (보류 — OpenAI-sub로 통일, 회사 키 환경 변경 시 부활)
 
-  (setq gptel-deepseek-backend
-        (gptel-make-deepseek "DeepSeek"
-          :stream t
-          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
+  ;; (setq gptel-deepseek-backend
+  ;;       (gptel-make-deepseek "DeepSeek"
+  ;;         :stream t
+  ;;         :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
 
 ;;;;;; OpenRouter
 
@@ -205,14 +205,27 @@
 
   (advice-add 'gptel--request-data :around #'gptel--claude-code-add-enable-tools)
 
+;;;;;; OpenAI-sub (ChatGPT Plus/Pro subscription via OAuth)
+
+  ;; gpt-5.4, gpt-5.4-mini, gpt-5.4-nano, gpt-5.4-pro 등 구독으로 사용.
+  ;; 첫 호출 시 브라우저로 OpenAI 로그인. 토큰은 로컬 캐시.
+  ;; 수동: M-x gptel-openai-oauth-login
+  ;; gptel-openai-oauth.el은 upstream gptel master (>= 56e5b06)에만 존재 —
+  ;; fboundp 가드는 패키지 회귀 안전망 (정상 환경에선 항상 등록됨).
+  (defvar gptel-openai-sub-backend nil
+    "OpenAI ChatGPT Plus/Pro subscription backend via OAuth.")
+  (when (fboundp 'gptel-make-openai-oauth)
+    (setq gptel-openai-sub-backend
+          (gptel-make-openai-oauth "OpenAI-sub")))
+
 ;;;;; 기본 백엔드 선택 & 전환
 
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
   (setq gptel--system-message user-llm-system-prompt)
 
-  ;; Magit 백엔드 (DeepSeek - 웹검색 불필요)
-  (setq gptel-magit-backend gptel-deepseek-backend)
-  (setq gptel-magit-model 'deepseek-v4-flash)
+  ;; Magit 백엔드 (gpt-5.4-mini — 커밋 메시지 충분, 구독 활용)
+  (setq gptel-magit-backend gptel-openai-sub-backend)
+  (setq gptel-magit-model 'gpt-5.4-mini)
 
   ;; Claude-Code 서버 상태 확인
   (defun gptel--claude-code-server-available-p ()
@@ -226,21 +239,19 @@
             (and (search-forward "healthy" nil t) t)))
       (error nil)))
 
-  ;; 기본 백엔드: DeepSeek 고정.
-  ;; OpenRouter / Claude-Code wrapper / Claude-Code 서버는 키·서비스가
-  ;; 항상 살아있지 않아 기본값으로는 부적합. DeepSeek는 회사 키로
-  ;; 안정 동작하므로 부팅 후 바로 채팅 가능.
+  ;; 기본 백엔드: OpenAI-sub (ChatGPT 구독, gpt-5.4).
+  ;; OAuth 토큰 캐시되면 부팅 후 즉시 사용. 답변 속도 빠름.
   ;; 다른 백엔드는 `my/gptel-switch-to-*` 명령으로 수동 전환.
-  (setq gptel-backend gptel-deepseek-backend)
-  (setq gptel-model 'deepseek-v4-pro)
+  (setq gptel-backend gptel-openai-sub-backend)
+  (setq gptel-model 'gpt-5.4)
 
   ;; 수동 백엔드 전환
-  (defun my/gptel-switch-to-deepseek ()
-    "Switch gptel backend to DeepSeek (default)."
+  (defun my/gptel-switch-to-openai-sub ()
+    "Switch gptel backend to OpenAI-sub (ChatGPT subscription, gpt-5.4)."
     (interactive)
-    (setq gptel-backend gptel-deepseek-backend)
-    (setq gptel-model 'deepseek-chat)
-    (message "Switched to DeepSeek backend"))
+    (setq gptel-backend gptel-openai-sub-backend)
+    (setq gptel-model 'gpt-5.4)
+    (message "Switched to OpenAI-sub backend (gpt-5.4)"))
 
   (defun my/gptel-switch-to-claude-code ()
     "Switch gptel backend to Claude-Code (requires server running)."
@@ -267,8 +278,9 @@
   ;; M-RET 채팅 버퍼로 이어서 질문
   ;; C-g   닫기
 
-  (setq gptel-quick-backend gptel-deepseek-backend)
-  (setq gptel-quick-model 'deepseek-chat)
+  ;; gptel-quick: OpenAI-sub gpt-5.4-mini (구독 활용, 빠른 echo area 응답)
+  (setq gptel-quick-backend gptel-openai-sub-backend)
+  (setq gptel-quick-model 'gpt-5.4-mini)
   (setq gptel-quick-word-count 30) ; 기본 12 → 30 (한글 ~15자 분량)
   (setq gptel-quick-timeout 15)    ; 기본 10 → 15초
   (setq gptel-quick-display nil)   ; use echo area
