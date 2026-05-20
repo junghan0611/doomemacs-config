@@ -350,12 +350,16 @@ has its own streaming wiring via fsm — leave it alone)."
                 (when (xor gptel-quick-backend gptel-quick-model)
                   (error "gptel-quick-backend and gptel-quick-model must be both set or unset"))
                 (let* ((count (or count gptel-quick-word-count))
-                       (gptel-max-tokens (floor (+ (sqrt (length query-text))
-                                                   (* count 2.5))))
-                       (gptel-use-curl t)  ; ← 핵심: url.el 대신 curl 강제
-                       (gptel-use-context (and gptel-quick-use-context 'system))
                        (gptel-backend (or gptel-quick-backend gptel-backend))
-                       (gptel-model (or gptel-quick-model gptel-model)))
+                       (gptel-model (or gptel-quick-model gptel-model))
+                       ;; Codex(OAuth) endpoint은 max_output_tokens 거부 — nil로 패스.
+                       ;; 다른 백엔드는 종래대로 단어 수 기반 cap 적용.
+                       (gptel-max-tokens
+                        (unless (eq (type-of gptel-backend) 'gptel-openai-oauth)
+                          (floor (+ (sqrt (length query-text))
+                                    (* count 2.5)))))
+                       (gptel-use-curl t)  ; ← 핵심: url.el 대신 curl 강제
+                       (gptel-use-context (and gptel-quick-use-context 'system)))
                   (gptel-request query-text
                     :system (funcall gptel-quick-system-message count)
                     :context (list query-text count
@@ -489,7 +493,17 @@ has its own streaming wiring via fsm — leave it alone)."
 - Maintain the original meaning and tone
 - Use natural Korean expressions
 - Preserve technical terms when appropriate"
-    "버퍼 번역용 시스템 프롬프트.")
+    "버퍼 번역용 시스템 프롬프트 (영→한 방향).")
+
+  (defvar +gptel-translate-bidirectional-system-message
+    "You are a professional translator working in both directions.
+- If the input is Korean, translate to natural English.
+- If the input is English, translate to natural Korean.
+- If the input is mixed, translate the dominant language to the other.
+- Preserve formatting, line breaks, and punctuation.
+- Keep technical terms, URLs, code, and proper nouns as-is.
+- Output ONLY the translated text — no labels, no explanations, no quotes."
+    "Region 번역용 양방향 프롬프트 (SNS·Emacs Everywhere 워크플로).")
 
   ;; Temperature 가이드:
   ;; | 작업 | 권장 온도 | 이유                      |
@@ -787,20 +801,71 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
     (let ((text (buffer-substring-no-properties beg end)))
       (gptel-quick text)))
 
+  (defun my/gptel--region-or-paragraph-bounds ()
+    "활성 region이 있으면 그 bounds, 없으면 현재 문단 bounds를 반환.
+반환: (BEG . END). 없으면 user-error."
+    (cond
+     ((use-region-p)
+      (cons (region-beginning) (region-end)))
+     ((bounds-of-thing-at-point 'paragraph))
+     (t (user-error "No region or paragraph at point"))))
+
   (defun my/gptel-translate-region (beg end)
-    "선택 영역 번역 (한↔영 자동 감지)."
-    (interactive "r")
-    (let ((text (buffer-substring-no-properties beg end)))
-      (gptel-request
-          (format "다음 텍스트를 번역해주세요. 한국어면 영어로, 영어면 한국어로:\n\n%s" text)
-        :system +gptel-translate-system-message
+    "선택 영역(또는 현재 문단)을 한↔영 양방향 번역하여
+*gptel-translate* 버퍼에 표시. 긴 글 검토용.
+SNS·Emacs Everywhere 즉시 변환은 `my/gptel-translate-region-inline' 참고."
+    (interactive (let ((b (my/gptel--region-or-paragraph-bounds)))
+                   (list (car b) (cdr b))))
+    (let ((text (buffer-substring-no-properties beg end))
+          (gptel-backend gptel-openai-sub-backend)
+          (gptel-model 'gpt-5.4-mini))
+      (message "번역 중... (gpt-5.4-mini)")
+      (gptel-request text
+        :system +gptel-translate-bidirectional-system-message
         :callback (lambda (response info)
                     (if response
                         (with-current-buffer (get-buffer-create "*gptel-translate*")
                           (erase-buffer)
                           (insert response)
-                          (display-buffer (current-buffer)))
+                          (display-buffer (current-buffer))
+                          (message "번역 완료"))
                       (message "번역 실패: %s" (plist-get info :status)))))))
+
+  (defun my/gptel-translate-region-inline (beg end &optional arg)
+    "선택 영역(또는 현재 문단)을 한↔영 번역하여 결과를 그 자리에 표시.
+기본: 영역 바로 아래에 번역문 삽입 (대화·메모 워크플로).
+C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
+모델은 gpt-5.4-mini 고정 (속도 우선)."
+    (interactive (let ((b (my/gptel--region-or-paragraph-bounds)))
+                   (list (car b) (cdr b) current-prefix-arg)))
+    (let ((text (buffer-substring-no-properties beg end))
+          (gptel-backend gptel-openai-sub-backend)
+          (gptel-model 'gpt-5.4-mini)
+          (replace-mode (and arg t))
+          (target-buf (current-buffer))
+          (insert-pos (copy-marker end t)))
+      (message "번역 중... (gpt-5.4-mini%s)"
+               (if replace-mode " · 교체" " · 아래 삽입"))
+      (gptel-request text
+        :system +gptel-translate-bidirectional-system-message
+        :callback
+        (lambda (response info)
+          (cond
+           ((not response)
+            (message "번역 실패: %s" (plist-get info :status)))
+           ((buffer-live-p target-buf)
+            (with-current-buffer target-buf
+              (save-excursion
+                (if replace-mode
+                    (progn
+                      (delete-region beg end)
+                      (goto-char beg)
+                      (insert response))
+                  (goto-char insert-pos)
+                  (unless (bolp) (insert "\n"))
+                  (insert response)
+                  (unless (eolp) (insert "\n")))))
+            (message "번역 완료")))))))
 
   (defun my/gptel-summarize-region (beg end)
     "선택 영역 요약."

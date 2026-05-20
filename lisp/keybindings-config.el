@@ -34,6 +34,9 @@
       "M-o" #'embark-act
       "M-O" #'embark-dwim
       "C-h B" #'embark-bindings
+      ;; gptel — quick translate (Emacs Everywhere SNS workflow)
+      ;; 영역 또는 현재 문단 → gpt-5.4-mini 한↔영. C-u 면 영역 교체.
+      "M-g SPC" #'my/gptel-translate-region-inline
       ;; Org global
       "C-c l" #'org-store-link
       "C-c L" #'my/org-store-link-id-optional
@@ -607,7 +610,8 @@
    (:prefix "g"
             "p" #'my/gptel-apply-prompt-to-region
             "[" #'my/gptel-quick-region
-            "t" #'my/gptel-translate-region
+            "t" #'my/gptel-translate-region        ; 새 버퍼 (긴 글 검토)
+            "T" #'my/gptel-translate-region-inline ; 인라인 삽입 / C-u 교체
             "s" #'my/gptel-summarize-region
             "e" #'my/gptel-explain-region
             "r" #'my/gptel-rewrite-region)
