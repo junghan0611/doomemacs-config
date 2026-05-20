@@ -36,6 +36,8 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'elfeed-db))
+
 ;;;; Elfeed
 
 ;; gc copy-link

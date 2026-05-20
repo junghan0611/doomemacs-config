@@ -75,6 +75,7 @@
 
 (package! vundo :disable t)
 (package! undo-fu-session :disable t)
+
 (package! elfeed-goodies :disable t)
 (package! solaire-mode :disable t)
 (package! mixed-pitch :disable t)
@@ -245,6 +246,8 @@
 
 ;;;; elfeed-config.el
 
+(unpin! elfeed)
+(package! elfeed)
 ;; (package! simple-httpd)  ; elfeed-web 비활성으로 끔
 (package! org-web-tools)
 
