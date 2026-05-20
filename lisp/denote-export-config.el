@@ -564,6 +564,54 @@ same path."
 
 (add-hook 'org-export-before-processing-hook #'my/org-rewrite-download-links)
 
+;;;; Section 2.4: file: image link desc strip (before-processing hook)
+;; Org core's `org-export-inline-image-p' (ox.el) requires NO description for
+;; a link to qualify as an inline image:
+;;
+;;   "This only applies to links without a description."
+;;     -- ox.el `org-export-inline-image-p' docstring
+;;
+;; ox-hugo's link handler delegates to this predicate first, so
+;; [[file:img.jpg][desc]] is rendered as a plain `[desc](url)' markdown link,
+;; never as a `figure' shortcode — even when the link sits alone in a
+;; paragraph that would otherwise be standalone-image-p.
+;;
+;; Doom's image yank / `org-insert-link' default-description auto-inserts the
+;; basename (sans extension) as description, producing
+;; [[file:/path/img.jpg][img]] for every pasted screenshot. User intent here
+;; is "show this image", not "text link to it" — so strip the description
+;; before ox-hugo parses the link.
+;;
+;; Canonical captioning is preserved: `#+caption:' on the paragraph above the
+;; link is read separately by ox-hugo via `org-export-get-caption' (no
+;; relation to link description), so writing
+;;     #+caption: 캡션
+;;     [[file:img.jpg]]
+;; still emits a figure with caption.
+;;
+;; Original org file is unchanged — hook runs on the export temp buffer,
+;; same pattern as `my/org-rewrite-download-links' and
+;; `my/org-fix-cjk-emphasis'. Headless export daemon (bin/denote-export.el)
+;; loads this file too, so behavior is shared between GUI and daemon.
+
+(defun my/org-strip-image-link-desc (_backend)
+  "Strip description from `[[file:...img.ext][desc]]' links before export.
+ext ∈ png|jpe?g|gif|webp|svg|bmp. Runs on the temp export buffer so the
+original `~/org/' file is not modified."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((re (concat "\\[\\[file:\\([^]]+\\."
+                      "\\(?:png\\|jpe?g\\|gif\\|webp\\|svg\\|bmp\\)"
+                      "\\)\\]\\[\\([^]]*\\)\\]\\]"))
+          (changes 0))
+      (while (re-search-forward re nil t)
+        (replace-match (concat "[[file:" (match-string 1) "]]") t t)
+        (cl-incf changes))
+      (when (> changes 0)
+        (message "[Export] file: image link desc stripped: %d" changes)))))
+
+(add-hook 'org-export-before-processing-hook #'my/org-strip-image-link-desc)
+
 ;;;; Section 2.5: Hashtag and Mention Span Wrapping for Hugo Export
 ;; Wrap #hashtags and @mentions with <span> tags during ox-hugo export.
 ;; Counterpart of doom-themes-ext-org.el fontification (interactive editing).
