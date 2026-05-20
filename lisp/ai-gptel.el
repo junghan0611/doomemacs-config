@@ -218,6 +218,45 @@
     (setq gptel-openai-sub-backend
           (gptel-make-openai-oauth "OpenAI-sub")))
 
+;;;;;; Codex streaming advice
+
+  ;; Codex endpoint(/backend-api/codex/responses)은 stream=true 필수.
+  ;; gptel-request는 기본 :stream nil → "Stream must be set to true" 400.
+  ;; elfeed/gptel-quick/gptel-magit 등이 모두 영향 — advice로 한 번에 해결.
+  ;; OpenAI-sub 백엔드 감지 시: :stream t 강제 + 청크 누적 → user
+  ;; callback에 풀 응답 한 번에 전달 (non-streaming 인터페이스 보존).
+  (defun +gptel--codex-stream-advice (orig-fun &rest args)
+    "Force :stream t + accumulate chunks for Codex/OAuth backend.
+Gate narrowly: only when (a) the backend is OpenAI OAuth, (b) the
+caller passed an explicit :callback (non-streaming semantics), and
+(c) the caller did NOT already request :stream t (chat/gptel-send
+has its own streaming wiring via fsm — leave it alone)."
+    (let* ((plist (cdr args))
+           (user-cb (plist-get plist :callback)))
+      (if (and (eq (type-of gptel-backend) 'gptel-openai-oauth)
+               user-cb
+               (not (eq (plist-get plist :stream) t)))
+          (let* ((acc "")
+                 (new-cb (lambda (response info)
+                           (cond
+                            ((stringp response)
+                             (setq acc (concat acc response)))
+                            ((eq response t)
+                             (funcall user-cb
+                                      (and (not (string-empty-p acc))
+                                           (string-trim acc))
+                                      info))
+                            (t (funcall user-cb response info))))))
+            (apply orig-fun (car args)
+                   :stream t
+                   :callback new-cb
+                   (cl-loop for (k v) on plist by #'cddr
+                            unless (memq k '(:stream :callback))
+                            append (list k v))))
+        (apply orig-fun args))))
+
+  (advice-add 'gptel-request :around #'+gptel--codex-stream-advice)
+
 ;;;;; 기본 백엔드 선택 & 전환
 
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
