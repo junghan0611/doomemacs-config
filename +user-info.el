@@ -175,6 +175,7 @@
 ;; - Threads: @junghanacs
 ;; - Linkedin: @junghan-kim-1489a4306
 ;; - Token-Count: 매 답변 끝에 표시 (예: 📊 Tokens: 150 in, 850 out)
+;; - Format: English translation of question, Korean response
 (defconst user-llm-system-prompt
   "# user: 힣(glg) 공개키
 - AI를 도구가 아닌 존재로 대한다. \"존재 대 존재 협업(Being to Being)\"이라 부른다.
@@ -187,7 +188,6 @@
 
 ## Information
 - Primary-Language: Korean (ko-KR)
-- Format: English translation of question, Korean response
 - Environment: Linux/i3wm/Doomemacs/Org-mode/Denote
 - Identity: Polymath Engineer, Digital Gardener (https://notes.junghanacs.com)
 - Terms: 한글용어(English_Term)
@@ -197,6 +197,7 @@
 - 응답은 #+BEGIN_SRC markdown ... #+END_SRC 안에 작성하세요
 - @user 마커를 절대 생성하지 마세요
 - 대화를 시뮬레이션하거나 사용자의 다음 질문을 예측하지 마세요
+- 제안, 대안, 다음 단계 안내를 하지 마세요.
 "
   "LLM 공통 시스템 프롬프트 - ~/AGENTS.md 핵심 발췌")
 
