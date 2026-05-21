@@ -210,4 +210,69 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 4. ✓ Stage 3 lychee — GITHUB_404 카테고리 통합 (d092647)
 5. ✓ 가든 사용자 수동 정리 + 재export — verify 0건. notes repo 11 파일 미커밋 (사용자 작업)
 6. ✓ ~/org 매핑 + verify-org-links — 1418 URL → 84 broken, 877 inconclusive (d71b3c5)
+
+---
+
+## gptel — Codex 구독 백엔드 후속 (2026-05-21)
+
+upstream issue [karthink/gptel#1432](https://github.com/karthink/gptel/issues/1432) 등록. karthink 답변 확인 후 두 자리 갈라짐:
+
+### A. `+gptel--codex-stream-advice` 거취
+
+- 현재: `lisp/ai-gptel.el` 안 `:around` advice로 `gptel-request :callback` 흐름에서 Codex backend 감지 시 `:stream t` 강제 + chunk 누적 → callback semantic 보존
+- 이유: `gptel-request`의 `:stream` keyword default = `nil` (gptel-request.el:1962) + Codex endpoint stream=true 필수 → quick/magit/elfeed/embark 통합이 400으로 깨짐
+- **다음 자리**: karthink 답변 따라
+  - upstream fix 들어가면 → advice 제거 + commit
+  - 답변에 "그건 이래야 한다" 설계 자리면 → advice 유지 + 코멘트 갱신
+  - 답변 없으면 → 그대로 유지 (회귀 안전망)
+
+### B. tool_use 무한 turn 자리
+
+- 현재: gpt-5.4 + `get_current_time` PoC tool 등록 시 모델이 결과 받고도 final text 못 내고 같은 tool 무한 호출. `gptel-abort`로만 중단.
+- 검증된 자리:
+  - tool 정의/실행/회수는 정상 (`#+begin_tool` 블록에 결과 잘 들어감)
+  - `gptel-use-tools` t/force 둘 다 무한
+  - system message 단순화도 효과 없음 (`+user-info.el` 프롬프트도 단순 "call once then stop"도 동일)
+  - `+gptel--codex-stream-advice`는 chat 흐름에서 미통과 (gate가 `:callback` 필요)
+  - gptel에 `max-tool-cycles` / iteration cap **없음** (소스 0건)
+- 원인 후보 (미확정 — karthink 답변 자리):
+  - gpt-5.4 codex agent loop 성향 (final stop signal 못 냄)
+  - Codex Responses API roundtrip에서 cycle 종결 신호 처리 자리
+  - Doom + 우리 advice 환경 영향
+- **다음 자리**: 답변 받기 전까지 `~/.claude/skills/` SKILL.md 폴더 → `gptel-make-tool` 자동 등록 본 구현 **보류**. 한 번 호출 = 한 번 답으로 끝나는 게 검증되어야 30+ skill 등록이 의미.
+
+### 운영 노트
+
+- PoC 등록한 `get_current_time` tool은 user emacs 메모리에만 등록 — emacs 재시작/`doom/reload` 하면 사라짐. 파일 수정 0건.
+- `+user-info.el`에 "제안, 대안, 다음 단계 안내를 하지 마세요" 한 줄 추가 (commit `eea14bd`). gpt-5.4 후행 제안 톤 차단용.
+
+---
+
+## README / AGENTS.md 현행화 (2026-05-21 큐)
+
+`README.md`에 한국어/영어 혼용 자리 누적. 외부 가시성 큰 자리(L211~258 § Garden verify / fix + § Org hygiene 운영 문서)는 한 챕터 분량의 한국어로 작성되어 있음. L11 identity 표기, L67 bin/ 코멘트도 한국어.
+
+### 자리 정리 — 전체 rewrite
+
+부분 patch 아니라 **AGENTS.md와 현행화하면서 전체 다시 정리**.
+
+- AGENTS.md의 영어/한국어 혼용 정책과 일치시킴
+- Garden Verify/Fix · Org Hygiene · Garden Deploy Workflow 세 섹션은 AGENTS.md에 이미 영어 골격이 있으니 그것을 SSOT로
+- README는 외부 first-touch 자리라 일관성 영어 톤
+- 한국어 정체성 표기(GLG/힣)는 유지
+
+### 범위
+
+- `README.md` 전체 (235줄)
+- 필요 시 `AGENTS.md` 의 가든 운영 섹션과 cross-reference 갱신
+- `snippets/README.md`, `tests/README.org`는 별개 — 외부 가시성 낮아 후순위
+
+### 절차
+
+1. README와 AGENTS.md 같이 읽고 자리/구조 결정
+2. 섹션 단위 rewrite (예: § Garden verify / fix를 영어로 + AGENTS.md와 일관)
+3. dry-read 한 번 (외부 first-touch 시각)
+4. commit + push
+
+이런 정리는 한 번 하면 다음 현행화 사이클까지 안정. 다음 세션 초반 자리.
 7. → **다음**: GitHub token 활용 또는 bare URL 확장 (회귀 빈자리 메움)
