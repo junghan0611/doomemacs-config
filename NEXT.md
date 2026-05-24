@@ -7,7 +7,111 @@
 
 ---
 
-## TOP — 가든 missing link 후속 검증 확장 (2026-05-19 발견)
+## TOP — gptel OAuth Codex 검증 트랙 (메인 백엔드 전환, 2026-05-24)
+
+### 목표
+
+OAuth Codex subscription backend (`gptel-make-openai-oauth`, gpt-5.4 family) 를
+**daily driver**로 전환. 현 api-key OpenAI backend 대체. 동기: 구독 가격,
+모델 접근성, Codex CLI ecosystem(`~/.codex/`)과의 일관성.
+
+backend 자체가 매우 신규 (`gptel@56e5b06`). upstream 검증이 다 된 상태가
+아니다. **우리가 검증해서 단단한 데이터로 issue/PR/글을 쌓는 트랙.**
+karthink 답글 대응은 부차적 — 데이터가 먼저.
+
+### 알려진 블로커 (현 시점)
+
+| # | 증상 | 영향 | 현 우회 |
+|---|------|------|---------|
+| 1 | `gptel-request :callback` 흐름이 `:stream :json-false`로 Codex에 가서 HTTP 400 "Stream must be set to true" | `gptel-quick` / `gptel-magit` / `gptel-elfeed` / embark 등 callback 기반 통합 전부 깨짐 | `+gptel--codex-stream-advice` (`lisp/ai-gptel.el`) — `:stream t` 강제 + chunk 누적 후 callback 한 번 호출 |
+| 2 | tool_use 무한 turn loop (`get_current_time` PoC) | tool-enabled 워크플로 (`~/.codex/skills/` 30+ skill 자동 등록) 전 진로 막힘 | `gptel-abort` 외 없음 |
+| 3 | `max-tool-cycles` 부재 | 2번 같은 상황에 안전망 없음 | 없음 |
+
+karthink 1차 답변 (issue #1432):
+- 1번 → "gptel issue 맞음" 인정. wrapping point 설계는 미정
+- 2번 → "`gptel-use-tools` `force` 때문" — 본문의 "regardless of `t` or `force`" 단서를 놓침
+- 3번 → "고려해본 적 없음. 필요한가?"
+
+### 검증 계획
+
+karthink 회신 전에 데이터를 모은다. 검증 끝나야 follow-up이 사실 기반.
+
+**A. Backend 비교 매트릭스**
+
+같은 PoC를 4 backend에서 돌려서 차이를 분리. 결과는
+`~/org/botlog/...--gptel-codex-validation.org` 한 파일에 표로.
+
+| 시나리오 | api-key OpenAI | OAuth Codex (gpt-5.4) | Anthropic | Gemini |
+|----------|----------------|------------------------|-----------|--------|
+| `gptel-send` 기본 chat | ? | ? | ? | ? |
+| `gptel-request :callback` (non-stream) | ? | ? | ? | ? |
+| `get_current_time` tool (`gptel-use-tools t`) | ? | ? | ? | ? |
+| 같은 tool (`gptel-use-tools 'force`) | ? | ? | ? | ? |
+| advice 비활성 시 callback 흐름 | N/A | ? | N/A | N/A |
+
+→ 2번이 Codex만의 문제인지, Responses API 전반인지, gpt-5.4 모델 성향인지 분리.
+
+**B. Tool flow wire-level 확인**
+
+Codex backend에서 tool call → tool result → next turn 의 raw payload 확인.
+모델이 `stop_reason`/`finish_reason` 안 보내는지, gptel이 못 받는지 분리.
+
+- `M-x gptel--log-buffer` 또는 `gptel-log-level` `debug` 설정
+- 같은 payload curl 한 번 더 — gptel 영향 분리
+- raw response 의 `finish_reason` / `output` 마지막 element 확인
+
+**C. Vanilla 환경 재현**
+
+Doom + 우리 advice 영향 분리.
+
+- `emacs -Q` + gptel `master` 만 로드 + Codex backend 최소 init
+- 같은 tool, 같은 질문 → 무한 루프 재현되는지
+- 재현되면 gptel 영역 확정. 안 되면 우리 advice/Doom 모듈 영향 추적
+
+**D. gptel master 변경 추적**
+
+`56e5b06` (Codex 지원) 이후 master 커밋에 tool flow 관련 변경 있는지.
+
+```bash
+cd ~/.config/emacs/.local/straight/repos/gptel
+git log --oneline 56e5b06.. -- gptel-openai-responses.el gptel-openai.el gptel.el
+```
+
+**E. PoC tool 30+ 확장 보류**
+
+위 A~D 끝나서 "한 번 호출 = 한 번 답으로 닫힘"이 검증돼야
+`~/.claude/skills/` SKILL.md → `gptel-make-tool` 자동 등록 본 구현 의미.
+검증 결과에 따라:
+- "Codex tool flow 안정" → 즉시 본 작업
+- "아직" → api-key OpenAI backend로 우선 시작, Codex 대기
+
+### Outputs
+
+1. **issue #1432 follow-up 코멘트** — A~D 결과 요약. backend 비교 표가 핵심.
+   karthink가 놓친 "regardless t/force" 다시 짚고, 다른 backend와 비교 데이터로 명확화.
+2. **PR 후보** — 1번 블로커는 `+gptel--codex-stream-advice`를 upstream 형태로
+   다듬어 PR. 2번은 reproduction 첨부, fix는 karthink 영역.
+3. **digital garden / botlog 글** — "OAuth Codex backend 검증 일지" ko/en
+   한 편씩. 같은 회귀에 부딪힌 사용자가 검색할 때 우리 글이 1차 자료가 되는 자리.
+
+### 완료 조건
+
+- A 매트릭스 5×4 cell 채움
+- B wire-level 답 명확화
+- C로 우리 환경 영향 분리
+- issue #1432 follow-up 코멘트 1건
+- 가든 글 1편 (ko/en)
+- 1번 PR 제안 (선택 — karthink wrapping point 의견 받은 후)
+
+### 안 하는 일
+
+- karthink 답글에 즉답 — 데이터 모은 다음. 빈 손으로 응대 안 함.
+- 30+ tool 자동 등록 본 구현 — 검증 후.
+- gpt-5.4 외 다른 Codex 모델 cross-validation (gpt-5, gpt-5-mini 등) — 추후.
+
+---
+
+## 가든 missing link 후속 검증 확장 (2026-05-19 발견, 안정 단계)
 
 샘플: `/home/junghan/sync/org/botlog/20260517T211731--§lifetract...org` →
 `~/repos/gh/notes/content/botlog/20260517T211731.md`
@@ -35,7 +139,7 @@
 
 ---
 
-## TOP-2 — 가든 위생 통합 검증 (보안 + SEO + link rot)
+## 가든 위생 통합 검증 (보안 + SEO + link rot, 안정 단계)
 
 링크 위생은 SEO만의 문제가 아니다. **내부 경로 노출 / 사라진 서브도메인 / URL 내 credential**은 보안 카테고리. notes 리포에 `gitleaks`(`.gitleaks.toml`)는 이미 있지만 secret 한정 — link 위생은 빈자리.
 
@@ -213,38 +317,91 @@ notes 리포는 가든 빌더(Quartz/Hugo/...)가 바뀔 수 있다. doomemacs-c
 
 ---
 
-## gptel — Codex 구독 백엔드 후속 (2026-05-21)
+## ghostel — 0.29.0 머지 후 닷파일 follow-up (2026-05-24)
 
-upstream issue [karthink/gptel#1432](https://github.com/karthink/gptel/issues/1432) 등록. karthink 답변 확인 후 두 자리 갈라짐:
+upstream `dakra/ghostel` 0.27 → 0.29 (40 커밋, 3 릴리스) 우리 fork `fix/korean-ime-commit` 위에 머지 완료 (`junghan0611/ghostel` `505bdbe`). IME 패치 (`8d3320d` + `d9c5b11`) 충돌 0 — `lisp/ghostel.el` 라인만 1838 → 2304로 자연 이동. doomemacs-config 측 활용은 다음 자리.
 
-### A. `+gptel--codex-stream-advice` 거취
+### Step 0 — sync + 빌드 (user Emacs 자리)
 
-- 현재: `lisp/ai-gptel.el` 안 `:around` advice로 `gptel-request :callback` 흐름에서 Codex backend 감지 시 `:stream t` 강제 + chunk 누적 → callback semantic 보존
-- 이유: `gptel-request`의 `:stream` keyword default = `nil` (gptel-request.el:1962) + Codex endpoint stream=true 필수 → quick/magit/elfeed/embark 통합이 400으로 깨짐
-- **다음 자리**: karthink 답변 따라
-  - upstream fix 들어가면 → advice 제거 + commit
-  - 답변에 "그건 이래야 한다" 설계 자리면 → advice 유지 + 코멘트 갱신
-  - 답변 없으면 → 그대로 유지 (회귀 안전망)
+`packages.el` L93~99이 `fix/korean-ime-commit` 픽업 중이라 자동 따라옴.
 
-### B. tool_use 무한 turn 자리
+```bash
+~/.config/emacs/bin/doom sync     # straight가 새 커밋 fetch
+```
+- user Emacs에서 `M-x doom/reload`
+- `M-x ghostel` 첫 호출 → `ghostel-module-auto-install 'ask` 빌드 prompt → 0.29.0 zig 모듈 빌드 (libghostty C API → Zig API 전환됨)
+- 빌드 후 기본 동작 확인: Pi 세션 띄우기 + 한글 IME 입력 + `evil-ghostel-escape 'terminal` 동작
 
-- 현재: gpt-5.4 + `get_current_time` PoC tool 등록 시 모델이 결과 받고도 final text 못 내고 같은 tool 무한 호출. `gptel-abort`로만 중단.
-- 검증된 자리:
-  - tool 정의/실행/회수는 정상 (`#+begin_tool` 블록에 결과 잘 들어감)
-  - `gptel-use-tools` t/force 둘 다 무한
-  - system message 단순화도 효과 없음 (`+user-info.el` 프롬프트도 단순 "call once then stop"도 동일)
-  - `+gptel--codex-stream-advice`는 chat 흐름에서 미통과 (gate가 `:callback` 필요)
-  - gptel에 `max-tool-cycles` / iteration cap **없음** (소스 0건)
-- 원인 후보 (미확정 — karthink 답변 자리):
-  - gpt-5.4 codex agent loop 성향 (final stop signal 못 냄)
-  - Codex Responses API roundtrip에서 cycle 종결 신호 처리 자리
-  - Doom + 우리 advice 환경 영향
-- **다음 자리**: 답변 받기 전까지 `~/.claude/skills/` SKILL.md 폴더 → `gptel-make-tool` 자동 등록 본 구현 **보류**. 한 번 호출 = 한 번 답으로 끝나는 게 검증되어야 30+ skill 등록이 의미.
+### Step 1 — 자동 적용 변화 체감 (수정 0)
 
-### 운영 노트
+닷파일 변경 없이 활성화. 체감 후 회귀 있으면 자리에 기록:
 
-- PoC 등록한 `get_current_time` tool은 user emacs 메모리에만 등록 — emacs 재시작/`doom/reload` 하면 사라짐. 파일 수정 0건.
-- `+user-info.el`에 "제안, 대안, 다음 단계 안내를 하지 마세요" 한 줄 추가 (commit `eea14bd`). gpt-5.4 후행 제안 톤 차단용.
+- **`ghostel-query-before-killing` default `'auto`** — Pi/Claude/Codex 실행 중 buffer kill 사고 방지. OSC 133 C/D markers로 prompt 자리에선 quiet
+- **`ghostel--filter-soft-wraps` O(n²) → O(n)** — Pi 긴 출력 copy mode `M-w` freeze 사라짐
+- **CRLF normalization on alt screen 스킵** — tmux/vim/less 레이아웃 깨짐 해소 (DECSET 47/1047/1049 감지)
+- **TTY auto-composition 비활성화** — 이모지 + VS-16 (🗂️) 컬럼 드리프트. Pi/Claude/Codex 출력에 직접
+- **Linux framebuffer black-on-black** — `unspecified-fg/bg` 인식. laptop/nuc에서 `emacs -nw` 살아남
+- **Bash OSC 7 hostname → `gethostname(2)`** — Toolbox/container에서 TRAMP 매 `cd`마다 발동 안 함 (#276)
+- **Semi-char mode `M-<digit/punct/uppercase>/SPC` 셸 포워딩** — `M-.`, `M-1`, `M-/` 같은 키가 Pi/셸까지 닿음 (이전엔 `M-a..z`만, 나머지는 Emacs global commands가 가로챘음)
+
+### Step 2 — 추가 후보 (하나씩 켜고 테스트)
+
+세 자리 모두 `lisp/term-config.el`. 한 번에 다 켜지 말고 a → b → c 순서로 하나씩.
+
+**a. `ghostel-glyph-scale-floor 1.0`** — CJK 자연 크기 (#298)
+```elisp
+;; lisp/term-config.el `(use-package! ghostel ... :config` 안
+(setq ghostel-glyph-scale-floor 1.0)
+```
+- 0 (default) = strict-grid 유지. 1 = 자연 크기 (row 약간 높아짐 trade-off)
+- buffer-local이라 ghostel 버퍼만. 다른 버퍼 영향 0
+- 테스트: ghostel 세션 두 개 띄워서 0 vs 1 비교 — 한글/이모지 잘림 확인
+
+**b. `global-ghostel-comint-mode 1`** — comint VT parser (0.29 큰 신규)
+```elisp
+;; lisp/term-config.el 끝에 (사용자가 직접 켜기, 자동화 X)
+;; (global-ghostel-comint-mode 1)
+```
+- `M-x compile`, `M-x shell`, eshell, run.sh export/verify/fix 버퍼에서 truecolor + OSC 8 hyperlink + OSC 7 cwd
+- **테스트 전 주의**: font-lock과의 상호작용. 켜기 전 `M-x compile RET ls --color=always RET` 같은 PoC로 색감/faint/inverse 깨지지 않는지 확인
+- 깨지면 buffer-local enable로 좁힘 (`ghostel-comint-mode`만)
+
+**c. Multi-terminal navigation leader binding 풀기** (0.28 신규)
+```elisp
+;; lisp/term-config.el L124~127 주석 자리 풀기 (조건부 — 빈도 누적 후)
+(map! :leader
+      :desc "Pi (ghostel)"   "j SPC" #'my/pi-ghostel-start
+      :desc "Ghostel list"   "j l"   #'ghostel-project-list-buffers
+      :desc "Ghostel next"   "j n"   #'ghostel-project-next
+      :desc "Ghostel prev"   "j p"   #'ghostel-project-previous)
+```
+- 닷파일에 "leader binding parked while experimental" 의식적 명시. Pi 세션 동시 N개 띄우는 빈도 누적된 후 결정
+- vterm이 daily driver 자리는 그대로 — `j SPC`는 Pi 전용 우회로
+
+### Step 3 — 추가 검토 자리 (낮은 우선순위)
+
+- **`ghostel-prompt-regexp`** — OSC 133 없는 셸 fallback. 기본값이 `$ # % > >>> λ ❯ ➜ →` 이미 인식. oracle/nuc/laptop SSH 첫 진입 자리에서 prompt detect 안 되면 사용자 prompt 패턴 추가
+- **macOS `ghostel-macos-login-shell`** — 우리 자리 NixOS라 무관
+
+### Step 4 — `fix/korean-ime-commit` upstream PR 자리 (보류)
+
+`8d3320d Forward IME-committed text to PTY for Emacs input methods` + `d9c5b11 Restrict IME commit forwarding to PTY-forwarding input modes` 두 커밋은 commit message + commentary 잘 정리됨 (Hangul IME `(self-insert-command 1)` 직접 호출 → `[remap]` 우회 → PTY 미전송 → 다음 redraw에 erased 문제, gating 포함). dakra/ghostel에 PR 던질 자리는 있음. 단:
+
+- 이전 PR 시도/토의 있었는지 먼저 확인: `gh pr list -R dakra/ghostel --search "korean ime author:junghan0611"` / `gh issue list -R dakra/ghostel --search "korean ime"`
+- 일반 IME (non-Korean quail) 회귀 테스트 자리 정리 필요
+- **보류 사유**: 한글 IME 패치는 우리 fork 자리에서 안정. dakra가 받지 않아도 fork로 충분. 우선순위 낮음 — 다른 작업과 트레이드오프
+
+---
+
+## gptel — 흡수됨 (2026-05-24)
+
+이 섹션은 **TOP — gptel OAuth Codex 검증 트랙**으로 흡수. 본문은 그쪽 참조.
+
+운영 노트만 남김:
+- PoC 등록한 `get_current_time` tool은 user emacs 메모리 한정 — 재시작 / `doom/reload` 시 사라짐. 파일 수정 0건.
+- `+user-info.el` "제안/대안/다음 단계 안내 하지 마세요" 한 줄 (commit `eea14bd`). gpt-5.4 후행 제안 톤 차단용.
+- upstream issue: [karthink/gptel#1432](https://github.com/karthink/gptel/issues/1432).
+- 우리 advice: `lisp/ai-gptel.el` `+gptel--codex-stream-advice`.
 
 ---
 
@@ -276,3 +433,17 @@ upstream issue [karthink/gptel#1432](https://github.com/karthink/gptel/issues/14
 
 이런 정리는 한 번 하면 다음 현행화 사이클까지 안정. 다음 세션 초반 자리.
 7. → **다음**: GitHub token 활용 또는 bare URL 확장 (회귀 빈자리 메움)
+
+---
+
+## Google Chat OAuth 토큰 만료 (2026-05-24)
+
+`agenda-stamp.sh` 옆 chat notify가 `invalid_grant "Token has been expired or revoked"`. 한 줄 자리:
+
+```bash
+gog auth login    # 재인증
+```
+
+- **영향**: 커밋/머지 시 Google Chat 알림 누락. agenda 도장은 정상 작동.
+- **회복**: 한 번 인증하면 자동. 다른 자리 영향 없음.
+- **발견 자리**: ghostel 0.29.0 머지 푸시 후 chat notify 호출 (`505bdbe`).
