@@ -638,25 +638,69 @@
 
 ;;;; Custom Keyboard
 
-;; my/enable-alice-keyboard-toggle-input-method
-(defun my/enable-alice-keyboard-toggle-input-method ()
-  (interactive)
-  ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
-  (map! (:map vertico-map
-              "`"   #'toggle-input-method)
-        (:map vterm-mode-map
-              "`"   #'toggle-input-method)
-        (:map prog-mode-map
-              "`"   #'toggle-input-method)
-        (:map minibuffer-mode-map
-              "`"   #'toggle-input-method)
-        (:map minibuffer-local-map
-              "`"   #'toggle-input-method)
-        (:map agent-shell-mode-map
-         :i "`" #'toggle-input-method)
-        (:map org-mode-map
-         :i "`" #'toggle-input-method))
+(when (equal my/current-device "thinkpad")
+  ;; my/enable-alice-keyboard-toggle-input-method
+  (defun my/enable-alice-keyboard-toggle-input-method ()
+    (interactive)
+    ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
+    (map! (:map vertico-map
+                "`"   #'toggle-input-method)
+          (:map vterm-mode-map
+                "`"   #'toggle-input-method)
+          (:map prog-mode-map
+                "`"   #'toggle-input-method)
+          (:map minibuffer-mode-map
+                "`"   #'toggle-input-method)
+          (:map minibuffer-local-map
+                "`"   #'toggle-input-method)
+          (:map agent-shell-mode-map
+           :i "`" #'toggle-input-method)
+          (:map org-mode-map
+           :i "`" #'toggle-input-method))
+    )
+  (my/enable-alice-keyboard-toggle-input-method)
   )
+
+(when (equal my/current-device "oracle")
+  ;; Android/Termux → SSH → TTY Emacs 에서는 C-SPC가 C-@로 들어오는 경우가
+  ;; 흔하다. Doom Evil이 state map에서 C-SPC를 잡으므로 일반 keymap에
+  ;; binding만 걸면 묻힌다. Evil state map(:inv = insert/normal/visual)에
+  ;; 직접 잡아야 우선순위가 산다.
+  ;; corfu-map의 C-SPC는 원래 corfu-insert-separator(orderless 멀티 패턴) —
+  ;; 한영 토글 우선이 트레이드오프.
+  (global-set-key (kbd "C-SPC") #'toggle-input-method)
+  (global-set-key (kbd "C-@")   #'toggle-input-method)
+  (map! :inv "C-SPC" #'toggle-input-method
+        :inv "C-@"   #'toggle-input-method)
+  (dolist (map (list minibuffer-local-map
+                     minibuffer-local-ns-map
+                     minibuffer-local-completion-map
+                     minibuffer-local-must-match-map
+                     minibuffer-local-isearch-map))
+    (define-key map (kbd "C-SPC") #'toggle-input-method)
+    (define-key map (kbd "C-@")   #'toggle-input-method))
+  ;; 만약 minibuffer / vertico에서 묻히면 evil-collection이 auxiliary state map에
+  ;; 잡아둔 것. 그땐 아래처럼 :inv 로 corfu-mode-map과 같은 방식으로 덮어쓴다.
+  ;; (map! :map minibuffer-mode-map :inv "C-SPC" #'toggle-input-method
+  ;;       :map minibuffer-mode-map :inv "C-@"   #'toggle-input-method)
+  ;; (after! vertico
+  ;;   (map! :map vertico-map :inv "C-SPC" #'toggle-input-method
+  ;;         :map vertico-map :inv "C-@"   #'toggle-input-method))
+  (after! vertico
+    (map! :map vertico-map
+          "C-SPC" #'toggle-input-method
+          "C-@"   #'toggle-input-method))
+  (after! corfu
+    ;; corfu-mode-map은 evil-collection/+corfu가 auxiliary state map에
+    ;; (evil-define-key 'insert corfu-mode-map ...) 형태로 잡아두는데,
+    ;; auxiliary state map이 글로벌 evil-state-map보다 우선이라 글로벌
+    ;; :inv 만으로는 묻힌다. corfu-mode-map :inv에 직접 잡아야 이긴다.
+    (map! :map corfu-mode-map
+          :inv "C-SPC" #'toggle-input-method
+          :inv "C-@"   #'toggle-input-method)
+    (map! :map corfu-map
+          "C-SPC" #'toggle-input-method
+          "C-@"   #'toggle-input-method)))
 
 ;;; provide
 

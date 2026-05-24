@@ -15,43 +15,44 @@
 (require 'doom-modeline)
 
 (progn
-  ;; (doom-modeline-def-modeline
-  ;;   'main
-  ;;   '(eldoc
-  ;;     bar
-  ;;     persp-name
-  ;;     ;; workspace-name - conflict tab-bar
-  ;;     window-number
-  ;;     modals
-  ;;     input-method
-  ;;     matches
-  ;;     follow
-  ;;     buffer-info
-  ;;     remote-host
-  ;;     buffer-position
-  ;;     word-count
-  ;;     parrot
-  ;;     selection-info)
-  ;;   '(compilation
-  ;;     objed-state
-  ;;     misc-info
-  ;;     battery
-  ;;     grip
-  ;;     irc
-  ;;     mu4e
-  ;;     gnus
-  ;;     github
-  ;;     debug
-  ;;     repl
-  ;;     lsp
-  ;;     minor-modes
-  ;;     indent-info
-  ;;     buffer-encoding
-  ;;     major-mode
-  ;;     process
-  ;;     vcs
-  ;;     check
-  ;;     time))
+  ;; 'main 모드라인 재정의. 좁은 화면(모바일 SSH 등)에서 rhs가 잘려도
+  ;; input-method가 보이도록 lhs 앞쪽(bar 다음)으로 끌어왔다. 한국어 입력
+  ;; 비활성 시 segment는 빈 문자열이라 평소엔 자리 차지 안 함.
+  (doom-modeline-def-modeline 'main
+    '(eldoc
+      bar
+      input-method
+      workspace-name
+      window-number
+      modals
+      matches
+      follow
+      buffer-info
+      remote-host
+      buffer-position
+      word-count
+      parrot
+      selection-info)
+    '(compilation
+      objed-state
+      misc-info
+      battery
+      grip
+      irc
+      mu4e
+      gnus
+      github
+      debug
+      repl
+      lsp
+      minor-modes
+      indent-info
+      buffer-encoding
+      major-mode
+      process
+      vcs
+      check
+      time))
 
   (setq doom-modeline-time nil)
   (setq doom-modeline-time-icon nil)

@@ -53,6 +53,17 @@
 
 ;;;;; consult-customize
 
+;; oracle/Android SSH TTY에서는 C-SPC를 Emacs 한영 토글로 양보한다.
+;; preview는 방향키/M-j/M-k로도 충분히 동작한다.
+;; defvar로 두는 이유: consult-customize는 매크로가 인자를 quote해서 저장하고
+;; 명령 호출 시점에 (eval form 'lexical)로 풀어 쓴다. let의 lexical 값은
+;; 그 시점에 사라져 void-variable 에러가 난다. dynamic global이어야 한다.
+(defvar my/consult-preview-key
+  (if (equal my/current-device "oracle")
+      '(:debounce 0.3 "<up>" "<down>" "M-j" "M-k")
+    '("C-SPC" :debounce 0.3 "<up>" "<down>" "M-j" "M-k"))
+  "consult preview key. oracle은 C-SPC를 한영 토글로 양보.")
+
 (after! consult
   (consult-customize
    +default/search-project +default/search-other-project
@@ -60,14 +71,13 @@
    +default/search-cwd +default/search-other-cwd
    +default/search-notes-for-symbol-at-point
    +default/search-emacsd
-   :preview-key '("C-SPC" :debounce 0.3 "<up>" "<down>" "M-j" "M-k"))
+   :preview-key my/consult-preview-key)
 
   (consult-customize
    consult-ripgrep consult-git-grep consult-grep
    consult-bookmark consult-recent-file
    consult-source-recent-file consult-source-project-recent-file consult-source-bookmark
-   :preview-key '("C-SPC"
-                  :debounce 0.3 "<up>" "<down>" "M-j" "M-k"))
+   :preview-key my/consult-preview-key)
   )
 
 ;;;; vertico
