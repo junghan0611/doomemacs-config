@@ -10,7 +10,8 @@
 ;; 터미널(TTY) Emacs를 위한 통합 설정.
 ;; - term-keys: WezTerm 키 시퀀스 (F1~F12, Hangul, S-SPC 등)
 ;; - clipboard: OSC 52 (Emacs 내장 xterm.el, clipetty 제거)
-;; - 성능: xterm-set-window-title off, mouse/paren off 등 경량화
+;; - 성능: xterm-set-window-title off, paren off 등 경량화
+;; - 모바일 SSH/tmux 읽기 UX: TTY mouse wheel/touch scroll 유지
 ;;
 ;; vterm/eat 같은 터미널 에뮬레이터 설정과는 별개.
 ;; 이 파일은 "Emacs 자체가 TTY에서 돌아갈 때" 필요한 설정.
@@ -93,8 +94,11 @@ BMP→SMP remap 은 여기서 하지 않는다. 흔한 케이스는 telega 쪽 d
     ;; Emacs → 터미널 윈도우 타이틀 OSC 0/2 송출 비활성.
     ;; tmux/WezTerm 이 이미 타이틀 관리하므로 중복. profile 에서 6% 점유.
     (setq-default xterm-set-window-title nil)
-    ;; 가벼움 — 에이전트 프론트엔드는 키보드-only
-    (xterm-mouse-mode -1)
+    ;; 모바일 SSH/tmux에서 터치 스크롤이 Emacs 버퍼 스크롤로 들어오려면
+    ;; xterm mouse tracking이 필요하다. 이전에는 에이전트 프론트엔드
+    ;; 키보드-only 경량화 목적으로 껐지만, org 읽기 UX 손상이 더 크다.
+    (xterm-mouse-mode 1)
+    ;; show-paren-mode 비활성 — org 읽기/쓰기 위주, paren highlight 비용 절감
     (show-paren-mode -1)
     (+tty-safe-ellipsis-setup)
     (unless standard-display-table
