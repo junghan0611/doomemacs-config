@@ -193,6 +193,9 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 ;;;; winpulse - window focus flash
 
 (use-package! winpulse
+  ;; `winpulse--on-window-selection-change' uses pixel/window geometry that can
+  ;; be nil in terminal/daemon frames; keep the focus flash GUI-only.
+  :if (display-graphic-p)
   :config
   (winpulse-mode +1))
 
