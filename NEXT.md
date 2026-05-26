@@ -7,107 +7,32 @@
 
 ---
 
-## TOP — gptel OAuth Codex 검증 트랙 (메인 백엔드 전환, 2026-05-24)
+## TOP — gptel / gptel-agent 모니터링 (2026-05-26 정렬)
 
-### 목표
+OAuth Codex backend 활용 자리. 우회 advice 4종 + 설정이 `lisp/ai-gptel.el`
+(`use-package! gptel-agent :config`) 에 영구 박힘.
 
-OAuth Codex subscription backend (`gptel-make-openai-oauth`, gpt-5.4 family) 를
-**daily driver**로 전환. 현 api-key OpenAI backend 대체. 동기: 구독 가격,
-모델 접근성, Codex CLI ecosystem(`~/.codex/`)과의 일관성.
+상세 작업기록 + issue 답변 draft:
+[[file:~/org/llmlog/20260526T140435--gptel-oauth-codex-활용-검증-작업기록__codex_gptel_gptelagent_llmlog_oauth.org][20260526T140435]]
 
-backend 자체가 매우 신규 (`gptel@56e5b06`). upstream 검증이 다 된 상태가
-아니다. **우리가 검증해서 단단한 데이터로 issue/PR/글을 쌓는 트랙.**
-karthink 답글 대응은 부차적 — 데이터가 먼저.
+### upstream 변경 시 advice 재검토 자리
 
-### 알려진 블로커 (현 시점)
+| advice | 불필요해질 조건 | tracking |
+|--------|-----------------|----------|
+| `+gptel--codex-stream-advice` | `gptel` 의 `gptel-request` wrapping point 또는 stream 자리 설계 결정 | [gptel #1432](https://github.com/karthink/gptel/issues/1432), [gptel-agent #107](https://github.com/karthink/gptel-agent/issues/107) |
+| `+gptel--codex-clear-max-tokens-advice` | `gptel-agent.el:690` 의 `gptel-max-tokens 8192` 무조건 박는 자리에 OAuth backend 가드 추가될 때 | [gptel-agent #108](https://github.com/karthink/gptel-agent/issues/108) |
+| `+gptel--disable-tool-confirmations` | `gptel-agent` 의 16 default tool 의 `:confirm t` 자리 변경 시 (영향 가능) | — |
+| `+gptel-agent--inject-user-prompt` | `gptel-agent` 의 `agents/*.md` frontmatter format 변경 시 (영향 가능) | — |
 
-| # | 증상 | 영향 | 현 우회 |
-|---|------|------|---------|
-| 1 | `gptel-request :callback` 흐름이 `:stream :json-false`로 Codex에 가서 HTTP 400 "Stream must be set to true" | `gptel-quick` / `gptel-magit` / `gptel-elfeed` / embark 등 callback 기반 통합 전부 깨짐 | `+gptel--codex-stream-advice` (`lisp/ai-gptel.el`) — `:stream t` 강제 + chunk 누적 후 callback 한 번 호출 |
-| 2 | tool_use 무한 turn loop (`get_current_time` PoC) | tool-enabled 워크플로 (`~/.codex/skills/` 30+ skill 자동 등록) 전 진로 막힘 | `gptel-abort` 외 없음 |
-| 3 | `max-tool-cycles` 부재 | 2번 같은 상황에 안전망 없음 | 없음 |
+### 답변 push 완료 (2026-05-26)
 
-karthink 1차 답변 (issue #1432):
-- 1번 → "gptel issue 맞음" 인정. wrapping point 설계는 미정
-- 2번 → "`gptel-use-tools` `force` 때문" — 본문의 "regardless of `t` or `force`" 단서를 놓침
-- 3번 → "고려해본 적 없음. 필요한가?"
+- [gptel #1432 follow-up](https://github.com/karthink/gptel/issues/1432#issuecomment-4540436258) — #2 retract + #1 확정 데이터 + #107 cross-link + gptel-agent side note
+- [gptel-agent #107 코멘트](https://github.com/karthink/gptel-agent/issues/107#issuecomment-4540436517) — ekattsim 자리 인사 + 우리 advice 가 subagent flow 도 자동 우회 (추정)
+- [gptel-agent #108 신규](https://github.com/karthink/gptel-agent/issues/108) — `gptel-agent.el:690` `gptel-max-tokens` 8192 default 가 OAuth Codex 와 충돌
 
-### 검증 계획
-
-karthink 회신 전에 데이터를 모은다. 검증 끝나야 follow-up이 사실 기반.
-
-**A. Backend 비교 매트릭스**
-
-같은 PoC를 4 backend에서 돌려서 차이를 분리. 결과는
-`~/org/botlog/...--gptel-codex-validation.org` 한 파일에 표로.
-
-| 시나리오 | api-key OpenAI | OAuth Codex (gpt-5.4) | Anthropic | Gemini |
-|----------|----------------|------------------------|-----------|--------|
-| `gptel-send` 기본 chat | ? | ? | ? | ? |
-| `gptel-request :callback` (non-stream) | ? | ? | ? | ? |
-| `get_current_time` tool (`gptel-use-tools t`) | ? | ? | ? | ? |
-| 같은 tool (`gptel-use-tools 'force`) | ? | ? | ? | ? |
-| advice 비활성 시 callback 흐름 | N/A | ? | N/A | N/A |
-
-→ 2번이 Codex만의 문제인지, Responses API 전반인지, gpt-5.4 모델 성향인지 분리.
-
-**B. Tool flow wire-level 확인**
-
-Codex backend에서 tool call → tool result → next turn 의 raw payload 확인.
-모델이 `stop_reason`/`finish_reason` 안 보내는지, gptel이 못 받는지 분리.
-
-- `M-x gptel--log-buffer` 또는 `gptel-log-level` `debug` 설정
-- 같은 payload curl 한 번 더 — gptel 영향 분리
-- raw response 의 `finish_reason` / `output` 마지막 element 확인
-
-**C. Vanilla 환경 재현**
-
-Doom + 우리 advice 영향 분리.
-
-- `emacs -Q` + gptel `master` 만 로드 + Codex backend 최소 init
-- 같은 tool, 같은 질문 → 무한 루프 재현되는지
-- 재현되면 gptel 영역 확정. 안 되면 우리 advice/Doom 모듈 영향 추적
-
-**D. gptel master 변경 추적**
-
-`56e5b06` (Codex 지원) 이후 master 커밋에 tool flow 관련 변경 있는지.
-
-```bash
-cd ~/.config/emacs/.local/straight/repos/gptel
-git log --oneline 56e5b06.. -- gptel-openai-responses.el gptel-openai.el gptel.el
-```
-
-**E. PoC tool 30+ 확장 보류**
-
-위 A~D 끝나서 "한 번 호출 = 한 번 답으로 닫힘"이 검증돼야
-`~/.claude/skills/` SKILL.md → `gptel-make-tool` 자동 등록 본 구현 의미.
-검증 결과에 따라:
-- "Codex tool flow 안정" → 즉시 본 작업
-- "아직" → api-key OpenAI backend로 우선 시작, Codex 대기
-
-### Outputs
-
-1. **issue #1432 follow-up 코멘트** — A~D 결과 요약. backend 비교 표가 핵심.
-   karthink가 놓친 "regardless t/force" 다시 짚고, 다른 backend와 비교 데이터로 명확화.
-2. **PR 후보** — 1번 블로커는 `+gptel--codex-stream-advice`를 upstream 형태로
-   다듬어 PR. 2번은 reproduction 첨부, fix는 karthink 영역.
-3. **digital garden / botlog 글** — "OAuth Codex backend 검증 일지" ko/en
-   한 편씩. 같은 회귀에 부딪힌 사용자가 검색할 때 우리 글이 1차 자료가 되는 자리.
-
-### 완료 조건
-
-- A 매트릭스 5×4 cell 채움
-- B wire-level 답 명확화
-- C로 우리 환경 영향 분리
-- issue #1432 follow-up 코멘트 1건
-- 가든 글 1편 (ko/en)
-- 1번 PR 제안 (선택 — karthink wrapping point 의견 받은 후)
-
-### 안 하는 일
-
-- karthink 답글에 즉답 — 데이터 모은 다음. 빈 손으로 응대 안 함.
-- 30+ tool 자동 등록 본 구현 — 검증 후.
-- gpt-5.4 외 다른 Codex 모델 cross-validation (gpt-5, gpt-5-mini 등) — 추후.
+karthink 답변 대기. 미해결 회귀 (subagent flow nil propagation, ekattsim
+second issue buffer lifecycle) 는 별개 issue 후보로 llmlog 안에 기록 — 데이터
+더 모은 후.
 
 ---
 

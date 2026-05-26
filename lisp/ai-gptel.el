@@ -65,12 +65,14 @@
 
 ;;;;; 백엔드 (Backends)
 
-;;;;;; DeepSeek (보류 — OpenAI-sub로 통일, 회사 키 환경 변경 시 부활)
+;;;;;; DeepSeek (OpenAI-compatible /v1/chat/completions — Codex Responses API 비교 자리)
 
-  ;; (setq gptel-deepseek-backend
-  ;;       (gptel-make-deepseek "DeepSeek"
-  ;;         :stream t
-  ;;         :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
+  ;; deepseek-chat: tool 지원. deepseek-reasoner: tool 미지원 (DeepSeek 측 제약).
+  ;; tool 검증/사용은 반드시 deepseek-chat로 — `my/gptel-switch-to-deepseek` 기본값.
+  (setq gptel-deepseek-backend
+        (gptel-make-deepseek "DeepSeek"
+          :stream t
+          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
 
 ;;;;;; OpenRouter
 
@@ -257,6 +259,49 @@ has its own streaming wiring via fsm — leave it alone)."
 
   (advice-add 'gptel-request :around #'+gptel--codex-stream-advice)
 
+;;;;;; Codex max_output_tokens advice
+
+  ;; gptel-agent.el L690이 chat buffer 생성 시 무조건 8192 박음 — Codex(OAuth)
+  ;; backend는 max_output_tokens 자체를 거부 (`88e4999` 패치 warning 매 요청 발동).
+  ;; gptel--request-data 호출 직전 dynamic let으로 nil 강제 → plist-put skip.
+  ;; 다른 backend는 영향 없음. upstream gptel-agent.el L690 패치 후보 자리.
+  (defun +gptel--codex-clear-max-tokens-advice (orig-fun &rest args)
+    "Force `gptel-max-tokens' nil for Codex (OAuth) backend — silence warning."
+    (let ((gptel-max-tokens
+           (if (eq (type-of gptel-backend) 'gptel-openai-oauth)
+               nil
+             gptel-max-tokens)))
+      (apply orig-fun args)))
+
+  (advice-add 'gptel--request-data :around #'+gptel--codex-clear-max-tokens-advice)
+
+;;;;; Tools (PoC — DeepSeek + OpenAI-sub 양 backend round-trip 검증용)
+
+  ;; 큰 그림: ~/.claude/skills/ 화이트리스트 → gptel-make-tool 자동 등록.
+  ;; 예: botlog skill 등록되면 "오늘 작업 botlog로 기록해" 한 마디로 호출.
+  ;; 현 단계는 tool round-trip이 양 backend에서 정상 닫히는지 sanity.
+  ;;
+  ;; gptel-use-tools 명시 (anti-regression):
+  ;; transient menu (`gptel-menu` → `T`)에서 `force`로 바꾸면 정의상 매 턴
+  ;; tool 호출 강제 → 무한 loop. dotsamples 30+ 사용자도 모두 `t`만 사용.
+  ;; default를 여기 명시해서 customize 잔재로부터 보호.
+  (setq gptel-use-tools t)
+  (setq-default gptel-use-tools t)
+
+  ;; 검증 매트릭스 (2026-05-26):
+  ;;   DeepSeek deepseek-chat + use-tools t      → 1회, 2.7s 닫힘  ✓
+  ;;   OpenAI-sub gpt-5.4    + use-tools t      → 1회, 4.58s 닫힘 ✓
+  ;;   양 backend            + use-tools 'force → 무한 loop (정의상 정상 동작)
+  ;;
+  ;; 사용: chat buffer에서 "What time is it?" → `get_current_time` 자동 호출.
+  ;; backend 전환은 `my/gptel-switch-to-*`, model은 `gptel-menu`에서.
+  (gptel-make-tool
+   :name "get_current_time"
+   :description "Return the current local time in ISO-8601 format (YYYY-MM-DDTHH:MM:SS+ZZZZ)."
+   :args nil
+   :category "time"
+   :function (lambda () (format-time-string "%Y-%m-%dT%H:%M:%S%z")))
+
 ;;;;; 기본 백엔드 선택 & 전환
 
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
@@ -308,6 +353,13 @@ has its own streaming wiring via fsm — leave it alone)."
     (setq gptel-backend gptel-openrouter-backend)
     (setq gptel-model gptel-openrouter-chat-model)
     (message "Switched to OpenRouter backend"))
+
+  (defun my/gptel-switch-to-deepseek ()
+    "Switch gptel backend to DeepSeek (deepseek-chat)."
+    (interactive)
+    (setq gptel-backend gptel-deepseek-backend)
+    (setq gptel-model 'deepseek-chat)
+    (message "Switched to DeepSeek backend (deepseek-chat)"))
 
 ;;;;; gptel-quick — 빠른 조회
 
@@ -471,6 +523,60 @@ has its own streaming wiring via fsm — leave it alone)."
           )))
 
   ) ; end of use-package! gptel
+
+;;;; gptel-agent — agents + skills 인프라 (karthink 제작)
+
+;; ~/.claude/skills/ 는 `gptel-agent-skill-dirs` 기본값에 이미 포함.
+;; `gptel-agent-update` 가 frontmatter (description) 만 metadata-only 로딩 →
+;; LLM 의 system message 에 `<available_skills>` XML 로 노출 (opencode 패턴).
+;; LLM 이 `Skill` tool 호출 시점에 SKILL.md 본문 lazy 로드.
+;;
+;; 기본 16 tool 등록: Agent / TodoWrite / Glob / Grep / Read / Insert / Edit /
+;; Write / Mkdir / Eval / Bash / WebSearch / WebFetch / YouTube / Skill.
+;; Bash/Write/Edit 등 위험 tool 은 confirmation default.
+;;
+;; 기본 5 agent preset: gptel-agent / gptel-plan / executor / introspector / researcher.
+;; `M-x gptel-menu` → preset 선택으로 활성화.
+;;
+;; ⚠ OpenAI-sub backend (Codex Responses API) + Agent/subagent 호출은 issue #107
+;; "Stream must be set to true" 에 부딪힘. 우리 `+gptel--codex-stream-advice`
+;; 가 `gptel-request` `:around` 라 `gptel-agent--task` 호출도 자동 우회 — 검증
+;; 필요. ekattsim 의 second issue (deleted buffer chunk crash) 는 별개 자리.
+(use-package! gptel-agent
+  :defer t
+  :config
+  ;; Tool confirmation 일괄 비활성 — 신뢰 환경에서 prompt fatigue 제거.
+  ;; gptel-agent 의 7 tool (Write/Edit/Bash/Mkdir/Eval/Insert/Agent) 이
+  ;; `:confirm t` 명시 박혀있어 global setq 만으로는 못 끔 — tool object 의
+  ;; :confirm 자체를 nil 로 강제. 위험 tool 도 무조건 실행.
+  (defun +gptel--disable-tool-confirmations ()
+    "Strip `:confirm' on all gptel tools."
+    (dolist (category gptel--known-tools)
+      (dolist (tool-cell (cdr category))
+        (let ((tool (cdr tool-cell)))
+          (when (gptel-tool-p tool)
+            (setf (gptel-tool-confirm tool) nil))))))
+
+  ;; 사용자 정체/환경 prompt 를 각 agent 의 :system 앞에 prepend.
+  ;; agents/*.md 의 system prompt 가 user-llm-system-prompt 를 대체하던 자리.
+  ;; gptel-agent-update 가 매번 agents 를 reset 하므로 advice 가 누적되지 않음.
+  ;; preset 재생성으로 chat buffer 다음 활성화 시점에 반영.
+  ;; (agzam 패턴: dotsamples/doom/agzam-dot-doom/.../config.el)
+  (defun +gptel-agent--inject-user-prompt (&rest _)
+    "Prepend `user-llm-system-prompt' to each agent's :system + re-create presets."
+    (when (and (boundp 'user-llm-system-prompt) user-llm-system-prompt)
+      (dolist (entry gptel-agent--agents)
+        (when-let* ((system (plist-get (cdr entry) :system)))
+          (plist-put (cdr entry) :system
+                     (concat user-llm-system-prompt "\n\n" system))))
+      (dolist (preset-name '("gptel-agent" "gptel-plan"))
+        (when-let* ((p (assoc-default preset-name gptel-agent--agents nil nil)))
+          (apply #'gptel-make-preset (intern preset-name) p)))))
+
+  (setq gptel-confirm-tool-calls nil)
+  (advice-add 'gptel-agent-update :after #'+gptel--disable-tool-confirmations)
+  (advice-add 'gptel-agent-update :after #'+gptel-agent--inject-user-prompt)
+  (gptel-agent-update))
 
 ;;;; 버퍼 요약/번역 (+gptel-buffer)
 

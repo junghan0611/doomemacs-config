@@ -205,6 +205,7 @@
 ;;;; ai-gptel.el
 
 (unpin! gptel)  ; OpenAI OAuth (gptel-openai-oauth.el) needs >= 56e5b06
+(package! gptel-agent)
 (package! uuidgen) ; for gptel-prompt
 (package! gptel-prompt :recipe (:host github :repo "jwiegley/gptel-prompts"))
 (package! yaml)      ; for .poet templates
