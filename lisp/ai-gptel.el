@@ -538,16 +538,21 @@ has its own streaming wiring via fsm — leave it alone)."
 ;; 기본 5 agent preset: gptel-agent / gptel-plan / executor / introspector / researcher.
 ;; `M-x gptel-menu` → preset 선택으로 활성화.
 ;;
-;; ⚠ OpenAI-sub backend (Codex Responses API) + Agent/subagent 호출은 issue #107
-;; "Stream must be set to true" 에 부딪힘. 우리 `+gptel--codex-stream-advice`
-;; 가 `gptel-request` `:around` 라 `gptel-agent--task` 호출도 자동 우회 — 검증
-;; 필요. ekattsim 의 second issue (deleted buffer chunk crash) 는 별개 자리.
+;; OpenAI-sub backend (Codex Responses API) + Agent/subagent 호출은 issue #107
+;; "Stream must be set to true" 에 부딪힘. 우회는 default `agents/gptel-agent.md`
+;; 의 DELEGATE/Agent 가이드를 우리 `agents/gptel-agent.md` (subagent-free 변형)
+;; 로 덮어쓰는 방식으로 해결 — LLM 이 subagent 자체를 모름.
+;; `gptel-agent-dirs` 에 우리 dir 을 append 하면 `gptel-agent--update-agents`
+;; 의 `setf (alist-get name ... equal)` 덕분에 같은 이름 (`gptel-agent`) entry
+;; 가 자연스럽게 교체됨. frontmatter `tools:` 리스트에서 `Agent` 도 빠져있어
+;; preset 활성 시 tool slot 도 비활성 — system prompt + tool slot 두 자리에서
+;; 모두 차단.
 (use-package! gptel-agent
   :defer t
   :config
   ;; Tool confirmation 일괄 비활성 — 신뢰 환경에서 prompt fatigue 제거.
-  ;; gptel-agent 의 7 tool (Write/Edit/Bash/Mkdir/Eval/Insert/Agent) 이
-  ;; `:confirm t` 명시 박혀있어 global setq 만으로는 못 끔 — tool object 의
+  ;; gptel-agent 의 default tool 중 Write/Edit/Bash/Mkdir/Eval/Insert 가
+  ;; `:confirm t` 박혀있어 global setq 만으로는 못 끔 — tool object 의
   ;; :confirm 자체를 nil 로 강제. 위험 tool 도 무조건 실행.
   (defun +gptel--disable-tool-confirmations ()
     "Strip `:confirm' on all gptel tools."
@@ -572,6 +577,13 @@ has its own streaming wiring via fsm — leave it alone)."
       (dolist (preset-name '("gptel-agent" "gptel-plan"))
         (when-let* ((p (assoc-default preset-name gptel-agent--agents nil nil)))
           (apply #'gptel-make-preset (intern preset-name) p)))))
+
+  ;; Append our prompts/ dir AFTER the package default so our
+  ;; `gptel-agent.md' (subagent-free variant) overrides the upstream one in
+  ;; `gptel-agent--update-agents'.
+  (add-to-list 'gptel-agent-dirs
+               (expand-file-name "prompts/" doom-user-dir)
+               t)
 
   (setq gptel-confirm-tool-calls nil)
   (advice-add 'gptel-agent-update :after #'+gptel--disable-tool-confirmations)

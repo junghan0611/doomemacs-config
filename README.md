@@ -66,6 +66,9 @@ doomemacs-config/
 │   ├── verify-org-links.py      # Stage 1.5 — ~/org GitHub URL lychee verify (read-only)
 │   └── check-description.sh     # description / abstract 누락 검사
 │
+├── prompts/             # gptel-agent system prompts (overrides upstream)
+│   └── gptel-agent.md            # Subagent-free variant of upstream default
+│
 ├── run.sh               # Unified CLI/TUI management
 └── flake.nix            # Emacs 31 IGC (MPS GC) Nix build
 ```
@@ -154,15 +157,38 @@ Incremental export (daily use) finishes in seconds, processing only changed file
 
 ## AI/Agent Modules
 
+The **main workflow** is `gptel-agent` (karthink) — a Markdown/Org agent definition
+system that loads sub-agent specs from disk, registers skills from `~/.claude/skills/`,
+and runs tools inside the Emacs buffer. Plain `gptel-send` chat is rarely used; almost
+everything flows through agent presets.
+
 | Module | File | Purpose |
 |--------|------|---------|
-| GPTel | `ai-gptel.el` | Multi-backend LLM (Claude, OpenAI, Gemini, local) |
+| **gptel-agent** | `ai-gptel.el` (`use-package! gptel-agent`) | **Primary chat/agent surface** — agent presets, skills, in-buffer tool execution |
+| GPTel core | `ai-gptel.el` | Multi-backend wiring (Claude, OpenAI-sub OAuth, Gemini, DeepSeek, local) + Codex stream advice |
 | Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
 | Whisper STT | `ai-stt-whisper.el` | Speech-to-text via Groq whisper-large-v3 |
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | Terminal multiplexer orchestration |
+
+### Custom gptel-agent prompts (`prompts/`)
+
+`gptel-agent-dirs` is appended with our `prompts/` directory so files here
+override upstream definitions of the same name. Currently shipping:
+
+- `prompts/gptel-agent.md` — subagent-free variant of the upstream default.
+  DELEGATE / `<tool name="Agent">` / researcher / executor / introspector
+  guidance removed; skills + 14 default tools (TodoWrite / Glob / Grep / Read /
+  Edit / Write / Bash / Eval / WebSearch / WebFetch / ...) preserved.
+
+Why: the upstream default prompt instructs the LLM to delegate aggressively,
+which (a) bloats every system message with ~100 lines of routing rules and
+(b) triggers tool-only stream completions on the OAuth Codex backend, hitting
+[gptel-agent #107](https://github.com/karthink/gptel-agent/issues/107). Removing
+the delegation guidance keeps a single foreground agent loop — closer to how I
+actually use Emacs day to day.
 
 ## Korean Input & TTY
 
