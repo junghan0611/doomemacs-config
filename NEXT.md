@@ -7,119 +7,155 @@
 
 ---
 
-## TOP — ghostel + 한글 IME race condition (2026-05-26, in-flight)
+## TOP — ghostel + 한글 IME race condition fix (2026-05-26, applied & verified)
 
 ghostel은 우리 담당. fork branch `fix/korean-ime-commit` 운용 중.
-upstream refactor 시 회귀 대비 — **이 NEXT.md + commit msg + 코드 주석**
-세 자리에 진단/근거가 박혀 있어야 함.
+**ghostel 업데이트가 빨라서 upstream merge 시 우리 patch와 맞춰야 함.**
+회귀 대비 — 이 NEXT.md + commit msg + 코드 주석 세 자리에 진단/근거 박힘.
 
-ghostel repo: `~/repos/gh/ghostel`, current branch `fix/korean-ime-commit`
-(2 patch commits: `8d3320d`, `d9c5b11`). doomemacs straight build:
-`~/.emacs.d/.local/straight/build-30.2/ghostel/ghostel.elc`.
+- 우리 자리: `~/repos/gh/ghostel` @ `fix/korean-ime-commit`
+- straight clone: `~/.emacs.d/.local/straight/repos/ghostel` (동일 fork origin)
+- build: `~/.emacs.d/.local/straight/build-30.2/ghostel/ghostel.elc`
+- 브랜치 commits (이전 2 + 신규 4):
+  ```
+  db2484d  Fix function-name and pending-buffer wording in IME guard commentary
+  88cdb7a  Defer delayed-redraw during lisp IME composition (safety net)
+  83f110c  Suppress immediate-redraw during lisp IME composition
+  3b518a0  Add lisp-IME composition guard helpers (no behavior change)
+  d9c5b11  Restrict IME commit forwarding to PTY-forwarding input modes  (이전)
+  8d3320d  Forward IME-committed text to PTY for Emacs input methods       (이전)
+  ```
 
-### 증상
+### 증상 (해결됨)
 
-wezterm → emacs GUI → ghostel buffer → pi-coding-agent 환경에서:
+wezterm → emacs (-nw 또는 GUI) → ghostel buffer → pi-coding-agent 환경에서
+에이전트 응답 중 / 직후 한글 입력 시 SPC 누르면 음절 사라짐, 또는
+39바이트 카오스 음절 PTY 송신 (실측 사례: `"자갈ㅓㅏㅓㅏㅏㅏㅓㅏㅓㅏㅓ"`).
 
-- **첫 턴**: 한글 입력 정상 ("테스트 입니다" + SPC + 마침표 모두 OK)
-- **에이전트 응답 중 / 직후**: SPC 누르면 음절 사라짐, 또는 카오스 음절
-  39바이트 한 번에 PTY 전송 (사례: "자갈ㅓㅏㅓㅏㅏㅏㅓㅏㅓㅏㅓ")
+### race window 진단 (분신 검수 통과 + 실측 확정)
 
-### race window 진단 (분신 검수 통과)
-
-1. **hangul2-input-method**는 우리 IME wrapper(`ghostel--ime-wrap-input-method`)
-   안에서 자체 `read-key-sequence` 루프 + `hangul-insert-character` →
-   `self-insert-command`로 ghostel buffer를 **임시 작업장**처럼 사용.
-2. 동시에 pi의 토큰 stream이 PTY로 도착 → ghostel filter의
-   **immediate-redraw path** (`ghostel.el:5606`, output ≤ 256B + 직전 send
-   ≤ 50ms전 조건) 가 `ghostel--delayed-redraw`를 **sync로** 호출.
-3. `--delayed-redraw` 본체 (`ghostel.el:6628`) 가 native module
-   `ghostel--redraw`로 buffer를 erase+reinsert. `quail-overlay` marker
-   invalidated. `(inhibit-modification-hooks t)` 라 quail은 본인 overlay
-   깨진 것도 모름.
+1. `hangul2-input-method`가 우리 IME wrapper 안에서 자체
+   `read-key-sequence` 루프 + `hangul-insert-character` →
+   `self-insert-command`로 ghostel buffer를 임시 작업장처럼 사용.
+2. 동시에 pi 토큰 stream 도착 → `ghostel--filter`의 immediate-redraw
+   path (`ghostel.el` 의 `(if (and (> ghostel-immediate-redraw-threshold 0) ...))`
+   분기, output ≤ 256B + 직전 send ≤ 50ms전 조건) 가
+   `ghostel--delayed-redraw`를 **sync로** 호출.
+3. `--delayed-redraw` 본체가 native module `ghostel--redraw` 호출 →
+   buffer erase+reinsert. `quail-overlay` marker invalidated.
+   `(inhibit-modification-hooks t)` 이라 quail은 자신의 overlay 깨진
+   사실도 모름.
 4. wrapper의 `(buffer-substring before-point after-point)` 캡쳐가 stale
-   buffer state를 잡아서 garbage를 PTY로 forward.
+   state 잡아서 garbage PTY 송신.
 
-### 기존 한계 (왜 ghostel이 지금까지 못 잡았나)
+### 기존 한계 (왜 ghostel이 못 잡았나)
 
-`ghostel--active-preedit-overlay` (`ghostel.el:6366`) 는
-`'(x-preedit-overlay pgtk-preedit-overlay)` 두 GUI native IME만 추적.
-`quail-overlay` (emacs lisp IME — hangul, anthy 등 다 포함) 는 ghostel
-설계 단계에서 시야 밖. `--capture-preedit-state`/`--restore-preedit-state`
-도 동일.
+`ghostel--active-preedit-overlay` 는 `'(x-preedit-overlay pgtk-preedit-overlay)`
+두 GUI native IME만 추적. `quail-overlay` (emacs lisp IME — hangul,
+anthy 등) 는 ghostel 설계 시야 밖.
+`--capture-preedit-state` / `--restore-preedit-state` 동일.
 
 ### Invariant (이 patch가 박는 contract)
 
 > **Lisp IME composition 중에는 terminal buffer rewrite 금지.
-> PTY output은 libghostty pending으로 누적, composition 끝나면 처리.**
+> PTY output은 `ghostel--pending-output` 에 누적, composition 끝나면
+> deferred redraw 가 native parser로 flush.**
 
-### Fix 디자인 v2 (검수 통과, 적용 대기)
+### 의도된 시각적 동작 (버그 아님)
 
-3-commit, 분신 정정점 4개 반영 (no timeout, buffer identity dynamic
-bind, GUI IME 분리, nil-safe overlay 검사):
+한글 composition 중에는 ghostel buffer rewrite가 defer되므로:
 
-**commit 1** — `ghostel--ime-lisp-composing-p` helper + dynamic flag.
-behavior change 없음. wrapper에 `(let ((ghostel--ime-lisp-composition-buffer (current-buffer))) ...)` 추가.
+- 에이전트 토큰 stream 도착해도 화면 갱신 안 됨
+- **pi 스피너가 일시 정지된 것처럼 보임**
+- composition 끝나면 (음절 commit / SPC / RET / 비한글 키) 누적된 frame이
+  한 번에 flush → 스피너가 최신 위치로 점프
 
-**commit 2** — `ghostel--filter-output` immediate-redraw path
-(`ghostel.el:5606`) 조건에 `(not (ghostel--ime-lisp-composing-p))` 추가.
-sync race 차단.
+invariant의 직접 시각화. correctness > liveness tradeoff.
 
-**commit 3** — `ghostel--delayed-redraw` 본체 진입 (`ghostel.el:6574`
-직후) 에 composition 가드 + reschedule. **timeout 없음** (correctness >
-liveness — 1.5초 read-loop 사례 있어서 watchdog은 의미 약함).
+### Fix 구성 (적용 완료, 4-commit)
 
-각 commit msg에 분신 권고 6항목 박을 것: **증상 / race / 기존 한계 /
-invariant / 위치 근거 / 경계**. upstream refactor 시 후속 에이전트가
-주석만 보고 race window 진단을 복원 가능해야 함.
+| SHA | 제목 | 변경 |
+|-----|------|------|
+| `3b518a0` | Add lisp-IME composition guard helpers (no behavior change) | helper 도입, dynamic flag, commentary block (`;; Lisp IME composition guard`) |
+| `83f110c` | Suppress immediate-redraw during lisp IME composition | `ghostel--filter` 의 immediate-redraw 분기 조건에 `(not (ghostel--ime-lisp-composing-p))` 추가 |
+| `88cdb7a` | Defer delayed-redraw during lisp IME composition (safety net) | `ghostel--delayed-redraw` 를 wrapper로, 본체를 `--delayed-redraw-body` 로 분리. wrapper 에서 composing 시 reschedule |
+| `db2484d` | Fix function-name and pending-buffer wording in IME guard commentary | 분신 3차 review 정정 (`filter-output` → `filter`, "pending in libghostty" 표현 정정) |
+
+각 commit msg에 분신 권고 6항목 박힘:
+**증상 / race / 기존 한계 / invariant / 위치 근거 / 경계 / upstream refactor guidance**.
+
+### 테스트 결과 (2026-05-26 실측)
+
+| 라운드 | 환경 | 결과 |
+|--------|------|------|
+| 1 | semi-char + emacs -nw + WezTerm + pi streaming + 정적 스피너 | ✅ 한글 입력 정상, race 없음 |
+| 2 | 위 + **default 12fps 스피너** 복원 | ✅ 여전히 정상. composition 중 스피너 일시 정지 → composition 끝나면 jump (의도된 동작) |
+
+특히 emacs -nw에서도 작동 — race가 ghostel 본인 코드 내부에 있어서
+frame mode (GUI / -nw) 와 무관하다는 강한 증거.
+
+### whimsical.ts 원복
+
+`~/repos/gh/agent-config/pi-extensions/whimsical.ts` 의 STATIC_INDICATOR
+호출 제거 (commit `47bafb7`). root cause가 ghostel 쪽에서 잡혔으므로
+워크어라운드 불필요. 코드 안에 history 코멘트 박음.
 
 ### Fix A (auto-reattach via post-command-hook) — 보류
 
-분신 의견: root 잡힌 후 wrapper 탈락 snapshot이 재현되면 그때 별도
-safety commit. 같은 묶음에는 비추천. "self-heal, not root fix"라 명시
-필요.
+분신 의견: root 잡힌 후에도 `wrapped=nil` snapshot이 재현되면 그때 별도
+safety commit. 같은 묶음에는 비추천. 현재 테스트 통과로 **불필요 확정**.
 
-### 현재 진행 상태
+### **upstream 회귀 시 점검 우선순위 (중요)**
 
-- ✅ debug instrumentation v1+v2 발사: `/tmp/ghostel-ime-debug.el`,
-  `/tmp/ghostel-ime-debug-v2.el` (advice + variable-watcher + auto-reattach
-  prototype). pi emacs (`/run/user/.../emacs/pi`) 에 살아있음.
-- ✅ snapshot 캡쳐 완료 (broken state: `wrapped=nil`, `orig=hangul2-input-method`,
-  `hangul-queue=[9 0 35 0 0 0]`).
-- ✅ 분신 1차 (`task 66c9dee1`, $1.21) — 가설 절반 맞음 판정 + hangul2
-  read-loop race 메커니즘 확정.
-- ✅ 분신 2차 (resume `66c9dee1`, $0.56) — design v2 검수 통과 + 4개
-  정정점 반영.
-- ⏸ 코드 작성 안 함. GLG 결정 대기.
+업스트림이 다음 자리를 refactor 하면 우리 patch가 깨질 수 있음.
+`git fetch upstream && git merge upstream/main` 후 점검 순서:
 
-### 다음 한 걸음
+1. **`ghostel--filter` 함수** (현 `lisp/ghostel.el:5640`): immediate-redraw
+   분기 condition 변경 시 → commit `83f110c` 의
+   `(not (ghostel--ime-lisp-composing-p))` 가드를 새 condition 자리에
+   옮김. 의도: **PTY filter → delayed-redraw 의 모든 sync path 차단
+   (composition 중)**.
 
-1. `ghostel` repo `fix/korean-ime-commit` 브랜치에 3-commit으로 patch
-   적용. 주석 깊이는 분신 권고 6항목 그대로.
-2. `git push junghan0611 fix/korean-ime-commit` (origin = 자기 fork).
-3. doomemacs straight rebuild — `doom sync` 또는 `M-x straight-rebuild-package ghostel`.
-4. pi에서 한글 입력 재검증 — 에이전트 streaming 중 SPC + 한글 합성 깨지지
-   않는지. wrapper 탈락 (`wrapped=nil`) 재현되면 Fix A 별도 commit 검토.
-5. 검증 OK면 `/tmp/ghostel-ime-debug*.el` instrumentation 제거 (또는
-   archive).
+2. **`ghostel--delayed-redraw` 와 `--delayed-redraw-body` 분리** (현
+   `lisp/ghostel.el:6641` 직후): 본체가 refactor되거나 native module
+   호출 자리가 바뀌면 commit `88cdb7a` 의 wrapper/body 분리 구조를 새
+   형태에 맞춰 옮김. 의도: **모든 caller에서 native `ghostel--redraw`
+   진입 전 composition 가드**.
 
-### upstream 회귀 시 어디 봐야 하나
+3. **`ghostel--active-preedit-overlay`** (현 `lisp/ghostel.el:6366`):
+   upstream이 여기에 `quail-overlay` 또는 lisp IME overlay를 공식
+   추가하면 → 우리 patch 폐기 가능. predicate 통합 검토.
 
-- 5606 immediate-redraw condition이 refactor되면 → commit 2의 가드
-  자리가 사라짐. 새 immediate path를 찾아 같은 predicate로 가드.
-- `ghostel--delayed-redraw` 본체가 refactor되면 → commit 3의 진입부
-  guard 위치 재조정. 핵심은 `(ghostel--redraw ghostel--term ...)`
-  native module 호출 **전**에 가드가 박혀야 함.
-- `ghostel--active-preedit-overlay`에 quail-overlay가 upstream에서
-  공식 추가되면 → 우리 patch는 폐기 가능. predicate 통합 검토.
+4. **`ghostel--ime-wrap-input-method`** (현 `lisp/ghostel.el:2304` 부근):
+   우리가 이미 patch 한 자리 (이전 2 commit + 신규 1 commit).
+   upstream에 IME wrap 자체에 다른 mechanism 도입되면 그쪽으로 통합.
+
+5. **`ghostel--capture-preedit-state` / `--restore-preedit-state`**: lisp
+   IME overlay 보존이 upstream에 추가되면 commit `3b518a0` 의 helper
+   에서 quail-overlay branch 빼기 가능.
+
+### 진행 상태 (2026-05-26 18:XX 시점)
+
+- ✅ debug instrumentation v1+v2 발사 (advice + variable-watcher +
+  auto-reattach prototype). pi emacs 에 살아있음. 회귀 진단용.
+- ✅ snapshot 캡쳐 + 분석 (broken state: `wrapped=nil`,
+  `orig=hangul2-input-method`, `hangul-queue=[9 0 35 0 0 0]`).
+- ✅ 분신 검수 3 pass (`task 66c9dee1`, gpt-5.5, 총 \$2.42): 가설 검증 →
+  design v2 정정점 4개 → 코드 final review 정정점 2개.
+- ✅ 4-commit 작성 + push (origin/fix/korean-ime-commit).
+- ✅ straight clone sync 완료.
+- ✅ 실측 검증 통과 (2 라운드 — static / default spinner).
+- ✅ whimsical.ts 원복 commit + push (agent-config `47bafb7`).
+- ⏸ debug instrumentation 정리 (`/tmp/ghostel-ime-debug*.el`) — 다음
+  upstream merge 회귀 진단용으로 archive할지, 제거할지. 일단 살림.
 
 ### 관련 자리
 
-- 분석 세션: 2026-05-26 GLG-Claude (이 NEXT 항목)
-- 분신 task id: `66c9dee1` (gpt-5.5, sync, resumable)
-- ghostel repo: `~/repos/gh/ghostel`
-- whimsical 스피너 자리: `~/repos/gh/agent-config/pi-extensions/whimsical.ts`
-  (별도 fix 완료 — `setWorkingIndicator({frames: ["●"]})`)
+- 분석 세션: 2026-05-26 GLG-Claude
+- 분신 task id: `66c9dee1` (gpt-5.5, sync, resumable, 3-pass review)
+- ghostel repo: `~/repos/gh/ghostel` @ `fix/korean-ime-commit`
+- agent-config whimsical 원복: commit `47bafb7`
+- debug instrumentation: `/tmp/ghostel-ime-debug.el`, `/tmp/ghostel-ime-debug-v2.el`
 
 ---
 
