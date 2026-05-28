@@ -7,7 +7,150 @@
 
 ---
 
-## TOP — ghostel + 한글 IME race condition fix (2026-05-26, applied & verified)
+## TOP — ghostel 한글 IME race condition fix → upstream PR #343 in review (2026-05-28)
+
+**상태**: draft PR 제출 + co-maintainer @emil-e 가 architectural direction 회신. 다음 한 걸음은 그 방향 검토 후 refactor.
+
+### Upstream PR (2026-05-28)
+
+- **PR URL**: https://github.com/dakra/ghostel/pull/343
+- **Branch**: `junghan0611/ghostel @ fix/korean-ime-commit` → `dakra/ghostel main`
+- **State**: OPEN, draft, mergeable (충돌 없음 — 0.30.0 + 118 commit churn 통과)
+- **Title**: `[Draft] Forward IME-committed text and guard redraws during composition (CJK lisp IME)`
+
+#### PR body — English original submitted
+
+```markdown
+Hi @dakra,
+
+Before anything else — **thank you for ghostel**. This project is genuinely precious to me, and I mean that.
+
+## A bit about who I am
+
+I'm a Doom Emacs user and a CJK (Korean — Hangul) speaker, and I work daily in **both GUI Emacs and `-nw` (terminal) Emacs**. The `-nw` path matters to me as much as the GUI path. For years, getting Korean IME to behave reliably inside terminal-style buffers inside Emacs has been a constant low-grade pain. ghostel solved enough of that — and was clean enough underneath — that I rebuilt my terminal workflow around it.
+
+I'm also a ghostty user, and honestly: I had been quietly thinking I might have to attempt this kind of project myself at some point. I'm very glad someone with your skill level got there first and built it properly. Truly grateful.
+
+## How I use ghostel
+
+- Doom Emacs config: https://github.com/junghan0611/doomemacs-config
+- The exact ghostel setup I daily-drive (single SSOT for GUI + `-nw`): https://github.com/junghan0611/doomemacs-config/blob/main/lisp/term-config.el
+- Main workload inside ghostel buffers: [`pi`](https://github.com/junghan0611/pi-shell-acp) (an ACP-based agent harness I develop) and Claude Code. Both are heavy streaming TUIs that emit small PTY chunks at high frequency — which turns out to be the exact race-condition trigger this PR addresses.
+- Korean input method: `hangul2-input-method` via Emacs' built-in `quail`.
+
+## What this PR proposes
+
+Two related changes, ~170 lines total, **all in `lisp/ghostel.el`**, **zero native zig changes**.
+
+### 1. Forward IME-committed text to PTY for Emacs input methods
+
+Some Emacs input methods commit text by directly inserting into the buffer (`hangul-insert-character` → `(self-insert-command 1)` as a *function call* with `last-command-event` bound) instead of returning events from `input-method-function`. A function call bypasses `[remap self-insert-command]`, so the character lands in the ghostel buffer but is never sent to the PTY — the next redraw erases it.
+
+Fix: locally wrap `input-method-function` in ghostel buffers. Around the original IME call, observe whether point advanced; if so the IME committed text by buffer insertion. Capture that text, delete it from the buffer, and forward it to the PTY as UTF-8. The shell echoes it back through the normal redraw path, so the buffer ends up consistent without racing the redraw. IMEs that already return events (most quail packages) pass straight through. Restricted to PTY-forwarding modes (semi-char, char); line mode untouched.
+
+### 2. Guard `ghostel--redraw` against running mid-composition
+
+When a TUI streams output via ~256B PTY chunks while the user composes Korean via `hangul2-input-method`, syllables vanish — or 30+ byte chaos sequences (literally like `자갈ㅓㅏㅓㅏㅏㅏㅓㅏㅓㅏㅓ`) get forwarded to the PTY.
+
+Race: `hangul2-input-method` runs a `read-key-sequence` loop inside the IME wrapper, using the ghostel buffer as a scratch area; each key mutates the buffer via `hangul-insert-character` → `self-insert-command`. In parallel, agent output triggers `ghostel--filter`'s immediate-redraw path, which calls `ghostel--delayed-redraw` synchronously; that body invokes the native `ghostel--redraw` to erase + reinsert the buffer from libghostty's VT grid. `quail-overlay` markers get invalidated mid-loop while `inhibit-modification-hooks t` silences quail's notifications, and the wrapper's `buffer-substring` then captures stale text.
+
+Existing limit: `ghostel--active-preedit-overlay` only tracks `x-preedit-overlay` / `pgtk-preedit-overlay` — GUI native IME. Emacs-lisp IMEs (`quail-overlay` family: hangul, anthy, …) were never in scope; `--capture-preedit-state` / `--restore-preedit-state` don't see them.
+
+Fix: a small predicate `ghostel--ime-lisp-composing-p` (a dynamic flag set by the IME wrapper + a live `quail-overlay` check) guards every code path that can end in `ghostel--redraw` rewriting the buffer:
+
+- The sync immediate-redraw branch in `ghostel--filter` — falls through to the bulk path during composition.
+- The body of `ghostel--delayed-redraw` — split into `ghostel--delayed-redraw-body`, with the guard living in the renamed wrapper. Catches every caller (theme sync, PTY filter immediate path, PTY filter bulk timer, `M-x ghostel-force-redraw`, window resize) in one place.
+
+**GUI native IME streaming behavior is intentionally unchanged** — the predicate excludes `x-preedit-overlay` / `pgtk-preedit-overlay`. Line mode is unaffected. While the symptom that surfaced this is Korean hangul, the fix uses `quail-overlay` (Emacs core), so it generalizes to **any lisp IME** — Japanese anthy, Chinese, …
+
+Detailed race-window analysis, invariant, and refactor guidance for future-you are documented inline as commentary blocks (the `;; Lisp IME composition guard` section).
+
+## Why this is a draft
+
+I don't send PRs the moment I write something. I keep the patch on a fork branch, pull upstream into it on a regular cadence, and use the result as my daily driver — that's how I shake bugs out. ghostel is your main project; it deserves to be treated that way.
+
+By now this series has survived **two upstream merges including the v0.30.0 release plus 118 commits**, including refactors that touched the exact same area (`9ff243f Centralize ghostel buffer terminal initialization`, `22e535a Break out invalidation logic out of redraw`) — with no merge conflicts and no behavioral regressions in daily use. That gives me reasonable confidence the placement is structural rather than coincidental.
+
+That said, it stays as a **draft** until you weigh in. Things I'd love your judgement on:
+
+- **Filesystem layout** — keep inline in `lisp/ghostel.el`, or move to a new `lisp/ghostel-ime.el`. I left it inline because every call site lives in `ghostel.el`, but I have no strong preference.
+- **Squash policy** — currently 6 commits, preserving the diagnostic narrative (each commit body reads like a small race-condition write-up). Happy to fold into ~3 if you prefer fewer, larger commits.
+- **Commentary tone** — I included a lot of "if upstream restructures X, the guard's intent is …" notes inside the file. Useful, or noise?
+- **Tests** — the race is concurrent (PTY stream vs. IME compose loop), so I documented it as a commentary block rather than as ert. I can take a swing at a hypothesis-style test if you'd want one before merge.
+- **Don't merge?** — entirely fine. Please just say so and I'll keep it on my fork. The main reason I opened the PR at all is so other CJK users running streaming TUI agents inside ghostel can find this.
+
+## Branch / commits
+
+- Fork & branch: [`junghan0611/ghostel` `fix/korean-ime-commit`](https://github.com/junghan0611/ghostel/tree/fix/korean-ime-commit)
+- Foundation: `8d3320d Forward IME-committed text to PTY for Emacs input methods` (2026-05-07)
+- Mode restriction follow-up: `d9c5b11 Restrict IME commit forwarding to PTY-forwarding input modes`
+- Guard series: `3b518a0` (helpers, no behavior change) → `83f110c` (immediate-redraw) → `88cdb7a` (delayed-redraw safety net) → `db2484d` (commentary fix)
+
+---
+
+다시 한 번, 진심으로 감사합니다.
+
+— @junghan0611
+```
+
+#### Maintainer feedback — @emil-e (co-maintainer with @dakra, 2026-05-28)
+
+🔗 https://github.com/dakra/ghostel/pull/343#issuecomment-4561598593
+
+> Hi @junghan0611, I'm a co-maintainer with @dakra. Thanks for the PR. I will need some time to review this more carefully since I'm pretty keen on avoiding increased complexity in this particular area, but here are some initial thoughts:
+>
+> - The blocking of redraw makes sense but there's a lot of code inhibiting redraws now, or at least it feels like that. I wonder if you can instead hook this into `ghostel--terminal-live-p` or something like that.
+> - Many of the comments are quite wordy and could use quite a bit of trimming down.
+>
+> I do think proper support for Emacs IMEs is something we should have so would love to work with you to get this in. I don't have time right now for a more thorough review :)
+
+**진짜 의미** (한 줄): "방향은 이쪽으로 잡아주세요. 그렇게 정리된 버전이 올라오면 그때 본격 review 합니다."
+
+- `I'm pretty keen on avoiding increased complexity in this particular area` — **강한 가드레일** (현재 모양이 그쪽 기준 과다)
+- `I wonder if you can instead hook this into terminal-live-p or something like that` — **architectural direction** (예시 함수까지 지목, "기존 헬퍼에 흡수")
+- `I do think proper support for Emacs IMEs is something we should have` — **방향성 승인**
+- `would love to work with you to get this in` — **협업 의지**
+
+→ 일반적인 OSS PR review 흐름 1단계 (`skim → direction → contributor revises → maintainer thorough review`)의 정확한 자리. 공이 contributor에게 넘어왔음.
+
+#### My reply (2026-05-28)
+
+🔗 https://github.com/dakra/ghostel/pull/343#issuecomment-4561763793
+
+> Hi @emil-e — thanks for the direction and the warm reception. Both points received.
+>
+> I'll read `ghostel--terminal-live-p` and the surrounding gating helpers carefully before I touch anything — the goal is to see whether the lisp-IME predicate can be absorbed into existing terminal-state machinery cleanly, the way you suggested. If that consolidation works the new call site in `ghostel--filter` and the `--delayed-redraw` split both go away, and the diff shrinks a lot.
+>
+> On the wordy comments — agreed, I'll trim to a single small block and move the race-window narrative to the commit body where it stops aging.
+>
+> I'll work at my own pace and force-push to this branch when the rewrite is ready. No need to ping me — just take a look whenever you have bandwidth.
+>
+> Thanks for the path.
+
+#### 다음 한 걸음 (refactor 작업 항목)
+
+1. **`ghostel--terminal-live-p` + 주변 gating helper 읽기** (`lisp/ghostel.el`)
+   - emil-e가 지목한 흡수 자리. 실제로 lisp-IME predicate를 거기에 묻을 수 있는지 구조적으로 확인.
+   - 안 되면 다른 흡수 자리 찾기 ("or something like that"가 함의).
+
+2. **현재 6 commit 구조 정리 → 새 형태**
+   - 흡수 가능하면: 새 call site (`ghostel--filter`에 추가한 `(not (... composing-p))`, `--delayed-redraw` body 분리) 둘 다 제거 → 흡수된 자리 한 곳만 변경.
+   - 그러면 IME wrapper는 그대로 두고, 가드는 기존 terminal-state 체크 한 분기로.
+
+3. **In-source commentary trim**
+   - 현재 `;; Lisp IME composition guard` 헤더 + symptom/race/limit/invariant/boundaries/refactor-guidance 6 항목 블록 → **single small block (≤10줄)** 로 축소.
+   - 잘려나간 race-window 진단 narrative는 **commit body로 이동** (patch land 후 aging stop).
+
+4. **Squash → 1~2 commit**
+   - 현재 6개. 자연스럽게 1~2개로.
+   - 그쪽도 squash 선호 가능성 (PR body에서 squash 정책 물어본 적 있음).
+
+5. **Force-push to `fix/korean-ime-commit`**
+   - emil-e가 ping 받고 싶어하지 않음 ("No need to ping me — just take a look whenever you have bandwidth"라고 답글에 박음). 그냥 push.
+
+6. **그 후 wait for thorough review.**
+
+### Background — 우리 fork 운용 (적용 + 검증 완료, 2026-05-26)
 
 ghostel은 우리 담당. fork branch `fix/korean-ime-commit` 운용 중.
 **ghostel 업데이트가 빨라서 upstream merge 시 우리 patch와 맞춰야 함.**
