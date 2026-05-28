@@ -204,6 +204,7 @@
 (require 'tmux-config)               ; tmux + claude code orchestration
 ;; (require 'zellij-config)             ; zellij terminal multiplexer
 (require 'search-config)             ; recent-rgrep 등 검색 도구
+(require 'andenken-config)           ; andenken 시멘틱 메모리 클라이언트
 ;; Emacs 내부 터미널 에뮬레이터(vterm/ghostel 등)는 user/pi 인스턴스에서.
 ;; agent-server/server 같은 보조 데몬에서는 터미널 모듈 로딩을 피한다.
 (when (member server-name '("user" "pi"))
