@@ -21,8 +21,8 @@ config.el               # Loader only — requires lisp/*.el
 ├── lisp/ (39 files)    # One concern = one file
 ├── bin/                # Standalone scripts (no Doom dependency)
 ├── autoload/           # ;;;###autoload lazy functions
-├── run.sh              # Unified CLI/TUI: sync, export, agent, IGC
-└── flake.nix           # Emacs 31 IGC (MPS GC) via nix
+├── run.sh              # Unified CLI/TUI: sync, export, agent, unstable
+└── flake.nix           # Emacs unstable channel (next stable) via nix
 ```
 
 ## Code Organization Rules
@@ -100,7 +100,7 @@ Every `.el` file uses outline headings:
 |--------|---------|---------------|
 | `"user"` | GLG's GUI Emacs | `doom run` (Doom auto-calls `server-start` for GUI) |
 | `"server"` | Agent daemon | `run.sh agent start` (separate `--init-directory`) |
-| `"doom-igc"` | Emacs 31 IGC | `bin/emacs-igc.sh` |
+| `"doom-unstable"` | Emacs unstable channel | `bin/emacs-unstable.sh` (or `run.sh unstable start`) |
 
 The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon instances (`emacs -nw`, `doom run`) run independently.
 
@@ -279,7 +279,7 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 
 - `doom sync` needed after `init.el` module changes, NOT for `config.el`/`lisp/` edits
 - `per-machine.el` is git-ignored — font/theme overrides go there
-- Emacs 31 IGC coexists with 30.2 via separate `EMACSDIR` and `server-name`
+- Emacs unstable channel coexists with system stable via separate `EMACSDIR` (`~/doomemacs-unstable`) and `server-name` (`doom-unstable`). overlay#emacs-unstable는 latest release tag만 따라가므로 오늘은 시스템 stable과 같은 30.2, 31.1 release day에 자동 점프.
 - Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard
 - WezTerm + terminal Emacs + built-in Korean input is a custom path; if minibuffer/search prompt spacing breaks, inspect TTY width drift first — especially hardcoded Unicode ellipsis (`…`) in Consult prompt/path truncation before blaming Hangul input
 - **헤드리스 데몬은 Doom 모듈을 로드하지 않는다** (`bin/denote-export.el`, `bin/agent-server.el`). buffer-local org 변수(`org-attach-id-dir`, `org-download-image-dir` 등)가 GUI에서만 자동으로 잡히는 경우 가든에 broken figure가 누적된다. `workflow-shared.el`에 SSOT applier로 두고 양쪽에서 호출 — 회귀 시 첫 의심 지점. (사례: 2026-05-10 commit b348898 / d8b977a)

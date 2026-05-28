@@ -29,8 +29,8 @@ PI_DAEMON="pi"
 PI_SOCKET="/run/user/$(id -u)/emacs/$PI_DAEMON"
 PI_CLIENT="emacsclient -s $PI_DAEMON"
 
-# Emacs 31 IGC
-IGC_SCRIPT="$BIN_DIR/emacs-igc.sh"
+# Emacs unstable channel (overlay#emacs-unstable — latest release tag)
+UNSTABLE_SCRIPT="$BIN_DIR/emacs-unstable.sh"
 
 # Hugo content dir
 HUGO_CONTENT_DIR="$HOME/repos/gh/notes/content"
@@ -112,17 +112,17 @@ show_menu() {
   echo "    O) fix-org    (link 정정, dry-run + --apply)"
   echo "       CLI: ./run.sh fix-org --check  (~/org GitHub URL lychee 검증, read-only)"
   echo ""
-  echo "  ${YELLOW}Emacs 31 IGC${NC} (MPS GC)"
-  echo "    i) igc run      (doom run, GUI)"
-  echo "    t) igc tty      (doom run -nw, 터미널)"
-  echo "    d) igc debug    (--debug-init)"
-  echo "    I) igc install  (sync + env + profile)"
-  echo "    S) igc sync     (doom sync)"
-  echo "    U) igc update   (doom sync -u)"
-  echo "    E) igc env      (doom env)"
-  echo "    D) igc doctor   (doom doctor)"
-  echo "    K) igc kill     (서버 종료)"
-  echo "    v) igc version"
+  echo "  ${YELLOW}Emacs unstable${NC} (next stable channel)"
+  echo "    i) unstable run      (doom run, GUI)"
+  echo "    t) unstable tty      (doom run -nw, 터미널)"
+  echo "    d) unstable debug    (--debug-init)"
+  echo "    I) unstable install  (sync + env + profile)"
+  echo "    S) unstable sync     (doom sync)"
+  echo "    U) unstable update   (doom sync -u)"
+  echo "    E) unstable env      (doom env)"
+  echo "    D) unstable doctor   (doom doctor)"
+  echo "    K) unstable kill     (서버 종료)"
+  echo "    v) unstable version"
   echo ""
   echo "    0) Exit"
   echo ""
@@ -589,27 +589,27 @@ cli_mode() {
         *)       err "pi: start|stop|restart|status|tty|client|eval" ;;
       esac
       ;;
-    igc)
+    unstable)
       local action="${1:-run}"; shift || true
       case "$action" in
-        run)     "$IGC_SCRIPT" ;;
-        tty|nw)  "$IGC_SCRIPT" --nw ;;
-        debug)   "$IGC_SCRIPT" --debug ;;
-        install) "$IGC_SCRIPT" --install ;;
-        sync)    "$IGC_SCRIPT" --sync ;;
-        update)  "$IGC_SCRIPT" --update ;;
-        env)     "$IGC_SCRIPT" --env ;;
-        doctor)  "$IGC_SCRIPT" --doctor ;;
-        kill)    "$IGC_SCRIPT" --kill ;;
-        version) "$IGC_SCRIPT" --version ;;
-        *)       err "igc: run|debug|install|sync|update|env|doctor|kill|version" ;;
+        run)     "$UNSTABLE_SCRIPT" ;;
+        tty|nw)  "$UNSTABLE_SCRIPT" --nw ;;
+        debug)   "$UNSTABLE_SCRIPT" --debug ;;
+        install) "$UNSTABLE_SCRIPT" --install ;;
+        sync)    "$UNSTABLE_SCRIPT" --sync ;;
+        update)  "$UNSTABLE_SCRIPT" --update ;;
+        env)     "$UNSTABLE_SCRIPT" --env ;;
+        doctor)  "$UNSTABLE_SCRIPT" --doctor ;;
+        kill)    "$UNSTABLE_SCRIPT" --kill ;;
+        version) "$UNSTABLE_SCRIPT" --version ;;
+        *)       err "unstable: run|debug|install|sync|update|env|doctor|kill|version" ;;
       esac
       ;;
     verify)  cmd_verify ;;
     fix)     cmd_fix ;;
     fix-org) cmd_fix_org "$@" ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|igc|verify|fix|fix-org> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|unstable|verify|fix|fix-org> [args]"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -668,16 +668,16 @@ main() {
       X) cmd_pi_stop ;;
       R) cmd_pi_stop; sleep 1; cmd_pi_start ;;
       T) cmd_pi_tty ;;
-      i) "$IGC_SCRIPT"; read -p "계속하려면 Enter..."; continue ;;
-      t) "$IGC_SCRIPT" --nw; read -p "계속하려면 Enter..."; continue ;;
-      d) "$IGC_SCRIPT" --debug; read -p "계속하려면 Enter..."; continue ;;
-      I) "$IGC_SCRIPT" --install; read -p "계속하려면 Enter..."; continue ;;
-      S) "$IGC_SCRIPT" --sync; read -p "계속하려면 Enter..."; continue ;;
-      U) "$IGC_SCRIPT" --update; read -p "계속하려면 Enter..."; continue ;;
-      E) "$IGC_SCRIPT" --env; read -p "계속하려면 Enter..."; continue ;;
-      D) "$IGC_SCRIPT" --doctor; read -p "계속하려면 Enter..."; continue ;;
-      K) "$IGC_SCRIPT" --kill; read -p "계속하려면 Enter..."; continue ;;
-      v) "$IGC_SCRIPT" --version ;;
+      i) "$UNSTABLE_SCRIPT"; read -p "계속하려면 Enter..."; continue ;;
+      t) "$UNSTABLE_SCRIPT" --nw; read -p "계속하려면 Enter..."; continue ;;
+      d) "$UNSTABLE_SCRIPT" --debug; read -p "계속하려면 Enter..."; continue ;;
+      I) "$UNSTABLE_SCRIPT" --install; read -p "계속하려면 Enter..."; continue ;;
+      S) "$UNSTABLE_SCRIPT" --sync; read -p "계속하려면 Enter..."; continue ;;
+      U) "$UNSTABLE_SCRIPT" --update; read -p "계속하려면 Enter..."; continue ;;
+      E) "$UNSTABLE_SCRIPT" --env; read -p "계속하려면 Enter..."; continue ;;
+      D) "$UNSTABLE_SCRIPT" --doctor; read -p "계속하려면 Enter..."; continue ;;
+      K) "$UNSTABLE_SCRIPT" --kill; read -p "계속하려면 Enter..."; continue ;;
+      v) "$UNSTABLE_SCRIPT" --version ;;
       V) cmd_verify ;;
       F) cmd_fix ;;
       O) cmd_fix_org ;;

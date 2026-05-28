@@ -28,7 +28,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 
 | | |
 |---|---|
-| **Emacs** | 30.2 (stable) + 31 IGC/MPS (experimental) |
+| **Emacs** | 30.2 (system stable) + unstable channel (auto-bumps to 31.1 on release) |
 | **Framework** | Doom Emacs (hlissner style) |
 | **Notes** | 3,300+ Denote org-mode files in `~/org/` |
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,100+ published |
@@ -49,7 +49,7 @@ doomemacs-config/
 │   ├── denote-*.el          # Denote ecosystem (4)
 │   ├── org-*.el             # Org-mode (2)
 │   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC
-│   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
+│   ├── tty-config.el           # TTY: term-keys, kitty-graphics, ghostel
 │   ├── workflow-shared.el       # Human ↔ Agent shared contract
 │   └── ...                      # 25+ more modules
 │
@@ -57,20 +57,20 @@ doomemacs-config/
 │   ├── agent-server.el          # Agent RPC server (socket "server")
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
-│   ├── emacs-igc.sh             # Emacs 31 IGC launcher
+│   ├── emacs-unstable.sh        # Emacs unstable channel launcher (next stable)
 │   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
 │   ├── site-policy.el           # SSOT for host aliases, internal-path patterns, lychee opts
 │   ├── verify-relref.py         # Hugo relref link validator + fixer
 │   ├── verify-figures.py        # Figure src validator + fixer (Hugo + markdown)
 │   ├── verify-content.py        # Garden content hygiene (host alias, internal path, GitHub 404)
 │   ├── verify-org-links.py      # Stage 1.5 — ~/org GitHub URL lychee verify (read-only)
-│   └── check-description.sh     # description / abstract 누락 검사
+│   └── check-description.sh     # Check for missing description / abstract
 │
 ├── prompts/             # gptel-agent system prompts (overrides upstream)
 │   └── gptel-agent.md            # Subagent-free variant of upstream default
 │
 ├── run.sh               # Unified CLI/TUI management
-└── flake.nix            # Emacs 31 IGC (MPS GC) Nix build
+└── flake.nix            # Emacs unstable channel Nix build (overlay#emacs-unstable)
 ```
 
 ## Human-Agent Unified Agenda
@@ -101,7 +101,7 @@ Four isolated server sockets coexist. Daily use is **one GUI + many TTY clients 
 | `"user"` | Emacs 30.2 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
 | `"pi"` | Emacs 30.2 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
 | `"server"` | Emacs 30.2 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
-| `"doom-igc"` | Emacs 31 (MPS GC) | IGC experimental frontend (`./run.sh igc run`) |
+| `"doom-unstable"` | Emacs unstable channel | Next-stable preview frontend (`./run.sh unstable run`) |
 
 Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
 
@@ -202,18 +202,18 @@ Full Korean support across GUI and terminal:
 
 The terminal setup ensures `emacs -nw` over SSH has clipboard, Korean input, and full functionality — identical to GUI except for images.
 
-## Emacs 31 IGC (Experimental)
+## Emacs Unstable Channel
 
-MPS garbage collector build coexisting with stable 30.2:
+A second Emacs install that follows [emacs-overlay](https://github.com/nix-community/emacs-overlay)'s `emacs-unstable` attribute (= latest Savannah release tag). Today it's the same `30.2` as system stable; on the day Emacs 31.1 is officially tagged, this channel auto-bumps to 31.1 a few hours / days ahead of nixpkgs — that's the whole point: ride the next stable preview without leaving the stable line.
 
 ```bash
-./run.sh igc run        # GUI
-./run.sh igc tty        # Terminal (alias: eti)
-./run.sh igc install    # First setup
-./run.sh igc debug      # --debug-init
+./run.sh unstable run        # GUI
+./run.sh unstable tty        # Terminal (alias: etu)
+./run.sh unstable install    # First setup
+./run.sh unstable debug      # --debug-init
 ```
 
-Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~/doomemacs-igc`) and server socket (`"doom-igc"`).
+Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system stable Emacs.
 
 ## run.sh — Unified Management
 
@@ -225,7 +225,7 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 ./run.sh pi tty                # Attach a new TTY client to the pi daemon
 ./run.sh export all            # Export all folders (incremental)
 ./run.sh export all --force    # Force re-export
-./run.sh igc tty               # IGC terminal mode
+./run.sh unstable tty          # Emacs unstable channel — terminal mode
 ./run.sh verify                # Verify garden md ([1/4]~[4/4], read-only)
 ./run.sh fix                   # Fix garden md ([1/4]~[4/4], step-by-step y/N)
 ./run.sh fix-org               # Rewrite ~/org link patterns (dry-run + y/N + --apply)
@@ -234,79 +234,79 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 
 ### Garden Verify / Fix
 
-가든 export 후 콘텐츠 품질 검증 / 정정. TUI Verify 섹션의 V/F 두 키로 통합. 4단계:
+Post-export content quality verification and correction for the digital garden. Unified under the TUI Verify section's V/F keys. Four stages:
 
-**`./run.sh verify`** — read-only 검증 [1/4]~[4/4]:
+**`./run.sh verify`** — read-only verification [1/4]~[4/4]:
 
-| 단계 | 도구 | 검사 항목 |
-|------|------|----------|
+| Stage | Tool | Checks |
+|-------|------|--------|
 | [1/4] relref | `verify-relref.py --summary` | ALIVE / VIRTUAL / REWRITE / DEAD / AMBIGUOUS / MALFORMED |
-| [2/4] description | `check-description.sh` | botlog/notes/bib `#+description:` / abstract callout 누락 |
-| [3/4] figures | `verify-figures.py` | ALIVE / REWRITE / AMBIGUOUS / DEAD / UNKNOWN — Hugo `{{< figure src=…>}}` + Markdown `![](…)` 둘 다 |
-| [4/4] content | `verify-content.py --lychee` | HOST_ALIAS / INTERNAL_PATH / PRIVATE_ENDPOINT / URL_CRED / GITHUB_404 (+ ORPHAN, 현재 비활성) |
+| [2/4] description | `check-description.sh` | Missing `#+description:` / abstract callout in botlog / notes / bib |
+| [3/4] figures | `verify-figures.py` | ALIVE / REWRITE / AMBIGUOUS / DEAD / UNKNOWN — covers both Hugo `{{< figure src=…>}}` and Markdown `![](…)` |
+| [4/4] content | `verify-content.py --lychee` | HOST_ALIAS / INTERNAL_PATH / PRIVATE_ENDPOINT / URL_CRED / GITHUB_404 (+ ORPHAN, currently disabled) |
 
-**`./run.sh fix`** — 단계별 dry-run 후 y/N 적용:
+**`./run.sh fix`** — per-stage dry-run followed by y/N apply:
 
-| 단계 | 동작 |
-|------|------|
-| [1/4] relref | DEAD/MALFORMED → plain text 치환, REWRITE → 경로 정정 |
-| [2/4] anchors | ox-hugo 누출 anchor 정리: `{#title--relref-section-id-dot-md}` → `{#title}` (link 내장 헤딩에서 transcoded markdown이 슬러그에 섞이는 회귀 보정) |
-| [3/4] figures | REWRITE → 소스 파일을 `notes/static/images/` 로 복사 + markdown src 를 `/images/{basename}` 로 치환 |
-| [4/4] content | HOST_ALIAS 자동 alias 치환 / INTERNAL_PATH·GITHUB_404 → plain text. lychee로 `github.com/USER/*` URL 200 OK 검증. `site-policy.el` SSOT |
+| Stage | Action |
+|-------|--------|
+| [1/4] relref | DEAD/MALFORMED → plain text, REWRITE → corrected path |
+| [2/4] anchors | Strip leaked ox-hugo anchors: `{#title--relref-section-id-dot-md}` → `{#title}` (regression where transcoded markdown leaks into the slug of link-embedded headings) |
+| [3/4] figures | REWRITE → copy source file into `notes/static/images/` and rewrite the markdown src to `/images/{basename}` |
+| [4/4] content | HOST_ALIAS auto-alias rewrite; INTERNAL_PATH and GITHUB_404 → plain text. lychee verifies `github.com/USER/*` URLs return 200 OK. `site-policy.el` is the SSOT |
 
-`verify-figures.py` SEARCH_DIRS 우선순위: `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. 이전 export에서 이미 정착된 파일이 먼저 잡혀 복사 없이 src 치환만 일어난다 (sha256 동일 시 SKIP-IDENT).
+`verify-figures.py` SEARCH_DIRS priority: `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. Files already promoted by a prior export are matched first, so only the src is rewritten without a copy (sha256 match → SKIP-IDENT).
 
-`verify-content.py` 출력은 각 검출에 `→ ~/org: <path>` 매핑 한 줄을 같이 표시 — 사용자가 emacs에서 즉시 열어 수정.
+`verify-content.py` output annotates every detection with a `→ ~/org: <path>` mapping line so the source file can be opened directly in Emacs for editing.
 
-**lychee 운영 노트**:
-- `GITHUB_PERSONAL_ACCESS_TOKEN` (또는 `GITHUB_TOKEN`) 권장. `~/.env.local` 에 두면 `run.sh`의 verify/fix [4/4]와 `fix-org --check`이 자동 source. token 없는 결과는 advisory — secondary abuse rate-limit으로 다수가 false positive (실측 84 → 1).
-- `.lycheecache` 1d 캐시 + `cache-exclude-status: "404"` 안전망 — agenda-stamp가 박는 SHA URL은 push 사이클로 404 → 200 변하므로 캐시 false positive 회피.
-- `max-concurrency: 16` (기본 128은 abuse detection).
+**lychee operational notes**:
+- `GITHUB_PERSONAL_ACCESS_TOKEN` (or `GITHUB_TOKEN`) recommended. Place it in `~/.env.local`; `run.sh` auto-sources it for verify/fix [4/4] and `fix-org --check`. Without a token results are advisory only — secondary abuse rate-limits trigger many false positives (measured: 84 broken without token → 1 with token).
+- `.lycheecache` provides a 1-day cache with `cache-exclude-status: "404"` as a safety net — agenda-stamp SHA URLs flip from 404 → 200 over the push cycle, so caching them would persist a false positive.
+- `max-concurrency: 16` (default 128 trips abuse detection).
 
-**잔존 broken** (DEAD / UNKNOWN / GITHUB_404 등) 는 원본 org 파일에서 사용자가 결정 (figure 제거 / 새 스크린샷 / private 표기 / plain text / rename).
+**Remaining broken items** (DEAD / UNKNOWN / GITHUB_404, etc.) are decided by the user in the source org file: remove the figure, retake the screenshot, mark as private, demote to plain text, or rename.
 
 ### Org Hygiene — `./run.sh fix-org`
 
-~/org 원본 link 정정 (Stage 1). 가든 export hook 옆의 SSOT 변환:
+Rewrites links in source `~/org` files (Stage 1). The SSOT transformation that lives next to the garden export hook:
 
-| 케이스 | 변환 |
-|--------|------|
+| Pattern | Rewritten to |
+|---------|--------------|
 | `[[file:~/repos/gh/REPO]]` | `[[https://github.com/junghan0611/REPO]]` |
 | `[[file:~/repos/gh/REPO/path/file.el]]` | `[[https://github.com/junghan0611/REPO/blob/main/path/file.el]]` |
-| `[[file:~/repos/gh/REPO/file.el::N]]` | `[[https://github.com/junghan0611/REPO/blob/main/file.el#LN]]` (라인 anchor 보존) |
-| `[[https://OLD.junghanacs.com][...]]` | `site-policy.el` `host-aliases` 사전 치환 |
+| `[[file:~/repos/gh/REPO/file.el::N]]` | `[[https://github.com/junghan0611/REPO/blob/main/file.el#LN]]` (line anchor preserved) |
+| `[[https://OLD.junghanacs.com][...]]` | `site-policy.el` `host-aliases` substitution |
 
-**보호 영역** (절대 건드리지 않음): `[[denote:UUID]]`, `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]`, `[[file:~/org/...]]`, code / verbatim / src-block 내부 (org-element 기반이라 자동).
+**Protected regions** (never touched): `[[denote:UUID]]`, `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]`, `[[file:~/org/...]]`, and the interior of code / verbatim / src-block (handled automatically via org-element).
 
-**모드**:
-- `O` / `./run.sh fix-org` — dry-run → y/N → apply. 로컬 부재는 ⚠ 표시
-- `./run.sh fix-org --apply` — prompt 없이 직접
-- `./run.sh fix-org --check` — 변환 안 함. ~/org의 `[[https://github.com/USER/...]]` URL을 lychee로 검증, broken을 file:line으로 보고 (사용자가 ~/org에서 직접 분류)
+**Modes**:
+- `O` / `./run.sh fix-org` — dry-run → y/N → apply. Local-absent targets are marked with ⚠
+- `./run.sh fix-org --apply` — apply directly without prompt
+- `./run.sh fix-org --check` — no transformation. Verifies `[[https://github.com/USER/...]]` URLs in `~/org` via lychee and reports broken ones as file:line (user triages directly in `~/org`)
 
-**SSOT**: `bin/site-policy.el` 한 줄 추가 → fix-org / verify-content / verify-org-links 세 도구가 동시에 인지.
+**SSOT**: a single line added to `bin/site-policy.el` is simultaneously visible to fix-org, verify-content, and verify-org-links.
 
 ### Garden Deploy Workflow
 
-전체 export 후 표준 운영 흐름:
+Standard operational flow after a full export:
 
 ```
-Phase           Command                                  Purpose
-─────           ───────                                  ───────
-1. Org 위생     O ) ./run.sh fix-org                     ~/repos/gh/ file: → GitHub URL
-   (선택)         CLI: ./run.sh fix-org --check          broken GitHub URL 검출 (token 필요)
+Phase             Command                                  Purpose
+─────             ───────                                  ───────
+1. Org hygiene    O ) ./run.sh fix-org                     ~/repos/gh/ file: → GitHub URL
+   (optional)       CLI: ./run.sh fix-org --check          Detect broken GitHub URLs (token required)
 
-2. Export       7 ) ./run.sh export <dir>                증분
-                8 ) ./run.sh export <dir> --force        전체 재구축
-                9 ) submenu                              폴더별 증분/전체
+2. Export         7 ) ./run.sh export <dir>                Incremental
+                  8 ) ./run.sh export <dir> --force        Force rebuild
+                  9 ) submenu                              Per-folder incremental/full
 
-3. 가든 검증    V ) ./run.sh verify                      [1/4]~[4/4] 검증
+3. Garden verify  V ) ./run.sh verify                      [1/4]~[4/4] checks
 
-4. 가든 정정    F ) ./run.sh fix                         단계별 y/N. 자동 가능만 적용
+4. Garden fix     F ) ./run.sh fix                         Per-stage y/N. Only auto-fixable cases applied
 
-5. 사용자 분류  (emacs에서 ~/org 직접)                   verify 출력의 → ~/org 매핑 따라
+5. User triage    (edit ~/org directly in Emacs)           Follow the → ~/org mapping from verify output
 
-6. Deploy       cd ~/repos/gh/notes && git push          가든 배포
-                cd ~/sync/org && git push                ~/org 변경 같이
+6. Deploy         cd ~/repos/gh/notes && git push          Publish the garden
+                  cd ~/sync/org && git push                Push ~/org changes too
 ```
 
 ## Installation
@@ -330,11 +330,11 @@ ln -s ~/repos/gh/doomemacs-config ~/.doom.d
 alias ecs='emacsclient -s user -t'             # Attach TTY client to GUI Emacs (user daemon)
 alias ep='~/.doom.d/run.sh pi tty'             # Attach TTY client to pi daemon (full Doom)
 alias es='~/.doom.d/run.sh agent restart'      # Restart agent RPC daemon (socket "server")
-alias eip='~/.doom.d/run.sh igc run'           # Emacs 31 IGC GUI
+alias eup='~/.doom.d/run.sh unstable run'      # Emacs unstable channel GUI
 
 # Standalone (fallback)
-alias et='emacs -nw'                           # Emacs 30 terminal, no daemon
-alias eti='~/.doom.d/bin/emacs-igc.sh --nw'    # Emacs 31 IGC terminal, no daemon
+alias et='emacs -nw'                                # System stable Emacs terminal, no daemon
+alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs unstable channel terminal, no daemon
 ```
 
 **Typical session**: launch `doom run` once for the GUI, run `./run.sh pi start`, then open WezTerm tabs and type `ep` in each. All tabs share the same pi daemon — config edits, packages, native-comp eln cache, even open buffers are shared. Agent RPC runs in a separate `server` daemon so it never blocks the editor.
@@ -343,7 +343,7 @@ alias eti='~/.doom.d/bin/emacs-igc.sh --nw'    # Emacs 31 IGC terminal, no daemo
 
 | Platform | Emacs | Terminal | Status |
 |----------|-------|----------|--------|
-| NixOS 25.11 | 30.2 + 31 IGC | Ghostty / WezTerm | Primary |
+| NixOS 25.11 | 30.2 + unstable channel | Ghostty / WezTerm | Primary |
 | Termux (Android) | 30.x (nox) | Termux | Tested |
 
 ## Links
@@ -364,6 +364,7 @@ alias eti='~/.doom.d/bin/emacs-igc.sh --nw'    # Emacs 31 IGC terminal, no daemo
 - [Doom Emacs](https://github.com/doomemacs/doomemacs) — Henrik Lissner's framework
 - [Protesilaos Stavrou](https://protesilaos.com/) — Denote, modus-themes, and a philosophy of computing
 - [Pi Coding Agent](https://shittycodingagent.ai/) — Daniel Nouri's coding agent harness
+- [ghostel](https://github.com/dakra/ghostel) — dakra's terminal emulator inside Emacs (libghostty-based); the surface my pi / Claude Code TTY workflow runs on, and the project that finally made Korean IME inside terminal-Emacs feel solid
 
 ## FAQ
 
