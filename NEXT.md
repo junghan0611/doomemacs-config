@@ -226,14 +226,34 @@ minor-mode + buffer-local `input-method-activate/deactivate-hook` 등록 + core 
 | A1 | `5c89e8c` cherry-pick → main 위 새 브랜치 1 commit | 새 PR |
 | A2 | 새 PR 생성 (native module load fallback) | 새 PR |
 | B1 | L5801 filter 가드 제거 (중복) | #343 |
-| B2 | core 에 `ghostel-inhibit-redraw-functions` 도입, `--delayed-redraw` wrapper 게이팅 교체 | #343 |
+| B2 | core 에 `ghostel-inhibit-redraw-functions` (defcustom abnormal hook, predicate 는 `(&optional buffer)`) 도입. **`--delayed-redraw-body` split 폐기 → 기존 `ghostel--delayed-redraw` 에 guard 한 줄만 인라인** (GPT 리뷰: maintainer 복잡도 우려 → private body 함수가 노이즈). `(run-hook-with-args-until-success 'ghostel-inhibit-redraw-functions buffer)` | #343 |
 | B3 | IME 블록(L2328~2448) → `lisp/ghostel-ime.el` 이동 | #343 |
-| B4 | `ghostel-ime-mode` minor-mode 정의, 루트 add-hook 제거, predicate 를 hook 에 등록 | #343 |
+| B4 | `ghostel-ime-mode` minor-mode 정의, 루트 add-hook 제거. **enable: buffer-local IM hook + inhibit hook 등록 + 이미 IME 활성 buffer 면 즉시 `ghostel--ime-install`** / **disable: hook 제거 + 현재 IMF 가 wrapper 일 때만 원복 + stale `--ime-original-input-method-function` clear** (deactivate-input-method 가 hook 전에 IMF 를 nil 로 만들 수 있음 주의) | #343 |
 | B5 | **`test/ghostel-ime-test.el` 작성** — 위 부품 테스트 + CJK 3종 일반화 | #343 |
 | B6 | 인라인 코멘트 1블록(≤10줄) 트리밍, race-window narrative → commit body | #343 |
 | B7 | `make test` / `test-native` 통과 + daily-drive(emacs -nw + WezTerm + pi streaming + 한글) race 재현 안 됨 확인 | #343 |
 | B8 | main 기준 1 commit 으로 재구성 → force-push `fix/korean-ime-commit` | #343 |
 | B9 | dakra/emil-e 답글 — minor-mode 합의 + 다른 패키지 패턴 + CJK 테스트 + 분리 완료 보고 | 댓글 |
+
+#### GPT-5.5 리뷰 반영 (2026-05-29, task 66c9dee1 resume)
+
+이전 race 분석을 함께한 분신(gpt-5.5)이 오늘 계획을 read-only 검토. 방향 승인 + 수정 2점 + 사실 1건.
+
+**실측 확인**:
+- **hangul2-input-method 가 실제로 `quail-overlay` 를 쓴다** (`quail-setup-overlays`/`quail-overlay`/`read-key-sequence`/`self-insert-command`). → predicate 의 quail-overlay 의존 타당. 5(a) 리스크 해소.
+
+**수정 2점** (위 B2/B4 에 반영):
+1. `--delayed-redraw-body` split 폐기 → 기존 함수에 guard 한 줄 인라인 (복잡도 최소).
+2. minor-mode enable 시 "이미 활성 IME 면 즉시 install" 누락 금지. disable 시 stale original 정리.
+
+**답변 방향 확정**:
+- generic hook: `terminal-live-p` 에 직접 섞지 **말 것** (copy-mode freeze 의미와 일시 redraw defer 가 섞여 의미 흐려짐). 별도 `defcustom :type 'hook` abnormal hook 이 맞다. emil-e 의 "terminal-live-p 류로 흡수" 의도는 "흩어진 inhibit 을 한 게이팅으로 수렴" 이지 그 함수 자체가 아님 — 우리 해석과 일치.
+- CJK 테스트 표현: "race 완전 재현" 이 아니라 **"race 를 구성하는 두 메커니즘(commit-forward[직접 insert IME] / redraw-guard[quail-overlay lisp IME])을 단위로 고정"**. native 태그 redraw-defer 테스트가 후자의 핵심 증거.
+- dakra minor-mode 질문 답글 예시: `corfu-mode` / `company-mode` / `flyspell-mode` / `yas-minor-mode` (major-mode hook opt-in), `electric-pair-mode` / `evil-mode` (명시적 enable). "모두 항상 필요" 보다 "필요한 사용자가 `ghostel-mode` hook 에서 켠다".
+- commit body race narrative: 5줄로 압축 (scratch 사용 → streaming redraw → state 깨짐 → inhibit hook defer → opt-in mode). 코드 주석은 더 짧게.
+- (d) GUI native IME 충돌 없음: predicate 가 preedit overlay 를 안 보고, hook 기본 nil 이면 core 동작 불변.
+
+**GPT 최종 권고 6단계** (우리 작업표와 일치): native 별도 PR → IME main 위 1 commit → ghostel.el 엔 public hook + guard 한 줄만 → 구현은 ghostel-ime.el + opt-in mode → filter 가드 제거 → delayed-redraw split 없이 guard 삽입.
 
 **재고려 트리거**: B5 테스트에서 (1) minor-mode 형태로 wrap/guard 가 안 걸리거나, (2) CJK 3종 중 일부가 predicate 에 안 잡히면 → 형태를 다시 고민. 테스트가 이 자리를 잡아주는 안전망. 통과 못 하면 force-push 안 함.
 
