@@ -7,123 +7,31 @@
 
 ---
 
-## TOP — ghostel 한글 IME PR #343 재작성: 구현·실측·린트 완료, **새 세션에서 최종검수→PR 발송** (2026-05-29)
+## TOP — ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
 
-**상태**: 구현 + 실사용 검증 + GPT 합동 리뷰 + 메인테이너 스타일 1차 린트 완료. `~/repos/gh/ghostel @ feat/emacs-lisp-ime` (d3e3072 기반)에 **uncommitted**. 새 세션은 아래 "START HERE v2"대로 **마지막 검수 한 번 더 → 메인테이너 코드스타일 린트 → 단일 커밋 → force-push → 답글**만 하면 됨.
+**상태**: ✅ **PR 발송 완료.** 재작성 → 단일 커밋 → force-push → 답글 → 닷파일 복원/검증 전부 끝. 이제 dakra/emil-e 리뷰만 기다림. 공이 메인테이너에게.
 
----
+- **PR #343**: https://github.com/dakra/ghostel/pull/343 (OPEN, draft)
+- **발송 커밋**: `2a9fd7d Add ghostel-ime-mode for Emacs Lisp input methods` — `fix/korean-ime-commit` 에 force-push (main=d3e3072 위 1 commit). 작업 브랜치 `feat/emacs-lisp-ime` 도 같은 커밋.
+- **답글**: https://github.com/dakra/ghostel/pull/343#issuecomment-4571986049 (rewrite 요약 — 분리/minor-mode/comment trim/native drop/테스트 + pi·Claude Code daily-driver 확인)
+- **검증**: `make byte-compile lint test` 전부 RC=0 (test-native 의 `ghostel-test-shell-integration` 만 환경실패 = NixOS `/bin/zsh` 부재, main 동일·무관). ime ert 8개 통과. **라이브 실측 통과** (pi + Claude Code streaming 중 한글 입력 정상).
+- **닷파일**: `packages.el` github recipe(`:branch fix/korean-ime-commit`)로 복원 + `doom sync` (repos/ghostel @ 2a9fd7d, ghostel-ime.elc 빌드, terminfo 경고 해소). `term-config.el` `:hook (ghostel-mode . ghostel-ime-mode)` 영구 유지. (commit `f703f43`)
 
-### ⚠️ START HERE v2 — 새 세션: 최종검수 → PR 발송 (2026-05-29, SSOT)
+### 다음 한 걸음 (리뷰 응답)
 
-**0. 환경 재확인 (매번 첫 단계 — 과거에 stale main 때문에 틀어진 적 있음)**
-```
-git -C ~/repos/gh/ghostel fetch dakra
-git -C ~/repos/gh/ghostel rev-list --left-right --count main...origin/main   # → 0 0
-git -C ~/repos/gh/ghostel rev-list --left-right --count main...dakra/main    # → 0 0  (= d3e3072)
-git -C ~/repos/gh/ghostel branch --show-current                              # → feat/emacs-lisp-ime
-```
-- ⚠️ `git fetch origin dakra` 아님 — **`git fetch dakra`** (dakra는 별도 remote). 옛 NEXT 오타.
-- worktree 금지 — in-repo 브랜치. `feat/emacs-lisp-ime` = 작업 브랜치, `fix/korean-ime-commit` = PR #343 브랜치(force-push 대상).
+- 메인테이너가 **변경 요청** 하면 → `feat/emacs-lisp-ime` 에서 수정 → 단일 커밋 유지 → `fix/korean-ime-commit` 에 force-push (같은 흐름).
+- **머지되면** → `packages.el` 을 upstream `dakra/ghostel` recipe 로 전환할지 결정 (우리 fork patch 불요해짐). fork 운용 종료 판단.
+- **거절(don't merge)** 이면 → fork `fix/korean-ime-commit` 유지, upstream merge 시 rebase 점검 (아래 "upstream 회귀 시 점검 우선순위").
 
-**1. 현재 변경 (= PR 내용). 전부 uncommitted, `git diff main` 으로 확인**
+### 설계 SSOT (회귀/리뷰 대응 시 참조)
 
-| 파일 | 변경 | 핵심 |
-|------|------|------|
-| `~/repos/gh/ghostel/lisp/ghostel.el` | +25/-1 | `defcustom ghostel-inhibit-redraw-functions`(`ghostel-timer-delay` 근처) + helper `ghostel--maybe-defer-redraw` + `ghostel--delayed-redraw` 진입 조건에 **한 줄 게이트**(`(and ghostel--term (ghostel--terminal-live-p) (not (ghostel--maybe-defer-redraw buffer)))`). **+2 indent churn 없음** — `git diff` 그대로 25줄. |
-| `~/repos/gh/ghostel/lisp/ghostel-ime.el` | **신규 170줄** | opt-in `ghostel-ime-mode`. core 의존은 `ghostel--buffer-editable-p`/`ghostel--send-string`/`ghostel-inhibit-redraw-functions`뿐. wrap(commit-forward) + `ghostel-ime-lisp-composing-p`(quail-overlay, `with-current-buffer` 정확) + install/uninstall + **`--reassert`(post-command-hook depth 90)** + **`list` sentinel 가드**. |
-| `~/repos/gh/ghostel/test/ghostel-ime-test.el` | **신규 217줄** | ert 8개 (defer / mode wiring / list guard / reactivation / external-reset reassert / CJK 한·あ·中 / quail / native mode-switch 생존). |
-| `~/repos/gh/ghostel/Makefile` | +3/-3 | ELC + checkdoc + docquotes 리스트에 ghostel-ime 추가. |
-| `~/repos/gh/ghostel/README.md` | +26 | `## Emacs Lisp input methods` 섹션 (`:ensure nil` + `:hook (ghostel-mode . ghostel-ime-mode)`). |
-
-**2. 설계 = 메인테이너 두 명 피드백 그대로** (PR body / 답글 섹션은 이 파일 아래 "Upstream PR" 참고)
-- dakra "1 redraw inhibit line" + emil-e "terminal-live-p 류로 흡수" → core는 `ghostel--delayed-redraw` **한 곳**에서만 generic hook 게이트. core는 IME 전혀 모름.
-- dakra "ghostel-ime.el 분리 / 루트 add-hook 금지 / minor-mode" → 전부 충족 (opt-in minor-mode, 모든 hook이 buffer-local).
-- emil-e "코멘트 trim" → core 코멘트 최소, narrative는 commit body로.
-- **A (native module PR) 폐기 확정** — d3e3072가 이미 `ghostel--load-module` user-error abort로 동등. #343 정리 시 자동 제거.
-
-**3. 실사용 검증 중 발견·수정한 견고성 버그 2개** (dogfooding 산물 = PR body가 말하는 daily-driver 검증)
-- **버그1 `list` sentinel**: 글로벌 `input-method-function` 런타임값이 `list`(IM 미활성 pass-through). install이 그 순간 발동하면 `list`를 원본으로 캡처 → 조합 우회. fix: install이 `(not (eq imf #'list))`이면만 캡처 + wrapper도 orig이 `list`면 안전 pass.
-- **버그2 외부 IM 매니저 우회 (evil 등)**: evil/커스텀 훅이 `input-method-activate-hook`을 우회해 IM 복원 → 래퍼가 raw로 남음. fix: `ghostel-ime--reassert`(post-command-hook, `current-input-method` 게이팅)가 다음 키 전에 재래핑. **evil 비종속 self-healing** — 코드에 evil 의존 0, 주석은 "외부 manager 예시"로 표현.
-
-**4. 검증 상태 (전부 ✅, 재현 명령)**
-```
-cd ~/repos/gh/ghostel
-make byte-compile   # error-on-warn t — 경고 0
-make checkdoc       # exit 0
-make docquotes      # exit 0
-# ime 테스트 8개:
-emacs --batch -Q -L lisp -L test -l ert -l test/ghostel-test-helpers.el -l test/ghostel-ime-test.el --eval "(ert-run-tests-batch-and-exit '(not (tag native)))"  # 7 pass
-emacs --batch -Q -L lisp -L test -l ert -l test/ghostel-test-helpers.el -l test/ghostel-ime-test.el --eval "(ert-run-tests-batch-and-exit '(tag native))"        # 1 pass
-make test           # elisp 18파일 FAILED 0
-make test-native    # render 73 등 통과. ghostel-test-shell-integration만 FAIL = 환경(NixOS /bin/zsh 부재, main에서도 동일) → 무관
-```
-- **라이브 실측 통과** (2026-05-29): semi-char / line-mode / evil normal↔insert 전환 전부 한글 입력 + SPC 정상.
-
-**5. 새 세션 할 일 (순서)**
-1. 환경 재확인(위 0).
-2. **최종 코드 검수 한 번 더** — diff 전체 정독, 메인테이너 코드스타일(명령형 commit, `\`symbol'` 인용, 코멘트 간결) 재점검.
-3. **메인테이너 스타일 린트 풀세트**: `make byte-compile checkdoc docquotes` + 가능하면 `make package-lint`(네트워크로 deps fetch — `ghostel.el`/`evil-ghostel.el`만 대상이라 ghostel-ime는 무관하지만 ghostel.el 변경분 확인) + `make lint`.
-4. **단일 커밋** (dakra "1 commit on top of main"). 메시지 초안 = 이 파일 아래 "#### 단일 커밋 메시지 초안".
-5. **force-push** → `git push -f origin feat/emacs-lisp-ime:fix/korean-ime-commit` (PR #343 브랜치 유지). ⚠️ **outward — 반드시 GLG 승인 후.**
-6. **답글** 작성 (아래 "#### 메인테이너 답글 포인트").
-7. (선택) `~/repos/gh/doomemacs-config/packages.el`을 dev `:local-repo` → 원래 `:host github :branch fix/korean-ime-commit`로 복원 + `doom sync`. 복원하면 terminfo 경고도 사라짐(전체 clone).
-
-**6. doomemacs-config 쪽 변경 (PR과 무관, 작업용 — 별도 처리)**
-- `lisp/term-config.el`: `:hook`에 `(ghostel-mode . ghostel-ime-mode)` 추가 (영구 유지 OK — opt-in 활성).
-- `packages.el`: ghostel recipe를 dev용 `:local-repo "~/repos/gh/ghostel/" :files ("lisp/*.el")`로 변경 (**임시** — PR 후 github/branch 복원).
-- `lisp/korean-input-config.el`: **건드리지 않음**. 버그2 reassert fix가 사용자 `korean/evil-*` 훅을 그대로 두고도 자가복구.
-
-**7. 알려진 gotcha**
-- **terminfo 경고**(`Bundled terminfo not found ... falling back to TERM=xterm-256color`): dev `:local-repo` + `:files ("lisp/*.el")`가 `etc/terminfo/`를 안 가져와서. `ghostel--resource-root`가 build dir의 `etc/`를 찾는데 없음. 해결: (A) `:files`에 `("etc/terminfo/x" "etc/terminfo/x/*")` 등 추가 + `doom sync`, 또는 (B) `(setq ghostel-term "xterm-256color")` 침묵, 또는 (C) PR 후 github recipe 복원하면 자동 해결(전체 clone). **임시 이슈**.
-- shell-integration 테스트 환경 실패는 정상(위 4).
-- GPT 자산 백업 여전히 유효: `~/.local/state/ghostel-ime-wip/` (ghostel-ime.el 원본 + 5bce751 diff).
-
-#### 단일 커밋 메시지 초안 (ghostel 방언: 타입접두사 없음, 명령형, `\`symbol'`)
-
-```
-Add ghostel-ime-mode for Emacs Lisp input methods
-
-Some Emacs Lisp input methods, such as `hangul-input-method', commit
-text by calling `self-insert-command' directly instead of returning
-events from `input-method-function'.  A direct call bypasses ghostel's
-key remapping, so the character lands in the buffer but is never sent
-to the PTY and the next redraw erases it.  Separately, when a TUI
-streams output while the user composes via a Quail-style method, the
-renderer can rewrite the buffer mid-composition and corrupt the
-in-flight syllable.
-
-Add `ghostel-ime-mode', an opt-in buffer-local minor mode in a new
-`ghostel-ime.el'.  When the input method commits by buffer insertion
-the mode forwards the committed text to the PTY as UTF-8 and lets the
-shell echo it back through the normal redraw path.
-
-Core gains a single generic hook, `ghostel-inhibit-redraw-functions',
-checked once in `ghostel--delayed-redraw': if any function returns
-non-nil the redraw is deferred and rescheduled.  ghostel-ime registers
-its composition predicate there, so core never calls into the IME code
-directly.  GUI native preedit handling is unchanged.
-
-Users opt in with `:hook (ghostel-mode . ghostel-ime-mode)'.  The
-predicate keys on `quail-overlay' (Emacs core), so it generalizes to
-any Lisp input method - Korean Hangul, Japanese, Chinese.
-
-The mode also re-asserts the wrapper from `post-command-hook' so an
-external input-method/state manager (Evil, for example) that restores
-the raw translator without firing `input-method-activate-hook' does
-not leave commits unforwarded.
-
-Add ghostel-ime-test.el covering the deferral hook, the minor-mode
-wiring, the list-sentinel guard, re-activation and external-reset
-re-wrapping, CJK commit-forwarding, the quail-overlay probe, and
-input-mode-switch survival.
-```
-
-#### 메인테이너 답글 포인트 (dakra/emil-e)
-- minor-mode 합의: GUI 네이티브 IME는 core가 이미 커버, Lisp-IME 버퍼-insert 경로는 소수(주로 CJK `-nw`) → **opt-in이 맞다**. evil-ghostel과 동일 패턴(`:hook (ghostel-mode . ...)`).
-- emil-e "terminal-live-p 류 흡수" = generic `ghostel-inhibit-redraw-functions` 한 곳 게이트로 구현, 코멘트 trim 완료, **filter 가드 제거**(immediate path가 delayed-redraw로 수렴).
-- **native module drop 투명 설명**: main이 이미 `ghostel--load-module` user-error abort로 동등 → 별도 PR 불요, 이 rewrite에서 drop.
-- **post-command reassert 선제 설명**: evil 의존 아님, 외부 IM/state manager 일반 대응(evil은 예시), 테스트 첨부.
-- diff 작음 강조(`ghostel.el` 25줄), 테스트 8개 mock/unit 중심(실 IM e2e는 환경의존이라 제외).
+- core 변경은 `ghostel.el` 단 하나 (+25/-1): `defcustom ghostel-inhibit-redraw-functions` (abnormal hook) + helper `ghostel--maybe-defer-redraw` + `ghostel--delayed-redraw` 진입에 한 줄 게이트. core 는 IME 를 전혀 모름.
+- `ghostel-ime.el` (신규 170줄): opt-in `ghostel-ime-mode` minor-mode. commit-forward wrap + `ghostel-ime-lisp-composing-p` (quail-overlay) + install/uninstall + `--reassert` (post-command-hook depth 90, 외부 IM/state manager 자가복구) + `list` sentinel 가드.
+- `test/ghostel-ime-test.el` (신규 217줄): ert 8개 (defer / mode wiring / list guard / reactivation / external-reset reassert / CJK 한·あ·中 / quail / native mode-switch 생존).
+- 메인테이너 피드백 매핑: dakra "1 redraw line + 분리 + 루트 add-hook 금지 + minor-mode" / emil-e "terminal-live-p 류로 흡수 + comment trim" → 전부 충족. native module fallback 은 main 이 이미 `ghostel--load-module` user-error abort 로 동등 → drop.
+- 견고성 버그 2개 (dogfooding): `list` sentinel 캡처 회피 / 외부 IM 매니저(evil 등) 우회 시 post-command reassert. 둘 다 ert 커버. evil 비종속 self-healing.
+- GPT 자산 백업: `~/.local/state/ghostel-ime-wip/` (ghostel-ime.el 원본 + diff).
+- 재현 명령: `cd ~/repos/gh/ghostel && make byte-compile lint test` + ime ert `emacs --batch -Q -L lisp -L test -l ert -l test/ghostel-test-helpers.el -l test/ghostel-ime-test.el --eval "(ert-run-tests-batch-and-exit t)"`.
 
 ---
 
