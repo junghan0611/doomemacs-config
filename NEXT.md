@@ -176,12 +176,26 @@ That said, it stays as a **draft** until you weigh in. Things I'd love your judg
 - Emacs 관용: 대부분 IME-aware / 환경 변경 기능은 minor-mode opt-in (evil-mode, corfu-mode, electric-pair-mode 등). "load 만으로 환경 바꾸지 마라"는 Emacs 커뮤니티 표준 원칙 — dakra 직관과 일치.
 - 답변 톤: 두 옵션 다 가져가지 말고 minor-mode 로 합의 (봇 분석 동의).
 
+#### A 폐기 — upstream 수렴 (2026-05-29)
+
+dakra 가 "별도 PR 로 빼라" 한 native module load feature(`5c89e8c fix(module): abort when native install fails`)를 main 에 cherry-pick 시도 → 충돌. 확인 결과 **main 이 이미 같은 의도를 더 견고하게 구현**:
+- `ghostel--compile-module` (main L756): 이미 성공 `t` / 실패·file-missing·error `nil` 반환 — 5c89e8c 핵심과 동일.
+- `ghostel--load-module` (main L913): docstring "load failures signal `user-error' so the calling flow aborts". `prompt-user` 시 module-load 실패·module 없음 둘 다 `user-error` abort. ensure 반환값 대신 file-exists-p 로 판단해 "compile 성공했는데 file 없음" 케이스까지 잡음 (5c89e8c 보다 견고).
+
+→ **PR 불필요. upstream 이 기다리는 사이 독립 수렴.** [[denote:20260220T113741][pi-mono lockSync]] 패턴 재현. dakra 답글에 "native module 부분은 upstream main 이 이미 동등 구현, 별도 PR 불필요" 한 줄. #343 을 main rebase 하면 `5c89e8c` 자동 제거되어 IME 만 남음.
+
+봇로그 [[denote:20260529T084444]] "기여의 두 양식" 시리즈에 **세 번째 사례**로 추가 가치 — 같은 fork 에서 "보낸 PR(IME)" 과 "안 보내도 되는 것으로 판명난 부분(native module)" 이 한 PR 안에 공존했고, upstream sync 가 후자를 자동 해소.
+
 #### 브랜치 전략 (repo 실사 2026-05-29)
 
 `main`(5bce751, 최신 upstream — v0.31.0 이후)이 `fix/korean-ime-commit` 의 **정확한 base** (`git merge-base main HEAD == main`, `HEAD..main` 비어있음). dakra 가 원하는 "1 commit on top of main" 을 그대로 만들 수 있는 깨끗한 상태. main..HEAD 의 우리 고유 변경은 IME 6커밋 + native module `5c89e8c` 둘 뿐(나머지는 머지로 따라온 upstream).
 
 - **A (native module PR)**: `git switch -c <name> main` → `5c89e8c` cherry-pick → main 위 1 commit → 새 PR. 리스크 작음, 먼저 떼면 #343 이 IME 만 남아 정리됨.
-- **B (IME PR 재작성)**: main 기준으로 IME 전체를 **1 commit + 테스트** 로 재구성 → `fix/korean-ime-commit` 을 그 형태로 만들어 force-push (PR #343 갱신). dakra 가 force-push 허가함.
+- **B (IME PR 재작성)** — GPT 2차 자문 확정 (worktree + #343 유지):
+  - **작업 위치**: main 기반 **작업용 새 브랜치** `feat/emacs-lisp-ime` 를 **worktree** 에서. user Emacs 의 `fix/korean-ime-commit`(IME 작동) 안 흔들림. in-place reset 은 daily-driver 위험만 큼.
+  - **PR 브랜치**: 완성 후 그 1 commit 을 `fix/korean-ime-commit` 에 force-push → **PR #343 유지** (reviewer context 보존, dakra force-push 명시 허가). 새 PR 로 갈아타지 않음.
+  - **범위**: commit-forward(`8d3320d`) + redraw-guard(`88cdb7a`) **한 commit 유지** — 코드상 분리 가능하나 둘 다 있어야 "한글 IME + streaming TUI" race 완전 해결 (commit-forward 만: mid-redraw race 잔존 / redraw-guard 만: 직접 insert 텍스트 PTY 미전송 잔존). 최소 범위 = core hook 1 + `ghostel-ime.el` + opt-in mode + squash 1.
+  - **#343 코멘트**: "native module split 시도했으나 main 이 이미 동등/더 강하게 구현해 rewrite 브랜치에서 drop" 투명 설명.
 
 #### 기능 보존 보장 = 테스트 (GLG 핵심 우려)
 
@@ -223,17 +237,17 @@ minor-mode + buffer-local `input-method-activate/deactivate-hook` 등록 + core 
 
 | # | 작업 | 대상 |
 |---|------|------|
-| A1 | `5c89e8c` cherry-pick → main 위 새 브랜치 1 commit | 새 PR |
-| A2 | 새 PR 생성 (native module load fallback) | 새 PR |
+| ~~A~~ | **폐기 (2026-05-29)** — main(5bce751)이 이미 동등 구현. PR 불필요 (아래 "A 폐기" 참조) | — |
+| B0 | **worktree** 에 main 기반 작업 브랜치 `feat/emacs-lisp-ime` 생성 (user Emacs 의 `fix/korean-ime-commit` 안 건드림). 완성분만 마지막에 force-push | worktree |
 | B1 | L5801 filter 가드 제거 (중복) | #343 |
 | B2 | core 에 `ghostel-inhibit-redraw-functions` (defcustom abnormal hook, predicate 는 `(&optional buffer)`) 도입. **`--delayed-redraw-body` split 폐기 → 기존 `ghostel--delayed-redraw` 에 guard 한 줄만 인라인** (GPT 리뷰: maintainer 복잡도 우려 → private body 함수가 노이즈). `(run-hook-with-args-until-success 'ghostel-inhibit-redraw-functions buffer)` | #343 |
 | B3 | IME 블록(L2328~2448) → `lisp/ghostel-ime.el` 이동 | #343 |
 | B4 | `ghostel-ime-mode` minor-mode 정의, 루트 add-hook 제거. **enable: buffer-local IM hook + inhibit hook 등록 + 이미 IME 활성 buffer 면 즉시 `ghostel--ime-install`** / **disable: hook 제거 + 현재 IMF 가 wrapper 일 때만 원복 + stale `--ime-original-input-method-function` clear** (deactivate-input-method 가 hook 전에 IMF 를 nil 로 만들 수 있음 주의) | #343 |
 | B5 | **`test/ghostel-ime-test.el` 작성** — 위 부품 테스트 + CJK 3종 일반화 | #343 |
 | B6 | 인라인 코멘트 1블록(≤10줄) 트리밍, race-window narrative → commit body | #343 |
-| B7 | `make test` / `test-native` 통과 + daily-drive(emacs -nw + WezTerm + pi streaming + 한글) race 재현 안 됨 확인 | #343 |
-| B8 | main 기준 1 commit 으로 재구성 → force-push `fix/korean-ime-commit` | #343 |
-| B9 | dakra/emil-e 답글 — minor-mode 합의 + 다른 패키지 패턴 + CJK 테스트 + 분리 완료 보고 | 댓글 |
+| B7 | `make test`→`make test-native`(native redraw defer)→CJK predicate 확인. **구조 완성 직후 중간 수동 실측 1회** (시행착오 축소) | worktree |
+| B8 | 최종 polish + **force-push 직전 수동 실측 1회**(emacs -nw + WezTerm + pi streaming + 한글) → `feat/emacs-lisp-ime` 의 1 commit 을 `fix/korean-ime-commit` 에 force-push | #343 |
+| B9 | dakra/emil-e 답글 — minor-mode 합의(corfu/company/flyspell/yas/electric-pair/evil 예시) + CJK 테스트 + **native module drop 투명 설명** + 분리 완료 보고 | 댓글 |
 
 #### GPT-5.5 리뷰 반영 (2026-05-29, task 66c9dee1 resume)
 
