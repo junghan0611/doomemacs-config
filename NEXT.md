@@ -9,7 +9,38 @@
 
 ## TOP — ghostel 한글 IME race condition fix → upstream PR #343 in review (2026-05-28)
 
-**상태**: draft PR 제출 + 메인테이너 두 명(@emil-e co-maintainer + @dakra owner) 모두 회신. 방향 동의, 형태 다듬기 요청. 다음 한 걸음은 (A) native module load 별도 PR 분리 + (B) IME PR을 ghostel-ime.el + minor-mode 로 재작성 후 force-push. **설계 확정됨** (아래 "확정 작업 분해" 참조).
+**상태 (2026-05-29 정정)**: 설계·2차 자문·환경 정리 완료. 코드 착수는 **새 세션에서**. ⚠️ 이전 준비가 stale local main(5bce751) 기준이라 틀어졌음 → 진짜 upstream `d3e3072` 로 정정 완료. **새 세션은 바로 아래 "START HERE" 블록부터 읽어라.** 그 아래 누적 본문(라인번호/worktree 흔적)은 설계 근거 archive — 라인번호는 d3e3072 기준 START HERE 를 따른다.
+
+---
+
+### ⚠️ START HERE — 새 세션 착수 가이드 (2026-05-29 정정, SSOT)
+
+**무엇이 틀어졌었나 (교훈)**: local `main` ref 가 stale(5bce751)인 채로 "최신 upstream" 이라 가정 → 그 위에 worktree 폴더 + GPT 패치 작업 → 진짜 upstream(`d3e3072`)보다 123커밋 뒤처짐. **재발 방지: 작업 전 항상 `git fetch origin dakra` → `git rev-list --left-right --count main...origin/main` 으로 대조. local `main` ref ≠ 최신 upstream.**
+
+**지금 깨끗한 상태 (정리 완료)**:
+- `~/repos/gh/ghostel` local `main` = `d3e3072` = `origin/main` = `dakra/main` (진짜 upstream, 0 0)
+- worktree 폴더 전부 제거. **worktree 금지 — 작업은 `~/repos/gh/ghostel` 안에서 브랜치로** (폴더 분산이 혼란의 원인이었다).
+- `fix/korean-ime-commit` = PR #343 브랜치. 현재 user Emacs(local-repo)가 이 브랜치 사용 — 한글 IME 작동 중. 브랜치 전환 시 IME 일시 영향하므로 ghostel-ime.el 적용까지 빠르게.
+- dakra remote 추가됨.
+
+**GPT 패치 자산** (gpt-5.5 task 66c9dee1 2차 검수 통과한 설계, d3e3072 재적용용):
+- `~/.local/state/ghostel-ime-wip/ghostel-ime.el` — `ghostel-ime.el` 완성본. core API(`ghostel--buffer-editable-p`/`ghostel--send-string`/`ghostel-inhibit-redraw-functions`)만 의존해 d3e3072 이식 OK. 거의 그대로 사용.
+- `~/.local/state/ghostel-ime-wip/core-test-readme-5bce751.diff` — core 게이팅 + test + README diff (5bce751 기준 → d3e3072 재적용 필요).
+
+**목적 (변함없음)**: upstream(`d3e3072`) 기반 브랜치에서, 메인테이너 방향(generic hook + `ghostel-ime.el` + opt-in minor-mode) + CJK 커버 + 테스트까지 넣어 PR #343 force-push.
+
+**착수 단계 (d3e3072 라인 기준)**:
+1. **환경 재확인**: `git -C ~/repos/gh/ghostel fetch origin dakra && git rev-list --left-right --count main...origin/main` → `0 0` 인지. 아니면 `git branch -f main origin/main` 으로 먼저 ff.
+2. **작업 브랜치**: `~/repos/gh/ghostel` 에서 `main`(d3e3072) 기반 브랜치 생성 (worktree 아님). 예: `git switch -c feat/emacs-lisp-ime main`.
+3. **core 게이팅** (`lisp/ghostel.el`): `ghostel--delayed-redraw` (d3e3072 **L6585**) 진입부를 `(if (with-demoted-errors "…" (run-hook-with-args-until-success 'ghostel-inhibit-redraw-functions buffer)) <defer+reschedule> <기존 본체>)` 로 감쌈 (split 없음). `defcustom ghostel-inhibit-redraw-functions` 는 `ghostel-timer-delay` (**L323**) 근처. `ghostel--filter` (**L5590**) 안 건드림 (sync/timer 두 경로가 delayed-redraw 로 수렴). GUI preedit(`ghostel--active-preedit-overlay` **L6392**) 경로 불변. → 자산 diff 참고하되 **라인은 d3e3072 기준 재배치**.
+4. **`lisp/ghostel-ime.el`**: 백업 자산 이식. commit-forward wrap(IME 가 buffer 직접 insert → delete → `ghostel--send-string` UTF-8 PTY forward) + `ghostel-ime-lisp-composing-p` predicate(dynamic var + `quail-overlay`) + `ghostel-ime-mode` minor-mode. mode 가 predicate 를 `ghostel-inhibit-redraw-functions` 에 buffer-local 등록, IM activate/deactivate hook buffer-local, **enable 시 이미 활성 IME 면 즉시 install**, disable 시 stale original 정리.
+5. **`test/`**: per-topic 구조 유지(d3e3072 도 분리됨, `ghostel-module-test.el` 은 없음). `ghostel-ime-test.el` 새 파일 권장. 부품(mode on/off · opt-in 비활성 · predicate · commit-forward) + **CJK 3종**(`korean-hangul` 한 / `japanese` あ / `chinese-py` 中) + `native` 태그 redraw-defer.
+6. **검증**: `make test` → `make test-native` → CJK → **구조 완성 직후 중간 실측 1회**(emacs -nw + WezTerm + pi streaming + 한글) → 최종 실측 → 작업 브랜치 1 commit 을 `fix/korean-ime-commit` 에 force-push (**PR #343 유지**).
+7. **답글**: dakra/emil-e — minor-mode 합의(corfu/company/flyspell/yas/electric-pair/evil 예시) + CJK 테스트 + **native module drop 투명 설명**("main 이 이미 `load-module` user-error abort 로 동등 구현, rewrite 브랜치에서 drop") + 분리 완료 보고.
+
+**A (native module PR) 폐기 — d3e3072 재확인 완료**: d3e3072 `ghostel--load-module` (L1383) docstring "so the calling flow aborts" + `user-error` 3곳(L1432/1443/1463) → install/load 실패 abort 유지. `5c89e8c` 불필요. #343 을 d3e3072 기준으로 정리하면 자동 제거됨.
+
+---
 
 ### Upstream PR (2026-05-28)
 
