@@ -28,7 +28,11 @@
 (use-package! ghostel
   :defer t
   :commands (ghostel ghostel-project my/pi-ghostel-start)
-  :hook (ghostel-mode . doom-mark-buffer-as-real-h)
+  :hook ((ghostel-mode . doom-mark-buffer-as-real-h)
+         ;; Opt-in Emacs Lisp IME integration (hangul2/quail commit-forward
+         ;; + redraw-defer during composition).  Must be on before
+         ;; `toggle-input-method' so its activate-hook wraps the live IME.
+         (ghostel-mode . ghostel-ime-mode))
   :if (and (fboundp 'module-load)
            module-file-suffix
            (not (bound-and-true-p IS-TERMUX)))
