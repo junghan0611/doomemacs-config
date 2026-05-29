@@ -9,7 +9,7 @@
 
 ## TOP — ghostel 한글 IME race condition fix → upstream PR #343 in review (2026-05-28)
 
-**상태**: draft PR 제출 + co-maintainer @emil-e 가 architectural direction 회신. 다음 한 걸음은 그 방향 검토 후 refactor.
+**상태**: draft PR 제출 + 메인테이너 두 명(@emil-e co-maintainer + @dakra owner) 모두 회신. 방향 동의, 형태 다듬기 요청. 다음 한 걸음은 (A) native module load 별도 PR 분리 + (B) IME PR을 ghostel-ime.el + minor-mode 로 재작성 후 force-push. **설계 확정됨** (아래 "확정 작업 분해" 참조).
 
 ### Upstream PR (2026-05-28)
 
@@ -127,28 +127,117 @@ That said, it stays as a **draft** until you weigh in. Things I'd love your judg
 >
 > Thanks for the path.
 
-#### 다음 한 걸음 (refactor 작업 항목)
+#### Maintainer feedback — @dakra (owner, 2026-05-28 08:59 UTC)
 
-1. **`ghostel--terminal-live-p` + 주변 gating helper 읽기** (`lisp/ghostel.el`)
-   - emil-e가 지목한 흡수 자리. 실제로 lisp-IME predicate를 거기에 묻을 수 있는지 구조적으로 확인.
-   - 안 되면 다른 흡수 자리 찾기 ("or something like that"가 함의).
+🔗 https://github.com/dakra/ghostel/pull/343#issuecomment-4562357898
 
-2. **현재 6 commit 구조 정리 → 새 형태**
-   - 흡수 가능하면: 새 call site (`ghostel--filter`에 추가한 `(not (... composing-p))`, `--delayed-redraw` body 분리) 둘 다 제거 → 흡수된 자리 한 곳만 변경.
-   - 그러면 IME wrapper는 그대로 두고, 가드는 기존 terminal-state 체크 한 분기로.
+> In addition to @emil-e's comment, I had a very quick peek.
+> It looks like there is a unrelated feature in there when native module loading fails. You can create a new PR with only that please (1 commit on top of main).
+>
+> The ime changes look very small but also besides the 1 redraw inhibit line completely independent. If we can somehow make it like @emil-e suggested that we don't directly need to call one of your new ime function, this could be a completely separate `ghostel-ime.el`.
+>
+> I'm also never a fan of adding hooks or changing someones Emacs just by loading a file. So imho the 2 `add-hook` calls on the root scope should not be there. How are other packages handling a situation like this normally? Could we make a minor-mode and tell users that want it to just do something like `:hook (ghostel-mode . ghostel-ime-mode)` or is it that every user always want this and we should just always activate / add-hook in the `ghostel` main function?
+>
+> Anyway, you can force push on this branch. Make a new PR, 1 commit, for the native module load feature, and this PR, 1 commit, on top of main.
 
-3. **In-source commentary trim**
-   - 현재 `;; Lisp IME composition guard` 헤더 + symptom/race/limit/invariant/boundaries/refactor-guidance 6 항목 블록 → **single small block (≤10줄)** 로 축소.
-   - 잘려나간 race-window 진단 narrative는 **commit body로 이동** (patch land 후 aging stop).
+**액션 4개**:
+1. **별개 PR 분리** — native module load fallback (`5c89e8c fix(module): abort when native install fails`) 는 IME와 무관 → main 위 1 commit 새 PR.
+2. **파일 분리** — redraw inhibit 1줄만 남기면 IME 코드는 독립 → `lisp/ghostel-ime.el` 로 완전 분리. 단 조건: core 가 IME 함수를 **직접 호출하지 않아야** 함.
+3. **루트 스코프 add-hook 2개 거부** — "파일 로드만으로 사용자 Emacs 바꾸는 패턴 싫다." → `ghostel-ime-mode` minor-mode + `:hook (ghostel-mode . ghostel-ime-mode)`. "다른 패키지는 어떻게?" 직접 질문.
+4. **이 PR force-push, main 위 1 commit.**
 
-4. **Squash → 1~2 commit**
-   - 현재 6개. 자연스럽게 1~2개로.
-   - 그쪽도 squash 선호 가능성 (PR body에서 squash 정책 물어본 적 있음).
+#### 확정 작업 분해 (코드 실사 완료 2026-05-29)
 
-5. **Force-push to `fix/korean-ime-commit`**
-   - emil-e가 ping 받고 싶어하지 않음 ("No need to ping me — just take a look whenever you have bandwidth"라고 답글에 박음). 그냥 push.
+`lisp/ghostel.el` 실제 구조 확인 후 설계 확정. 두 메인테이너가 **같은 축**을 가리킴 — emil-e "redraw inhibit 흩어진 느낌, terminal-live-p 류로 흡수" = dakra "1 redraw inhibit line 외엔 독립적".
 
-6. **그 후 wait for thorough review.**
+**핵심 발견 — 가드 한 자리는 이미 중복**:
+- 현재 가드 2자리: `ghostel--filter` (L5801 `(not (ghostel--ime-lisp-composing-p))`) + `ghostel--delayed-redraw` wrapper (L6779 cond).
+- filter 의 immediate-redraw path 는 **결국 `ghostel--delayed-redraw` 를 sync 로 호출** (L5807). 그 wrapper(L6779)가 composing 시 reschedule 하므로 **filter 가드(L5801)는 중복**.
+- → L5801 가드 제거 + filter 는 항상 `ghostel--delayed-redraw` 호출. redraw inhibit 이 **단 한 줄**(L6779 wrapper)로 수렴. 3b518a0~88cdb7a 의 split 도 단순화.
+
+**dakra "직접 IME 함수 호출 안 하게" 푸는 열쇠 — generic predicate hook**:
+- core 에 `ghostel-inhibit-redraw-functions` (predicate list / abnormal hook) 변수 1개 도입.
+- `ghostel--delayed-redraw` wrapper 는 `(run-hook-with-args-until-success 'ghostel-inhibit-redraw-functions)` 로 게이팅 — **core 는 IME 를 전혀 모름**.
+- `ghostel-ime.el` 의 minor-mode 가 켜질 때 `ghostel--ime-lisp-composing-p` 를 그 hook 에 add. 완전 분리 + dakra 의 "directly call your ime function 회피" 동시 달성.
+- 이게 emil-e 의 "hook into terminal-live-p or something" 의 정확한 구현형 (terminal-live-p 자체는 `(not copy-mode)` 라 IME 와 직교 — 흡수 대상은 그 함수가 아니라 그 **류의 게이팅 머시너리**).
+
+**`ghostel-ime.el` 로 옮길 블록** (`ghostel.el` L2328~2448, defvar + 5 defun + add-hook 2개 전부):
+- `ghostel--ime-original-input-method-function`, `--ime-lisp-composition-buffer`, `--ime-redraw-defer-pending` defvar
+- `ghostel--ime-lisp-composing-p`, `--ime-wrap-input-method`, `--ime-install`, `--ime-uninstall`
+- 루트 add-hook 2개 → **삭제**, minor-mode 안으로.
+
+**`ghostel-ime-mode` minor-mode 설계** (buffer-local):
+- on: `input-method-activate/deactivate-hook` 에 install/uninstall 을 buffer-local 등록 + `ghostel-inhibit-redraw-functions` 에 predicate 등록.
+- off: 모두 제거 + `input-method-function` 원복.
+- 사용자: `:hook (ghostel-mode . ghostel-ime-mode)` (opt-in).
+
+**minor-mode 질문 답변 방향** (dakra "다른 패키지는?"):
+- minor-mode 쪽이 정답. GUI native IME(x/pgtk preedit)는 upstream 이 이미 처리 → 이 기능은 **CJK lisp IME 사용자만 필요**, 전원 필요 아님. opt-in 이 맞다.
+- Emacs 관용: 대부분 IME-aware / 환경 변경 기능은 minor-mode opt-in (evil-mode, corfu-mode, electric-pair-mode 등). "load 만으로 환경 바꾸지 마라"는 Emacs 커뮤니티 표준 원칙 — dakra 직관과 일치.
+- 답변 톤: 두 옵션 다 가져가지 말고 minor-mode 로 합의 (봇 분석 동의).
+
+#### 브랜치 전략 (repo 실사 2026-05-29)
+
+`main`(5bce751, 최신 upstream — v0.31.0 이후)이 `fix/korean-ime-commit` 의 **정확한 base** (`git merge-base main HEAD == main`, `HEAD..main` 비어있음). dakra 가 원하는 "1 commit on top of main" 을 그대로 만들 수 있는 깨끗한 상태. main..HEAD 의 우리 고유 변경은 IME 6커밋 + native module `5c89e8c` 둘 뿐(나머지는 머지로 따라온 upstream).
+
+- **A (native module PR)**: `git switch -c <name> main` → `5c89e8c` cherry-pick → main 위 1 commit → 새 PR. 리스크 작음, 먼저 떼면 #343 이 IME 만 남아 정리됨.
+- **B (IME PR 재작성)**: main 기준으로 IME 전체를 **1 commit + 테스트** 로 재구성 → `fix/korean-ime-commit` 을 그 형태로 만들어 force-push (PR #343 갱신). dakra 가 force-push 허가함.
+
+#### 기능 보존 보장 = 테스트 (GLG 핵심 우려)
+
+> "메인테이너 요구사항(minor-mode/분리) 때문에 IME 지원을 제대로 못하게 되면 다시 고민" — 형태 변경이 race fix 를 깨뜨리지 않음을 **테스트로 증명**한다. race 전체(PTY stream ↔ IME compose loop concurrent)는 ert 재현이 어려우므로, **메커니즘의 부품을 단위 테스트**로 고정:
+
+| 검증 | 태그 | 내용 |
+|------|------|------|
+| minor-mode on/off | elisp | on → `input-method-function` wrap + `ghostel-inhibit-redraw-functions` 에 predicate 등록 / off → 둘 다 원복·해제 |
+| **opt-in 보장** | elisp | mode 안 켜진 ghostel buffer → wrap/predicate **둘 다 비활성** (dakra "load 만으로 환경 바꾸지 마라" 직접 검증) |
+| predicate 로직 | elisp | `ghostel--ime-lisp-composing-p`: dynamic var bound 시 t / 살아있는 `quail-overlay` 시 t / 둘 다 없으면 nil |
+| commit forward | elisp | buffer 직접 insert(self-insert) 시뮬 → wrap 이 delete + `ghostel--send-string` 호출 (send mock). 8d3320d 핵심 |
+| redraw defer | **native** | composing 상태 → `ghostel--delayed-redraw` 가 body(native redraw) 호출 안 함 + reschedule / non-composing → body 호출. 88cdb7a 핵심 |
+
+#### CJK 일반화 + 테스트 (GLG 핵심 우려 — "한글 대표로 처리하면 일·중도 되나")
+
+`ghostel--ime-lisp-composing-p` 는 `quail-overlay` + wrap dynamic var 기반이라 **input method 종류와 직교**. 두 메커니즘이 서로 다른 IME 유형을 커버:
+- **commit forward (8d3320d)**: buffer 에 직접 insert 하는 IM(hangul `hangul-insert-character` → `(self-insert-command 1)` 직접 호출). events 반환 안 하는 류.
+- **redraw guard (88cdb7a)**: `quail-overlay` 쓰는 모든 lisp IM — pinyin/japanese quail 은 물론 hangul.el 도 overlay 사용.
+
+**batch `-Q` 로드 검증 완료** (2026-05-29): 세 IM 다 내장(leim) 으로 batch 에서 activate 가능 →
+- `korean-hangul` (hangul2, 독자 IM, `hangul-input-method-activate`) — dynamic var 경로
+- `chinese-py` (pinyin, `quail/PY`) — quail-overlay 경로
+- `japanese` (`quail/japanese`) — quail-overlay 경로
+
+→ 테스트에서 셋 각각 activate 후 composing 진입 시 predicate 가 t 인지 증명. **이게 "CJK 대표 처리" 의 증거이자 PR 의 일반화 주장 뒷받침** ("symptom 은 한글이지만 fix 는 quail-overlay/Emacs core 라 anthy·중국어로 일반화" 를 코드 주석 아닌 테스트로).
+
+#### 테스트 인프라 (실사 완료)
+
+- 자리: `test/ghostel-ime-test.el` 새 파일. `TEST_BASES := $(notdir $(basename $(TEST_FILES)))` → **자동 포함** (`make test` / `test-native`).
+- 분류: ERT `native` 태그. 순수 elisp(빠름, module 불요) 는 무태그, native redraw 검증만 `(tag native)`.
+- 헬퍼: `ghostel-test--with-compile-buffer` (ghostel-mode buffer, native 불요), `ghostel-test--with-terminal-buffer` (terminal 붙음, native 필요).
+- 실행: `make test` (elisp), `make test-native` (module), `make test-all`.
+
+#### Emacs 표준 인터페이스 — 배포판 비종속 (GLG 동의)
+
+minor-mode + buffer-local `input-method-activate/deactivate-hook` 등록 + core 의 generic predicate hook. Doom/spacemacs 등 어느 배포판도 모르는 순수 Emacs core 인터페이스. 사용자는 `:hook (ghostel-mode . ghostel-ime-mode)` 한 줄. 우리 `lisp/term-config.el` 도 그 형태로 따라감 (닷파일도 표준 인터페이스 사용).
+
+#### 작업 순서
+
+| # | 작업 | 대상 |
+|---|------|------|
+| A1 | `5c89e8c` cherry-pick → main 위 새 브랜치 1 commit | 새 PR |
+| A2 | 새 PR 생성 (native module load fallback) | 새 PR |
+| B1 | L5801 filter 가드 제거 (중복) | #343 |
+| B2 | core 에 `ghostel-inhibit-redraw-functions` 도입, `--delayed-redraw` wrapper 게이팅 교체 | #343 |
+| B3 | IME 블록(L2328~2448) → `lisp/ghostel-ime.el` 이동 | #343 |
+| B4 | `ghostel-ime-mode` minor-mode 정의, 루트 add-hook 제거, predicate 를 hook 에 등록 | #343 |
+| B5 | **`test/ghostel-ime-test.el` 작성** — 위 부품 테스트 + CJK 3종 일반화 | #343 |
+| B6 | 인라인 코멘트 1블록(≤10줄) 트리밍, race-window narrative → commit body | #343 |
+| B7 | `make test` / `test-native` 통과 + daily-drive(emacs -nw + WezTerm + pi streaming + 한글) race 재현 안 됨 확인 | #343 |
+| B8 | main 기준 1 commit 으로 재구성 → force-push `fix/korean-ime-commit` | #343 |
+| B9 | dakra/emil-e 답글 — minor-mode 합의 + 다른 패키지 패턴 + CJK 테스트 + 분리 완료 보고 | 댓글 |
+
+**재고려 트리거**: B5 테스트에서 (1) minor-mode 형태로 wrap/guard 가 안 걸리거나, (2) CJK 3종 중 일부가 predicate 에 안 잡히면 → 형태를 다시 고민. 테스트가 이 자리를 잡아주는 안전망. 통과 못 하면 force-push 안 함.
+
+**주의 — force-push 전 사용자 확인**: ghostel 은 별도 repo + 외부 공개 PR. 코드 재작성 + force-push + 답글 publish 는 GLG 결정 자리. B8/B9 전 diff·답글 초안 GLG 확인.
 
 ### Background — 우리 fork 운용 (적용 + 검증 완료, 2026-05-26)
 
