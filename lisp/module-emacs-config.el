@@ -67,7 +67,7 @@
   (require 'dired-aux)
   (setq dired-do-revert-buffer t) ; doom nil
   ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
-  ;; (remove-hook 'dired-mode-hook 'dired-omit-mode)
+  (remove-hook 'dired-mode-hook 'dired-omit-mode)
 
   ;; Plain Dired buffers should start in the compact view too.
   ;; Dirvish has its own `dirvish-hide-details' switch below for Dirvish
