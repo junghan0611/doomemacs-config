@@ -67,8 +67,15 @@
   (require 'dired-aux)
   (setq dired-do-revert-buffer t) ; doom nil
   ;; (setq dired-clean-confirm-killing-deleted-buffers t) ; doom nil
-  (remove-hook 'dired-mode-hook 'dired-omit-mode)
-  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
+  ;; (remove-hook 'dired-mode-hook 'dired-omit-mode)
+
+  ;; Plain Dired buffers should start in the compact view too.
+  ;; Dirvish has its own `dirvish-hide-details' switch below for Dirvish
+  ;; sessions; keep this hook as the built-in Dired fallback.
+  (defun my/dired-enable-hide-details-h ()
+    "Enable compact Dired listings by default."
+    (dired-hide-details-mode 1))
+  (add-hook 'dired-mode-hook #'my/dired-enable-hide-details-h)
 
   (require 'wdired)
   (setq wdired-allow-to-change-permissions t) ; doom nil
@@ -85,6 +92,12 @@
   ;; prot-dired-grep-marked-files
   ;; (require 'prot-dired)
   )
+
+(after! dirvish
+  ;; Doom narrows this to '(dirvish dirvish-side).  Include plain `dired'
+  ;; as well, otherwise Dirvish-controlled Dired entry points can reopen with
+  ;; details shown even when `dired-hide-details-mode' is on our hook.
+  (setq dirvish-hide-details '(dired dirvish dirvish-fd dirvish-side)))
 
 ;;;; dired-preview
 
