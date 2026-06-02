@@ -226,6 +226,46 @@ only those in the selected frame."
   (setq adoc-imenu-generic-expression
         '(("Sections" "^=+ +\\(.+\\)$" 1))))
 
+;;;; nov — EPUB reader
+
+;; EPUB viewer. Evil defaults 참고:
+;; evil-collection/modes/nov/evil-collection-nov.el
+(use-package! nov
+  :mode ("\\.epub\\'" . nov-mode)
+  :commands (nov-org-link-follow nov-org-link-store)
+  :init
+  (with-eval-after-load 'org
+    (org-link-set-parameters "nov"
+                             :follow 'nov-org-link-follow
+                             :store 'nov-org-link-store))
+  :config
+  (map! :map nov-mode-map
+        :n "RET" #'nov-scroll-up
+        :n "d" #'nov-scroll-up
+        :n "u" #'nov-scroll-down)
+
+  (defun +nov-mode-setup ()
+    "Configure `nov-mode' as a comfortable EPUB reader."
+    (face-remap-add-relative 'variable-pitch
+                             :family "Pretendard Variable"
+                             :height 1.1
+                             :width 'semi-expanded)
+    (face-remap-add-relative 'default :height 1.0)
+    (variable-pitch-mode 1)
+    (setq-local line-spacing 0.2
+                shr-use-colors nil)
+    (when (bound-and-true-p hl-line-mode)
+      (hl-line-mode -1))
+    (when (bound-and-true-p font-lock-mode)
+      (font-lock-mode -1))
+    ;; Re-render with new display settings.
+    (nov-render-document)
+    ;; Look up words with Doom's dictionary backend when available.
+    (when (boundp '+lookup-definition-functions)
+      (add-to-list '+lookup-definition-functions #'+lookup/dictionary-definition)))
+  (add-hook 'nov-mode-hook #'+nov-mode-setup 80)
+  (setq font-lock-global-modes '(not nov-mode)))
+
 ;;;; provide
 
 (provide 'editing-config)

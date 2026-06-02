@@ -162,6 +162,11 @@
 (package! ox-hugo
   :recipe (:host github :repo "kaushalmodi/ox-hugo" :nonrecursive t))
 
+;; ox-epub: 로컬 포크 직접 개발용. ~/repos/gh/ox-epub 가 라이브 소스(SSOT).
+;; upstream(ofosos/ox-epub)은 4년간 미업데이트 → junghan0611 포크에서 개선하며 사용.
+;; straight 가 별도 클론하지 않고 워킹 트리를 그대로 빌드 → 편집 즉시 반영.
+(package! ox-epub :recipe (:local-repo "~/repos/gh/ox-epub" :files ("*.el")))
+(package! nov) ; EPUB reader (nov-mode)
 (package! org-rich-yank)
 (package! org-appear)
 (package! org-reverse-datetree)
@@ -171,6 +176,10 @@
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
 (package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
 (package! pinentry)
+
+;;;; TODO Ontology
+
+(package! elot) ; ontology tool (MELPA), config TBD
 
 ;;;; project-config.el
 

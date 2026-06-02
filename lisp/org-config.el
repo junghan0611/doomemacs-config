@@ -542,6 +542,13 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
 ;;  :backref-seperator ","
 ;;  :definition-structure #'+org-glossary--latex-cdef)
 
+;;;; ox-epub — Org to EPUB export
+
+(use-package! ox-epub
+  :after ox
+  :init
+  (require 'ox-org))
+
 ;;;; Inline image preview — include linked images
 
 ;; Doom's `+org--toggle-inline-images-in-subtree' calls `org-link-preview' with
