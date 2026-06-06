@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Emacs unstable channel launcher
+# Emacs preview channel launcher
 # 시스템 stable(30.2)과 공존 — server-name "doom-unstable"로 분리.
-# `emacs-overlay`의 `emacs-unstable` attribute를 따라간다 (latest release tag).
-# 31.1 release day에 자동으로 30.2 → 31.1 점프.
+# flake output 이름은 호환상 `emacs-unstable`이지만 실제 패키지는
+# Savannah `emacs-31` release branch를 고정한 Emacs 31 pre-release다.
+# 참고: overlay `emacs-unstable`은 latest stable release tag라 현재 30.2에 머물고,
+# overlay `emacs-git`은 upstream master라 이미 32.0.50일 수 있다.
 #
 # Usage:
 #   ./bin/emacs-unstable.sh              # GUI 실행 (daemon + client)
@@ -18,12 +20,12 @@ DOOMDIR="$SCRIPT_DIR/.."
 EMACSDIR="$HOME/doomemacs-unstable"
 DOOM_BIN="${EMACSDIR}/bin/doom"
 
-# flake에서 빌드된 emacs-unstable 경로
+# flake에서 빌드된 Emacs 31 preview 경로
 # GC root를 만들어 nix-gc에서 보호 (--no-link은 GC root 없음 → 삭제됨)
 GC_ROOT="$HOME/.local/state/nix/gcroots/emacs-unstable"
 mkdir -p "$(dirname "$GC_ROOT")"
 # stderr는 살려둔다 — 캐시 miss 시 빌드 진행이 안 보이면 hang 처럼 느껴짐
-echo "[emacs-unstable] resolving emacs-unstable store path (nix build, may take a while on cache miss)..." >&2
+echo "[emacs-unstable] resolving Emacs preview store path (nix build, may take a while on cache miss)..." >&2
 EMACS_STORE=$(nix build "${DOOMDIR}#emacs-unstable" --out-link "$GC_ROOT" --print-out-paths)
 EMACS_BIN="${EMACS_STORE}/bin/emacs"
 EMACS_CLIENT="${EMACS_STORE}/bin/emacsclient"

@@ -1,5 +1,5 @@
 {
-  description = "Doom Emacs config — Emacs unstable channel (tracks next stable release)";
+  description = "Doom Emacs config — Emacs 31 preview channel";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -14,18 +14,31 @@
         overlays = [ emacs-overlay.overlays.default ];
       };
 
-      # Emacs unstable channel — emacs-overlay의 `emacs-unstable` attribute는
-      # Savannah의 latest release tag를 따라간다. 오늘은 30.2 (= system stable과
-      # 동일), 31.1 정식 태그가 박히는 날 자동으로 31.1로 점프. "다음 안정판을
-      # release day-1에 받는 채널"이라는 의도.
-      emacs-unstable-with-packages = (pkgs.emacsPackagesFor pkgs.emacs-unstable).emacsWithPackages (epkgs: [
+      # Emacs 31 preview channel — emacs-overlay의 `emacs-unstable` attribute는
+      # latest stable release tag를 따라가므로 현재 30.2에 머문다. `emacs-git`은
+      # upstream master snapshot이라 이미 32.0.50일 수 있으므로, 31 pre-release를
+      # 원하면 Savannah `emacs-31` release branch를 명시적으로 고정한다.
+      # Output name `emacs-unstable`은 기존 launcher/alias 호환을 위해 유지.
+      emacs-31 = pkgs.emacs-git.overrideAttrs (_old: {
+        pname = "emacs-31";
+        name = "emacs-31-31.0.90";
+        version = "31.0.90";
+        src = pkgs.fetchgit {
+          url = "https://git.savannah.gnu.org/git/emacs.git";
+          rev = "3801c09ae22fe5bc0bf42546b2747824cb9fe0b6"; # refs/heads/emacs-31
+          hash = "sha256-eZpiiIdex79eC6hrCFALpkTc9dyCOArHoZs6j8eUwPk=";
+        };
+      });
+
+      emacs-preview-with-packages = (pkgs.emacsPackagesFor emacs-31).emacsWithPackages (epkgs: [
         epkgs.vterm
       ]);
     in
     {
       packages.${system} = {
-        emacs-unstable = emacs-unstable-with-packages;
-        default = emacs-unstable-with-packages;
+        emacs-unstable = emacs-preview-with-packages;
+        emacs-31 = emacs-preview-with-packages;
+        default = emacs-preview-with-packages;
       };
 
       # nix develop로 emacs-unstable + export/verify 도구를 PATH에 넣기.
@@ -33,14 +46,14 @@
       # 있으나 작성/내보내기/검증은 doomemacs-config 측에서 안정적으로 운영한다.
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = [
-          emacs-unstable-with-packages
+          emacs-preview-with-packages
           # bin/verify-*.py + 가든 link/content 검증
           (pkgs.python3.withPackages (ps: with ps; [ pyyaml ]))
           # 외부 link rot / redirect chain / deprecated host 추적
           pkgs.lychee
         ];
         shellHook = ''
-          echo "Emacs unstable available:"
+          echo "Emacs preview available:"
           emacs --version | head -1
           echo "  lychee: $(lychee --version 2>/dev/null | head -1)"
           echo ""

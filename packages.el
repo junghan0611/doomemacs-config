@@ -91,11 +91,11 @@
 (package! kkp :disable t) ; conflict with term-keys
 (package! term-keys :recipe (:host github :repo "junghan0611/term-keys"))
 (package! ghostel
-  :recipe (:host github :repo "junghan0611/ghostel"
-           :branch "fix/korean-ime-commit"))
+  :recipe (:host github :repo "dakra/ghostel"
+           :branch "main"))
 (package! evil-ghostel
-  :recipe (:host github :repo "junghan0611/ghostel"
-           :branch "fix/korean-ime-commit"
+  :recipe (:host github :repo "dakra/ghostel"
+           :branch "main"
            :files ("extensions/evil-ghostel/evil-ghostel.el")))
 
 ;;; module-emacs-config.el
@@ -117,7 +117,7 @@
 
 (package! citar-denote)
 
-(package! consult-notes)
+(package! consult-notes :recipe (:host codeberg :repo "mclear-tools/consult-notes"))
 (package! consult-denote)
 
 (package! denote-explore :recipe (:host github :repo "pprevos/denote-explore"))
@@ -179,7 +179,7 @@
 
 ;;;; TODO Ontology
 
-(package! elot) ; ontology tool (MELPA), config TBD
+(package! elot :recipe (:host github :repo "johanwk/elot")) ; ontology tool (GitHub), config TBD
 
 ;;;; project-config.el
 
@@ -243,7 +243,7 @@
 
 ;;;; ai-bot-config.el
 
-(package! telega)
+(package! telega :pin "f70c1e1006fc47012780a2d885b22b0b93512c47")
 (package! ement)
 
 ;;;; ai-stt-whisper.el

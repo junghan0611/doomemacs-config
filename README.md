@@ -28,7 +28,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 
 | | |
 |---|---|
-| **Emacs** | 30.2 (system stable) + unstable channel (auto-bumps to 31.1 on release) |
+| **Emacs** | 30.2 (system stable) + preview channel (Savannah `emacs-31`, Emacs 31 pre-release) |
 | **Framework** | Doom Emacs (hlissner style) |
 | **Notes** | 3,300+ Denote org-mode files in `~/org/` |
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,100+ published |
@@ -57,7 +57,7 @@ doomemacs-config/
 │   ├── agent-server.el          # Agent RPC server (socket "server")
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
-│   ├── emacs-unstable.sh        # Emacs unstable channel launcher (next stable)
+│   ├── emacs-unstable.sh        # Emacs 31 preview channel launcher
 │   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
 │   ├── site-policy.el           # SSOT for host aliases, internal-path patterns, lychee opts
 │   ├── verify-relref.py         # Hugo relref link validator + fixer
@@ -70,7 +70,7 @@ doomemacs-config/
 │   └── gptel-agent.md            # Subagent-free variant of upstream default
 │
 ├── run.sh               # Unified CLI/TUI management
-└── flake.nix            # Emacs unstable channel Nix build (overlay#emacs-unstable)
+└── flake.nix            # Emacs 31 preview Nix build (Savannah emacs-31)
 ```
 
 ## Human-Agent Unified Agenda
@@ -101,7 +101,7 @@ Four isolated server sockets coexist. Daily use is **one GUI + many TTY clients 
 | `"user"` | Emacs 30.2 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
 | `"pi"` | Emacs 30.2 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
 | `"server"` | Emacs 30.2 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
-| `"doom-unstable"` | Emacs unstable channel | Next-stable preview frontend (`./run.sh unstable run`) |
+| `"doom-unstable"` | Emacs preview channel | Emacs 31 preview frontend (`./run.sh unstable run`) |
 
 Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
 
@@ -202,9 +202,9 @@ Full Korean support across GUI and terminal:
 
 The terminal setup ensures `emacs -nw` over SSH has clipboard, Korean input, and full functionality — identical to GUI except for images.
 
-## Emacs Unstable Channel
+## Emacs Preview Channel
 
-A second Emacs install that follows [emacs-overlay](https://github.com/nix-community/emacs-overlay)'s `emacs-unstable` attribute (= latest Savannah release tag). Today it's the same `30.2` as system stable; on the day Emacs 31.1 is officially tagged, this channel auto-bumps to 31.1 a few hours / days ahead of nixpkgs — that's the whole point: ride the next stable preview without leaving the stable line.
+A second Emacs install built via [emacs-overlay](https://github.com/nix-community/emacs-overlay). The launcher/output name remains `emacs-unstable` for compatibility, but the flake pins Savannah's `emacs-31` release branch because overlay `emacs-unstable` follows the latest stable release tag and currently stays at `30.2`, while overlay `emacs-git` tracks master and may already be `32.0.50`. This gives an Emacs 31 pre-release channel before 31.1 is officially tagged.
 
 ```bash
 ./run.sh unstable run        # GUI
@@ -225,7 +225,7 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 ./run.sh pi tty                # Attach a new TTY client to the pi daemon
 ./run.sh export all            # Export all folders (incremental)
 ./run.sh export all --force    # Force re-export
-./run.sh unstable tty          # Emacs unstable channel — terminal mode
+./run.sh unstable tty          # Emacs preview channel — terminal mode
 ./run.sh verify                # Verify garden md ([1/4]~[4/4], read-only)
 ./run.sh fix                   # Fix garden md ([1/4]~[4/4], step-by-step y/N)
 ./run.sh fix-org               # Rewrite ~/org link patterns (dry-run + y/N + --apply)
@@ -330,11 +330,11 @@ ln -s ~/repos/gh/doomemacs-config ~/.doom.d
 alias ecs='emacsclient -s user -t'             # Attach TTY client to GUI Emacs (user daemon)
 alias ep='~/.doom.d/run.sh pi tty'             # Attach TTY client to pi daemon (full Doom)
 alias es='~/.doom.d/run.sh agent restart'      # Restart agent RPC daemon (socket "server")
-alias eup='~/.doom.d/run.sh unstable run'      # Emacs unstable channel GUI
+alias eup='~/.doom.d/run.sh unstable run'      # Emacs preview channel GUI
 
 # Standalone (fallback)
 alias et='emacs -nw'                                # System stable Emacs terminal, no daemon
-alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs unstable channel terminal, no daemon
+alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs preview channel terminal, no daemon
 ```
 
 **Typical session**: launch `doom run` once for the GUI, run `./run.sh pi start`, then open WezTerm tabs and type `ep` in each. All tabs share the same pi daemon — config edits, packages, native-comp eln cache, even open buffers are shared. Agent RPC runs in a separate `server` daemon so it never blocks the editor.
@@ -343,7 +343,7 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs unstable channel ter
 
 | Platform | Emacs | Terminal | Status |
 |----------|-------|----------|--------|
-| NixOS 25.11 | 30.2 + unstable channel | Ghostty / WezTerm | Primary |
+| NixOS 25.11 | 30.2 + preview channel (`emacs-31`) | Ghostty / WezTerm | Primary |
 | Termux (Android) | 30.x (nox) | Termux | Tested |
 
 ## Links
