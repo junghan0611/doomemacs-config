@@ -174,7 +174,12 @@
 ;;;; editing-config.el
 
 (package! outli :recipe (:host github :repo "jdtsmith/outli" :files ("*.el")))
-(package! ten :recipe (:host sourcehut :repo "nobiot/ten")) ;; https://git.sr.ht/~nobiot/ten
+;; Emacs 31 `loaddefs-generate' emits `transient-define-prefix' directly into
+;; ten-autoloads.el, but the macro is not loaded when straight activates Ten.
+;; We load Ten explicitly in `editing-config.el', so skip generated autoloads.
+(package! ten
+  :recipe (:host sourcehut :repo "nobiot/ten"
+           :build (:not autoloads))) ;; https://git.sr.ht/~nobiot/ten
 (package! pinentry)
 
 ;;;; TODO Ontology

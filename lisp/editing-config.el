@@ -61,6 +61,10 @@
 
 (when (locate-library "ten")
   (require 'ten)
+  ;; We disable generated autoloads for Ten in packages.el because Emacs 31
+  ;; loaddefs emits `transient-define-prefix' into ten-autoloads.el before
+  ;; `transient' is loaded. Keep the transient wizard available on demand.
+  (autoload 'ten-glossary-create "ten-transient" nil t)
   (setq ten-glossary-file-extensions '("org" "md" "txt"))
   (setq ten-glossary-exclude-regexps '("/\\."))
 
