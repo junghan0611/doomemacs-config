@@ -35,7 +35,7 @@
          (ghostel-mode . ghostel-ime-mode))
   :if (and (fboundp 'module-load)
            module-file-suffix
-           (not (bound-and-true-p IS-TERMUX)))
+           (not (bound-and-true-p my/termux-p)))
   :init
   (setq ghostel-module-auto-install 'ask)
   :config

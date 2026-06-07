@@ -15,7 +15,7 @@
 ;;;; termux-fixes
 ;; Fix async issues in Termux/Android
 
-(when IS-TERMUX
+(when my/termux-p
   (setq native-comp-async-report-warnings-errors nil)
   (setq native-comp-warning-on-missing-source nil)
   (setq async-bytecomp-allowed-packages nil)
@@ -25,7 +25,7 @@
 
 ;;; TODO TERMUX
 
-(when IS-TERMUX
+(when my/termux-p
   ;; TODO android browse url 설정
   ;; (setq android-browse-url )
 
@@ -68,7 +68,7 @@
 
     ;; Termux는 ESC O 시퀀스를 전송 (Application Keypad Mode)
     ;; input-decode-map과 function-key-map 모두에 매핑 (더 강력)
-    (defun termux-fix-arrow-keys ()
+    (defun my/termux-fix-arrow-keys ()
       "Fix arrow keys for Termux extra-keys."
       ;; input-decode-map (우선순위 높음)
       (define-key input-decode-map "\eOA" [up])
@@ -95,14 +95,14 @@
       (define-key local-function-key-map "\eOD" [left]))
 
     ;; 즉시 적용
-    (termux-fix-arrow-keys)
+    (my/termux-fix-arrow-keys)
 
     ;; 터미널 초기화 후에도 적용 (tty-setup-hook)
-    (add-hook 'tty-setup-hook #'termux-fix-arrow-keys)
+    (add-hook 'tty-setup-hook #'my/termux-fix-arrow-keys)
 
     ;; evil-mode 로드 후에도 적용 (evil이 키를 오버라이드할 수 있음)
     (after! evil
-      (termux-fix-arrow-keys))
+      (my/termux-fix-arrow-keys))
 
     (message "Termux 방향키 ESC O 시퀀스 매핑 완료 ✓"))
   )

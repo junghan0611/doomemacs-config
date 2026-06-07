@@ -17,15 +17,26 @@
     (message "Emacs server '%s' already running! Use emacsclient instead." server-name)
     (kill-emacs)))
 
-;;;; Termux
+;;;; Platform predicates
 
 (setq-default root-path "/")
 
-(defvar IS-TERMUX
-  (string-suffix-p "Android" (string-trim (shell-command-to-string "uname -a"))))
+;; Keep local platform predicates under the `my/' namespace.  Doom's old
+;; `IS-*' constants are compatibility shims and will disappear with v3.
+(defconst my/termux-p
+  (and (or (getenv "TERMUX_VERSION")
+           (string-match-p "termux" (or (getenv "PREFIX") "")))
+       t)
+  "Non-nil when running inside Termux/Android.
+Detected from the environment to avoid a `uname' subprocess during init.")
 
-(defvar IS-EMACS31+
-  (>= emacs-major-version 31))
+(defconst my/emacs31-p
+  (>= emacs-major-version 31)
+  "Non-nil when running Emacs 31 or newer.")
+
+(defconst my/system-macos-p
+  (featurep :system 'macos)
+  "Non-nil on macOS.  Local replacement for Doom's obsolete `IS-MAC'.")
 
 (defvar my/current-device
   (let ((f "~/.current-device"))
@@ -35,7 +46,7 @@
   "Device id from ~/.current-device (nuc|laptop|thinkpad|termux|oracle).
 nil if file missing.")
 
-(when IS-TERMUX
+(when my/termux-p
   (setq root-path "/data/data/com.termux/files/"))
 
 ;;;; DONT android gui emacs
@@ -83,7 +94,7 @@ nil if file missing.")
        ;; smooth-scroll: TTY 는 픽셀 보간 의미 없음. good-scroll 타이머/advice
        ;; 비용만 발생. GUI 에서 ultra-scroll 만 필요하면 명시적으로 재활성.
 
-       ;; (:unless IS-EMACS31+ tabs) ; centaur-tabs — powerline 31 비호환
+       ;; (:unless my/emacs31-p tabs) ; centaur-tabs — powerline 31 비호환
        ;; treemacs          ; LSP 안 쓰면 가치 절반 — :emacs dired/dirvish 로 대체
        vc-gutter         ; +pretty - vcs diff in the fringe
        ;; vi-tilde-fringe   ; fringe tildes to mark beyond EOB
@@ -135,14 +146,14 @@ nil if file missing.")
 
        make              ; run make tasks from Emacs
        (pass +auth)              ; password manager for nerds
-       (:unless IS-TERMUX (pdf)) ; pdf enhancements
+       (:unless my/termux-p (pdf)) ; pdf enhancements
        ;;terraform         ; infrastructure as code
        tmux              ; an API for interacting with tmux
        tree-sitter ;; syntax and parsing, sitting in a tree...
        upload            ; map local to remote projects via ssh/ftp
 
        :os
-       (:if IS-MAC macos)  ; improve compatibility with macOS
+       (:if my/system-macos-p macos) ; improve compatibility with macOS
        tty                 ; improve the terminal Emacs experience
 
        :lang

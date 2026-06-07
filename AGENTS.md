@@ -94,6 +94,45 @@ Every `.el` file uses outline headings:
 - Needs `;;;###autoload`? → `autoload/junghan.el`
 - Internal to a module? → Inside that `lisp/*.el`
 
+### Elisp coding conventions
+
+This repo is a long-lived personal Lisp system. New agent-written Elisp should
+follow a small, repeatable style so later agents can extend or remove features
+without inventing a new idiom each time.
+
+- **Doom style baseline**: follow Doom's current `docs/contributing.org` unless
+  this section narrows it: bbatsov Elisp style, no hanging parentheses, and use
+  `DEPRECATED` only for code that will actually be removed. Prefer `mapc` over
+  `seq-do` when iterating only for side effects.
+- **Namespace**: custom public variables/functions use `my/...` (`my/termux-p`,
+  `my/org-download-image-dir`). Interactive commands may use `my/name` in Doom's
+  command style. Private helpers should still start with `my/` and include the
+  concern name; use `--` for genuinely internal helpers inside a larger module,
+  e.g. `my/termux--decode-arrow-key`.
+- **Avoid Doom v2 compat shims**: do not add new `IS-*`, `EMACS29+`, `setq!`,
+  `featurep!`, `appendq!`, `pushnew!`, etc. Prefer `(featurep :system 'macos)`,
+  `(>= emacs-major-version 31)`, `setopt`/`setq`, `cl-callf`, `add-to-list`, or
+  a local `my/...` predicate when grep-ability matters.
+- **Use Emacs libraries before hand-rolled loops**: prefer `seq.el` for lists,
+  `map.el` for alists, `subr-x` for string helpers, and existing Doom/Emacs
+  primitives before writing long bespoke functions.
+- **Data shape**: for small structured state, prefer alists with `:kebab-case`
+  keyword keys. Use plists/hash-tables only when there is a clear reason.
+- **Accessors**: prefer `map-elt` and `map-nested-elt` for alists; avoid repeated
+  nested `assoc`/`cdr` boilerplate.
+- **cl-lib surface**: `cl-defun` with `&key` is welcome for self-documenting
+  call sites. Reach for other `cl-lib` forms only when they simplify the code.
+- **Flatten control flow**: prefer `when`, `unless`, `when-let*`, and guard
+  bindings over deeply nested `let`/`if` blocks. Use `let*` only when bindings
+  depend on earlier bindings.
+- **No premature API**: avoid new `defcustom` until the option has settled.
+  Start with an internal `defvar`/`defconst` and promote later if needed.
+- **Comments/docstrings**: code comments should be in English and explain intent
+  or invariants, not restate the obvious. Korean operational notes are fine in
+  higher-level docs, but generated code should keep comments concise.
+- **Consistency first**: before adding a feature, search for the closest existing
+  pattern in `lisp/` and mirror it unless there is a strong reason not to.
+
 ## Emacs Server Sockets
 
 | Socket | Purpose | How it starts |

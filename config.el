@@ -225,7 +225,7 @@
 ;;;; fortune
 
 ;; not work on termux
-;; (unless IS-TERMUX
+;; (unless my/termux-p
 ;;   (require 'fortune)
 ;;   (setq fortune-always-compile nil)
 ;;   (setq fortune-dir (concat root-path "usr/share/games/fortunes/advice"))

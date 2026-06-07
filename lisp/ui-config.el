@@ -63,7 +63,7 @@
   (let ((body
          (if (executable-find "fortune")
              ;; fortune 명령어가 있으면 사용, termux는 -c 옵션이 없으므로 조건부 처리
-             (let ((fortune-cmd (if IS-TERMUX
+             (let ((fortune-cmd (if my/termux-p
                                     "fortune"  ; termux: simple fortune
                                   "fortune ~/.fortunes/advice"))) ; NixOS: ~/.fortunes/advice (Kevin Kelly)
                (string-join

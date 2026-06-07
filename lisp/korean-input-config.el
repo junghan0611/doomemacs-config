@@ -118,11 +118,15 @@
 
 (setq system-time-locale "C") ;; 날짜 표시를 영어로한다. org mode에서 time stamp 날짜에 영향을 준다.
 
-;; IS-TERMUX: Doom에서 defconst로 정의됨. 미정의 환경(agent Emacs 등)에서 에러 방지.
-(defvar IS-TERMUX (bound-and-true-p IS-TERMUX)
-  "Doom Emacs IS-TERMUX 호환. 미정의 시 nil.")
+;; `my/termux-p' is defined in init.el.  Keep a fallback for standalone loads
+;; such as agent-side batch checks that do not evaluate the full Doom init file.
+(defvar my/termux-p
+  (and (or (getenv "TERMUX_VERSION")
+           (string-match-p "termux" (or (getenv "PREFIX") "")))
+       t)
+  "Non-nil when running inside Termux/Android.")
 
-(when IS-TERMUX
+(when my/termux-p
   (setenv "LANG" "C.UTF-8")
   (setenv "LC_ALL" "C.UTF-8"))
 
@@ -143,7 +147,7 @@
 (add-hook 'context-menu-mode-hook '(lambda () (define-key context-menu-mode-map (kbd "<menu>") #'toggle-input-method)))
 
 ;; Termux/모바일 전용: 추가 토글 키
-(when IS-TERMUX
+(when my/termux-p
   (global-set-key (kbd "M-SPC") 'toggle-input-method) ; Alt+Space (긴급용)
   (global-set-key (kbd "C-c \\") 'toggle-input-method) ; 최후 수단
 

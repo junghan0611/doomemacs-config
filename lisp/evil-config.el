@@ -102,7 +102,7 @@
   (evil-escape-mode 1)
 
   ;; 모바일 타이핑 최적화
-  (when IS-TERMUX
+  (when my/termux-p
     (setq evil-escape-delay 0.8)))
 
 ;;;; smartparens

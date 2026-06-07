@@ -29,7 +29,7 @@
 
   ;; Ensure claude-agent-acp / pi-acp in exec-path for Termux
   ;; NOTE 2026-03-18: claude-code-acp → claude-agent-acp 리네임 완료
-  (when IS-TERMUX
+  (when my/termux-p
     (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
 
   (setq agent-shell-anthropic-authentication

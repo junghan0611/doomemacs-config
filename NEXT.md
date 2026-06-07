@@ -7,7 +7,56 @@
 
 ---
 
-## TOP — ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
+## TOP — lisp/ 리팩터: 테스트 게이트 + vanilla-first 로직 파티션 (2026-06-08)
+
+**목표**: 16K줄 닷파일을 "테스트로 핀 박힌 로직"과 "Doom 설정"으로 분리.
+개인 닷파일이라고 가볍게 두면 부채가 쌓여 확장이 막힌다 (ghostel PR 교훈:
+핵심은 테스트 유무). full-Doom 추종은 하지 않는다 — agent-server는 Doom
+의존이 없고, 에이전트도 Doom idiom을 매번 다시 봐야 해서 어색하다.
+
+**가이딩 센터 (3기둥)**:
+1. **로직은 vanilla** (`emacs -Q`에서 돔), Doom 매크로(`map!`/`after!`/
+   `use-package!`)는 glue·keybinding 파일에만. 로직 함수 안엔 안 넣는다.
+   → 테스트성 + 추출성 + agent-server 호환을 한 규칙으로 동시 해결.
+2. **테스트가 게이트.** 하니스(`tests/run-tests.sh` + `test-helper.el`)는
+   이미 있음 — 새로 만들지 말고 일반화. `-Q`에서 도는 것 = Tier A.
+3. **Characterization test 먼저** → green 상태에서 리팩터 → 리팩터에 동작
+   변경 금지(동작 변경은 별도). 검수 = 테스트 리뷰 + green 확인.
+
+**파티션** (lisp/ 전수 측정 완료, defun/doom-macro):
+- **Tier A** (테스트 먼저 → 리팩터): `denote-functions.el`(45/0),
+  `functions.el`(19/1), `andenken-config.el`(14/0), `workflow-shared.el`(10/1),
+  `org-functions.el`(4/0)
+- **Tier B** (손대지 않음, 네임스페이스만 기회 닿을 때): `ai-gptel.el`(6/23),
+  `ui-config.el`(4/10), `elfeed-config.el`(15/9), tty/term/present-config.el
+- `map! 117 · after! 92 · use-package! 53` 은 전부 Tier B — 설정이지 로직 아님.
+
+**기존 테스트 현실** (2026-06-08 실측, `run-tests.sh`): 28개 중 23 통과,
+0 실패, **5 SKIPPED**. 하지만 SKIP된 5개가 정작 핵심 `test-denote-link-export--*`
+— `-Q`에서 ox-hugo 의존이라 안 돈다. 즉 실제로 도는 23개는 변두리
+(section-detection / notification / unicode filename)뿐. **denote-export 테스트는
+모범이 아니라 "핵심을 비껴간 커버리지"** — Tier A 일반화 시 ox-hugo를 batch에서
+optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다.
+
+**완료 (2026-06-08)**:
+- ✅ Phase 0: `my/termux-p` `uname -a` subprocess 제거 → `TERMUX_VERSION`/`PREFIX`
+  env 검출로 통일. 세 군데가 제각각이었음 (init.el subprocess / korean-input
+  `featurep :system 'android`(Termux-pkg는 gnu/linux라 오검출) / termux-config
+  env) → init.el + korean-input fallback 둘 다 env 방식으로 SSOT 정리.
+- ✅ Phase 0: 공개 노트(`20240404T101052`)의 `uname` 예시도 env 방식으로 정정 +
+  이유 주석. `(:if my/system-macos-p macos)` 는 doom! 정식 지원 확인됨(소스
+  `lib/modules.el` `doom-module-mplist-map`) — 고치지 말 것.
+
+**다음 한 걸음** (순서):
+- [ ] 공개 노트에 "vanilla-first + 테스트 게이트" 반영 (현재 노트는 Doom
+      구조 추종에 치우침 — 리팩터 order 섹션에 `-Q`=Tier A 규칙 추가).
+- [ ] `run-tests.sh` glob 디스커버리화 + `TESTING-GUIDELINES.org`에 `-Q`=Tier A
+      명문화. ox-hugo optional-load 여부 결정.
+- [ ] 첫 표본 1파일: **`andenken-config.el`** (14/0, 현재 껍데기 수준이라 수정
+      좋음). Tier A에서 `-Q` 테스트 가능한 순수함수만 골라 characterization
+      test + 리팩터. 표본 합의 후 그 문체로 확산.
+
+## ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
 
 **상태**: ✅ **PR 발송 완료.** 재작성 → 단일 커밋 → force-push → 답글 → 닷파일 복원/검증 전부 끝. 이제 dakra/emil-e 리뷰만 기다림. 공이 메인테이너에게.
 

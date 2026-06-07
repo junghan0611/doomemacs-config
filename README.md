@@ -73,6 +73,14 @@ doomemacs-config/
 └── flake.nix            # Emacs 31 preview Nix build (Savannah emacs-31)
 ```
 
+## Elisp Conventions
+
+This config is being refactored toward a consistent Doom-style Lisp system: `config.el` stays a loader, `lisp/*.el` keeps one concern per file, custom symbols use the `my/` namespace, and new code avoids Doom v2 compatibility shims such as `IS-*`, `setq!`, and `featurep!`.
+
+The living convention document is published in the garden and kept at a stable URL:
+
+- [Doom Emacs dotfile Elisp coding conventions](https://notes.junghanacs.com/notes/20240404T101052)
+
 ## Human-Agent Unified Agenda
 
 The core design: **one timeline for both human and AI**.
