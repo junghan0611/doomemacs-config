@@ -46,14 +46,27 @@ Simple, straightforward, built-in.
 - =setq= 더미를 테스트하는 건 의미 없다. 네임스페이스/스타일만 기회 닿을 때 손본다.
 - 파일 예: =ai-gptel.el=, =ui-config.el=, =elfeed-config.el=, =tty/term/present-config.el=.
 
-** 패키지 의존 로직 — skip 또는 수동
+** Tier C — 패키지 의존 로직 (별도 integration runner)
 
 Tier A 로직이라도 =ox-hugo= / =denote= 등 패키지를 로드해야 도는 경우
 ( =test-denote-link-export--*= ) =-Q= 에서는 =skip-unless= 로 SKIP 된다.
-SKIP 은 통과가 아니다 — 핵심이 안 돌고 있다는 신호다. 선택지:
+SKIP 은 통과가 아니다 — 핵심이 안 돌고 있다는 신호다.
 
-1. 테스트 진입부에서 straight repo 의 패키지를 batch-load (커버리지 회복).
-2. 수동 검증으로 분류하고 SKIP 을 유지 (단, 커버리지 공백임을 인지).
+#+begin_quote
+목표는 SKIP 0개가 아니라 SKIP 의 의미를 정확히 분류하는 것.
+패키지를 =-Q= 런에 억지로 끌어들이면 "Tier A = vanilla" 불변식이 깨진다.
+#+end_quote
+
+그러니 =-Q= 런(=run-tests.sh=)은 순수하게 유지하고, 둘 중 하나로 간다:
+
+1. *순수 추출 → Tier A*: 패키지 의존 함수 안의 순수 분기(예: broken-link
+   fallback 이 plain text 를 돌려주는 부분)를 작은 파일로 떼어 =-Q= 에서 테스트.
+2. *Tier C 분리*: 진짜 패키지가 필요한 경로는 straight 패키지를 로드하는
+   별도 integration runner 로 옮긴다 (=-Q= 아님). =run-tests.sh= 의 vanilla
+   SKIP 과 섞지 않는다.
+
+어느 쪽이든 "왜 SKIP 인가"가 코드에 드러나야 한다 — dead-path 로 인한 우발적
+SKIP( =../+denote-export.el= 부재처럼)은 분류가 아니라 버그다.
 
 ** 새 테스트 추가
 

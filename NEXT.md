@@ -54,10 +54,13 @@ optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다
   TZ 불변(정오-UTC 입력). `run-tests.sh`: 40개 중 35통과/0실패/5스킵.
 
 **다음 한 걸음** (순서):
-- [ ] **denote-export 테스트 dead-path 수정**: `test-denote-export.el`이
-      존재하지 않는 `../+denote-export.el`을 로드 시도 → 핵심 link-export 5개가
-      SKIP. 실제 경로(`lisp/denote-export-config.el` 또는 `bin/denote-export.el`)로
-      고쳐 커버리지 회복. (5 SKIP의 정체)
+- [ ] **denote-export 테스트 5 SKIP — 분류가 목표, 0-SKIP 아님** (지피티힣 리뷰):
+      `test-denote-export.el`이 존재하지 않는 `../+denote-export.el`을 로드 시도
+      → dead-path 우발 SKIP (이건 버그). 단, 실제 파일 `denote-export-config.el`은
+      ox-hugo/denote 의존이 커서 `-Q` 런에 억지로 넣으면 "Tier A=vanilla"가 깨짐.
+      → 둘 중 하나: (1) `my/denote-link-ol-export`의 순수 fallback 분기를 작은
+      파일로 추출해 Tier A, (2) 패키지 의존 경로는 Tier C integration runner로
+      분리. dead-path 먼저 고치고 어느 tier인지 명시.
 - [ ] andenken 소규모 리팩터 (green 하에, 동작 변경 금지): `--search-sessions-
       window`의 `cl-loop ... collect` → `seq-map-indexed` 검토. 코드 이미 깨끗해서
       옵션. 가치는 백엔드 2e(`--view session`)지 elisp 정리 아님.
