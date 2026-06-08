@@ -53,21 +53,45 @@ optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다
   `--format-session-result`)에 characterization test 12개. 전부 관측값 기준,
   TZ 불변(정오-UTC 입력). `run-tests.sh`: 40개 중 35통과/0실패/5스킵.
 
-**다음 한 걸음** (순서):
-- [ ] **denote-export 테스트 5 SKIP — 분류가 목표, 0-SKIP 아님** (지피티힣 리뷰):
-      `test-denote-export.el`이 존재하지 않는 `../+denote-export.el`을 로드 시도
-      → dead-path 우발 SKIP (이건 버그). 단, 실제 파일 `denote-export-config.el`은
-      ox-hugo/denote 의존이 커서 `-Q` 런에 억지로 넣으면 "Tier A=vanilla"가 깨짐.
-      → 둘 중 하나: (1) `my/denote-link-ol-export`의 순수 fallback 분기를 작은
-      파일로 추출해 Tier A, (2) 패키지 의존 경로는 Tier C integration runner로
-      분리. dead-path 먼저 고치고 어느 tier인지 명시.
+### export 파이프라인 정리 (Understanding 고정됨 — 리팩터 진입)
+
+> 호출 그래프 / 4분류 지도는 가든 가이드 노트에 헤딩1로 박음:
+> `~/org/notes/20251221T120044--§doomemacs-config-...denote_export_guide_hugo.org`
+> LIVE: `run.sh export → parallel.py → emacs daemon(denote-export.el) → load denote-export-config.el`
+> **원칙: 리팩터 전 characterization test 선행, 자동경로 로직 동작 보존, 분류부터 문서 고정.**
+
+위험도 낮은 순:
+
+- [ ] **🟢 legacy surface 분류 결정** (GLG): `bin/denote-export.sh` +
+      `tests/test_bash_cleanup.sh` 를 어찌할지 — (a)손으로 안 씀→deprecated 표기
+      후 제거 후보, (b)가끔 씀→`run.sh export` 위임 얇은 wrapper로 축소, (c)유지→
+      cleanup 중복 명시. **자동경로 LIVE 아님 (run.sh가 .py 직접 호출).**
+- [ ] **🟡 stale reference 정정**: `my/update-dblock-export-garden-all-parallel`
+      (`denote-export-config.el:970`)이 존재하지 않는 `bin/denote-export-parallel.sh`
+      를 찾음 → sequential로 fallback. interactive M-x surface. 옛 .sh 병렬 모델
+      잔재. **LIVE 파일 안이라 .sh 고아보다 우선.** 제거 vs `run.sh export` 위임
+      vs `.py` 경로로 교정 — GLG 결정 후 손댐. (docstring의 `~/.config/doom` 옛
+      경로, `clean-run.sh` 참조도 같이)
+- [ ] **🟡 test dead-path 정정 — Tier 결정**: `test-denote-export.el`의
+      `../+denote-export.el` (없음) → 실제 `my/denote-link-ol-export`
+      (`denote-export-config.el:461`). 그 파일 top-level `(require 'ox-hugo)` →
+      `-Q` 불가. **억지 full-load 금지.** (1)broken-link fallback 순수추출→Tier A,
+      또는 (2)Tier C integration runner. 결정 후 5 SKIP 분류.
+- [ ] **🟡 가이드 노트 Architecture 섹션 갱신**: 옛 v2.0 서술이 stale
+      (`denote-export.sh` 진입/`lisp/denote-export.el` 오기/`docs/` 위치/mermaid
+      run.sh 미언급). 새 헤딩1과 일치하게 정정. (노트는 GLG commit/export 자리)
+- [ ] **🔴 1045줄 `denote-export-config.el` 함수별 live/dead 전수 분석**: 위 분류
+      끝난 뒤. 8섹션 중 어디부터 볼지 GLG 지정. read-only 리스트 먼저, 제거는 별도.
+
+### 그 외 Tier A 확산
+
 - [ ] andenken 소규모 리팩터 (green 하에, 동작 변경 금지): `--search-sessions-
       window`의 `cl-loop ... collect` → `seq-map-indexed` 검토. 코드 이미 깨끗해서
       옵션. 가치는 백엔드 2e(`--view session`)지 elisp 정리 아님.
 - [ ] 다음 Tier A 파일 표본 확산: `denote-functions.el`(45/0) — 순수함수
       triage → characterization test. andenken 표본 문체 그대로.
-- [ ] 공개 노트에 "vanilla-first + 테스트 게이트" 반영 (현재 노트는 Doom
-      구조 추종에 치우침 — 리팩터 order 섹션에 `-Q`=Tier A 규칙 추가).
+- [ ] 공개 컨벤션 노트(`20240404T101052`)에 "vanilla-first + 테스트 게이트
+      (Tier A/B/C)" 반영 (현재 Doom 구조 추종에 치우침).
 
 ## ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
 
