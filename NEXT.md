@@ -46,15 +46,25 @@ optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다
 - ✅ Phase 0: 공개 노트(`20240404T101052`)의 `uname` 예시도 env 방식으로 정정 +
   이유 주석. `(:if my/system-macos-p macos)` 는 doom! 정식 지원 확인됨(소스
   `lib/modules.el` `doom-module-mplist-map`) — 고치지 말 것.
+- ✅ Phase 1: `run-tests.sh` glob 디스커버리화 (`test-*.el` 자동 발견,
+  test-helper 먼저). `TESTING-GUIDELINES.org`에 Tier A/B `-Q` 파티션 명문화.
+- ✅ 첫 Tier A 표본: `tests/test-andenken.el` — andenken-config.el 순수코어
+  5함수(`--format-date`/`--truncate`/`--day-range-utc`/`--week-range-utc`/
+  `--format-session-result`)에 characterization test 12개. 전부 관측값 기준,
+  TZ 불변(정오-UTC 입력). `run-tests.sh`: 40개 중 35통과/0실패/5스킵.
 
 **다음 한 걸음** (순서):
+- [ ] **denote-export 테스트 dead-path 수정**: `test-denote-export.el`이
+      존재하지 않는 `../+denote-export.el`을 로드 시도 → 핵심 link-export 5개가
+      SKIP. 실제 경로(`lisp/denote-export-config.el` 또는 `bin/denote-export.el`)로
+      고쳐 커버리지 회복. (5 SKIP의 정체)
+- [ ] andenken 소규모 리팩터 (green 하에, 동작 변경 금지): `--search-sessions-
+      window`의 `cl-loop ... collect` → `seq-map-indexed` 검토. 코드 이미 깨끗해서
+      옵션. 가치는 백엔드 2e(`--view session`)지 elisp 정리 아님.
+- [ ] 다음 Tier A 파일 표본 확산: `denote-functions.el`(45/0) — 순수함수
+      triage → characterization test. andenken 표본 문체 그대로.
 - [ ] 공개 노트에 "vanilla-first + 테스트 게이트" 반영 (현재 노트는 Doom
       구조 추종에 치우침 — 리팩터 order 섹션에 `-Q`=Tier A 규칙 추가).
-- [ ] `run-tests.sh` glob 디스커버리화 + `TESTING-GUIDELINES.org`에 `-Q`=Tier A
-      명문화. ox-hugo optional-load 여부 결정.
-- [ ] 첫 표본 1파일: **`andenken-config.el`** (14/0, 현재 껍데기 수준이라 수정
-      좋음). Tier A에서 `-Q` 테스트 가능한 순수함수만 골라 characterization
-      test + 리팩터. 표본 합의 후 그 문체로 확산.
 
 ## ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
 

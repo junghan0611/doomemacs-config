@@ -21,6 +21,45 @@ Simple, straightforward, built-in.
 복잡한 기능보다 간단하고 명확한 테스트.
 #+end_quote
 
+* 무엇을 테스트하는가 — Tier A/B 파티션
+
+이 저장소는 16K줄 닷파일이다. 전부 테스트하지 않는다. =run-tests.sh= 가
+=emacs -Q --batch= 로 도는 것 자체가 테스트 대상을 정해준다.
+
+#+begin_quote
+=emacs -Q= = Doom 없음 = vanilla.
+=-Q= 에서 도는 함수 = Doom 의존 없는 로직 = 패키지로 추출 가능 = agent-server 가
+실제로 쓰는 함수. 네 갈래가 같은 집합이다. 하니스가 파티션을 강제한다.
+#+end_quote
+
+** Tier A — 로직 (테스트 먼저 → 리팩터)
+
+- Doom-free. =map!= / =after!= / =use-package!= 를 함수 본문에 넣지 않는다.
+- 입력→출력이 명확한 순수함수가 1순위 (path/url/string transform 등).
+- 파일 예: =denote-functions.el=, =functions.el=, =org-functions.el=,
+  =andenken-config.el=, =workflow-shared.el=.
+- 리팩터 전 characterization test 로 현재 동작을 고정한다 (아래 "리팩토링 시").
+
+** Tier B — 설정 (테스트하지 않음)
+
+- =map! / after! / use-package!= 로 짜인 선언적 설정·키바인딩·UI 커맨드.
+- =setq= 더미를 테스트하는 건 의미 없다. 네임스페이스/스타일만 기회 닿을 때 손본다.
+- 파일 예: =ai-gptel.el=, =ui-config.el=, =elfeed-config.el=, =tty/term/present-config.el=.
+
+** 패키지 의존 로직 — skip 또는 수동
+
+Tier A 로직이라도 =ox-hugo= / =denote= 등 패키지를 로드해야 도는 경우
+( =test-denote-link-export--*= ) =-Q= 에서는 =skip-unless= 로 SKIP 된다.
+SKIP 은 통과가 아니다 — 핵심이 안 돌고 있다는 신호다. 선택지:
+
+1. 테스트 진입부에서 straight repo 의 패키지를 batch-load (커버리지 회복).
+2. 수동 검증으로 분류하고 SKIP 을 유지 (단, 커버리지 공백임을 인지).
+
+** 새 테스트 추가
+
+=tests/test-<module>.el= 로 만들면 =run-tests.sh= 가 자동 발견한다 (glob).
+실행 순서는 무관하나 =test-helper.el= 만 먼저 로드된다.
+
 * 테스트 작성 원칙
 
 ** 1. 파일 구조
