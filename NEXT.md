@@ -53,6 +53,23 @@ optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다
   `--format-session-result`)에 characterization test 12개. 전부 관측값 기준,
   TZ 불변(정오-UTC 입력). `run-tests.sh`: 40개 중 35통과/0실패/5스킵.
 
+**완료 (2026-06-09) — 안 쓰는 파일 정리 (tag-release 전 1차 정렬)**:
+- ✅ 제거: `bin/denote-export.sh` (run.sh가 parallel.py 직접 호출하며 대체) +
+  `tests/test_bash_cleanup.sh` (그 .sh의 trap 테스트).
+- ✅ 제거: `bin/gh-starred-to-bib.sh` (zotero-config로 이관됨).
+- ✅ `DENOTE-EXPORT-ISSUES.md` → `CHANGELOG.md`로 이관 후 삭제 (해결된 daemon
+  hardening 4건: after!→with-eval-after-load / dblock GC / debug-on-error nil /
+  NBSP 파일명). 문서 정리.
+- ⚠️ `tests/test_daemon_cleanup.py` 검토 결과 **연결 보류**: 통과는 하지만
+  `create_testable_module()`이 cleanup 로직을 **문자열 사본**으로 bin/에 써넣고
+  그걸 테스트 — 실제 `parallel.py` 미테스트(가짜 테스트) + bin/ 오염. 제대로
+  하려면 parallel.py를 import 가능하게 리팩터 필요(live 코드, 지금 보류).
+  → 처분 미정 (제거 vs 향후 재작성). 생성 artifact `denote_export_parallel_testable.py`
+  제거함.
+- ✅ `CHANGELOG.md` 생성 (Keep a Changelog, `## Unreleased`). tag-release 준비.
+- **유지 확인**: `bin/agent-server-healthcheck.sh`(cron), `gh-starred`는 제거지만
+  cron healthcheck는 LIVE. `lisp/ai-gptel-local-proxy.el`은 gitignored 로컬.
+
 ### export 파이프라인 정리 (Understanding 고정됨 — 리팩터 진입)
 
 > 호출 그래프 / 4분류 지도는 가든 가이드 노트에 헤딩1로 박음:
@@ -62,11 +79,10 @@ optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다
 
 위험도 낮은 순:
 
-- [ ] **🟢 legacy surface 분류 결정** (GLG): `bin/denote-export.sh` +
-      `tests/test_bash_cleanup.sh` 를 어찌할지 — (a)손으로 안 씀→deprecated 표기
-      후 제거 후보, (b)가끔 씀→`run.sh export` 위임 얇은 wrapper로 축소, (c)유지→
-      cleanup 중복 명시. **자동경로 LIVE 아님 (run.sh가 .py 직접 호출).**
-- [ ] **🟡 stale reference 정정**: `my/update-dblock-export-garden-all-parallel`
+- [x] **🟢 legacy surface 제거 완료** (2026-06-09): `bin/denote-export.sh` +
+      `tests/test_bash_cleanup.sh` 삭제 (위 완료 블록 참조).
+- [ ] **🟡 stale reference 정정 — 함수라 보류** (GLG: 지금 함수 안 건드림):
+      `my/update-dblock-export-garden-all-parallel`
       (`denote-export-config.el:970`)이 존재하지 않는 `bin/denote-export-parallel.sh`
       를 찾음 → sequential로 fallback. interactive M-x surface. 옛 .sh 병렬 모델
       잔재. **LIVE 파일 안이라 .sh 고아보다 우선.** 제거 vs `run.sh export` 위임
