@@ -34,12 +34,6 @@ emacs -Q --batch \
       "${LOAD_ARGS[@]}" \
       -f ert-run-tests-batch-and-exit
 
-# NOTE: tests/test_daemon_cleanup.py is intentionally NOT run here. It tests a
-# string-embedded reimplementation of the cleanup logic (it writes its own
-# bin/denote_export_parallel_testable.py and imports that), not the live
-# bin/denote-export-parallel.py — so it neither covers real code nor should
-# litter bin/. Wiring it in needs parallel.py made importable first.
-
 echo ""
 echo "================================"
 echo "All tests completed!"

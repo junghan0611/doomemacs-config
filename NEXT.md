@@ -60,12 +60,11 @@ optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다
 - ✅ `DENOTE-EXPORT-ISSUES.md` → `CHANGELOG.md`로 이관 후 삭제 (해결된 daemon
   hardening 4건: after!→with-eval-after-load / dblock GC / debug-on-error nil /
   NBSP 파일명). 문서 정리.
-- ⚠️ `tests/test_daemon_cleanup.py` 검토 결과 **연결 보류**: 통과는 하지만
-  `create_testable_module()`이 cleanup 로직을 **문자열 사본**으로 bin/에 써넣고
-  그걸 테스트 — 실제 `parallel.py` 미테스트(가짜 테스트) + bin/ 오염. 제대로
-  하려면 parallel.py를 import 가능하게 리팩터 필요(live 코드, 지금 보류).
-  → 처분 미정 (제거 vs 향후 재작성). 생성 artifact `denote_export_parallel_testable.py`
-  제거함.
+- ✅ `tests/test_daemon_cleanup.py` **제거**: 통과하지만 가짜 테스트였음 —
+  `create_testable_module()`이 cleanup 로직을 문자열 사본으로 bin/에 써넣고
+  그걸 테스트(실제 `parallel.py` 미커버) + 매 실행 bin/ 오염. 생성 artifact
+  `denote_export_parallel_testable.py`도 제거. parallel.py의 cleanup 진짜 테스트가
+  필요하면 → parallel.py를 import 가능하게 만든 뒤 재작성 (향후, live 코드 손댈 때).
 - ✅ `CHANGELOG.md` 생성 (Keep a Changelog, `## Unreleased`). tag-release 준비.
 - **유지 확인**: `bin/agent-server-healthcheck.sh`(cron), `gh-starred`는 제거지만
   cron healthcheck는 LIVE. `lisp/ai-gptel-local-proxy.el`은 gitignored 로컬.

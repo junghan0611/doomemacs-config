@@ -15,6 +15,12 @@ All notable changes to this project will be documented here. Format follows
   already duplicated by run.sh's own trap.
 - `bin/gh-starred-to-bib.sh` (GitHub stars → BibTeX) — migrated to
   zotero-config.
+- `tests/test_daemon_cleanup.py` — it tested a string-embedded
+  reimplementation of the cleanup logic (written by its own
+  `create_testable_module()` into `bin/`), not the live
+  `bin/denote-export-parallel.py`, so it covered no real code and littered
+  `bin/` on each run. Genuine coverage would require making parallel.py
+  importable first.
 - `DENOTE-EXPORT-ISSUES.md` resolved-issue log — folded into this changelog
   (the entries below).
 
