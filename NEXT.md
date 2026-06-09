@@ -7,106 +7,42 @@
 
 ---
 
-## TOP — lisp/ 리팩터: 테스트 게이트 + vanilla-first 로직 파티션 (2026-06-08)
+## TOP — lisp/ 리팩터 후속 큐: vanilla-first + export 정리 (2026-06-09)
 
-**목표**: 16K줄 닷파일을 "테스트로 핀 박힌 로직"과 "Doom 설정"으로 분리.
-개인 닷파일이라고 가볍게 두면 부채가 쌓여 확장이 막힌다 (ghostel PR 교훈:
-핵심은 테스트 유무). full-Doom 추종은 하지 않는다 — agent-server는 Doom
-의존이 없고, 에이전트도 Doom idiom을 매번 다시 봐야 해서 어색하다.
+**현재 원칙**: 처리 완료된 작업은 `CHANGELOG.md`로 이동한다. NEXT는 다음에 할 일만
+남긴다. 상세 완료 로그는 `CHANGELOG.md`의 다음 릴리스 섹션을 본다.
 
-**가이딩 센터 (3기둥)**:
-1. **로직은 vanilla** (`emacs -Q`에서 돔), Doom 매크로(`map!`/`after!`/
-   `use-package!`)는 glue·keybinding 파일에만. 로직 함수 안엔 안 넣는다.
-   → 테스트성 + 추출성 + agent-server 호환을 한 규칙으로 동시 해결.
-2. **테스트가 게이트.** 하니스(`tests/run-tests.sh` + `test-helper.el`)는
-   이미 있음 — 새로 만들지 말고 일반화. `-Q`에서 도는 것 = Tier A.
-3. **Characterization test 먼저** → green 상태에서 리팩터 → 리팩터에 동작
-   변경 금지(동작 변경은 별도). 검수 = 테스트 리뷰 + green 확인.
+**가이딩 센터**:
+1. **로직은 vanilla**: `emacs -Q`에서 도는 함수 = Doom 의존 없는 로직 =
+   패키지 추출 가능 = agent-server 재사용 가능. Doom 매크로(`map!`/`after!`/
+   `use-package!`)는 glue·keybinding·package setup에 둔다.
+2. **테스트가 게이트**: Tier A 리팩터 전 characterization test로 현재 동작을
+   고정한다. `tests/run-tests.sh`는 `emacs -Q` ERT runner다.
+3. **export는 리팩터 전 분류부터**: 가든 export는 live 인프라다. 호출 그래프와
+   4분류를 먼저 문서화하고, 동작 보존 테스트 없이는 핵심 로직을 건드리지 않는다.
 
-**파티션** (lisp/ 전수 측정 완료, defun/doom-macro):
-- **Tier A** (테스트 먼저 → 리팩터): `denote-functions.el`(45/0),
-  `functions.el`(19/1), `andenken-config.el`(14/0), `workflow-shared.el`(10/1),
-  `org-functions.el`(4/0)
-- **Tier B** (손대지 않음, 네임스페이스만 기회 닿을 때): `ai-gptel.el`(6/23),
-  `ui-config.el`(4/10), `elfeed-config.el`(15/9), tty/term/present-config.el
-- `map! 117 · after! 92 · use-package! 53` 은 전부 Tier B — 설정이지 로직 아님.
+**다음 한 걸음** (우선순위):
 
-**기존 테스트 현실** (2026-06-08 실측, `run-tests.sh`): 28개 중 23 통과,
-0 실패, **5 SKIPPED**. 하지만 SKIP된 5개가 정작 핵심 `test-denote-link-export--*`
-— `-Q`에서 ox-hugo 의존이라 안 돈다. 즉 실제로 도는 23개는 변두리
-(section-detection / notification / unicode filename)뿐. **denote-export 테스트는
-모범이 아니라 "핵심을 비껴간 커버리지"** — Tier A 일반화 시 ox-hugo를 batch에서
-optional-load 하거나 그 함수들을 수동 검증으로 분류해야 한다.
-
-**완료 (2026-06-08)**:
-- ✅ Phase 0: `my/termux-p` `uname -a` subprocess 제거 → `TERMUX_VERSION`/`PREFIX`
-  env 검출로 통일. 세 군데가 제각각이었음 (init.el subprocess / korean-input
-  `featurep :system 'android`(Termux-pkg는 gnu/linux라 오검출) / termux-config
-  env) → init.el + korean-input fallback 둘 다 env 방식으로 SSOT 정리.
-- ✅ Phase 0: 공개 노트(`20240404T101052`)의 `uname` 예시도 env 방식으로 정정 +
-  이유 주석. `(:if my/system-macos-p macos)` 는 doom! 정식 지원 확인됨(소스
-  `lib/modules.el` `doom-module-mplist-map`) — 고치지 말 것.
-- ✅ Phase 1: `run-tests.sh` glob 디스커버리화 (`test-*.el` 자동 발견,
-  test-helper 먼저). `TESTING-GUIDELINES.org`에 Tier A/B `-Q` 파티션 명문화.
-- ✅ 첫 Tier A 표본: `tests/test-andenken.el` — andenken-config.el 순수코어
-  5함수(`--format-date`/`--truncate`/`--day-range-utc`/`--week-range-utc`/
-  `--format-session-result`)에 characterization test 12개. 전부 관측값 기준,
-  TZ 불변(정오-UTC 입력). `run-tests.sh`: 40개 중 35통과/0실패/5스킵.
-
-**완료 (2026-06-09) — 안 쓰는 파일 정리 (tag-release 전 1차 정렬)**:
-- ✅ 제거: `bin/denote-export.sh` (run.sh가 parallel.py 직접 호출하며 대체) +
-  `tests/test_bash_cleanup.sh` (그 .sh의 trap 테스트).
-- ✅ 제거: `bin/gh-starred-to-bib.sh` (zotero-config로 이관됨).
-- ✅ `DENOTE-EXPORT-ISSUES.md` → `CHANGELOG.md`로 이관 후 삭제 (해결된 daemon
-  hardening 4건: after!→with-eval-after-load / dblock GC / debug-on-error nil /
-  NBSP 파일명). 문서 정리.
-- ✅ `tests/test_daemon_cleanup.py` **제거**: 통과하지만 가짜 테스트였음 —
-  `create_testable_module()`이 cleanup 로직을 문자열 사본으로 bin/에 써넣고
-  그걸 테스트(실제 `parallel.py` 미커버) + 매 실행 bin/ 오염. 생성 artifact
-  `denote_export_parallel_testable.py`도 제거. parallel.py의 cleanup 진짜 테스트가
-  필요하면 → parallel.py를 import 가능하게 만든 뒤 재작성 (향후, live 코드 손댈 때).
-- ✅ `CHANGELOG.md` 생성 (Keep a Changelog, `## Unreleased`). tag-release 준비.
-- **유지 확인**: `bin/agent-server-healthcheck.sh`(cron), `gh-starred`는 제거지만
-  cron healthcheck는 LIVE. `lisp/ai-gptel-local-proxy.el`은 gitignored 로컬.
-
-### export 파이프라인 정리 (Understanding 고정됨 — 리팩터 진입)
-
-> 호출 그래프 / 4분류 지도는 가든 가이드 노트에 헤딩1로 박음:
-> `~/org/notes/20251221T120044--§doomemacs-config-...denote_export_guide_hugo.org`
-> LIVE: `run.sh export → parallel.py → emacs daemon(denote-export.el) → load denote-export-config.el`
-> **원칙: 리팩터 전 characterization test 선행, 자동경로 로직 동작 보존, 분류부터 문서 고정.**
-
-위험도 낮은 순:
-
-- [x] **🟢 legacy surface 제거 완료** (2026-06-09): `bin/denote-export.sh` +
-      `tests/test_bash_cleanup.sh` 삭제 (위 완료 블록 참조).
-- [ ] **🟡 stale reference 정정 — 함수라 보류** (GLG: 지금 함수 안 건드림):
-      `my/update-dblock-export-garden-all-parallel`
+- [ ] **stale reference 정정 — 함수라 보류**: `my/update-dblock-export-garden-all-parallel`
       (`denote-export-config.el:970`)이 존재하지 않는 `bin/denote-export-parallel.sh`
-      를 찾음 → sequential로 fallback. interactive M-x surface. 옛 .sh 병렬 모델
-      잔재. **LIVE 파일 안이라 .sh 고아보다 우선.** 제거 vs `run.sh export` 위임
-      vs `.py` 경로로 교정 — GLG 결정 후 손댐. (docstring의 `~/.config/doom` 옛
-      경로, `clean-run.sh` 참조도 같이)
-- [ ] **🟡 test dead-path 정정 — Tier 결정**: `test-denote-export.el`의
-      `../+denote-export.el` (없음) → 실제 `my/denote-link-ol-export`
-      (`denote-export-config.el:461`). 그 파일 top-level `(require 'ox-hugo)` →
-      `-Q` 불가. **억지 full-load 금지.** (1)broken-link fallback 순수추출→Tier A,
-      또는 (2)Tier C integration runner. 결정 후 5 SKIP 분류.
-- [ ] **🟡 가이드 노트 Architecture 섹션 갱신**: 옛 v2.0 서술이 stale
-      (`denote-export.sh` 진입/`lisp/denote-export.el` 오기/`docs/` 위치/mermaid
-      run.sh 미언급). 새 헤딩1과 일치하게 정정. (노트는 GLG commit/export 자리)
-- [ ] **🔴 1045줄 `denote-export-config.el` 함수별 live/dead 전수 분석**: 위 분류
-      끝난 뒤. 8섹션 중 어디부터 볼지 GLG 지정. read-only 리스트 먼저, 제거는 별도.
-
-### 그 외 Tier A 확산
-
-- [ ] andenken 소규모 리팩터 (green 하에, 동작 변경 금지): `--search-sessions-
-      window`의 `cl-loop ... collect` → `seq-map-indexed` 검토. 코드 이미 깨끗해서
-      옵션. 가치는 백엔드 2e(`--view session`)지 elisp 정리 아님.
-- [ ] 다음 Tier A 파일 표본 확산: `denote-functions.el`(45/0) — 순수함수
-      triage → characterization test. andenken 표본 문체 그대로.
-- [ ] 공개 컨벤션 노트(`20240404T101052`)에 "vanilla-first + 테스트 게이트
-      (Tier A/B/C)" 반영 (현재 Doom 구조 추종에 치우침).
+      를 찾음 → sequential fallback. interactive M-x surface. 제거 vs `run.sh export`
+      위임 vs `.py` 경로 교정 중 GLG 결정 후 손댐. docstring의 옛 경로/`clean-run.sh`
+      참조도 같이 정리.
+- [ ] **denote-export test dead-path Tier 결정**: `test-denote-export.el`의
+      `../+denote-export.el`은 없음. 실제 함수 `my/denote-link-ol-export`는
+      `denote-export-config.el` 안에 있고 top-level `(require 'ox-hugo)` 때문에
+      `emacs -Q` 불가. 억지 full-load 금지.
+      - 선택 A: broken-link fallback 순수 분기 추출 → Tier A
+      - 선택 B: ox-hugo/denote/straight 로드 별도 runner → Tier C
+- [ ] **가이드 노트 Architecture 섹션 갱신**: `20251221T120044`의 옛 v2.0 서술이
+      stale (`denote-export.sh` 진입, `lisp/denote-export.el` 오기, `docs/` 위치,
+      mermaid run.sh 미언급). 새 헤딩1 호출 그래프와 일치하게 정정.
+- [ ] **`denote-export-config.el` 함수별 live/dead 전수 분석**: 위 분류가 끝난 뒤.
+      1045줄 8섹션 중 어디부터 볼지 GLG 지정. read-only 리스트 먼저, 제거는 별도.
+- [ ] **다음 Tier A 표본 확산**: `denote-functions.el`(45/0) 순수함수 triage →
+      characterization test. `tests/test-andenken.el` 문체를 기준으로 한다.
+- [ ] **옵션**: andenken 소규모 리팩터 (`--search-sessions-window`의 `cl-loop` →
+      `seq-map-indexed`)는 green 하에만. 백엔드 2e(`--view session`)가 더 큰 가치.
 
 ## ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
 

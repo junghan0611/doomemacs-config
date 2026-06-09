@@ -109,6 +109,14 @@ without inventing a new idiom each time.
   command style. Private helpers should still start with `my/` and include the
   concern name; use `--` for genuinely internal helpers inside a larger module,
   e.g. `my/termux--decode-arrow-key`.
+- **Vanilla-first logic**: functions with clear input→output behavior should
+  run under `emacs -Q` whenever possible. Keep Doom macros (`map!`, `after!`,
+  `use-package!`) in glue, keybinding, or package-configuration layers, not in
+  reusable logic.
+- **Test gate before refactor**: for Tier A logic, write characterization tests
+  before changing behavior or structure. `tests/run-tests.sh` is the vanilla
+  `emacs -Q` ERT gate; package-dependent paths belong in a separate Tier C
+  integration runner or should have their pure branch extracted first.
 - **Avoid Doom v2 compat shims**: do not add new `IS-*`, `EMACS29+`, `setq!`,
   `featurep!`, `appendq!`, `pushnew!`, etc. Prefer `(featurep :system 'macos)`,
   `(>= emacs-major-version 31)`, `setopt`/`setq`, `cl-callf`, `add-to-list`, or

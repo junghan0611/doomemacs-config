@@ -6,6 +6,8 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.6.9
+
 ### Removed
 
 - Superseded parallel-export wrapper `bin/denote-export.sh` and its bash-trap
@@ -29,6 +31,10 @@ All notable changes to this project will be documented here. Format follows
 - Test harness: `tests/run-tests.sh` auto-discovers `test-*.el` (ERT). Tier
   A/B/C testing model documented in `tests/TESTING-GUIDELINES.org`;
   `tests/test-andenken.el` characterization tests added.
+- Export pipeline Understanding pinned in `NEXT.md` and the garden guide note:
+  live path, legacy/manual surface, stale references, and Tier C test boundary.
+- `CHANGELOG.md` as the release/change-history SSOT; completed NEXT entries now
+  move here so NEXT stays focused on remaining work.
 
 ### Fixed (denote-export daemon hardening, 2026-03-12)
 
@@ -47,4 +53,7 @@ All notable changes to this project will be documented here. Format follows
 ### Changed
 
 - Coding conventions: `my/` namespace, env-based Termux detection (no `uname`
-  subprocess at init), Doom-v3-aware compat-shim avoidance. See AGENTS.md.
+  subprocess at init), Doom-v3-aware compat-shim avoidance, vanilla-first logic,
+  and characterization-test gate. See AGENTS.md and the public convention note.
+- `NEXT.md` trimmed back to pending work only; completed cleanup/test/export
+  history lives in this changelog.
