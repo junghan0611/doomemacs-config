@@ -6,6 +6,17 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+### Added
+
+- Keep an empty `modules/` directory (`modules/.gitkeep`) so Doom's post-v3
+  `doctor` path check succeeds and future local Doom modules have a stable
+  landing zone.
+
+### Documentation
+
+- Clarified in `NEXT.md` that `lisp/` remains the personal concern-split layer;
+  only stable, opt-in/out units should graduate to `$DOOMDIR/modules`.
+
 ## v2026.6.9
 
 ### Removed

@@ -21,6 +21,19 @@
 3. **export는 리팩터 전 분류부터**: 가든 export는 live 인프라다. 호출 그래프와
    4분류를 먼저 문서화하고, 동작 보존 테스트 없이는 핵심 로직을 건드리지 않는다.
 
+**lisp/ vs modules/ 판단**:
+- 지금 목표는 `lisp/`를 Doom module처럼 정돈하는 것이다. 전부 `modules/`로 옮기지
+  않는다. `lisp/`는 개인 `$DOOMDIR` concern 분리 자리이고, `modules/`는 켜고 끌 수
+  있는 Doom module로 승격할 때만 쓴다.
+- module 후보 조건: `doom!`에서 opt-in/out 가능, `packages.el`/`config.el`/
+  `autoload/`/`doctor.el` 경계가 의미 있음, 다른 Doom 사용자도 쓸 수 있음,
+  package dependency를 module 단위로 관리할 가치가 있음.
+- 특히 `workflow-shared.el`, `denote-export-config.el`처럼 headless daemon
+  (`bin/agent-server.el`, `bin/denote-export.el`)도 직접 로드하는 파일은 바로
+  `modules/`로 옮기면 위험하다. 먼저 vanilla core와 Doom glue를 분리한다.
+- `modules/.gitkeep`는 빈 사용자 module 디렉토리 보존용이다. Doom 2026-06-09
+  구조 변경 후 `doom doctor`가 `$DOOMDIR/modules` 존재를 기대하므로 유지한다.
+
 **다음 한 걸음** (우선순위):
 
 - [ ] **stale reference 정정 — 함수라 보류**: `my/update-dblock-export-garden-all-parallel`
