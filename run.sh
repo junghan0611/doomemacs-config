@@ -11,6 +11,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOOM_BIN="$HOME/.config/emacs/bin/doom"
+DOOM_STABLE_DIR="$HOME/doomemacs"
+DOOM_UNSTABLE_DIR="$HOME/doomemacs-unstable"
 BIN_DIR="$SCRIPT_DIR/bin"
 PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"
 PYTHON_VERIFY="$BIN_DIR/verify-relref.py"
@@ -79,6 +81,7 @@ show_menu() {
   echo "    1) doom sync"
   echo "    2) doom sync -u -j 2 (업데이트)"
   echo "    3) doom doctor"
+  echo "    G) doom git pull (~/doomemacs + ~/doomemacs-unstable)"
   echo ""
   echo "  ${YELLOW}Denote Dblock${NC}"
   echo "    4) dblock meta (기본)"
@@ -177,6 +180,46 @@ cmd_sync_update() {
 
 cmd_doctor() {
   execute_cmd "$DOOM_BIN doctor"
+}
+
+cmd_doom_pull_repo() {
+  local repo_path="$1"
+  local label="$2"
+
+  [[ -d "$repo_path" ]] || { err "$label 디렉토리 없음: $repo_path"; return 1; }
+  git -C "$repo_path" rev-parse --is-inside-work-tree &>/dev/null || {
+    err "$label git 리포 아님: $repo_path"
+    return 1
+  }
+
+  info "$label pull: $repo_path"
+  git -C "$repo_path" pull --ff-only --recurse-submodules
+  git -C "$repo_path" submodule sync --recursive
+  git -C "$repo_path" submodule update --init --recursive
+  git -C "$repo_path" submodule status --recursive || true
+  success "$label 완료"
+}
+
+cmd_doom_pull() {
+  local target="${1:-all}"
+
+  case "$target" in
+    stable)
+      cmd_doom_pull_repo "$DOOM_STABLE_DIR" "doomemacs"
+      ;;
+    unstable)
+      cmd_doom_pull_repo "$DOOM_UNSTABLE_DIR" "doomemacs-unstable"
+      ;;
+    all)
+      cmd_doom_pull_repo "$DOOM_STABLE_DIR" "doomemacs"
+      echo ""
+      cmd_doom_pull_repo "$DOOM_UNSTABLE_DIR" "doomemacs-unstable"
+      ;;
+    *)
+      err "doom-pull: stable|unstable|all"
+      return 1
+      ;;
+  esac
 }
 
 # ━━━ Dblock ━━━
@@ -544,6 +587,7 @@ cli_mode() {
     sync)          cmd_sync ;;
     sync-update)   cmd_sync_update ;;
     doctor)        cmd_doctor ;;
+    doom-pull)     cmd_doom_pull "${1:-all}" ;;
     dblock)
       local target="${1:-meta}"; shift || true
       local jobs="${1:-$DEFAULT_JOBS}"
@@ -609,7 +653,8 @@ cli_mode() {
     fix)     cmd_fix ;;
     fix-org) cmd_fix_org "$@" ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|dblock|export|agent|pi|unstable|verify|fix|fix-org> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|doom-pull|dblock|export|agent|pi|unstable|verify|fix|fix-org> [args]"
+      echo "     doom-pull [stable|unstable|all]   # default: all"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -636,6 +681,7 @@ main() {
       1) cmd_sync ;;
       2) cmd_sync_update ;;
       3) cmd_doctor ;;
+      G) cmd_doom_pull all ;;
       4)
         local jobs; jobs=$(ask_jobs)
         cmd_dblock "$(resolve_org_dir meta)" "$jobs"
