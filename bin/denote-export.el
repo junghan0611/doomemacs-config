@@ -670,9 +670,22 @@ Catches all errors including those from dblock handlers to prevent daemon crash.
                   (progn
                     (message "[DBLOCK] Found in %s" (file-name-nondirectory file))
                     (goto-char (point-min))
-                    (org-update-all-dblocks)
-                    (save-buffer)
-                    (message "[DBLOCK] ✓ Updated in %.2fs" (- (float-time) start-time)))
+                    ;; Only save when dblock output actually changed. Saving
+                    ;; unconditionally bumps the file mtime even for identical
+                    ;; content, which makes the next incremental export re-export
+                    ;; every dblock file. Compare before/after and skip the save
+                    ;; (clearing the modified flag org-update-all-dblocks sets)
+                    ;; when nothing changed, so mtime stays put.
+                    (let ((before (buffer-string)))
+                      (org-update-all-dblocks)
+                      (if (string= before (buffer-string))
+                          (progn
+                            (set-buffer-modified-p nil)
+                            (message "[DBLOCK] = Unchanged, skip save: %s"
+                                     (file-name-nondirectory file)))
+                        (save-buffer)
+                        (message "[DBLOCK] ✓ Updated in %.2fs"
+                                 (- (float-time) start-time)))))
                 (message "[DBLOCK] SKIP: No denote dblock in %s" (file-name-nondirectory file)))))
           (when (buffer-live-p buf)
             (kill-buffer buf)))
