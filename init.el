@@ -13,9 +13,18 @@
 (unless noninteractive
   (require 'server)
   (setq server-name (or (getenv "EMACS_SERVER_NAME") "user"))
-  (when (and (daemonp) (server-running-p))
-    (message "Emacs server '%s' already running! Use emacsclient instead." server-name)
-    (kill-emacs)))
+  (if (daemonp)
+      ;; daemon: 같은 server-name 중복 실행만 차단.
+      (when (server-running-p)
+        (message "Emacs server '%s' already running! Use emacsclient instead." server-name)
+        (kill-emacs))
+    ;; 비-daemon GUI: 메뉴(Win+m 등)에서 띄운 인스턴스가
+    ;; `emacsclient -s user' 의 접속점이 되도록 직접 server 를 연다.
+    ;; 이미 user 소켓이 떠 있으면(다른 인스턴스) 건드리지 않는다.
+    (add-hook 'emacs-startup-hook
+              (lambda ()
+                (when (and (display-graphic-p) (not (server-running-p)))
+                  (server-start))))))
 
 ;;;; Platform predicates
 
