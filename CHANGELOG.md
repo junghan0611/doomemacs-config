@@ -6,11 +6,28 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.6.15 — zmx 라이브 세션 + 데몬/export 보강
+
 ### Added
 
+- Persistent terminal sessions via `term-sessions`
+  (ArthurHeymans/emacs-term-sessions), with zmx as the backend: Emacs is the
+  client, zmx owns session lifecycle/PTYs/history. The ghostel frontend keeps
+  Korean IME working; `SPC j z` opens the consult session picker (the Emacs
+  analog of the `zx` fzf picker) and `my/zmx-launch` (`SPC j a`) ports the
+  `zcc`/`zcx`/`zagy`/`zpi` harness launchers as per-project
+  `<prefix>.<project>` sessions.
+- `run.sh doom-pull` command.
 - Keep an empty `modules/` directory (`modules/.gitkeep`) so Doom's post-v3
   `doctor` path check succeeds and future local Doom modules have a stable
   landing zone.
+
+### Fixed
+
+- Restored `server-start` for non-daemon GUI instances; the daemon-only guard
+  had prevented the `user` GUI socket from starting.
+- denote-export dblock save now skips writing when the rendered content is
+  unchanged, preserving the source file's mtime.
 
 ### Documentation
 
