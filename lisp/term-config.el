@@ -42,7 +42,7 @@
   (setq ghostel-shell (or explicit-shell-file-name
                           shell-file-name
                           (getenv "SHELL")
-                          "/bin/zsh"))
+                          "/bin/bash"))
   ;; Default is xterm-ghostty. If remote terminfo gets noisy, temporarily use:
   ;; (setq ghostel-term "xterm-256color")
   ;; Keep side effects opt-in during evaluation.
@@ -129,6 +129,96 @@ its own CLI."
 ;; Invoke via `M-x my/pi-ghostel-start' when you want to test it.
 ;; (map! :leader
 ;;       :desc "Pi (ghostel)" "j SPC" #'my/pi-ghostel-start)
+
+
+;;; term-sessions — browse zmx live sessions from Emacs
+
+;; zmx (neurosnap) owns the session lifecycle/PTYs/history; Emacs is just a
+;; client that shells out for control ops and attaches through a frontend.
+;; This is the Emacs counterpart of the `zx' fzf picker in ~/.bashrc.local:
+;; `term-sessions-consult-session' lists every live session (cc/cx/agy/pi/...)
+;; with a `zmx history' preview and attaches the chosen one in one step.
+;;
+;; Session names are plain (`cc.<dir>', not prefixed), so leave
+;; `term-sessions-zmx-session-prefix' nil to see all of them.  `zmx' resolves
+;; via PATH (~/.local/bin until the nixos-config rebuild lands a system zmx).
+(use-package! term-sessions
+  :defer t
+  :commands (term-sessions-consult-session
+             term-sessions-open
+             term-sessions-list
+             term-sessions-history
+             term-sessions-kill)
+  :init
+  ;; Set the frontend in `:init', BEFORE the package loads.  `term-sessions-open'
+  ;; reads `term-sessions-preferred-frontend' at open time and ignores any
+  ;; stored spec frontend, so a `:config' setq (which only runs *after* the
+  ;; autoloaded command has already triggered load) is too late and races the
+  ;; `term' defcustom default.  ghostel, not vterm: ghostel's `ghostel-mode-hook'
+  ;; fires `ghostel-ime-mode' (see the ghostel use-package above), so Korean
+  ;; input works inside attached sessions — vterm has no equivalent IME path
+  ;; here.  `evil-ghostel-mode' also routes ESC to the PTY, which is what
+  ;; attaching to a live claude/pi session wants anyway.
+  (setq term-sessions-preferred-frontend 'ghostel)
+  (map! :leader
+        (:prefix ("j" . "pi-agent")
+         :desc "zmx sessions (consult)" "z" #'term-sessions-consult-session)))
+
+
+;;; zmx agent-harness launchers — Emacs analog of zcc/zcx/zagy/zep
+
+;; The shell launchers in ~/.bashrc.local run
+;;   zmx attach "<prefix>.<basename PWD>" <command>
+;; to create-or-attach a per-project session running an agent harness.
+;; `term-sessions-open' passes COMMAND straight to `zmx attach'
+;; (`term-sessions--attach-args'), so the same one-handle semantics — create
+;; with the harness command on first open, reattach as-is afterwards — fall out
+;; of it.  `term-sessions-run' is the wrong tool: it runs a one-shot job
+;; *inside* a session and captures output, not an interactive TUI attach.
+(defvar my/zmx-harnesses
+  '((claude . (:prefix "cc"  :command "claude"))
+    (codex  . (:prefix "cx"  :command "codex"))
+    (agy    . (:prefix "agy" :command "agy"))
+    (pi     . (:prefix "pi"  :command "bash -lc \"source $HOME/.bashrc.local; pit5\"")))
+  "Agent harnesses launchable as zmx sessions via `my/zmx-launch'.
+Each entry maps a harness key to a plist with `:prefix' (the zmx
+session-name prefix, matching ~/.bashrc.local) and `:command' (passed to
+`zmx attach' for session creation).  `:command' is parsed with
+`split-string-and-unquote', which honours double quotes but not single
+quotes — quote multi-word arguments with \\\"...\\\".
+
+The `pi' command runs through `bash -lc' so the `pit5' shell function — and
+the `_pi_garden_pi' it calls — are sourced from ~/.bashrc.local.  zmx exec's
+its argv directly, so a bare `pit5' would not resolve; the wrapper is what
+the `zpi' launcher in ~/.bashrc.local does.  The model and flags
+\(--model openai-codex/gpt-5.5 --entwurf-control --emacs-agent-socket server)
+live inside `pit5' there, not in this file.")
+
+(defun my/zmx--project-root ()
+  "Return the current project root, or `default-directory' when outside one."
+  (or (when-let* ((proj (project-current)))
+        (project-root proj))
+      default-directory))
+
+(defun my/zmx-launch (harness)
+  "Create-or-attach a zmx session running agent HARNESS at the project root.
+HARNESS is a key in `my/zmx-harnesses'.  The session is named
+\"<prefix>.<project>\" and attached through the ghostel frontend, mirroring
+the zcc/zcx/zagy/zep launchers in ~/.bashrc.local."
+  (interactive
+   (list (intern (completing-read "zmx harness: "
+                                  (mapcar #'car my/zmx-harnesses) nil t))))
+  (let* ((spec (map-elt my/zmx-harnesses harness))
+         (root (my/zmx--project-root))
+         (name (concat (plist-get spec :prefix) "."
+                       (file-name-nondirectory (directory-file-name root))))
+         (command (plist-get spec :command))
+         (default-directory root))
+    (term-sessions-open name command)))
+
+(map! :leader
+      (:prefix ("j" . "pi-agent")
+       :desc "zmx launch harness" "a" #'my/zmx-launch))
 
 (provide 'term-config)
 ;;; term-config.el ends here

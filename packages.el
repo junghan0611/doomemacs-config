@@ -97,6 +97,10 @@
   :recipe (:host github :repo "dakra/ghostel"
            :branch "main"
            :files ("extensions/evil-ghostel/evil-ghostel.el")))
+;; Persistent terminal sessions backed by zmx — Emacs is the client, zmx owns
+;; the session lifecycle.  `:defaults' excludes the bundled -tests.el.
+(package! term-sessions
+  :recipe (:host github :repo "ArthurHeymans/emacs-term-sessions"))
 
 ;;; module-emacs-config.el
 
