@@ -638,28 +638,28 @@
 
 ;;;; Custom Keyboard
 
-(when (equal my/current-device "thinkpad")
-  ;; my/enable-alice-keyboard-toggle-input-method
-  (defun my/enable-alice-keyboard-toggle-input-method ()
-    (interactive)
-    ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
-    (map! (:map vertico-map
-                "`"   #'toggle-input-method)
-          (:map vterm-mode-map
-                "`"   #'toggle-input-method)
-          (:map prog-mode-map
-                "`"   #'toggle-input-method)
-          (:map minibuffer-mode-map
-                "`"   #'toggle-input-method)
-          (:map minibuffer-local-map
-                "`"   #'toggle-input-method)
-          (:map agent-shell-mode-map
-           :i "`" #'toggle-input-method)
-          (:map org-mode-map
-           :i "`" #'toggle-input-method))
-    )
-  (my/enable-alice-keyboard-toggle-input-method)
-  )
+;; (when (equal my/current-device "thinkpad")
+;;   ;; my/enable-alice-keyboard-toggle-input-method
+;;   (defun my/enable-alice-keyboard-toggle-input-method ()
+;;     (interactive)
+;;     ;; (map! :i "`" #'toggle-input-method) ; 2025-12-09 추가 입력시 무조건 한영 변환
+;;     (map! (:map vertico-map
+;;                 "`"   #'toggle-input-method)
+;;           (:map vterm-mode-map
+;;                 "`"   #'toggle-input-method)
+;;           (:map prog-mode-map
+;;                 "`"   #'toggle-input-method)
+;;           (:map minibuffer-mode-map
+;;                 "`"   #'toggle-input-method)
+;;           (:map minibuffer-local-map
+;;                 "`"   #'toggle-input-method)
+;;           (:map agent-shell-mode-map
+;;            :i "`" #'toggle-input-method)
+;;           (:map org-mode-map
+;;            :i "`" #'toggle-input-method))
+;;     )
+;;   (my/enable-alice-keyboard-toggle-input-method)
+;;   )
 
 (when (equal my/current-device "oracle")
   ;; Android/Termux → SSH → TTY Emacs 에서는 C-SPC가 C-@로 들어오는 경우가
