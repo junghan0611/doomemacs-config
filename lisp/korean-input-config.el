@@ -163,46 +163,49 @@
 ;;;###autoload
   (defun my/set-emoji-symbol-font ()
     (interactive)
+    ;; emacs-nox (terminal-only) builds lack fontset support; skip silently
+    ;; so the after-setting-font-hook does not error on void symbol.
+    (when (fboundp 'set-fontset-font)
 
-    (set-fontset-font "fontset-default" 'hangul (font-spec :family (face-attribute 'default :family)))
+      (set-fontset-font "fontset-default" 'hangul (font-spec :family (face-attribute 'default :family)))
 
-    (when (display-graphic-p) ; gui
-      ;; Symbola 제거 — Noto 심볼 시리즈로 통합 fallback.
-      ;; prepend 누적: 마지막 prepend가 최우선. 아래 순서면
-      ;; Noto Sans Symbols → Symbols 2 → Math 순으로 조회.
-      (set-fontset-font t 'mathematical (font-spec :family "Noto Sans Math") nil 'prepend)
-      (set-fontset-font t 'unicode (font-spec :family "Noto Sans Math") nil 'prepend)
-      (set-fontset-font t 'unicode (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
-      (set-fontset-font t 'unicode (font-spec :family "Noto Sans Symbols") nil 'prepend)
-      ;; 기존 'emoji 폰트 폴백 전부 제거 후 Noto Emoji만 등록 —
-      ;; 시스템 fontconfig가 fontset에 심어둔 Noto Color Emoji를 명시적으로 쫓아낸다.
-      (set-fontset-font t 'emoji nil)
-      (set-fontset-font "fontset-default" 'emoji nil)
-      (set-fontset-font t 'emoji (font-spec :family "Noto Emoji")))
+      (when (display-graphic-p) ; gui
+        ;; Symbola 제거 — Noto 심볼 시리즈로 통합 fallback.
+        ;; prepend 누적: 마지막 prepend가 최우선. 아래 순서면
+        ;; Noto Sans Symbols → Symbols 2 → Math 순으로 조회.
+        (set-fontset-font t 'mathematical (font-spec :family "Noto Sans Math") nil 'prepend)
+        (set-fontset-font t 'unicode (font-spec :family "Noto Sans Math") nil 'prepend)
+        (set-fontset-font t 'unicode (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
+        (set-fontset-font t 'unicode (font-spec :family "Noto Sans Symbols") nil 'prepend)
+        ;; 기존 'emoji 폰트 폴백 전부 제거 후 Noto Emoji만 등록 —
+        ;; 시스템 fontconfig가 fontset에 심어둔 Noto Color Emoji를 명시적으로 쫓아낸다.
+        (set-fontset-font t 'emoji nil)
+        (set-fontset-font "fontset-default" 'emoji nil)
+        (set-fontset-font t 'emoji (font-spec :family "Noto Emoji")))
 
-    (unless (display-graphic-p) ; terminal
-      ;; 터미널에서는 Noto Emoji (monochrome) 사용
-      (set-fontset-font "fontset-default" 'emoji (font-spec :family "Noto Emoji") nil)
-      ;; Symbola 제거 — Noto 시리즈로 유니코드 보완.
-      ;; append 순서가 조회 순서. Symbols(넓은 범위) → Symbols 2 → Math.
-      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Symbols") nil 'append)
-      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Symbols 2") nil 'append)
-      (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Math") nil 'append)
+      (unless (display-graphic-p) ; terminal
+        ;; 터미널에서는 Noto Emoji (monochrome) 사용
+        (set-fontset-font "fontset-default" 'emoji (font-spec :family "Noto Emoji") nil)
+        ;; Symbola 제거 — Noto 시리즈로 유니코드 보완.
+        ;; append 순서가 조회 순서. Symbols(넓은 범위) → Symbols 2 → Math.
+        (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Symbols") nil 'append)
+        (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Symbols 2") nil 'append)
+        (set-fontset-font "fontset-default" 'unicode (font-spec :family "Noto Sans Math") nil 'append)
 
-      ;; 터미널 폰트 스케일 — 이모지만 0.9 로 축소 (인접 셀 침범 방지).
-      ;; Noto Sans Symbols/Math 는 산스 계열이라 모노 advance 근사, 스케일 불필요.
-      (setq face-font-rescale-alist
-            '(("Noto Emoji" . 0.9)))
+        ;; 터미널 폰트 스케일 — 이모지만 0.9 로 축소 (인접 셀 침범 방지).
+        ;; Noto Sans Symbols/Math 는 산스 계열이라 모노 advance 근사, 스케일 불필요.
+        (setq face-font-rescale-alist
+              '(("Noto Emoji" . 0.9)))
 
-      ;; NOTE: char-width-table widen 은 top-level 로 이동 (file 상단 참조).
-      ;; font hook 타이밍 의존 문제 해결 + aset 로 sub-table singleton 우회.
-      )
+        ;; NOTE: char-width-table widen 은 top-level 로 이동 (file 상단 참조).
+        ;; font hook 타이밍 의존 문제 해결 + aset 로 sub-table singleton 우회.
+        )
 
-    ;; 'symbol 대역 fallback — Symbola 제거, Noto Sans Math 추가.
-    ;; 최종 조회 순서: Noto Sans Symbols → Symbols 2 → Math.
-    (set-fontset-font t 'symbol (font-spec :family "Noto Sans Math") nil 'prepend)
-    (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
-    (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols") nil 'prepend))
+      ;; 'symbol 대역 fallback — Symbola 제거, Noto Sans Math 추가.
+      ;; 최종 조회 순서: Noto Sans Symbols → Symbols 2 → Math.
+      (set-fontset-font t 'symbol (font-spec :family "Noto Sans Math") nil 'prepend)
+      (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols 2") nil 'prepend)
+      (set-fontset-font t 'symbol (font-spec :family "Noto Sans Symbols") nil 'prepend)))
 
   (add-hook 'after-setting-font-hook #'my/set-emoji-symbol-font))
 
