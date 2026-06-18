@@ -252,7 +252,7 @@
 
 ;;;; ai-bot-config.el
 
-(package! telega :pin "f70c1e1006fc47012780a2d885b22b0b93512c47")
+(package! telega)
 (package! ement)
 
 ;;;; ai-stt-whisper.el
