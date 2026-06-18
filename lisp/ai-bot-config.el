@@ -158,6 +158,191 @@
         telega-symbol-bot-menu        "="
         telega-symbol-checklist       "[x]")
 
+  ;; messageRichMessage 렌더링 (TDLib 1.8.64+ 신규 content 타입)
+  ;;
+  ;; Why: TDLib 1.8.64 부터 리치 포맷 텍스트 메시지를 messageText 가 아닌 신규
+  ;; content 타입 messageRichMessage 로 전달한다 (td_api.tl):
+  ;;   messageRichMessage message:richMessage = MessageContent;
+  ;;   richMessage blocks:vector<PageBlock> is_rtl:Bool is_full:Bool = RichMessage;
+  ;; telega.el 은 아직 이 타입 렌더러가 없어 telega-ins--content 의 pcase fallback 이
+  ;; "<TODO: messageRichMessage>" 만 찍는다 — 봇 메시지가 전부 깨진다.
+  ;;
+  ;; 렌더 방식: WYSIWYG 가 아니라 **markdown 소스 텍스트**로 직렬화한다. 헤딩은
+  ;; #/##/### (sectionHeading :size 1-6 그대로), 문단 사이는 빈 줄, 인라인은
+  ;; **bold** *italic* `code` ~~strike~~ [text](url) 마커로. 텍스트 크기를 키우지
+  ;; 않아 (markdown-mode 처럼) 보기·복사·에이전트 프롬프트 전달이 쉽다.
+  ;; 직렬화기는 cl-case (t) 로 total — 1.8.64 신규 블록/리치텍스트도 inner text 로
+  ;; degrade, 절대 에러를 던지지 않아 메시지·root 목록 PP(telega-root--chat-known-pp)
+  ;; 가 안 깨진다 (telega 의 telega-webpage--ins-pb/--ins-rt 는 cl-ecase 라 신규
+  ;; 타입에서 throw — 그래서 재사용하지 않고 자체 직렬화기를 쓴다).
+  ;; one-line 경로(reply preview / root 목록)는 telega-ins--content-one-line 의
+  ;; (t (telega-ins--content msg)) fallback 을 타고 자동으로 거친다(한 줄로 잘림).
+  ;; TODO: telega upstream 이 messageRichMessage 를 지원하면 advice 와 함께 제거.
+  (defun my/telega--md-face (str face)
+    "Return STR with FACE combined over its whole length.
+Markdown markers stay literal text (markdown-mode style); the face only
+adds visual emphasis and is additive so nested link/code faces survive."
+    (let ((s (copy-sequence str)))
+      (add-face-text-property 0 (length s) face nil s)
+      s))
+
+  (defun my/telega--rich-rt->md (rt)
+    "Serialize TDLib RichText RT to a markdown source string.
+Markdown markers are kept literal; bold/italic/code/strike also get a face
+so they render emphasized (like markdown-mode) without changing text size.
+Total over subtypes: unknown 1.8.64 additions fall back to their inner
+text, so nothing can break rendering."
+    (cond
+     ((null rt) "")
+     ((stringp rt) rt)
+     (t
+      (let ((inner (lambda () (my/telega--rich-rt->md (plist-get rt :text)))))
+        (cl-case (telega--tl-type rt)
+          (richTextPlain (or (telega-tl-str rt :text) ""))
+          (richTexts (mapconcat #'my/telega--rich-rt->md (plist-get rt :texts) ""))
+          (richTextBold (my/telega--md-face (concat "**" (funcall inner) "**") 'bold))
+          (richTextItalic (my/telega--md-face (concat "*" (funcall inner) "*") 'italic))
+          (richTextStrikethrough
+           (my/telega--md-face (concat "~~" (funcall inner) "~~")
+                               'telega-webpage-strike-through))
+          (richTextFixed
+           (my/telega--md-face (concat "`" (funcall inner) "`") 'telega-webpage-fixed))
+          (richTextSpoiler (concat "||" (funcall inner) "||"))
+          ((richTextUrl richTextReferenceLink)
+           (let ((url (telega-tl-str rt :url)) (txt (funcall inner)))
+             (if (and url (not (string-empty-p url)))
+                 (format "[%s](%s)" txt url)
+               txt)))
+          (richTextEmailAddress
+           (let ((em (telega-tl-str rt :email_address)) (txt (funcall inner)))
+             (if (and em (not (string-empty-p em)))
+                 (format "[%s](mailto:%s)" txt em)
+               txt)))
+          (richTextCustomEmoji (or (telega-tl-str rt :alternative_text) ""))
+          (richTextMathematicalExpression (or (telega-tl-str rt :expression) ""))
+          ;; underline/marked/mention/hashtag/cashtag/bot-command/phone/datetime/
+          ;; sub-superscript/anchor/... — no portable markdown marker, emit text.
+          (t
+           (let ((sub (plist-get rt :text)))
+             (cond ((stringp sub) sub)
+                   (sub (my/telega--rich-rt->md sub))
+                   (t (or (telega-tl-str rt :alternative_text)
+                          (telega-tl-str rt :expression) ""))))))))))
+
+  (defun my/telega--rich-blocks->md (blocks)
+    "Serialize sequence BLOCKS to markdown, one blank line between blocks."
+    (string-join
+     (seq-remove #'string-empty-p
+                 (seq-map (lambda (b) (string-trim (or (my/telega--rich-pb->md b) "")))
+                          blocks))
+     "\n\n"))
+
+  (defun my/telega--md-heading (level rt)
+    "Markdown heading string for RichText RT at LEVEL (1-6), bold-faced."
+    (my/telega--md-face
+     (concat (make-string (max 1 (min 6 level)) ?#) " " (my/telega--rich-rt->md rt))
+     'bold))
+
+  (defun my/telega--rich-table->md (pb)
+    "Serialize a pageBlockTable PB to a markdown table string."
+    (let* ((rows (seq-map (lambda (row) (append row nil))
+                          (plist-get pb :cells)))
+           (line (lambda (row)
+                   (concat "| "
+                           (mapconcat
+                            (lambda (cell)
+                              (string-trim (my/telega--rich-rt->md (plist-get cell :text))))
+                            row " | ")
+                           " |"))))
+      (when rows
+        (let* ((ncol (length (car rows)))
+               (sep (concat "| " (string-join (make-list (max 1 ncol) "---") " | ") " |"))
+               (lines (mapcar line rows))
+               (caption (string-trim (my/telega--rich-rt->md (plist-get pb :caption)))))
+          (concat (car lines) "\n" sep
+                  (when (cdr lines) (concat "\n" (string-join (cdr lines) "\n")))
+                  (unless (string-empty-p caption) (concat "\n\n" caption)))))))
+
+  (defun my/telega--rich-pb->md (pb)
+    "Serialize TDLib rich-message PageBlock PB to a markdown source string.
+Total over subtypes, and reads the 1.8.64 field names (blockQuote/
+listItem/details nested blocks moved to :blocks) with old-name fallback."
+    (if (null pb) ""
+      (cl-case (telega--tl-type pb)
+        (pageBlockParagraph (my/telega--rich-rt->md (plist-get pb :text)))
+        ;; sectionHeading :size 는 1-6, 1 이 가장 큰 헤딩 → 그대로 markdown 레벨.
+        (pageBlockSectionHeading
+         (my/telega--md-heading (or (plist-get pb :size) 2) (plist-get pb :text)))
+        (pageBlockTitle (my/telega--md-heading 1 (plist-get pb :title)))
+        (pageBlockHeader (my/telega--md-heading 1 (plist-get pb :header)))
+        (pageBlockSubtitle (my/telega--md-heading 2 (plist-get pb :subtitle)))
+        (pageBlockSubheader (my/telega--md-heading 2 (plist-get pb :subheader)))
+        (pageBlockKicker (my/telega--rich-rt->md (plist-get pb :kicker)))
+        (pageBlockFooter (my/telega--rich-rt->md (plist-get pb :footer)))
+        ;; "Thinking..." pending placeholder (rich message streaming)
+        (pageBlockThinking (my/telega--rich-rt->md (plist-get pb :text)))
+        (pageBlockPreformatted
+         (concat "```" (or (telega-tl-str pb :language) "") "\n"
+                 (my/telega--rich-rt->md (plist-get pb :text)) "\n```"))
+        (pageBlockMathematicalExpression
+         (concat "$$" (or (telega-tl-str pb :expression) "") "$$"))
+        (pageBlockTable (my/telega--rich-table->md pb))
+        (pageBlockDivider "---")
+        ;; 컨테이너 — 1.8.64 에서 nested 가 :blocks 로 이름 변경됨.
+        (pageBlockBlockQuote
+         (let ((body (my/telega--rich-blocks->md
+                      (or (plist-get pb :blocks) (plist-get pb :page_blocks))))
+               (credit (plist-get pb :credit)))
+           (concat
+            (mapconcat (lambda (l) (concat "> " l)) (split-string body "\n") "\n")
+            (when credit (concat "\n> — " (my/telega--rich-rt->md credit))))))
+        (pageBlockList
+         (mapconcat #'my/telega--rich-pb->md (append (plist-get pb :items) nil) "\n"))
+        (pageBlockListItem
+         (let ((label (cond ((plist-get pb :has_checkbox)
+                             (if (eq (plist-get pb :is_checked) t) "- [x]" "- [ ]"))
+                            ((telega-tl-str pb :label)
+                             (concat (telega-tl-str pb :label) "."))
+                            (t "-")))
+               (body (my/telega--rich-blocks->md
+                      (or (plist-get pb :blocks) (plist-get pb :page_blocks)))))
+           (concat label " " (string-trim body))))
+        (pageBlockDetails
+         (let ((header (plist-get pb :header))
+               (body (my/telega--rich-blocks->md
+                      (or (plist-get pb :blocks) (plist-get pb :page_blocks)))))
+           (concat (when header (concat "**" (my/telega--rich-rt->md header) "**\n\n"))
+                   body)))
+        (pageBlockCover (my/telega--rich-pb->md (plist-get pb :cover)))
+        (pageBlockAnchor "")
+        ;; media / unknown — markdown 텍스트로 담을 수 없으니 caption 이나 타입 태그.
+        (t
+         (let ((rt (plist-get pb :text))
+               (cap (plist-get pb :caption)))
+           (cond (rt (my/telega--rich-rt->md rt))
+                 (cap (my/telega--rich-rt->md (plist-get cap :text)))
+                 (t (format "[%s]" (telega--tl-type pb)))))))))
+
+  (defun my/telega-ins--rich-message-content (msg)
+    "Insert messageRichMessage MSG as markdown source text (not WYSIWYG)."
+    (condition-case _err
+        (let* ((blocks (telega--tl-get msg :content :message :blocks))
+               (md (and blocks (> (length blocks) 0)
+                        (my/telega--rich-blocks->md blocks))))
+          (if (and md (not (string-empty-p md)))
+              (telega-ins md)
+            (telega-ins--with-face 'telega-shadow (telega-ins "[rich message]"))))
+      (error
+       (telega-ins--with-face 'telega-shadow (telega-ins "[rich message]")))))
+
+  (defun my/telega-ins--content-rich-a (orig-fn msg)
+    "Around advice: intercept messageRichMessage, else delegate to ORIG-FN."
+    (if (eq (telega--tl-type (plist-get msg :content)) 'messageRichMessage)
+        (my/telega-ins--rich-message-content msg)
+      (funcall orig-fn msg)))
+
+  (advice-add 'telega-ins--content :around #'my/telega-ins--content-rich-a)
+
   ;; WORKAROUND: telega 이벤트 핸들러에서 setTdlibParameters 전송 실패 시
   ;; WaitTdlibParameters 상태에서 벗어나지 못하는 버그 우회
   ;; TODO: telega upstream에서 수정되면 제거

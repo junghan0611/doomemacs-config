@@ -57,6 +57,47 @@
 - [ ] **옵션**: andenken 소규모 리팩터 (`--search-sessions-window`의 `cl-loop` →
       `seq-map-indexed`)는 green 하에만. 백엔드 2e(`--view session`)가 더 큰 가치.
 
+## telega `messageRichMessage` 렌더러 — telega/tdlib 버전업 시 주기 점검 (2026-06-18)
+
+**상태**: ✅ 적용·live 검증 완료. `lisp/ai-bot-config.el` `use-package! telega :config`
+안에 자급 렌더러 + advice. **이건 깨지기 쉽다 — telega가 따라잡으면 점검·제거 대상.**
+
+**왜 만들었나**: TDLib 1.8.64가 리치 포맷 텍스트 메시지를 신규 content 타입
+`messageRichMessage`(`message:richMessage`, `blocks:vector<PageBlock>`)로 보낸다.
+telega.el은 아직 이 타입 렌더러가 없어 `telega-ins--content` pcase fallback이
+`<TODO: messageRichMessage>`만 찍고, 봇(OpenClaw/Gemini) 메시지가 전부 깨졌다.
+(telegram-desktop은 아예 표시조차 안 함 — 미지원.) 우리가 직접 markdown 소스
+텍스트로 직렬화해 렌더.
+
+**구현 요약** (모두 `lisp/ai-bot-config.el`):
+- `my/telega-ins--content-rich-a` — `telega-ins--content`에 `:around` advice, content가
+  `messageRichMessage`일 때만 가로채고 나머지는 원본 위임. (advice-add는 멱등)
+- `my/telega--rich-rt->md` / `--rich-pb->md` / `--rich-blocks->md` — RichText/PageBlock을
+  **markdown 소스 문자열로 직렬화**. 헤딩 `#`×size(1-6), 문단 사이 빈 줄, `**bold**`
+  `*italic*` `` `code` `` `~~strike~~`(face 합성), `[text](url)`, `> ` 인용, `- `/`1.` 리스트,
+  코드블록 펜스, `| | |` 테이블. WYSIWYG 아님 — 복사·에이전트 프롬프트용.
+- 직렬화기는 전부 `cl-case (t)`로 **total** → 미지 타입도 inner text로 degrade, **절대
+  에러 안 던짐**. (telega의 `telega-webpage--ins-pb`/`--ins-rt`는 `cl-ecase`라 신규
+  타입에서 throw하고 root PP `telega-root--chat-known-pp`까지 깨뜨림 → 그래서 재사용 안 함.)
+
+**버전업 시 점검 우선순위** (telega `git pull` 또는 tdlib 업그레이드 후):
+1. **telega가 `messageRichMessage`를 지원하기 시작했나** — `grep -rn messageRichMessage`
+   on telega.el 소스. 지원되면 **우리 블록(advice + 직렬화기 5개) 통째 제거** 후 telega
+   기본 렌더와 비교. 이게 1순위 제거 트리거.
+2. **PageBlock/RichText 필드 rename 추가** — 우리가 잡은 것: `pageBlockBlockQuote`
+   `text→blocks`, `pageBlockListItem`/`pageBlockDetails` `page_blocks→blocks`. tdlib
+   `td_api.tl`에서 컨테이너 블록 필드가 또 바뀌면 `--rich-pb->md`의 `(or :blocks
+   :page_blocks)` 자리 갱신.
+3. **신규 블록/리치텍스트 타입** — total fallback이 텍스트로는 잡아주지만 전용 렌더가
+   필요한 게 생기면(`pageBlockTable` 류) `--rich-pb->md`/`--rich-rt->md`에 케이스 추가.
+   확인: `td_api.tl`의 `= PageBlock;` / `= RichText;` 목록 vs 우리 cl-case.
+4. **링크 클릭 복원(옵션)** — 현재 링크는 `[text](url)` **소스 텍스트**(클릭 불가).
+   원하면 markdown-mode 류 font-lock으로 색만 입혀 클릭 살리는 follow-up.
+
+**재현/검증**: live `user` Emacs에 파일 defun들을 재평가 → 가짜 `messageRichMessage`
+plist를 `telega-ins--content`로 통과시켜 출력 확인. 실측 트리거: OpenClaw/Gemini 봇이
+헤딩·리스트·테이블·코드블록 섞인 메시지를 보낼 때.
+
 ## ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
 
 **상태**: ✅ **PR 발송 완료.** 재작성 → 단일 커밋 → force-push → 답글 → 닷파일 복원/검증 전부 끝. 이제 dakra/emil-e 리뷰만 기다림. 공이 메인테이너에게.
