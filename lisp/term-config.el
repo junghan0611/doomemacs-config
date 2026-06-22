@@ -179,7 +179,7 @@ its own CLI."
   '((claude . (:prefix "cc"  :command "claude"))
     (codex  . (:prefix "cx"  :command "codex"))
     (agy    . (:prefix "agy" :command "agy"))
-    (pi     . (:prefix "pi"  :command "bash -lc \"source $HOME/.bashrc.local; pit5\"")))
+    (pi     . (:prefix "pi"  :command "bash -lc \"source $HOME/.bashrc.local; pit\"")))
   "Agent harnesses launchable as zmx sessions via `my/zmx-launch'.
 Each entry maps a harness key to a plist with `:prefix' (the zmx
 session-name prefix, matching ~/.bashrc.local) and `:command' (passed to
@@ -187,12 +187,12 @@ session-name prefix, matching ~/.bashrc.local) and `:command' (passed to
 `split-string-and-unquote', which honours double quotes but not single
 quotes — quote multi-word arguments with \\\"...\\\".
 
-The `pi' command runs through `bash -lc' so the `pit5' shell function — and
+The `pi' command runs through `bash -lc' so the `pit' shell function — and
 the `_pi_garden_pi' it calls — are sourced from ~/.bashrc.local.  zmx exec's
-its argv directly, so a bare `pit5' would not resolve; the wrapper is what
+its argv directly, so a bare `pit' would not resolve; the wrapper is what
 the `zpi' launcher in ~/.bashrc.local does.  The model and flags
 \(--model openai-codex/gpt-5.5 --entwurf-control --emacs-agent-socket server)
-live inside `pit5' there, not in this file.")
+live inside `pit' there, not in this file.")
 
 (defun my/zmx--project-root ()
   "Return the current project root, or `default-directory' when outside one."
