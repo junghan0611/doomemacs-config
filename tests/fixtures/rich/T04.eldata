@@ -1,0 +1,12 @@
+;; fixture: telega messageRichMessage :content for T04
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "[T04] 풀쿼트 / 확장형 인용 (pull quote, expandable)"))
+                 (:@type "pageBlockBlockQuote" :blocks
+                         [(:@type "pageBlockParagraph" :text
+                                  (:@type "richTextPlain" :text
+                                          "이것은 확장형(긴) 인용입니다. 여러 줄이 접혀 있다가 펼쳐지면 expandable 지원. 세 번째 줄."))])]
+                :is_full t))

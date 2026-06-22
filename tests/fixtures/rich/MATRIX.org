@@ -1,0 +1,73 @@
+#+title: telega Rich Message 지원 매트릭스 (Txx)
+#+date: [2026-06-22 Mon]
+
+* 무엇인가
+
+OpenClaw 봇이 ~richMessages~ ON 으로 보내는 Bot API 10.1 리치 메시지를, telega
+(TDLib 1.8.65) + 우리 ~messageRichMessage~ advice 가 어떻게 렌더하는지의 SSOT.
+
+- 입력 fixture: =TNN.eldata= — 실제 TDLib 1.8.65 ~messageRichMessage~ :content
+  (glg-default 봇이 쏜 T01~T15, 텍스트 프로퍼티 stripped).
+- 기대 출력: =TNN.golden.md= — 직렬화기(=lisp/telega-rich-md.el=)가 내야 하는
+  markdown 소스 (텍스트만; face/display 프로퍼티는 비검증).
+- 게이트: =tests/test-telega-rich.el= 가 =emacs -Q= 에서 fixture→golden 을 검증.
+  =tests/run-tests.sh= 에 자동 편입.
+
+핵심 재프레이밍: 우리는 ~messageRichMessage~ content 타입을 advice 로 *통째로
+가로채* 모든 PageBlock 을 markdown 소스로 직렬화한다. 따라서 telega 네이티브가
+"unsupported" 로 가리는 타입이어도 우리 쪽에선 가려지지 않는다. 판정축은
+"보임/unsupported" 가 아니라 *"구조/강조까지 살았나 vs 플레인 텍스트로 degrade
+했나"* 두 가지다.
+
+* 매트릭스 (TDLib 1.8.65 실측)
+
+| T   | 항목         | TDLib 블록/리치텍스트                    | 렌더              | 판정         |
+|-----+--------------+------------------------------------------+-------------------+--------------|
+| T01 | 헤딩         | pageBlockSectionHeading :size 1-6        | =#/##/###= + bold | ✅ 구조+강조 |
+| T02 | 표           | pageBlockTable :cells :caption          | markdown 표       | ✅           |
+| T03 | 블록인용     | pageBlockBlockQuote :blocks             | =>= prefix        | ✅           |
+| T04 | 풀쿼트/확장  | pageBlockBlockQuote (별도 타입 아님)    | =>= prefix        | ✅           |
+| T05 | 접기         | pageBlockDetails :header :blocks        | header bold+펼침  | ✅ (접힘 X)  |
+| T06 | 구분선       | pageBlockDivider                        | =---=             | ✅           |
+| T07 | 위/아래첨자  | richTextSuperscript / Subscript         | 플레인 텍스트     | ⚠️ *갭*      |
+| T08 | 형광펜       | richTextMarked                          | 플레인 텍스트     | ⚠️ *갭*      |
+| T09 | 스포일러     | richTextSpoiler                         | =\vert\vert..\vert\vert= | ✅ (가림 X)  |
+| T10 | 리스트       | pageBlockList / pageBlockListItem       | =-= / =N.=        | ✅           |
+| T11 | 체크박스     | pageBlockListItem :has_checkbox         | =- [x]= / =- [ ]= | ✅           |
+| T12 | 코드         | richTextFixed + pageBlockPreformatted   | 인라인/펜스+face  | ✅           |
+| T13 | 각주         | (OpenClaw 가 =[^1]= 플레인으로 보냄)    | 플레인 텍스트     | ◐ 봇쪽       |
+| T14 | 수식         | richTextCashtag (=$E= 오파싱!)          | 플레인 텍스트     | ◐ 봇 버그    |
+| T15 | 링크         | richTextUrl                             | =[txt](url)=      | ✅           |
+
+* 진짜 렌더러 갭 (우리가 메울 수 있는 것)
+
+- *T07 sup/sub* — ~richTextSuperscript~/~richTextSubscript~ 미처리. 현재 inner
+  텍스트만 흘려 "mc2" 가 됨. markdown 에 portable 마커가 없으므로 후보는
+  =display '(raise N)= 프로퍼티(텍스트 불변, 시각만 올림) 또는 유니코드
+  위/아래첨자. 텍스트 골든이 못 잡는 영역 → 채울 때 프로퍼티 검증 테스트 추가.
+- *T08 형광펜* — ~richTextMarked~ 미처리. 후보: markdown =\=\=mark\=\== 마커 +
+  ~highlight~ face. 골든 텍스트가 바뀌므로 fill 시 T08.golden.md 갱신.
+
+둘 다 advice/직렬화기 안에서 ~richTextSuperscript~/~Subscript~/~Marked~ case 만
+추가하면 됨. 포크 불필요 — soft fork (advice) 영역.
+
+* 봇쪽(OpenClaw) 이슈 — telega 책임 아님
+
+- *T13 각주* — 리치 마크업이 아니라 그냥 ~richTextPlain~ 의 =[^1]= 리터럴로 옴.
+  우리 렌더러는 그대로 출력(읽힘). 각주를 진짜 살리려면 OpenClaw 직렬화가 footnote
+  엔티티를 보내야 함.
+- *T14 수식* — =$E = mc^2$= 의 =$E= 가 ~richTextCashtag~ (cashtag "E") 로
+  오파싱됨. 문서가 자랑한 "통화/숫자 보호(sigil 회피)" 가 =$E= 에서 실패. 블록
+  수식 =$$..$$= 도 평문. → OpenClaw 쪽에 보고 대상.
+
+* 회귀 운영 (telega/TDLib drift)
+
+TDLib 는 빠르고(1.8.64→65) telega 는 늦다. 필드명 변경(예: nested blocks 가
+1.8.64 에서 =:page_blocks= → =:blocks=)이나 신규 RichText 서브타입이 나오면:
+
+1. user 소켓 telega 에서 fixture 재캡처 (=/tmp/telega-rich-capture.el= 패턴).
+2. =run-tests.sh= 의 Txx diff 가 무엇이 움직였는지 정확히 짚어줌.
+3. 직렬화기 case 추가/수정 → golden 갱신.
+
+직렬화기는 ~cl-case (t)~ total 이라 미지 타입도 inner text 로 degrade — 절대
+에러를 던지지 않아 root 목록 PP(~telega-root--chat-known-pp~)를 깨지 않는다.

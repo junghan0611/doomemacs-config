@@ -1,0 +1,14 @@
+;; fixture: telega messageRichMessage :content for T14
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTexts" :texts
+                                 [(:@type "richTextPlain" :text
+                                          "[T14] 수식 (formula) — 불확실 후보 인라인 수식: ")
+                                  (:@type "richTextCashtag" :text
+                                          (:@type "richTextPlain" :text "$E")
+                                          :cashtag "E")
+                                  (:@type "richTextPlain" :text
+                                          " = mc^2$ 블록 수식: $$\\int_0^\\infty e^{-x},dx = 1$$ 수식으로 렌더되면 formula 지원. 평문 $기호로 보이면 미지원.")]))]
+                :is_full t))

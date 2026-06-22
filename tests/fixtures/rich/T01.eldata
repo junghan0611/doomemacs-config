@@ -1,0 +1,16 @@
+;; fixture: telega messageRichMessage :content for T01
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text "[T01] 헤딩 (heading)"))
+                 (:@type "pageBlockSectionHeading" :text
+                         (:@type "richTextPlain" :text "H1 헤딩 테스트") :size 1)
+                 (:@type "pageBlockSectionHeading" :text
+                         (:@type "richTextPlain" :text "H2 헤딩 테스트") :size 2)
+                 (:@type "pageBlockSectionHeading" :text
+                         (:@type "richTextPlain" :text "H3 헤딩 테스트") :size 3)
+                 (:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "본문 한 줄. 위 세 줄이 크기 구분되어 보이면 헤딩 지원."))]
+                :is_full t))

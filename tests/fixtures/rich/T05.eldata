@@ -1,0 +1,15 @@
+;; fixture: telega messageRichMessage :content for T05
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "[T05] 접기 (details / summary)"))
+                 (:@type "pageBlockDetails" :header
+                         (:@type "richTextPlain" :text
+                                 "여기를 펼치면 내용이 보입니다 (요약줄)")
+                         :blocks
+                         [(:@type "pageBlockParagraph" :text
+                                  (:@type "richTextPlain" :text
+                                          "숨겨진 본문입니다. 펼침/접힘이 동작하면 details 지원. 두 번째 숨겨진 줄."))])]
+                :is_full t))

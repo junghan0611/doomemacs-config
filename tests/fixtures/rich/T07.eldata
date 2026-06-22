@@ -1,0 +1,16 @@
+;; fixture: telega messageRichMessage :content for T07
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTexts" :texts
+                                 [(:@type "richTextPlain" :text
+                                          "[T07] 위첨자/아래첨자 (sup / sub) E = mc")
+                                  (:@type "richTextSuperscript" :text
+                                          (:@type "richTextPlain" :text "2"))
+                                  (:@type "richTextPlain" :text " 그리고 H")
+                                  (:@type "richTextSubscript" :text
+                                          (:@type "richTextPlain" :text "2"))
+                                  (:@type "richTextPlain" :text
+                                          "O. 2의 제곱과 H2O 아래첨자가 작게 올라가/내려가면 지원.")]))]
+                :is_full t))

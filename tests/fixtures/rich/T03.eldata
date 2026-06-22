@@ -1,0 +1,14 @@
+;; fixture: telega messageRichMessage :content for T03
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "[T03] 블록인용 (blockquote)"))
+                 (:@type "pageBlockBlockQuote" :blocks
+                         [(:@type "pageBlockParagraph" :text
+                                  (:@type "richTextPlain" :text
+                                          "이것은 블록인용입니다. 두 번째 줄까지 인용 안에 들어갑니다."))])
+                 (:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text "인용 바깥 본문."))]
+                :is_full t))

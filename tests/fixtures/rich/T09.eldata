@@ -1,0 +1,14 @@
+;; fixture: telega messageRichMessage :content for T09
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTexts" :texts
+                                 [(:@type "richTextPlain" :text
+                                          "[T09] 스포일러 (spoiler) 다음은 스포일러입니다: ")
+                                  (:@type "richTextSpoiler" :text
+                                          (:@type "richTextPlain" :text
+                                                  "가려진 내용, 탭하면 드러남"))
+                                  (:@type "richTextPlain" :text
+                                          " 가려졌다가 탭하면 보이면 spoiler 지원.")]))]
+                :is_full t))

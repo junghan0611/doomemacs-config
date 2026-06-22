@@ -1,0 +1,8 @@
+;; fixture: telega messageRichMessage :content for T10
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "[T10] 리스트 (ul / ol) 순서 없는 목록: • 사과 • 배 • 중첩된 항목 • 감 순서 있는 목록: 1. 첫째 2. 둘째 3. 셋째"))]
+                :is_full t))

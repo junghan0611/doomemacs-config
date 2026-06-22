@@ -1,0 +1,68 @@
+;; fixture: telega messageRichMessage :content for T02
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "[T02] 표 (table, 정렬+캡션)"))
+                 (:@type "pageBlockTable" :caption
+                         (:@type "richTextPlain" :text "분기 매출 (캡션 테스트)")
+                         :cells
+                         [[(:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "항목")
+                                   :is_header t :colspan 1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentLeft")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))
+                           (:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "값")
+                                   :is_header t :colspan 1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentRight")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))
+                           (:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "상태")
+                                   :is_header t :colspan 1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentCenter")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))]
+                          [(:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "매출")
+                                   :colspan 1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentLeft")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))
+                           (:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "400") :colspan
+                                   1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentRight")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))
+                           (:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "↑") :colspan
+                                   1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentCenter")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))]
+                          [(:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "비용")
+                                   :colspan 1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentLeft")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))
+                           (:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "600") :colspan
+                                   1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentRight")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))
+                           (:@type "pageBlockTableCell" :text
+                                   (:@type "richTextPlain" :text "↓") :colspan
+                                   1 :rowspan 1 :align
+                                   (:@type "pageBlockHorizontalAlignmentCenter")
+                                   :valign
+                                   (:@type "pageBlockVerticalAlignmentMiddle"))]])
+                 (:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "칸으로 보이면 표 지원. 깨지면 코드블록/평문 폴백."))]
+                :is_full t))

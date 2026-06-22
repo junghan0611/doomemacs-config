@@ -1,0 +1,20 @@
+;; fixture: telega messageRichMessage :content for T12
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTexts" :texts
+                                 [(:@type "richTextPlain" :text
+                                          "[T12] 코드블록 + 인라인코드 (code) 인라인: ")
+                                  (:@type "richTextFixed" :text
+                                          (:@type "richTextPlain" :text
+                                                  "print(\"hello\")"))
+                                  (:@type "richTextPlain" :text " 입니다.")]))
+                 (:@type "pageBlockPreformatted" :text
+                         (:@type "richTextPlain" :text
+                                 "def hello(name):\n    return f\"안녕 {name}\"\n")
+                         :language "python")
+                 (:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "코드블록 배경/등폭폰트면 지원."))]
+                :is_full t))

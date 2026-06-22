@@ -1,0 +1,8 @@
+;; fixture: telega messageRichMessage :content for T11
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTextPlain" :text
+                                 "[T11] 체크박스 / 작업목록 (task list) • [x] 완료된 항목 • [ ] 미완료 항목 • [ ] 또 다른 미완료 체크박스 모양이 나오면 task list 지원."))]
+                :is_full t))

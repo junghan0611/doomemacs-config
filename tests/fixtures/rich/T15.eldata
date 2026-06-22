@@ -1,0 +1,15 @@
+;; fixture: telega messageRichMessage :content for T15
+;; captured from glg-default bot, TDLib 1.8.65, text-props stripped
+(:@type "messageRichMessage" :message
+        (:@type "richMessage" :blocks
+                [(:@type "pageBlockParagraph" :text
+                         (:@type "richTexts" :texts
+                                 [(:@type "richTextPlain" :text
+                                          "[T15] 인메시지 링크 (anchor / link) 링크 테스트: ")
+                                  (:@type "richTextUrl" :text
+                                          (:@type "richTextPlain" :text
+                                                  "디지털 가든")
+                                          :url "https://notes.junghanacs.com/")
+                                  (:@type "richTextPlain" :text
+                                          " 으로 이동. 밑줄/클릭 가능한 링크로 보이면 지원. (이건 호환 모드에서도 되는 기본 항목)")]))]
+                :is_full t))
