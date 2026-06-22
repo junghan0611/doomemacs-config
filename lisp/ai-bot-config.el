@@ -186,8 +186,15 @@
     "Insert messageRichMessage MSG as markdown source text (not WYSIWYG)."
     (condition-case _err
         (let* ((blocks (telega--tl-get msg :content :message :blocks))
+               ;; TDLib sends emoji as UTF-16 surrogate pairs; telega-server
+               ;; attaches the real glyph as a `telega-display' text property at
+               ;; parse time.  The pure serializer preserves that property
+               ;; through concat but never resolves it, so apply telega's own
+               ;; desurrogate at the boundary (the same step `telega-tl-str'
+               ;; runs on every normal text message) before insertion.
                (md (and blocks (> (length blocks) 0)
-                        (my/telega--rich-blocks->md blocks))))
+                        (telega--desurrogate-apply
+                         (my/telega--rich-blocks->md blocks)))))
           (if (and md (not (string-empty-p md)))
               (telega-ins md)
             (telega-ins--with-face 'telega-shadow (telega-ins "[rich message]"))))
