@@ -54,6 +54,26 @@ adds visual emphasis and is additive so nested link/code faces survive."
     (add-face-text-property 0 (length s) face nil s)
     s))
 
+(defconst my/telega--superscript-map
+  '((?0 . ?⁰) (?1 . ?¹) (?2 . ?²) (?3 . ?³) (?4 . ?⁴)
+    (?5 . ?⁵) (?6 . ?⁶) (?7 . ?⁷) (?8 . ?⁸) (?9 . ?⁹)
+    (?+ . ?⁺) (?- . ?⁻) (?= . ?⁼) (?\( . ?⁽) (?\) . ?⁾)
+    (?n . ?ⁿ) (?i . ?ⁱ))
+  "Char → Unicode superscript for the safe, widely-rendered set.")
+
+(defconst my/telega--subscript-map
+  '((?0 . ?₀) (?1 . ?₁) (?2 . ?₂) (?3 . ?₃) (?4 . ?₄)
+    (?5 . ?₅) (?6 . ?₆) (?7 . ?₇) (?8 . ?₈) (?9 . ?₉)
+    (?+ . ?₊) (?- . ?₋) (?= . ?₌) (?\( . ?₍) (?\) . ?₎))
+  "Char → Unicode subscript for the safe, widely-rendered set.")
+
+(defun my/telega--rich-script (str map)
+  "Map each char of STR through MAP to a Unicode super/subscript glyph.
+Unmapped chars pass through unchanged, so arbitrary content degrades to
+plain text instead of dropping.  Emitted as source text (not a raise-face)
+to match this module's markdown-source contract and survive re-export."
+  (apply #'string (mapcar (lambda (c) (or (cdr (assq c map)) c)) str)))
+
 (defun my/telega--rich-rt->md (rt)
   "Serialize TDLib RichText RT to a markdown source string.
 Markdown markers are kept literal; bold/italic/code/strike also get a face
@@ -76,6 +96,13 @@ text, so nothing can break rendering."
         (richTextFixed
          (my/telega--md-face (concat "`" (funcall inner) "`") 'telega-webpage-fixed))
         (richTextSpoiler (concat "||" (funcall inner) "||"))
+        (richTextMarked
+         (my/telega--md-face (concat "==" (funcall inner) "==")
+                             'telega-webpage-marked))
+        (richTextSuperscript
+         (my/telega--rich-script (funcall inner) my/telega--superscript-map))
+        (richTextSubscript
+         (my/telega--rich-script (funcall inner) my/telega--subscript-map))
         ((richTextUrl richTextReferenceLink)
          (let ((url (my/telega--rt-str rt :url)) (txt (funcall inner)))
            (if (and url (not (string-empty-p url)))
@@ -88,7 +115,7 @@ text, so nothing can break rendering."
              txt)))
         (richTextCustomEmoji (or (my/telega--rt-str rt :alternative_text) ""))
         (richTextMathematicalExpression (or (my/telega--rt-str rt :expression) ""))
-        ;; underline/marked/mention/hashtag/cashtag/bot-command/phone/datetime/
+        ;; underline/mention/hashtag/cashtag/bot-command/phone/datetime/
         ;; anchor/... — no portable markdown marker, emit text.
         (t
          (let ((sub (plist-get rt :text)))

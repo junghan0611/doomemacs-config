@@ -29,8 +29,8 @@ OpenClaw 봇이 ~richMessages~ ON 으로 보내는 Bot API 10.1 리치 메시지
 | T04 | 풀쿼트/확장  | pageBlockBlockQuote (별도 타입 아님)    | =>= prefix        | ✅           |
 | T05 | 접기         | pageBlockDetails :header :blocks        | header bold+펼침  | ✅ (접힘 X)  |
 | T06 | 구분선       | pageBlockDivider                        | =---=             | ✅           |
-| T07 | 위/아래첨자  | richTextSuperscript / Subscript         | 플레인 텍스트     | ⚠️ *갭*      |
-| T08 | 형광펜       | richTextMarked                          | 플레인 텍스트     | ⚠️ *갭*      |
+| T07 | 위/아래첨자  | richTextSuperscript / Subscript         | 유니코드 ²/₂      | ✅           |
+| T08 | 형광펜       | richTextMarked                          | ~==mark==~ + face | ✅           |
 | T09 | 스포일러     | richTextSpoiler                         | =\vert\vert..\vert\vert= | ✅ (가림 X)  |
 | T10 | 리스트       | pageBlockList / pageBlockListItem       | =-= / =N.=        | ✅           |
 | T11 | 체크박스     | pageBlockListItem :has_checkbox         | =- [x]= / =- [ ]= | ✅           |
@@ -39,17 +39,20 @@ OpenClaw 봇이 ~richMessages~ ON 으로 보내는 Bot API 10.1 리치 메시지
 | T14 | 수식         | richTextCashtag (=$E= 오파싱!)          | 플레인 텍스트     | ◐ 봇 버그    |
 | T15 | 링크         | richTextUrl                             | =[txt](url)=      | ✅           |
 
-* 진짜 렌더러 갭 (우리가 메울 수 있는 것)
+* 렌더러 갭 — 메움 완료 (commit fc6d0ec 이후)
 
-- *T07 sup/sub* — ~richTextSuperscript~/~richTextSubscript~ 미처리. 현재 inner
-  텍스트만 흘려 "mc2" 가 됨. markdown 에 portable 마커가 없으므로 후보는
-  =display '(raise N)= 프로퍼티(텍스트 불변, 시각만 올림) 또는 유니코드
-  위/아래첨자. 텍스트 골든이 못 잡는 영역 → 채울 때 프로퍼티 검증 테스트 추가.
-- *T08 형광펜* — ~richTextMarked~ 미처리. 후보: markdown =\=\=mark\=\== 마커 +
-  ~highlight~ face. 골든 텍스트가 바뀌므로 fill 시 T08.golden.md 갱신.
+- *T07 sup/sub* — ~richTextSuperscript~/~richTextSubscript~ → 유니코드
+  위/아래첨자(=mc²=, =H₂O=)로 직렬화. telega webpage 는 =display '(raise N)= +
+  =:height 0.5= 로 WYSIWYG 처리하지만, 이 모듈은 *markdown 소스 텍스트* 계약이라
+  텍스트 글자로 박는 쪽을 택함 — 골든이 그대로 잡고, 가든 재export 에도 살아남음.
+  매핑 없는 문자는 passthrough(=my/telega--rich-script=). 안전 세트(숫자+산술기호,
+  super 는 n/i 추가)만 매핑.
+- *T08 형광펜* — ~richTextMarked~ → =~==mark==~= 마커 + telega 와 동일한
+  ~telega-webpage-marked~ face. strike/fixed 가 telega-webpage-* face 를 쓰는
+  기존 패턴과 일치.
 
-둘 다 advice/직렬화기 안에서 ~richTextSuperscript~/~Subscript~/~Marked~ case 만
-추가하면 됨. 포크 불필요 — soft fork (advice) 영역.
+둘 다 ~telega-rich-md.el~ 직렬화기 case 추가로 끝 — 포크 불필요(soft fork 영역).
+남은 비-✅ 는 T13/T14 둘뿐이고 *둘 다 OpenClaw 봇쪽* 책임(아래).
 
 * 봇쪽(OpenClaw) 이슈 — telega 책임 아님
 
