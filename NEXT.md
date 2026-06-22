@@ -59,8 +59,16 @@
 
 ## telega `messageRichMessage` 렌더러 — telega/tdlib 버전업 시 주기 점검 (2026-06-18)
 
-**상태**: ✅ 적용·live 검증 완료. `lisp/ai-bot-config.el` `use-package! telega :config`
-안에 자급 렌더러 + advice. **이건 깨지기 쉽다 — telega가 따라잡으면 점검·제거 대상.**
+**상태**: ✅ 적용·live 검증 완료. **이건 깨지기 쉽다 — telega가 따라잡으면 점검·제거 대상.**
+
+**갱신 (2026-06-22, tdlib 1.8.65)**: 순수 직렬화기를 `lisp/telega-rich-md.el`로
+추출(`emacs -Q` 독립), advice/insert glue만 `ai-bot-config.el`에 남김. 회귀선 =
+`tests/fixtures/rich/` **Txx 매트릭스**(실측 1.8.65 payload + golden, SSOT=MATRIX.org)
++ `tests/test-telega-rich.el`(`run-tests.sh` 자동 편입, 15/15). 갭이던 T07(sup/sub
+→ 유니코드 `²`/`₂`)·T08(mark → `==..==`+face) 메움. **남은 비-✅: T13 각주·T14 수식
+둘뿐, 둘 다 OpenClaw 봇쪽**(T14는 `$E`→`richTextCashtag` 봇 오파싱). draftMessage
+신규 스키마 shim도 추가(root 목록 PP crash 우회). fixture 재캡처는 **user 소켓**
+telega에서. (commits fc6d0ec, fe0745b)
 
 **왜 만들었나**: TDLib 1.8.64가 리치 포맷 텍스트 메시지를 신규 content 타입
 `messageRichMessage`(`message:richMessage`, `blocks:vector<PageBlock>`)로 보낸다.
