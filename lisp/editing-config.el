@@ -270,6 +270,51 @@ only those in the selected frame."
   (add-hook 'nov-mode-hook #'+nov-mode-setup 80)
   (setq font-lock-global-modes '(not nov-mode)))
 
+;;;; jinx - hunspell
+
+(use-package! jinx
+  :config
+  (setq jinx-delay 0.5) ; default 0.2
+
+  ;; 1) 영어 제외 : 한글만 검사 2) 한글 영어 선택하도록 제공
+  ;; 한글 일 경우는 ko.dic 을 ~/.hunspell_ko_personal 으로 심볼링 링크 해줄 것
+  ;; enchant.ordering -> ../../mydotfiles/config-common/.config/enchant/enchant.ordering
+  ;; hunspell -> /usr/share/hunspell/
+  ;; ~/.config/enchant/ko.dic -> /home/junghan/dotemacs/var/hunspell_ko_personal
+  ;; 2) enchant.ordering hunspell 변경 ko_KR:hunspell
+  (setq jinx-languages "ko")
+  ;; (setq jinx-exclude-regexps '((t "[A-Za-z]" "[']")))
+  (setq jinx-exclude-regexps
+        '((emacs-lisp-mode "Package-Requires:.*$")
+          (t "[A-Za-z]" "[']" "[A-Z]+\\>" "-+\\>" "\\w*?[0-9]\\w*\\>" "[a-z]+://\\S-+" "<?[-+_.~a-zA-Z][-+_.~:a-zA-Z0-9]*@[-.a-zA-Z0-9]+>?" "\\(?:Local Variables\\|End\\):\\s-*$" "jinx-\\(?:languages\\|local-words\\):\\s-+.*$")))
+
+  ;; 아래는 기본인데 일단 해보면서 보자.
+  ;; "[A-Z]+\\>"         ;; Uppercase words
+  ;; "\\w*?[0-9]\\w*\\>" ;; Words with numbers, hex codes
+  ;; "[a-z]+://\\S-+"    ;; URI
+  ;; "<?[-+_.~a-zA-Z][-+_.~:a-zA-Z0-9]*@[-.a-zA-Z0-9]+>?" ;; Email
+  ;; "\\(?:Local Variables\\|End\\):\\s-*$" ;; Local variable indicator
+  ;; "jinx-\\(?:languages\\|local-words\\):\\s-+.*$")) ;; Local variables
+
+  ;; C-; embark-dwim
+  ;; C-: 점 앞의 철자가 틀린 단어에 대한 수정을 트리거합니다.
+  ;; C-u M-$전체 버퍼에 대한 수정을 트리거합니다.
+  (keymap-global-set "C-:" #'jinx-correct)
+  (keymap-global-set "C-M-$" #'jinx-languages)
+
+  ;; 'z =' ispell-word
+  (map! :map (org-mode-map
+              markdown-mode-map
+              text-mode-map)
+        :n ", SPC" #'jinx-correct)
+
+  (push 'org-inline-src-block (alist-get 'org-mode jinx-exclude-faces))
+  ;; Take over the relevant bindings.
+  (after! ispell (global-set-key [remap ispell-word] #'jinx-correct))
+  (after! evil-commands
+    (global-set-key [remap evil-next-flyspell-error] #'jinx-next)
+    (global-set-key [remap evil-prev-flyspell-error] #'jinx-previous)))
+
 ;;;; provide
 
 (provide 'editing-config)

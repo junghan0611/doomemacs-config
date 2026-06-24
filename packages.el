@@ -145,6 +145,8 @@
 (package! kitty-graphics :recipe (:host github :repo "cashmeredev/kitty-graphics.el"))
 (package! adoc-mode)
 
+(package! jinx)
+
 (package! show-font) ; TODO
 (package! info+) ; TODO
 ;; (package! list-unicode-display)
