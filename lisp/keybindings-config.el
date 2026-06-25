@@ -270,25 +270,25 @@
 
 ;;;;; Vterm
 
-(after! vterm
-  (defun my/vterm-send-alt-return ()
-    "Send <alt>-<return> to vterm."
-    (interactive)
-    (vterm-send-key "" nil t))
+;; (after! vterm
+;;   (defun my/vterm-send-alt-return ()
+;;     "Send <alt>-<return> to vterm."
+;;     (interactive)
+;;     (vterm-send-key "" nil t))
 
-  (defun my/vterm-send-meta-backspace ()
-    "Send M-Backspace to vterm (backward-kill-word)."
-    (interactive)
-    (vterm-send-key (kbd "DEL") nil t))
+;;   (defun my/vterm-send-meta-backspace ()
+;;     "Send M-Backspace to vterm (backward-kill-word)."
+;;     (interactive)
+;;     (vterm-send-key (kbd "DEL") nil t))
 
-  (setq vterm-always-compile-module t)
-  (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0")
-  (map! :map vterm-mode-map
-        :i "M-RET" #'my/vterm-send-alt-return
-        :inv "M-y" #'vterm-yank-pop
-        :inv "M-\\" #'other-window
-        :inv "M-z" #'evil-collection-vterm-toggle-send-escape
-        :inv "M-DEL" #'my/vterm-send-meta-backspace))
+;;   (setq vterm-always-compile-module t)
+;;   (undefine-key! vterm-mode-map "M-," "M-e" "M-." "M-1" "M-2" "M-3" "M-4" "M-5" "M-6" "M-7" "M-8" "M-9" "M-0")
+;;   (map! :map vterm-mode-map
+;;         :i "M-RET" #'my/vterm-send-alt-return
+;;         :inv "M-y" #'vterm-yank-pop
+;;         :inv "M-\\" #'other-window
+;;         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
+;;         :inv "M-DEL" #'my/vterm-send-meta-backspace))
 
 ;;;;; Markdown
 

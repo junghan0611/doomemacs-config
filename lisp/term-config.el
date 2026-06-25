@@ -19,12 +19,13 @@
 
 ;;; Code:
 
-;; Experimental — on-demand only.  Loaded lazily via `:commands`/`:defer';
-;; invoke explicitly through `M-x ghostel`, `M-x ghostel-project`, or
-;; `M-x my/pi-ghostel-start' when you want it.  No leader binding and no
-;; project-switch entry on purpose — vterm stays the stable daily driver,
-;; ghostel is a "I want to test something" detour.  Re-enable the
-;; commented hooks below once daily-use signal accumulates.
+;; vterm is retired (commented out in init.el); ghostel is now the daily
+;; in-Emacs terminal *and* the agent-tool surface.  Loaded lazily via
+;; `:commands'/`:defer'; the leader entry points `my/ghostel-toggle' (popup)
+;; and `my/ghostel-here' (current window) below replace `+vterm/toggle' and
+;; `+vterm/here'.  Direct commands `M-x ghostel', `M-x ghostel-project', and
+;; `M-x my/pi-ghostel-start' stay available.  project-switch integration is
+;; still parked until daily-use signal accumulates.
 (use-package! ghostel
   :defer t
   :commands (ghostel ghostel-project my/pi-ghostel-start)
@@ -79,6 +80,106 @@
   ;; scrollback (`ghostel-copy-mode').  `evil-ghostel-toggle-send-escape'
   ;; switches modes per buffer when needed.
   (setq evil-ghostel-escape 'terminal))
+
+
+;;; vterm replacement — toggle / here
+
+;; ghostel counterparts of doom :term/vterm's `+vterm/toggle' and
+;; `+vterm/here'.  ghostel displays same-window by default, so the popup
+;; behaviour comes from the `set-popup-rule!' below matching the popup
+;; buffer name; `my/ghostel-toggle' then shows/hides the popup window.
+;;
+;; Unlike vterm's popup (`:ttl 0', killed on close), we keep `:ttl nil' and
+;; toggle by hiding the window — ghostel here is an *agent tool*, so a popup
+;; toggle must never kill the running session (claude/codex/pi).
+
+(set-popup-rule! "^\\*doom:ghostel-popup:"
+  :size 0.30 :vslot -4 :select t :quit nil :ttl nil)
+
+(defun my/ghostel--popup-name ()
+  "Return the per-workspace ghostel popup buffer name.
+Mirrors `+vterm/toggle's persp-scoped naming so each workspace keeps
+its own popup terminal."
+  (format "*doom:ghostel-popup:%s*"
+          (if (bound-and-true-p persp-mode)
+              (safe-persp-name (get-current-persp))
+            "main")))
+
+(defun my/ghostel--enter-insert (buffer)
+  "Select BUFFER's window and enter evil insert state.
+ghostel here is an agent terminal: it must be ready for input the moment
+it appears.  evil also keeps the input method *off* in normal state, so
+the Korean IME (`ghostel-ime-mode') only engages once we are in insert —
+re-showing a hidden popup that was left in normal state would otherwise
+swallow Hangul toggles.  No-op when evil is absent or already in insert."
+  (when-let* ((win (and (buffer-live-p buffer) (get-buffer-window buffer))))
+    (with-selected-window win
+      (when (and (bound-and-true-p evil-local-mode)
+                 (not (evil-insert-state-p)))
+        (evil-insert-state)))))
+
+(defun my/ghostel--at-project-root (arg display-fn)
+  "Set PROOT to the project root and call DISPLAY-FN there.
+With prefix ARG non-nil, stay in `default-directory' instead of the
+project root.  Ghostel analog of `+vterm--configure-project-root-and-display'."
+  (unless (fboundp 'module-load)
+    (user-error "Your build of Emacs lacks dynamic modules support and cannot load ghostel"))
+  (require 'ghostel)
+  (let* ((project-root (or (doom-project-root) default-directory))
+         (default-directory (if arg default-directory project-root)))
+    (setenv "PROOT" project-root)
+    (funcall display-fn)))
+
+(defun my/ghostel-toggle (arg)
+  "Toggle a ghostel terminal popup window at the project root.
+With prefix ARG, recreate the popup buffer in the current project's root.
+Returns the ghostel buffer.  The ghostel counterpart of `+vterm/toggle'."
+  (interactive "P")
+  (my/ghostel--at-project-root
+   arg
+   (lambda ()
+     (let ((bname (my/ghostel--popup-name)))
+       (when arg
+         (let ((buffer (get-buffer bname))
+               (window (get-buffer-window bname)))
+           (when (buffer-live-p buffer)
+             (let (kill-buffer-query-functions)
+               (kill-buffer buffer)))
+           (when (window-live-p window)
+             (delete-window window))))
+       (if-let* ((win (get-buffer-window bname)))
+           ;; Visible -> hide.  `delete-window' (not popup `:ttl' kill) keeps
+           ;; the agent session alive behind the curtain.
+           (delete-window win)
+         ;; Reuse the public `ghostel' entry so identity, IME, evil-ghostel,
+         ;; and process startup match a normal ghostel buffer; the popup rule
+         ;; on BNAME makes `display-buffer' float it.
+         (let ((ghostel-buffer-name bname))
+           (ghostel))
+         ;; Enter insert on every show (create *and* re-show) so the terminal
+         ;; is ready and the Korean IME path is live.
+         (my/ghostel--enter-insert (get-buffer bname)))
+       (get-buffer bname)))))
+
+(defun my/ghostel-here (arg)
+  "Open a ghostel terminal in the current window at the project root.
+With prefix ARG, use `default-directory' instead of the project root.
+The ghostel counterpart of `+vterm/here'."
+  (interactive "P")
+  (my/ghostel--at-project-root
+   arg
+   (lambda ()
+     ;; Bind `display-buffer-alist' to nil to bypass popup rules and force
+     ;; same-window display, exactly as `+vterm/here' does.  Plain `ghostel'
+     ;; (single reusable buffer) honours the ambient `default-directory'.
+     (let (display-buffer-alist)
+       (ghostel))
+     (my/ghostel--enter-insert (current-buffer)))))
+
+(map! :leader
+      (:prefix ("o" . "open")
+       :desc "Toggle ghostel popup" "t" #'my/ghostel-toggle
+       :desc "Ghostel here"         "T" #'my/ghostel-here))
 
 
 ;;; Pi CLI in ghostel — replacing pi-coding-agent package on -nw

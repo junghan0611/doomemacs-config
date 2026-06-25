@@ -7,6 +7,49 @@
 
 ---
 
+## 🔴 활성 — ghostel 한글 IME 회귀: upstream read-only 전환에 내 IME 경로가 밀림 (2026-06-25)
+
+**한 줄**: 내가 기여한 한글 IME(`ghostel-ime.el`, PR #343 merged)가, **어제(2026-06-24)
+upstream이 ghostel 버퍼를 read-only로 바꾸면서(`9e8460a`) 같이 재작성됨 → commit-forward
+전제가 깨져 ghostel 안에서 한글 입력이 안 됨.** 다른 작업하다 이 회귀를 놓쳤다. 내 영역이니
+제대로 다시 봐야 한다.
+
+**어떻게 드러났나**: 오늘 vterm→ghostel 토글 작업(`+vterm/toggle`/`+vterm/here` 대체) 중
+`o t` 팝업에서 한글이 안 돼서 발견. **토글 코드 자체는 정상** — 아래 진단은 ghostel 본체 회귀.
+
+**진단 (실측 확정)**:
+- ✅ IME 로딩·hook·autoload·feature 전부 정상. `:defer t` 무관. `ghostel-ime-mode`도 켜짐.
+- ✅ evil **insert state**에선 wrapper(`ghostel-ime--wrap-input-method`)까지 정상으로 붙음 —
+  단 새 read-only 모델에서 입력기의 버퍼 insert가 막히면 commit-forward가 무력화될 수 있음.
+- 두 갈래로 깨졌고 **둘 다 어제 들어온 upstream 변경**:
+
+| 증상 | 원인 커밋 (dakra/ghostel main) | 성격 |
+|------|------------------------------|------|
+| 한글 commit-forward 무력화 | `9e8460a` Make ghostel buffers read-only (Emil Sahlén, 6/24) — **`lisp/ghostel-ime.el` 24줄 + `test/ghostel-ime-test.el` 50줄 같이 손댐** | 내 IME 기여 영역이 read-only 모델로 upstream 재작성됨 |
+| reshow 시 `number-or-marker-p nil` (커서 동기화) | `adac637` Error on reentrant redraw / `3eda20d` deferred effects 버퍼 / `162cb0f` redraw-now FORCE arity / `3431d79` hidden buffer 재등장 강제 redraw | redraw·deferred-effect 재진입 처리 변경 |
+
+**현재 닷파일 상태**:
+- `packages.el`: `dakra/ghostel :branch main` (upstream, fork 아님 — PR 머지돼서 fork patch 종료됨).
+  즉 지금 read-only 버전 main을 그대로 쓰고 있다. straight repo HEAD = `78e9677`.
+- `lisp/term-config.el`: 오늘 추가한 `my/ghostel-toggle`/`my/ghostel-here` + `set-popup-rule!`
+  (`*doom:ghostel-popup:`, `:ttl nil` — 에이전트 세션 안 죽이게) + `SPC o t`/`SPC o T` 바인딩 +
+  `my/ghostel--enter-insert` 헬퍼. **토글/here 구조는 검증 통과.** 단 `my/ghostel--enter-insert`가
+  reshow(normal→insert) 때 위 redraw 버그를 건드려 `number-or-marker-p nil` 발생 →
+  **거슬리면 그 두 호출만 잠깐 주석** 처리. (create 시점 insert는 정상.)
+
+**다음 한 걸음**:
+- [ ] `git -C ~/repos/gh/ghostel show 9e8460a -- lisp/ghostel-ime.el test/ghostel-ime-test.el`
+      읽고, read-only 모델에서 한글 commit-forward가 **어떻게 동작해야 하는지** 새 계약 파악.
+      (입력기 self-insert가 read-only로 막히는지, `inhibit-read-only`/editable region을 어디서 여는지.)
+- [ ] 라이브 재현 격리: `user` Emacs에서 ghostel 버퍼 insert state + `korean-hangul` 켠 뒤
+      실제 타이핑 → wrapper의 `before-point`/`after-point` 변화와 `ghostel--buffer-editable-p`
+      반환을 찍어 commit-forward가 어디서 끊기는지 확정.
+- [ ] reshow 커서 에러: `3431d79`/`adac637` diff 읽고 `evil-ghostel--insert-state-entry`가
+      참조하는 `ghostel--cursor-pos`/viewport-row가 재등장 타이밍에 nil인 지점 확인.
+- [ ] 설계 정리 후 결정: upstream에 후속 PR vs 로컬 fork 재개(`packages.el` recipe 되돌림).
+      과거 fork 운용/검증 흐름은 아래 "PR #343" 섹션이 SSOT.
+- **참조**: 아래 `## ghostel 한글 IME PR #343` 섹션 (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
+
 ## TOP — lisp/ 리팩터 후속 큐: vanilla-first + export 정리 (2026-06-09)
 
 **현재 원칙**: 처리 완료된 작업은 `CHANGELOG.md`로 이동한다. NEXT는 다음에 할 일만
