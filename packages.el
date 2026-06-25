@@ -90,9 +90,13 @@
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
 (package! kkp :disable t) ; conflict with term-keys
 (package! term-keys :recipe (:host github :repo "junghan0611/term-keys"))
+;; Fork branch carries the read-only Lisp-IME fix (Korean composition in
+;; protected ghostel buffers) on top of dakra/main.  Pull dakra/main into the
+;; branch each cycle; drop back to upstream once the fix lands there.
+;; Branch: fix/lisp-ime-readonly-compose — PR pending.
 (package! ghostel
-  :recipe (:host github :repo "dakra/ghostel"
-           :branch "main"))
+  :recipe (:host github :repo "junghan0611/ghostel"
+           :branch "fix/lisp-ime-readonly-compose"))
 (package! evil-ghostel
   :recipe (:host github :repo "dakra/ghostel"
            :branch "main"

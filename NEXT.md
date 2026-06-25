@@ -7,48 +7,37 @@
 
 ---
 
-## 🔴 활성 — ghostel 한글 IME 회귀: upstream read-only 전환에 내 IME 경로가 밀림 (2026-06-25)
+## 🟡 진행 — ghostel 한글 IME 회귀: 근본 원인 확정 + fork 수정 발송, dogfooding 중 (2026-06-25)
 
-**한 줄**: 내가 기여한 한글 IME(`ghostel-ime.el`, PR #343 merged)가, **어제(2026-06-24)
-upstream이 ghostel 버퍼를 read-only로 바꾸면서(`9e8460a`) 같이 재작성됨 → commit-forward
-전제가 깨져 ghostel 안에서 한글 입력이 안 됨.** 다른 작업하다 이 회귀를 놓쳤다. 내 영역이니
-제대로 다시 봐야 한다.
+**근본 원인 (확정)**: 어제(2026-06-24) upstream `9e8460a Make ghostel buffers read-only`가
+ghostel 버퍼를 `buffer-read-only = t`로 만들면서 한글이 깨졌다. **hangul 입력기가
+`buffer-read-only` 변수를 직접 검사**한다:
+```elisp
+;; leim/quail/hangul.el — hangul2/hangul3/hangul390 전부 동일
+(defun hangul2-input-method (key)
+  (if (or buffer-read-only ...) (list key)  ; read-only면 조합 없이 키 패스스루
+    ...compose...))
+```
+upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는데, 그건 modification
+배리어·text-prop만 가리고 hangul의 변수 직접 검사는 못 뚫는다 → hangul이 즉시 `(list key)`로
+빠져 조합 안 함 → raw 키가 PTY로 forward. (live probe 실측: `pt-delta 0` + raw `d/k/j…` 전송.)
 
-**어떻게 드러났나**: 오늘 vterm→ghostel 토글 작업(`+vterm/toggle`/`+vterm/here` 대체) 중
-`o t` 팝업에서 한글이 안 돼서 발견. **토글 코드 자체는 정상** — 아래 진단은 ghostel 본체 회귀.
-
-**진단 (실측 확정)**:
-- ✅ IME 로딩·hook·autoload·feature 전부 정상. `:defer t` 무관. `ghostel-ime-mode`도 켜짐.
-- ✅ evil **insert state**에선 wrapper(`ghostel-ime--wrap-input-method`)까지 정상으로 붙음 —
-  단 새 read-only 모델에서 입력기의 버퍼 insert가 막히면 commit-forward가 무력화될 수 있음.
-- 두 갈래로 깨졌고 **둘 다 어제 들어온 upstream 변경**:
-
-| 증상 | 원인 커밋 (dakra/ghostel main) | 성격 |
-|------|------------------------------|------|
-| 한글 commit-forward 무력화 | `9e8460a` Make ghostel buffers read-only (Emil Sahlén, 6/24) — **`lisp/ghostel-ime.el` 24줄 + `test/ghostel-ime-test.el` 50줄 같이 손댐** | 내 IME 기여 영역이 read-only 모델로 upstream 재작성됨 |
-| reshow 시 `number-or-marker-p nil` (커서 동기화) | `adac637` Error on reentrant redraw / `3eda20d` deferred effects 버퍼 / `162cb0f` redraw-now FORCE arity / `3431d79` hidden buffer 재등장 강제 redraw | redraw·deferred-effect 재진입 처리 변경 |
-
-**현재 닷파일 상태**:
-- `packages.el`: `dakra/ghostel :branch main` (upstream, fork 아님 — PR 머지돼서 fork patch 종료됨).
-  즉 지금 read-only 버전 main을 그대로 쓰고 있다. straight repo HEAD = `78e9677`.
-- `lisp/term-config.el`: 오늘 추가한 `my/ghostel-toggle`/`my/ghostel-here` + `set-popup-rule!`
-  (`*doom:ghostel-popup:`, `:ttl nil` — 에이전트 세션 안 죽이게) + `SPC o t`/`SPC o T` 바인딩 +
-  `my/ghostel--enter-insert` 헬퍼. **토글/here 구조는 검증 통과.** 단 `my/ghostel--enter-insert`가
-  reshow(normal→insert) 때 위 redraw 버그를 건드려 `number-or-marker-p nil` 발생 →
-  **거슬리면 그 두 호출만 잠깐 주석** 처리. (create 시점 insert는 정상.)
+**수정 (발송됨)**: wrapper의 `(funcall original key)` 바인딩에 **`buffer-read-only nil` 추가**.
+- fork 브랜치 `junghan0611/ghostel:fix/lisp-ime-readonly-compose` @ `66a8778` (base dakra/main 78e9677, push 완료)
+- `lisp/ghostel-ime.el` 한 줄 + characterization test (`ghostel-test-ime-wrap-composes-in-read-only-buffer`,
+  hangul read-only 게이트 모델링 — 수정 빼면 실패 확인)
+- 검증: `make byte-compile` ✓ / `make lint` ✓ / `make test` ✓ (ime 10/10). live 실측 "김정한" forward 확인.
+- `packages.el`: ghostel recipe를 이 fork 브랜치로 전환 (evil-ghostel은 dakra/main 유지).
 
 **다음 한 걸음**:
-- [ ] `git -C ~/repos/gh/ghostel show 9e8460a -- lisp/ghostel-ime.el test/ghostel-ime-test.el`
-      읽고, read-only 모델에서 한글 commit-forward가 **어떻게 동작해야 하는지** 새 계약 파악.
-      (입력기 self-insert가 read-only로 막히는지, `inhibit-read-only`/editable region을 어디서 여는지.)
-- [ ] 라이브 재현 격리: `user` Emacs에서 ghostel 버퍼 insert state + `korean-hangul` 켠 뒤
-      실제 타이핑 → wrapper의 `before-point`/`after-point` 변화와 `ghostel--buffer-editable-p`
-      반환을 찍어 commit-forward가 어디서 끊기는지 확정.
-- [ ] reshow 커서 에러: `3431d79`/`adac637` diff 읽고 `evil-ghostel--insert-state-entry`가
-      참조하는 `ghostel--cursor-pos`/viewport-row가 재등장 타이밍에 nil인 지점 확인.
-- [ ] 설계 정리 후 결정: upstream에 후속 PR vs 로컬 fork 재개(`packages.el` recipe 되돌림).
-      과거 fork 운용/검증 흐름은 아래 "PR #343" 섹션이 SSOT.
-- **참조**: 아래 `## ghostel 한글 IME PR #343` 섹션 (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
+- [ ] **dogfooding 2-3 사이클**: 브랜치 daily-drive하며 dakra/main 주기적 pull → 충돌/회귀 점검.
+      upstream이 스스로 안 고치면 → dakra/ghostel에 PR (`66a8778`, 커밋 메시지가 PR body 그대로 쓸 수 있게 작성됨).
+- [ ] **머지/upstream 자체수정 시** → `packages.el` recipe를 `dakra/ghostel :branch main`으로 복귀.
+- [ ] **(별개·미해결) reshow `number-or-marker-p nil`**: `my/ghostel-toggle` 재토글 때
+      `my/ghostel--enter-insert` → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장 타이밍에
+      `ghostel--cursor-pos`/viewport-row nil 참조. 원인 커밋 후보 `3431d79`/`adac637`. 한글과 별개 트랙.
+      급하면 `term-config.el`의 `my/ghostel--enter-insert` 호출 2곳 주석.
+- **참조**: 아래 `## ghostel 한글 IME PR #343` (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
 
 ## TOP — lisp/ 리팩터 후속 큐: vanilla-first + export 정리 (2026-06-09)
 
