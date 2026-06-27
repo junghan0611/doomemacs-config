@@ -98,8 +98,8 @@
   :recipe (:host github :repo "junghan0611/ghostel"
            :branch "fix/lisp-ime-readonly-compose"))
 (package! evil-ghostel
-  :recipe (:host github :repo "dakra/ghostel"
-           :branch "main"
+  :recipe (:host github :repo "junghan0611/ghostel"
+           :branch "fix/lisp-ime-readonly-compose"
            :files ("extensions/evil-ghostel/evil-ghostel.el")))
 ;; Persistent terminal sessions backed by zmx — Emacs is the client, zmx owns
 ;; the session lifecycle.  `:defaults' excludes the bundled -tests.el.

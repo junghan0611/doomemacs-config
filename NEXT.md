@@ -7,7 +7,7 @@
 
 ---
 
-## 🟡 진행 — ghostel 한글 IME 회귀: 근본 원인 확정 + fork 수정 발송, dogfooding 중 (2026-06-25)
+## 🟡 진행 — ghostel 한글 IME 회귀: 근본 원인 확정 + fork 수정, 업스트림 재머지 1회 더 후 PR 예정 (2026-06-27)
 
 **근본 원인 (확정)**: 어제(2026-06-24) upstream `9e8460a Make ghostel buffers read-only`가
 ghostel 버퍼를 `buffer-read-only = t`로 만들면서 한글이 깨졌다. **hangul 입력기가
@@ -23,15 +23,22 @@ upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는
 빠져 조합 안 함 → raw 키가 PTY로 forward. (live probe 실측: `pt-delta 0` + raw `d/k/j…` 전송.)
 
 **수정 (발송됨)**: wrapper의 `(funcall original key)` 바인딩에 **`buffer-read-only nil` 추가**.
-- fork 브랜치 `junghan0611/ghostel:fix/lisp-ime-readonly-compose` @ `66a8778` (base dakra/main 78e9677, push 완료)
+- fork 브랜치 `junghan0611/ghostel:fix/lisp-ime-readonly-compose` @ `b15cb5d` (force-push 완료)
 - `lisp/ghostel-ime.el` 한 줄 + characterization test (`ghostel-test-ime-wrap-composes-in-read-only-buffer`,
   hangul read-only 게이트 모델링 — 수정 빼면 실패 확인)
-- 검증: `make byte-compile` ✓ / `make lint` ✓ / `make test` ✓ (ime 10/10). live 실측 "김정한" forward 확인.
+- 검증: `make byte-compile` ✓ / `checkdoc`+`docquotes` ✓ / ime ert ✓ (10/10). live 실측 "김정한" forward 확인.
 - `packages.el`: ghostel recipe를 이 fork 브랜치로 전환 (evil-ghostel은 dakra/main 유지).
 
+**업스트림 재머지 (2026-06-27)**: 직전 `66a8778`은 orphan root commit이라 main과 공통 조상 없음.
+업스트림이 `92bfcc5 Release version 0.39.0`까지 진행 → fork 브랜치를 **새 main 위 단일 커밋으로 재구성**.
+- 방식: `git diff main fix -- ghostel-ime.el test/ghostel-ime-test.el`로 순수 추가분만 패치로 떠서
+  main(`92bfcc5`) 위에 재적용 → 커밋 `b15cb5d` → `--force-with-lease`로 origin 갱신 (`66a8778...b15cb5d`).
+- main 재확인: 0.39.0도 여전히 wrapper에 `inhibit-read-only`만 묶음 → **우리 수정 여전히 필요** (중복 아님).
+- 결과: 브랜치가 깨끗한 PR-ready 모양 (최신 업스트림 + 우리 커밋 1개, +44/-1).
+
 **다음 한 걸음**:
-- [ ] **dogfooding 2-3 사이클**: 브랜치 daily-drive하며 dakra/main 주기적 pull → 충돌/회귀 점검.
-      upstream이 스스로 안 고치면 → dakra/ghostel에 PR (`66a8778`, 커밋 메시지가 PR body 그대로 쓸 수 있게 작성됨).
+- [ ] **업스트림 재머지 1회 더**: dakra/main 다시 pull → 새 main 위 재적용 (위와 동일 패치 흐름) → 충돌/회귀 점검.
+- [ ] **그 다음 PR 발송**: dakra/ghostel에 PR (`b15cb5d` 기반, 커밋 메시지가 PR body 그대로 쓸 수 있게 작성됨).
 - [ ] **머지/upstream 자체수정 시** → `packages.el` recipe를 `dakra/ghostel :branch main`으로 복귀.
 - [ ] **(별개·미해결) reshow `number-or-marker-p nil`**: `my/ghostel-toggle` 재토글 때
       `my/ghostel--enter-insert` → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장 타이밍에
