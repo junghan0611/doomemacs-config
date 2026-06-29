@@ -46,6 +46,58 @@ upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는
       급하면 `term-config.el`의 `my/ghostel--enter-insert` 호출 2곳 주석.
 - **참조**: 아래 `## ghostel 한글 IME PR #343` (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
 
+## 🟢 NEW — export-side frontmatter enrichment: 패키지 메타데이터 → md frontmatter 다리 (2026-06-29)
+
+**한 줄**: 이맥스 패키지(denote/citar-denote/vc 등)가 **이미 구조적으로 들고 있는
+메타데이터**를 ox-hugo export 산출물 md frontmatter로 흘려보내는 **다리(bridge)**를
+export 파이프라인에 만든다. 단발 기능이 아니라 **반복 패턴** — 오늘 reference가 첫 사례,
+git commit이 둘째. 앞으로 같은 틀로 늘어난다.
+
+**설계 원칙 (GLG 명시, 이게 SSOT)**:
+1. **날것 코드 금지, 구루 패키지 활용.** denote는 org 전용이 아니라 md(yaml/toml)
+   frontmatter 포맷까지 추상화해뒀다(`citar-denote-file-types`). 이런 추상화를 직접
+   재발명하지 말고 **그 위에 다리만 놓는다.** 패키지를 쓸수록 장기적으로 유연해진다.
+2. **유연함이 코드에 드러나야 한다.** GLG가 원하는 방향 자체가 유연함이라, 코드가
+   날것으로 가면 그 유연함이 사라진다. 패키지 경유 = 유연함이 구조로 보임.
+3. **GLG가 도메인 정보를 준다.** 우리가 전부 파악하는 게 아니라, GLG가 어느 패키지·어느
+   필드를 쓰는지 알려준다(오늘 대화처럼). 모르면 묻는다, 새로 만들지 않는다.
+4. export 주입 지점은 `bin/denote-export.el` — 헤드리스 데몬이 export-config를 로드하니
+   citar/citar-denote가 메모리에 떠 있다. post-export 블록(`date:` 박는 517-536) 옆이
+   1차 후보. (pre-export `#+hugo_custom_front_matter:` 합성은 중첩 배열에 취약 → 비권장.)
+
+**사례 1 — `#+reference:` → frontmatter → notes JSON-LD `citation` (footprints AEO)**:
+- 배경: notes(v4) 담당이 넘긴 건. `#+reference:`(citar-denote 필드, citekey 보관)가 org
+  1086 노트에 있으나 export md frontmatter엔 0건. ox-hugo는 이 키를 모르니 drop(의도적
+  아님, 매핑 부재). notes Head.tsx는 frontmatter 데이터로 JSON-LD `citation` 배열을 짜려는데
+  소스가 없음.
+- 확정 사실: `#+reference:`는 **citar-denote 필드**(`citar-denote.el:157` `:reference-format`),
+  ox-hugo 키워드 아님. 본문 BIBLIOGRAPHY(`csl-bib-body`)는 `[cite:@]`+`#+print_bibliography:`가
+  만드는 **별개 본문 HTML 층** — frontmatter JSON-LD와 무관. footprints JSON-LD는 ox-hugo
+  표준 경로로 못 얻음 → **frontmatter 주입이 유일 경로.**
+- 재료(이미 있음): `citar-denote--retrieve-references(file)`(추출), `--generate-title`/
+  `--format-author-editor`(메타 포맷), citar 메모리에서 citekey→{title,url} 해소(샘플 전부
+  bib에 title+url 보유: `web-emacsageai`→"Emacs in the age of AI"+url 등).
+- 방향 결정(GLG): **(b) 구조화 — bare key 아님.** `refs: [{key,title,url}]`로 해소해 주입.
+  bare citekey는 크롤러에 노이즈라 제외. notes-side 수신부는 형태 확정되면 ~20줄로 붙임.
+
+**사례 2 — git commit SHA → frontmatter (deprecated 감안 메타)**:
+- 목적: "이 문서는 어느 리포의 어느 내용을 언제 수정한 것"인지 보이게. 문서는 다 deprecated된
+  코드의 표현이므로 **그걸 감안하고 보라**는 메타 신호. 독자(사람+LLM)가 시점 기준을 알게.
+- 미결: 어느 커밋인가 — 노트 파일(`~/sync/org`) 자체의 마지막 수정 커밋? 노트가 가리키는
+  코드 리포의 커밋? 둘 다? / 어느 패키지로 따나(`vc.el`/`vc-git`이 1순위 — 날것 shell git 금지).
+  → **GLG 도메인 입력 필요.**
+
+**미결 결정 (논의 대기 — GPT + notes 담당 합류)**:
+- [ ] frontmatter 스키마 최종 확정 (`refs` 키 이름, 객체 필드, git commit 필드명)
+- [ ] 사례 1: `citar-denote--retrieve-references` + citar 해소 + post-export 주입 PoC 1개 파일로
+- [ ] 사례 2: git commit 메타 — 어느 커밋/어느 패키지, GLG 입력 후 설계
+- [ ] notes-side 수신부(Head.tsx JSON-LD `citation`) — 스키마 확정 후 통지
+- [ ] 다리 추상화: 사례가 둘이면 공통 "frontmatter enrichment 훅" 자리를 둘지(둘로 충분히 패턴
+      보이면 추출), 아직 조급한 API는 만들지 않음(AGENTS.md 코딩 규칙)
+
+**협업**: notes(v4) 담당 Claude `@~/repos/gh/notes` (session `20260629T111227-928e32`) +
+GPT 대기 중. 이 lane이 설계 SSOT. 형태 확정 전까진 notes-side 코드 동결, 방향만 공유됨.
+
 ## TOP — lisp/ 리팩터 후속 큐: vanilla-first + export 정리 (2026-06-09)
 
 **현재 원칙**: 처리 완료된 작업은 `CHANGELOG.md`로 이동한다. NEXT는 다음에 할 일만
