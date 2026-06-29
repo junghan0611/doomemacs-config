@@ -85,9 +85,10 @@ git commit이 둘째. 앞으로 같은 틀로 늘어난다.
   **해소 2247 (98.9%) / orphan 24 (1.1%)**. orphan 성격: 한글 청구기호, bib 미등록 도서, 끝에
   `:` 붙은 파싱 아티팩트. → **skip 정책 확정, 커버리지 98.9%면 충분.** (측정 명령은 커밋 로그
   `202c187` 이후 세션 기록 참조 — grep `^#+reference:` ~/org vs `@type{key,` bib 키 comm.)
-- **vanilla core 완료 (커밋 `202c187`)**: `lisp/denote-export-refs.el` 순수 레이어(split/
-  in-string/resolve) + `tests/fixtures/refs/`(가든 비의존 org 3 + sample.bib) + ERT 9개 green.
-  데이터 파이프라인은 재현 가능하게 고정. 남은 건 glue(직렬화+citar 결선).
+- **vanilla core 완료**: `lisp/denote-export-refs.el` 순수 레이어 — `split`(order-preserving
+  dedupe 포함) / `in-string` / `resolve` + `tests/fixtures/refs/`(가든 비의존 org 3 +
+  sample.bib) + ERT 10개 green. **GPT 검수 통과**(byte-compile clean, nit 2개 — dedupe +
+  `(require 'subr-x)` 명시 — 반영). 데이터 파이프라인은 재현 가능하게 고정. 남은 건 glue.
 
 **사례 2 — git commit SHA → frontmatter (deprecated 감안 메타)**:
 - 목적: "이 문서는 어느 리포의 어느 내용을 언제 수정한 것"인지 보이게. 문서는 다 deprecated된

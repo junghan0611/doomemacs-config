@@ -54,6 +54,11 @@ the bib file — it exercises the title-required skip rule.")
   (should (equal (my/denote-export-refs-split "  web-a ;  book-b  ")
                  '("web-a" "book-b"))))
 
+(ert-deftest test-refs-split--dedupe-order-preserving ()
+  "Duplicate citekeys collapse to one, keeping first-seen order."
+  (should (equal (my/denote-export-refs-split "a;a;b") '("a" "b")))
+  (should (equal (my/denote-export-refs-split "b;a;b;a") '("b" "a"))))
+
 (ert-deftest test-refs-split--blank-and-nil ()
   "Blank, empty, and nil values yield nil (no empty citekeys)."
   (should (null (my/denote-export-refs-split "")))

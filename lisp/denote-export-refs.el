@@ -28,6 +28,7 @@
 ;;; Code:
 
 (require 'seq)
+(require 'subr-x)                        ; string-trim, string-empty-p
 
 ;;;; Citekey extraction
 
@@ -39,10 +40,13 @@ Mirrors citar-denote's org `:reference-regex' (see `citar-denote-file-types').")
 (defun my/denote-export-refs-split (value)
   "Split a `#+reference:' keyword VALUE into trimmed citekeys.
 VALUE is the semicolon-separated string citar-denote writes
-\(e.g. \"web-a;book-b\").  Returns nil for nil or blank input."
+\(e.g. \"web-a;book-b\").  Duplicate citekeys are collapsed, preserving
+first-seen order, so a note that cites one source twice yields one ref.
+Returns nil for nil or blank input."
   (when (stringp value)
-    (seq-remove #'string-empty-p
-                (mapcar #'string-trim (split-string value ";" t "[ \t]+")))))
+    (seq-uniq
+     (seq-remove #'string-empty-p
+                 (mapcar #'string-trim (split-string value ";" t "[ \t]+"))))))
 
 (defun my/denote-export-refs-in-string (text)
   "Return the citekey list from the first `#+reference:' line in TEXT.
