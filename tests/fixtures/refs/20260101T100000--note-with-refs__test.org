@@ -1,0 +1,9 @@
+#+title:      Note With References
+#+date:       [2026-01-01 Thu 10:00]
+#+filetags:   :test:
+#+identifier: 20260101T100000
+#+export_file_name: 20260101T100000.md
+#+reference:  web-emacsageai;ahyattekg
+
+A fixture note carrying a citar-denote ~#+reference:~ line with two
+resolvable citekeys.  Used by tests/test-denote-export-refs.el.

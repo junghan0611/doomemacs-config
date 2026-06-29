@@ -1,0 +1,10 @@
+#+title:      Note With Orphan Reference
+#+date:       [2026-01-01 Thu 10:02]
+#+filetags:   :test:
+#+identifier: 20260101T100200
+#+export_file_name: 20260101T100200.md
+#+reference:  web-emacsageai;nonexistent-key-xyz
+
+A fixture note mixing one resolvable citekey with one orphan (absent
+from the bib).  The bridge must keep the resolvable ref and silently
+drop the orphan.  Used by tests/test-denote-export-refs.el.

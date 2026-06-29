@@ -1,0 +1,8 @@
+#+title:      Note Without References
+#+date:       [2026-01-01 Thu 10:01]
+#+filetags:   :test:
+#+identifier: 20260101T100100
+#+export_file_name: 20260101T100100.md
+
+A fixture note with no ~#+reference:~ line at all.  The bridge must emit
+nothing for this note.  Used by tests/test-denote-export-refs.el.

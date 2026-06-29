@@ -19,6 +19,7 @@
                    (directory-file-name
                     (file-name-directory load-file-name)))))
   (add-to-list 'load-path parent-dir)
+  (add-to-list 'load-path (expand-file-name "lisp" parent-dir))
   (add-to-list 'load-path (file-name-directory load-file-name)))
 
 ;;;; Helper Functions
