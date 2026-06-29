@@ -77,26 +77,51 @@ git commit이 둘째. 앞으로 같은 틀로 늘어난다.
 - 재료(이미 있음): `citar-denote--retrieve-references(file)`(추출), `--generate-title`/
   `--format-author-editor`(메타 포맷), citar 메모리에서 citekey→{title,url} 해소(샘플 전부
   bib에 title+url 보유: `web-emacsageai`→"Emacs in the age of AI"+url 등).
-- 방향 결정(GLG): **(b) 구조화 — bare key 아님.** `refs: [{key,title,url}]`로 해소해 주입.
-  bare citekey는 크롤러에 노이즈라 제외. notes-side 수신부는 형태 확정되면 ~20줄로 붙임.
+- **스키마 확정 (notes + GPT + dexport 3자 합의)**: `refs: [{key*, title*, url, author, year, doi}]`
+  (`*`필수). schema.org 매핑 url→url / author→author / year→datePublished / doi→identifier.
+  bare citekey는 노이즈라 제외. **orphan(bib 미해소)·title 없음 = skip** — bare key가 public
+  frontmatter에 절대 안 닿음. notes-side 수신부는 ~20줄(`{title,url}`→`citation`).
+- **orphan 측정 (2026-06-29, config-bibfiles 8 .bib 대상)**: 1086 노트 / 고유 citekey 2271 /
+  **해소 2247 (98.9%) / orphan 24 (1.1%)**. orphan 성격: 한글 청구기호, bib 미등록 도서, 끝에
+  `:` 붙은 파싱 아티팩트. → **skip 정책 확정, 커버리지 98.9%면 충분.** (측정 명령은 커밋 로그
+  `202c187` 이후 세션 기록 참조 — grep `^#+reference:` ~/org vs `@type{key,` bib 키 comm.)
+- **vanilla core 완료 (커밋 `202c187`)**: `lisp/denote-export-refs.el` 순수 레이어(split/
+  in-string/resolve) + `tests/fixtures/refs/`(가든 비의존 org 3 + sample.bib) + ERT 9개 green.
+  데이터 파이프라인은 재현 가능하게 고정. 남은 건 glue(직렬화+citar 결선).
 
 **사례 2 — git commit SHA → frontmatter (deprecated 감안 메타)**:
 - 목적: "이 문서는 어느 리포의 어느 내용을 언제 수정한 것"인지 보이게. 문서는 다 deprecated된
   코드의 표현이므로 **그걸 감안하고 보라**는 메타 신호. 독자(사람+LLM)가 시점 기준을 알게.
-- 미결: 어느 커밋인가 — 노트 파일(`~/sync/org`) 자체의 마지막 수정 커밋? 노트가 가리키는
-  코드 리포의 커밋? 둘 다? / 어느 패키지로 따나(`vc.el`/`vc-git`이 1순위 — 날것 shell git 금지).
-  → **GLG 도메인 입력 필요.**
+- **①/② 의미 분리 확정 (GPT 제안·채택)** — 둘은 다른 신호라 스키마/lane을 가른다:
+  - **① `doc_revision`**: 노트 파일(`~/sync/org`) 자체 마지막 커밋 = "문서 언제 손질됨"
+    (freshness/provenance, schema.org `dateModified`). `vc-git` 파일 단위, 구현 쉬움.
+  - **② `based_on`**: 노트가 가리키는 코드 리포(`~/repos/gh/...`) 커밋 = "어떤 코드 상태를
+    설명" (deprecated 경고 본뜻, schema.org `isBasedOn`). 링크 파싱 필요, 무거움. 별도 lane.
+  - notes JSON-LD에서 **②만 `isBasedOn`**, ①은 dateModified/freshness.
+- 패키지: `vc.el`/`vc-git`이 1순위 (날것 shell git 금지).
+- **미결: ① phase 0로 먼저냐 ② 본격이냐 — GLG 우선순위 입력 대기.**
 
-**미결 결정 (논의 대기 — GPT + notes 담당 합류)**:
-- [ ] frontmatter 스키마 최종 확정 (`refs` 키 이름, 객체 필드, git commit 필드명)
-- [ ] 사례 1: `citar-denote--retrieve-references` + citar 해소 + post-export 주입 PoC 1개 파일로
-- [ ] 사례 2: git commit 메타 — 어느 커밋/어느 패키지, GLG 입력 후 설계
-- [ ] notes-side 수신부(Head.tsx JSON-LD `citation`) — 스키마 확정 후 통지
-- [ ] 다리 추상화: 사례가 둘이면 공통 "frontmatter enrichment 훅" 자리를 둘지(둘로 충분히 패턴
-      보이면 추출), 아직 조급한 API는 만들지 않음(AGENTS.md 코딩 규칙)
+**다음 한 걸음 (사례1 glue — vanilla core는 끝)**:
+- [x] frontmatter 스키마 확정 — `refs:[{key*,title*,url,author,year,doi}]`
+- [x] orphan 측정 — 98.9% 해소 / 1.1% orphan → skip 확정
+- [x] vanilla core + 가든 비의존 테스트 (커밋 `202c187`)
+- [ ] **glue 결선** (`bin/denote-export.el` / `denote-export-config.el`):
+      ① citar-denote private API(`--retrieve-references`)를 **한 wrapper에 감싸** 호출
+         (패키지 변경 시 한 군데만 고침 — GPT 지적).
+      ② citar로 bib-index 공급 → `my/denote-export-refs-resolve`.
+      ③ `yaml-encode`로 nested YAML 직렬화 (손으로 만들지 말 것 — GPT 지적).
+      ④ `denote-export--enrich-frontmatter`로 post-export 주입(`date:` 블록 옆). **idempotent
+         필수** — 재export 시 기존 `refs:` 블록 replace, 중복 삽입 금지 (GPT 지적, `date:`의
+         "if not present" 패턴 동일).
+      ⑤ batch summary 로그: `refs: N resolved, M unresolved`.
+- [ ] PoC 1개 파일 export로 frontmatter 실증 → notes에 스키마 확정 통지
+- [ ] notes-side 수신부(Head.tsx JSON-LD `citation`) — 통지 후 동결 해제
+- [ ] 사례 2: git commit — GLG ①/② 우선순위 입력 후 설계 (별도 lane 분리)
+- [ ] 다리 추상화: 사례 둘로 패턴 보이면 공통 enrich 훅 추출. 조급한 API 금지(AGENTS.md).
 
-**협업**: notes(v4) 담당 Claude `@~/repos/gh/notes` (session `20260629T111227-928e32`) +
-GPT 대기 중. 이 lane이 설계 SSOT. 형태 확정 전까진 notes-side 코드 동결, 방향만 공유됨.
+**협업**: notes(v4) Claude `@~/repos/gh/notes` (`20260629T111227-928e32`) + GPT
+(`20260629T121901-98740b` @ this repo). 이 lane이 설계 SSOT. notes-side는 스키마 확정 통지
+전까지 코드 동결(합의됨). 스키마/orphan/idempotent 합의 완료 — 남은 건 glue 구현 + PoC.
 
 ## TOP — lisp/ 리팩터 후속 큐: vanilla-first + export 정리 (2026-06-09)
 
