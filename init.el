@@ -215,5 +215,5 @@ nil if file missing.")
 
        :config
        ;; literate ; use manually
-       (default +bindings +smartparens)
+       (default +bindings) ; +smartparens: :doom compat 이동(하드코딩), :config default flag 폐지
        )
