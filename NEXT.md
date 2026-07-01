@@ -46,6 +46,38 @@ upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는
       급하면 `term-config.el`의 `my/ghostel--enter-insert` 호출 2곳 주석.
 - **참조**: 아래 `## ghostel 한글 IME PR #343` (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
 
+## 🟢 NEW — :term ghostel 공식 모듈 마이그레이션 (base 위임, 적당한 시점) (2026-07-01)
+
+**배경**: Doom v3 재구조화로 모듈이 core → `sources/doom+`(doomemacs/modules 서브모듈)로 분리.
+거기에 **공식 `:term ghostel` 모듈** 신설 (`.doommodule` since `26.07`, maintainer @hlissner,
+`static/init.example.el`에 vterm을 "almost the best"로 강등하고 ghostel 등재). 우리는 이미
+`lisp/term-config.el`(325줄)에 `use-package! ghostel`을 daily driver로 통합 — 지금은 우리 게 더 앞섬.
+적당한 시점에 base를 공식 모듈로 위임하고 override만 남겨 유지보수 부담을 줄인다.
+
+**하드 의존 (선행 게이트)**: 공식 모듈 `packages.el`은 `dakra/ghostel @ 0f0a9bd` pin.
+우리 `packages.el:97`은 IME fix 위해 `junghan0611/ghostel` fork pin (위 🟡 IME 항목).
+→ **IME PR이 dakra에 머지되기 전엔 공식 모듈 recipe 그대로 못 씀.** 두 경로:
+- (a) IME PR 머지 후 → 공식 모듈 recipe 그대로 사용
+- (b) 그 전엔 → 공식 모듈 켜되 우리 `packages.el`에서 `(package! ghostel :recipe ...fork)` override로 pin만 덮기
+
+**공식 모듈이 덤으로 주는 것** (`+everywhere` 플래그, 우리엔 없음 → 획득):
+comint 통합, `compilation-start` advice, `ghostel-eshell` visual-command, solaire face 연동,
+persp `ghostel-buffer-name-function nil` 충돌 방지.
+
+**유지 필수 (공식에 없음 → override 레이어로 남김)**:
+- `ghostel-ime-mode`(한글), `evil-ghostel-escape 'terminal`(ESC 라우팅)
+- popup rule + `my/ghostel-toggle`/`-here` — evil-insert 자동진입 + IME 활성화 포함.
+  공식 `+ghostel/toggle`은 prefix-arg 경로에서 `buffer-name`을 변수로 잘못 참조(void)하고 insert/IME 없음.
+- `my/pi-ghostel-start`, `term-sessions`(zmx), `my/zmx-launch`, `ghostel-eval-cmds`, OSC 9;4 spinner
+
+**절차**:
+1. `init.el` `:term`에 `(:unless my/termux-p (ghostel +everywhere))` 추가 → `doom sync`
+2. `term-config.el`에서 `use-package! ghostel` 기본 블록 제거, override-only로 축소
+3. 함수 충돌: `my/ghostel-toggle` + `SPC o t/T` 유지, 공식 `+ghostel/*`는 미바인딩(공존 무해)
+4. 실익은 "코드 절감"보다 **유지보수 위임 + `+everywhere` 기능 획득**
+
+**참조**: 위 🟡 ghostel 한글 IME 항목 — fork/PR #343 상태가 이 마이그레이션의 게이트.
+
 ## 🟢 NEW — export-side frontmatter enrichment: 패키지 메타데이터 → md frontmatter 다리 (2026-06-29)
 
 **한 줄**: 이맥스 패키지(denote/citar-denote/vc 등)가 **이미 구조적으로 들고 있는
