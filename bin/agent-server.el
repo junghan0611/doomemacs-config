@@ -204,6 +204,15 @@
 (defvar org-directory (expand-file-name "~/org"))
 (setq denote-directory (expand-file-name "~/org/"))
 
+;; INCIDENT 2026-07-01: 헤드리스 `--fg-daemon` 은 대화형 프롬프트에 답할 터미널이
+;; 없다. org-agenda-files 에 리네임·삭제된 파일이 남으면 `org-check-agenda-file`
+;; 이 "[R]emove from list or [A]bort?" 를 물어 데몬이 **영구 hang** → 이 데몬에
+;; 의존하는 geworfen 전 페이지가 500/000. (그날 botlog 논문 파일 제목이
+;; `§연구논문`→`§geworfen: 연구논문` 으로 바뀌며 denote 리네임 → org-agenda 가
+;; 옛 이름을 stale 로 물고 프롬프트.) 기본값 nil → t 로 바꿔, 없는 파일은
+;; 프롬프트 대신 조용히 건너뛴다. 이 hang 클래스를 뿌리째 제거.
+(setq org-agenda-skip-unavailable-files t)
+
 ;; Load user info (+user-info.el)
 (let ((user-info (expand-file-name "+user-info.el" doom-user-dir)))
   (when (file-exists-p user-info)
