@@ -59,6 +59,7 @@
 ;;; Global Unset Keys
 
 (map! "<f2>" nil
+      "<f10>" nil
       "M-\\" nil  ; delete-horizontal-space
       "M-a" nil   ; forward-sentence - use evil motion instead
       "M-c" nil   ; capitalize-word

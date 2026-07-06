@@ -82,7 +82,11 @@
       :m "4" #'evil-end-of-line
       :m "0" #'evil-beginning-of-line
       :n "g ]" #'evil-jump-forward
-      :n "g [" #'evil-jump-backward)
+      :n "g [" #'evil-jump-backward
+
+      "<f10> O" #'bh/make-org-scratch
+      "<f10> S" #'bh/make-markdown-scratch
+      )
 
 ;;;; F1-12: Function Keys
 

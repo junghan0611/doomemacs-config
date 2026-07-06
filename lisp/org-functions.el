@@ -18,6 +18,14 @@
   (interactive)
   (org-insert-time-stamp nil t t nil nil nil))
 
+(defun bh/make-org-scratch ()
+  (interactive)
+  (find-file (concat org-directory "/scratch.org")))
+
+(defun bh/make-markdown-scratch ()
+  (interactive)
+  (find-file (concat org-directory "/scratch.md")))
+
 ;;;; ~/sync/emacs/emacs-fulllab-config/dotdoomemacs/+markdown.el
 
 (progn
