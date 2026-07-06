@@ -7,7 +7,14 @@
 
 ---
 
-## 🟡 진행 — ghostel 한글 IME 회귀: 근본 원인 확정 + fork 수정, 업스트림 재머지 1회 더 후 PR 예정 (2026-06-27)
+## 🟡 진행 — ghostel 한글 IME 회귀: PR #510 발송 + owner 리뷰 대응 완료, **머지 대기** (2026-07-06)
+
+**현재 상태 (2026-07-06)**: PR **#510** https://github.com/dakra/ghostel/pull/510 (OPEN).
+- v0.41.0+3(`f77efee`) 위로 rebase → CI 전부 SUCCESS (byte-compile 28.2/29.4/snapshot, test, test-evil, test-zig, build-native, melpazoid).
+- dakra(owner)가 인라인 리뷰 1건 — "코드 코멘트 1~2줄로 줄여라 (상세는 test/git blame)". → 9줄 코멘트를 2줄로 trim, `--amend` + force-push (`adf2f02`→`1c70fc9`), 코멘트에 답글 완료.
+- fork 브랜치 `junghan0611/ghostel:fix/lisp-ime-readonly-compose` @ `1c70fc9`. 로컬/origin/PR 동기.
+- 로컬 full 검증: native 빌드(zig 0.15.2 = `/nix/store/n64wxy7nch118ggn9lbmda5a29jr775r-zig-0.15.2/bin`; 시스템 zig 0.16은 ghostty가 0.15.2 요구해서 실패) + `make test`/`test-native`/byte-compile/checkdoc 전부 green.
+- **다음**: dakra 머지 대기. 머지되면 → 아래 🟢 마이그레이션 Beat 1 (fork 은퇴).
 
 **근본 원인 (확정)**: 어제(2026-06-24) upstream `9e8460a Make ghostel buffers read-only`가
 ghostel 버퍼를 `buffer-read-only = t`로 만들면서 한글이 깨졌다. **hangul 입력기가
@@ -37,9 +44,9 @@ upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는
 - 결과: 브랜치가 깨끗한 PR-ready 모양 (최신 업스트림 + 우리 커밋 1개, +44/-1).
 
 **다음 한 걸음**:
-- [ ] **업스트림 재머지 1회 더**: dakra/main 다시 pull → 새 main 위 재적용 (위와 동일 패치 흐름) → 충돌/회귀 점검.
-- [ ] **그 다음 PR 발송**: dakra/ghostel에 PR (`b15cb5d` 기반, 커밋 메시지가 PR body 그대로 쓸 수 있게 작성됨).
-- [ ] **머지/upstream 자체수정 시** → `packages.el` recipe를 `dakra/ghostel :branch main`으로 복귀.
+- [x] ~~업스트림 재머지 + PR 발송~~ → #510 발송 완료 (2026-07-06).
+- [x] ~~owner 리뷰 대응~~ → dakra 코멘트 trim 요청 반영, `1c70fc9`.
+- [ ] **머지 대기** → 머지 떨어지면 🟢 Beat 1: `packages.el` ghostel recipe를 fork → `dakra/ghostel :branch main`으로 전환 + `doom sync`. (단, 아래 버전-lag 이슈 주의 — 공식 모듈 pin은 unpin해야 함.)
 - [ ] **(별개·미해결) reshow `number-or-marker-p nil`**: `my/ghostel-toggle` 재토글 때
       `my/ghostel--enter-insert` → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장 타이밍에
       `ghostel--cursor-pos`/viewport-row nil 참조. 원인 커밋 후보 `3431d79`/`adac637`. 한글과 별개 트랙.
@@ -70,13 +77,28 @@ persp `ghostel-buffer-name-function nil` 충돌 방지.
   공식 `+ghostel/toggle`은 prefix-arg 경로에서 `buffer-name`을 변수로 잘못 참조(void)하고 insert/IME 없음.
 - `my/pi-ghostel-start`, `term-sessions`(zmx), `my/zmx-launch`, `ghostel-eval-cmds`, OSC 9;4 spinner
 
-**절차**:
-1. `init.el` `:term`에 `(:unless my/termux-p (ghostel +everywhere))` 추가 → `doom sync`
-2. `term-config.el`에서 `use-package! ghostel` 기본 블록 제거, override-only로 축소
-3. 함수 충돌: `my/ghostel-toggle` + `SPC o t/T` 유지, 공식 `+ghostel/*`는 미바인딩(공존 무해)
-4. 실익은 "코드 절감"보다 **유지보수 위임 + `+everywhere` 기능 획득**
+**⚠️ 버전-lag 이슈 (핵심 — 2026-07-06 갱신)**: 공식 모듈 `packages.el`은 `dakra/ghostel @ 0f0a9bd`
+(2026-07-01, "nushell integration") pin — **현 upstream main보다 22커밋 뒤 + 우리 read-only fix 없음**.
+ghostel은 매우 빠르게 개발되어 Doom 모듈 pin이 항상 뒤처진다. → **공식 모듈을 켜더라도
+`packages.el`에서 ghostel recipe를 unpin(override)해서 우리가 원하는 최신 버전을 써야 한다.**
+이건 임시 우회가 아니라 상시 상태 — @hlissner이 pin을 우리 머지 이후로 bump하기 전까진 override 유지.
+따라서 마이그레이션은 @hlissner 스케줄에 안 묶인다 (recipe override로 우리가 통제).
 
-**참조**: 위 🟡 ghostel 한글 IME 항목 — fork/PR #343 상태가 이 마이그레이션의 게이트.
+**두 박자로 분리 (묶지 말 것)**:
+
+*Beat 1 — fork 은퇴 (#510 머지 즉시, 소규모·저위험)*:
+- `packages.el` ghostel/evil-ghostel recipe: `junghan0611/ghostel:fix/lisp-ime-readonly-compose`
+  → `dakra/ghostel :branch main` (fix가 이제 upstream 안 → fork 불필요). `doom sync`.
+- fork 유지보수 부담 소멸. "우리쪽 수정 최소화"의 절반 달성.
+
+*Beat 2 — 공식 모듈 채택 (여유될 때, 리팩토링)*:
+1. `init.el` `:term`에 `(:unless my/termux-p (ghostel +everywhere))` 추가 → `doom sync`
+2. `packages.el`에서 ghostel recipe override로 `dakra/main`(또는 원하는 SHA) pin — 공식 모듈의 stale `0f0a9bd` unpin. **위 버전-lag 이슈 = 이 override 상시 필요.**
+3. `term-config.el`(325줄) → override-only 레이어로 축소
+4. 함수 충돌: `my/ghostel-toggle` + `SPC o t/T` 유지, 공식 `+ghostel/*`는 미바인딩(공존 무해)
+5. 실익은 "코드 절감"보다 **유지보수 위임 + `+everywhere` 기능 획득**(comint/compilation/eshell/solaire/persp)
+
+**참조**: 위 🟡 ghostel 한글 IME 항목 — PR #510 머지가 Beat 1의 게이트.
 
 ## 🟢 NEW — export-side frontmatter enrichment: 패키지 메타데이터 → md frontmatter 다리 (2026-06-29)
 
