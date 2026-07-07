@@ -7,28 +7,18 @@
 
 ---
 
-## ✅ RECENT — ghostel: IME PR #510 머지 + 공식 :term 모듈 마이그레이션 완료 (2026-07-07)
+## ghostel — 공식 :term 모듈 이관 완료 (v2026.7.7), 남은 트랙만 (2026-07-07)
 
-PR **#510** (read-only Lisp-IME fix, `1c70fc9`) 가 `dakra/ghostel main`에 머지 → fork 은퇴.
-공식 `:term ghostel (+everywhere)` 모듈로 이관 완료. **재시작 실측 통과** (한글 IME 조합 /
-evil-ghostel ESC→PTY / `+everywhere` compile·comint·eshell / popup 자동 evil-insert).
+이관·fork 은퇴 상세는 `CHANGELOG.md` `v2026.7.7` 참조. 불변식 하나만: `packages.el`의
+`(unpin! ghostel evil-ghostel)`로 dakra/main 추적 (공식 모듈은 stale SHA pin = Doom 재현성 정책).
+override 레이어는 `lisp/term-config.el`, 근거 SSOT는 packages.el 주석. 설계 아카이브는 아래
+`## ghostel 한글 IME PR #343`.
 
-- **버전 관리는 우리 손**: 공식 모듈은 `dakra/ghostel`을 stale SHA로 pin(Doom 재현성 정책,
-  항상 뒤처짐 — 실측 24커밋). `packages.el`의 `(unpin! ghostel evil-ghostel)`로 dakra/main
-  추적. 근거·불변식은 **packages.el 주석이 SSOT**. `doom sync -u`가 최신 pull.
-- **override 레이어 = `lisp/term-config.el`**: `after! ghostel`(doom-real-buffer-modes /
-  ghostel-shell / eval-cmds / spinner) + `use-package! ghostel-ime` + `after! evil-ghostel`
-  (`escape 'terminal`) + `my/ghostel-toggle`/`-here`·pi·zmx. 공식 `+ghostel/toggle`은 버그
-  (void `buffer-name` + no insert/IME)라 미사용.
-- 커밋: `61763b4`(모듈 이관) ← `b53f970`(fork 은퇴). 상세 설계·재현 명령·GPT 백업
-  (`~/.local/state/ghostel-ime-wip/`)은 아래 `## ghostel 한글 IME PR #343` 아카이브 참조.
-
-### 남은 개별 트랙 (한글 IME와 별개)
-- [ ] **reshow `number-or-marker-p nil`**: `my/ghostel-toggle` 재토글 시 `my/ghostel--enter-insert`
-      → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장 타이밍에 `ghostel--cursor-pos`/
-      viewport-row nil 참조. 원인 후보 `3431d79`/`adac637`. 급하면 `term-config.el`의
-      `my/ghostel--enter-insert` 호출 2곳 주석. **마이그레이션(evil-ghostel 0.41) 후 재현되는지
-      재확인 필요** — 최신 버전에서 고쳐졌을 수 있음.
+- [ ] **reshow `number-or-marker-p nil` (한글과 별개)**: `my/ghostel-toggle` 재토글 시
+      `my/ghostel--enter-insert` → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장
+      타이밍에 `ghostel--cursor-pos`/viewport-row nil 참조. 원인 후보 `3431d79`/`adac637`.
+      급하면 `term-config.el`의 `my/ghostel--enter-insert` 호출 2곳 주석. **evil-ghostel 0.41
+      이관 후 재현되는지 재확인 필요** — 최신 버전에서 고쳐졌을 수 있음.
 
 ## 🟢 NEW — export-side frontmatter enrichment: 패키지 메타데이터 → md frontmatter 다리 (2026-06-29)
 
