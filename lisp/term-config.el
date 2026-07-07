@@ -19,75 +19,71 @@
 
 ;;; Code:
 
-;; vterm is retired (commented out in init.el); ghostel is now the daily
-;; in-Emacs terminal *and* the agent-tool surface.  Loaded lazily via
-;; `:commands'/`:defer'; the leader entry points `my/ghostel-toggle' (popup)
-;; and `my/ghostel-here' (current window) below replace `+vterm/toggle' and
-;; `+vterm/here'.  Direct commands `M-x ghostel', `M-x ghostel-project', and
-;; `M-x my/pi-ghostel-start' stay available.  project-switch integration is
-;; still parked until daily-use signal accumulates.
-(use-package! ghostel
-  :defer t
-  :commands (ghostel ghostel-project my/pi-ghostel-start)
-  :hook ((ghostel-mode . doom-mark-buffer-as-real-h)
-         ;; Opt-in Emacs Lisp IME integration (hangul2/quail commit-forward
-         ;; + redraw-defer during composition).  Must be on before
-         ;; `toggle-input-method' so its activate-hook wraps the live IME.
-         (ghostel-mode . ghostel-ime-mode))
-  :if (and (fboundp 'module-load)
-           module-file-suffix
-           (not (bound-and-true-p my/termux-p)))
-  :init
+;; ghostel is the daily in-Emacs terminal *and* the agent-tool surface (vterm is
+;; retired, commented out in init.el).  Since 2026-07 the official `:term
+;; ghostel' module (enabled with `+everywhere' in init.el) owns the base
+;; `use-package! ghostel': mode-line-invisible, line-number disable, solaire,
+;; persp buffer-name guard, and comint/compile/eshell integration + `evil-ghostel'.
+;; This file is now an *override layer* — only what the module does not wire —
+;; plus our own entry points (`my/ghostel-toggle'/`-here', `my/pi-ghostel-start',
+;; zmx launchers) further below.  We version-manage the package via `unpin!'
+;; (packages.el), so ghostel tracks dakra/main rather than the module's stale pin.
+
+(after! ghostel
+  ;; ghostel buffers are long-lived agent sessions (claude/codex/pi): treat them
+  ;; as real so `doom/kill-this-buffer' and real-buffer cycling respect them.
+  ;; Declarative, mirroring how `app/irc' registers `circe-mode'.
+  (add-to-list 'doom-real-buffer-modes 'ghostel-mode)
   (setq ghostel-module-auto-install 'ask)
-  :config
   (setq ghostel-shell (or explicit-shell-file-name
                           shell-file-name
                           (getenv "SHELL")
                           "/bin/bash"))
-  ;; Default is xterm-ghostty. If remote terminfo gets noisy, temporarily use:
+  ;; Default term is xterm-ghostty.  If remote terminfo gets noisy, temporarily:
   ;; (setq ghostel-term "xterm-256color")
-  ;; Keep side effects opt-in during evaluation.
+  ;; Opt-in side effects, left off by default:
   ;; (setq ghostel-enable-osc52 t)
   ;; (setq ghostel-tramp-shell-integration t)
 
-  ;;; project.el integration — disabled while ghostel is experimental.
-  ;; Re-enable once daily-use signal accumulates.
-  ;; (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
+  ;; Whitelist Doom commands callable from inside the terminal via `ghostel_cmd'.
+  ;; Defaults already include find-file(-other-window), dired(-other-window), message.
+  (dolist (cmd '(("magit-status-setup-buffer" magit-status-setup-buffer)
+                 ("dired-jump"                 dired-jump)
+                 ("+default/find-file-under-here" +default/find-file-under-here)))
+    (add-to-list 'ghostel-eval-cmds cmd))
 
-  ;;; Whitelist additional elisp callbacks for `ghostel_cmd' shell helper.
-  ;; Default: find-file, find-file-other-window, dired, dired-other-window, message.
-  ;; Add Doom-specific commands we want callable from inside the terminal.
-  (with-eval-after-load 'ghostel
-    (dolist (cmd '(("magit-status-setup-buffer" magit-status-setup-buffer)
-                   ("dired-jump"                 dired-jump)
-                   ("+default/find-file-under-here" +default/find-file-under-here)))
-      (add-to-list 'ghostel-eval-cmds cmd)))
-
-  ;;; OSC 9;4 progress protocol — claude code, codex, pi CLI all emit this.
-  ;; spinner.el ships with magit; default to spinner if loadable, else text.
+  ;; OSC 9;4 progress protocol — claude code, codex, pi CLI all emit this.
+  ;; spinner.el ships with magit; fall back to text when unavailable.
   (when (locate-library "spinner")
     (setq ghostel-progress-function #'ghostel-spinner-progress
           ghostel-spinner-type 'progress-bar)))
 
-(use-package! evil-ghostel
-  :after (ghostel evil)
-  :hook (ghostel-mode . evil-ghostel-mode)
-  :config
-  ;; Route insert-state ESC to the PTY in every ghostel buffer.
-  ;; Claude Code, codex, pi all expose their own vim-style mode that
-  ;; expects ESC to reach them; alt-screen apps (vim, htop) need it too.
-  ;; Use `,.' (evil-escape) for Emacs evil normal state, `C-c C-t' for
-  ;; scrollback (`ghostel-copy-mode').  `evil-ghostel-toggle-send-escape'
-  ;; switches modes per buffer when needed.
+;; Korean Emacs-Lisp input method — bundled in the ghostel package but not wired
+;; by the module.  README's documented opt-in; must be on before
+;; `toggle-input-method' so its activate-hook wraps the live IME.  The fix that
+;; lets hangul compose in the read-only terminal buffer (PR #510) is now upstream.
+(use-package! ghostel-ime
+  :hook (ghostel-mode . ghostel-ime-mode))
+
+;; evil-ghostel: the module enables the mode under `:editor evil' + `+everywhere'.
+;; We only route insert-state ESC to the PTY — Claude Code, codex, pi each expose
+;; their own vim-style mode that expects ESC, and alt-screen apps (vim, htop) need
+;; it too.  `,.' (evil-escape) reaches Emacs normal state; `C-c C-t' opens
+;; scrollback (`ghostel-copy-mode'); `evil-ghostel-toggle-send-escape' flips it
+;; per buffer when needed.
+(after! evil-ghostel
   (setq evil-ghostel-escape 'terminal))
 
 
-;;; vterm replacement — toggle / here
+;;; toggle / here — our replacements for `+vterm/*' and the module's `+ghostel/*'
 
-;; ghostel counterparts of doom :term/vterm's `+vterm/toggle' and
-;; `+vterm/here'.  ghostel displays same-window by default, so the popup
-;; behaviour comes from the `set-popup-rule!' below matching the popup
-;; buffer name; `my/ghostel-toggle' then shows/hides the popup window.
+;; The `:term ghostel' module ships `+ghostel/toggle'/`+ghostel/here', but we
+;; keep our own: the module's `+ghostel/toggle' references `buffer-name' as a
+;; variable (void-variable in its prefix-arg branch) and enters neither evil
+;; insert state nor the Korean IME — both of which an agent terminal needs the
+;; moment it appears.  ghostel displays same-window by default, so the popup
+;; behaviour comes from the `set-popup-rule!' below matching the popup buffer
+;; name; `my/ghostel-toggle' then shows/hides the popup window.
 ;;
 ;; Unlike vterm's popup (`:ttl 0', killed on close), we keep `:ttl nil' and
 ;; toggle by hiding the window — ghostel here is an *agent tool*, so a popup

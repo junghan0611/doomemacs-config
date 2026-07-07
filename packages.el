@@ -90,17 +90,12 @@
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
 (package! kkp :disable t) ; conflict with term-keys
 (package! term-keys :recipe (:host github :repo "junghan0611/term-keys"))
-;; Follow dakra/main directly (unpinned): the read-only Lisp-IME fix landed
-;; upstream (1c70fc9, PR #510), so the fork is retired.  ghostel iterates fast,
-;; so tracking main beats any SHA pin — including the stale one the official
-;; :term ghostel module ships.
-(package! ghostel
-  :recipe (:host github :repo "dakra/ghostel"
-           :branch "main"))
-(package! evil-ghostel
-  :recipe (:host github :repo "dakra/ghostel"
-           :branch "main"
-           :files ("extensions/evil-ghostel/evil-ghostel.el")))
+;; The `:term ghostel' module supplies the recipe and pins dakra/ghostel to a
+;; stale SHA (Doom's package-reproducibility policy — the pin always lags, and
+;; ghostel iterates very fast).  We carry upstreamed fixes (Lisp-IME, PR #510)
+;; and want the latest, so we version-manage ghostel ourselves: unpin and follow
+;; dakra/main.  ghostel-ime/eshell/comint/compile all ship inside the package.
+(unpin! ghostel evil-ghostel)
 ;; Persistent terminal sessions backed by zmx — Emacs is the client, zmx owns
 ;; the session lifecycle.  `:defaults' excludes the bundled -tests.el.
 (package! term-sessions

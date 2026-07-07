@@ -53,7 +53,7 @@ upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는
       급하면 `term-config.el`의 `my/ghostel--enter-insert` 호출 2곳 주석.
 - **참조**: 아래 `## ghostel 한글 IME PR #343` (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
 
-## 🟢 NEW — :term ghostel 공식 모듈 마이그레이션 (base 위임, 적당한 시점) (2026-07-01)
+## 🟢 완료 — :term ghostel 공식 모듈 마이그레이션 (Beat 1+2, 2026-07-07)
 
 **배경**: Doom v3 재구조화로 모듈이 core → `sources/doom+`(doomemacs/modules 서브모듈)로 분리.
 거기에 **공식 `:term ghostel` 모듈** 신설 (`.doommodule` since `26.07`, maintainer @hlissner,
@@ -71,11 +71,12 @@ upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는
 comint 통합, `compilation-start` advice, `ghostel-eshell` visual-command, solaire face 연동,
 persp `ghostel-buffer-name-function nil` 충돌 방지.
 
-**유지 필수 (공식에 없음 → override 레이어로 남김)**:
-- `ghostel-ime-mode`(한글), `evil-ghostel-escape 'terminal`(ESC 라우팅)
+**유지 필수 (공식에 없음 → override 레이어로 남김, 전부 term-config.el에 구현됨)**:
+- `ghostel-ime-mode`(한글, `use-package! ghostel-ime`), `evil-ghostel-escape 'terminal`(ESC 라우팅)
+- `doom-real-buffer-modes`에 `ghostel-mode` 등록 (선언형, app/irc `circe-mode` 패턴 — 기존 `doom-mark-buffer-as-real-h` 훅 대체)
 - popup rule + `my/ghostel-toggle`/`-here` — evil-insert 자동진입 + IME 활성화 포함.
-  공식 `+ghostel/toggle`은 prefix-arg 경로에서 `buffer-name`을 변수로 잘못 참조(void)하고 insert/IME 없음.
-- `my/pi-ghostel-start`, `term-sessions`(zmx), `my/zmx-launch`, `ghostel-eval-cmds`, OSC 9;4 spinner
+  공식 `+ghostel/toggle`은 prefix-arg 경로에서 `buffer-name`을 변수로 잘못 참조(void)하고 insert/IME 없음 (autoload.el 실측 확인).
+- `my/pi-ghostel-start`, `term-sessions`(zmx), `my/zmx-launch`, `ghostel-eval-cmds`, `ghostel-shell`, OSC 9;4 spinner
 
 **⚠️ 버전-lag 이슈 (핵심 — 2026-07-06 갱신)**: 공식 모듈 `packages.el`은 `dakra/ghostel @ 0f0a9bd`
 (2026-07-01, "nushell integration") pin — **현 upstream main보다 22커밋 뒤 + 우리 read-only fix 없음**.
@@ -91,14 +92,19 @@ ghostel은 매우 빠르게 개발되어 Doom 모듈 pin이 항상 뒤처진다.
   straight repos remote를 dakra로 재정렬(interactive 프롬프트 회피) 후 `doom sync` (build @ `eb806d1`, `ghostel-ime-mode`·`ghostel-ime-lisp-composing-p` 로드 확인).
 - fork 유지보수 부담 소멸. "우리쪽 수정 최소화"의 절반 달성.
 
-*Beat 2 — 공식 모듈 채택 (여유될 때, 리팩토링)*:
-1. `init.el` `:term`에 `(:unless my/termux-p (ghostel +everywhere))` 추가 → `doom sync`
-2. `packages.el`에서 ghostel recipe override로 `dakra/main`(또는 원하는 SHA) pin — 공식 모듈의 stale `0f0a9bd` unpin. **위 버전-lag 이슈 = 이 override 상시 필요.**
-3. `term-config.el`(325줄) → override-only 레이어로 축소
-4. 함수 충돌: `my/ghostel-toggle` + `SPC o t/T` 유지, 공식 `+ghostel/*`는 미바인딩(공존 무해)
-5. 실익은 "코드 절감"보다 **유지보수 위임 + `+everywhere` 기능 획득**(comint/compilation/eshell/solaire/persp)
+*Beat 2 — 공식 모듈 채택 ✅ 완료 (2026-07-07)*:
+1. ~~`init.el` `:term`에 `(:unless my/termux-p (ghostel +everywhere))`~~ → doom-module struct `#s(doom-module ... :term ghostel (+everywhere))` 확인. `doom sync` clean, `+ghostel/toggle`/`here` autoload 등록.
+2. ~~`packages.el` ghostel recipe override~~ → **`(unpin! ghostel evil-ghostel)`** (tramp 스타일). 공식 모듈이 recipe 제공, 우리는 pin만 벗겨 dakra/main 추적. straight repo 여전히 `eb806d1`.
+3. ~~`term-config.el` override-only 축소~~ → base `use-package! ghostel`/`evil-ghostel` 제거, `after! ghostel`/`after! evil-ghostel` + `use-package! ghostel-ime` override 레이어로. paren 균형 확인.
+4. `my/ghostel-toggle` + `SPC o t/T` 유지 (user config가 모듈 뒤 로드 → 우리 map! 승리). 공식 `+ghostel/*` 미바인딩.
+5. 획득: **유지보수 위임 + `+everywhere`**(comint/compilation/eshell/solaire/persp).
 
-**참조**: 위 ghostel 한글 IME 항목 — PR #510 머지 완료 → **Beat 1 완료**. 남은 것은 Beat 2 (공식 모듈 채택, 여유될 때).
+**⚠️ 남은 검증 (재시작 필요 — init.el 바뀜)**:
+- [ ] Emacs 재시작 후 실측: 한글 IME 조합, evil-ghostel ESC→PTY, `+everywhere` compile/comint/eshell가 ghostel로 렌더되는지, `my/ghostel-toggle` popup + evil-insert 자동진입.
+- [ ] **native module 재다운로드** — v0.41.0에서 min native 버전이 0.41.0로 bump. 기존 `.so`가 오래됐으면 `M-x ghostel-download-module` 또는 `ghostel-module-auto-install 'ask` 프롬프트. zig 빌드는 `/nix/store/...zig-0.15.2` 경로.
+- [ ] (선택) `ghostel-full-redraw` 옵션 참조 여부 점검 — v0.40.0에서 제거됨. 현재 우리 config엔 없음(확인).
+
+**참조**: 위 ghostel 한글 IME 항목 — PR #510 머지 완료. **Beat 1+2 완료**. 남은 것은 재시작 후 실측 + native 0.41 재다운로드.
 
 ## 🟢 NEW — export-side frontmatter enrichment: 패키지 메타데이터 → md frontmatter 다리 (2026-06-29)
 

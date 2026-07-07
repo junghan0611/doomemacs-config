@@ -134,6 +134,7 @@ nil if file missing.")
        :term
        eshell            ; the elisp shell that works everywhere
        ;; vterm             ; the best terminal emulation in Emacs
+       (:unless my/termux-p (ghostel +everywhere)) ; libghostty-vt terminal — daily driver + agent surface
 
        :checkers
        (syntax +flymake)    ; tasing you for every semicolon you forget
