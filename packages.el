@@ -90,16 +90,16 @@
 (package! evil-terminal-cursor-changer :disable t) ; conflict on kitty
 (package! kkp :disable t) ; conflict with term-keys
 (package! term-keys :recipe (:host github :repo "junghan0611/term-keys"))
-;; Fork branch carries the read-only Lisp-IME fix (Korean composition in
-;; protected ghostel buffers) on top of dakra/main.  Pull dakra/main into the
-;; branch each cycle; drop back to upstream once the fix lands there.
-;; Branch: fix/lisp-ime-readonly-compose — PR pending.
+;; Follow dakra/main directly (unpinned): the read-only Lisp-IME fix landed
+;; upstream (1c70fc9, PR #510), so the fork is retired.  ghostel iterates fast,
+;; so tracking main beats any SHA pin — including the stale one the official
+;; :term ghostel module ships.
 (package! ghostel
-  :recipe (:host github :repo "junghan0611/ghostel"
-           :branch "fix/lisp-ime-readonly-compose"))
+  :recipe (:host github :repo "dakra/ghostel"
+           :branch "main"))
 (package! evil-ghostel
-  :recipe (:host github :repo "junghan0611/ghostel"
-           :branch "fix/lisp-ime-readonly-compose"
+  :recipe (:host github :repo "dakra/ghostel"
+           :branch "main"
            :files ("extensions/evil-ghostel/evil-ghostel.el")))
 ;; Persistent terminal sessions backed by zmx — Emacs is the client, zmx owns
 ;; the session lifecycle.  `:defaults' excludes the bundled -tests.el.
