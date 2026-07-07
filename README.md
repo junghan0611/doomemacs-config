@@ -49,7 +49,8 @@ doomemacs-config/
 │   ├── denote-*.el          # Denote ecosystem (4)
 │   ├── org-*.el             # Org-mode (2)
 │   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC
-│   ├── tty-config.el           # TTY: term-keys, kitty-graphics, ghostel
+│   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
+│   ├── term-config.el          # In-Emacs terminal — :term ghostel module + overrides
 │   ├── workflow-shared.el       # Human ↔ Agent shared contract
 │   └── ...                      # 25+ more modules
 │
@@ -372,7 +373,7 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs preview channel term
 - [Doom Emacs](https://github.com/doomemacs/doomemacs) — Henrik Lissner's framework
 - [Protesilaos Stavrou](https://protesilaos.com/) — Denote, modus-themes, and a philosophy of computing
 - [Pi Coding Agent](https://shittycodingagent.ai/) — Daniel Nouri's coding agent harness
-- [ghostel](https://github.com/dakra/ghostel) — dakra's terminal emulator inside Emacs (libghostty-based); the surface my pi / Claude Code TTY workflow runs on, and the project that finally made Korean IME inside terminal-Emacs feel solid
+- [ghostel](https://github.com/dakra/ghostel) — dakra's terminal emulator inside Emacs (libghostty-based); the surface my pi / Claude Code TTY workflow runs on, and the project that finally made Korean IME inside terminal-Emacs feel solid. The Lisp-IME read-only compose fix landed upstream ([PR #510](https://github.com/dakra/ghostel/pull/510), shipped as the documented `ghostel-ime` extension), and this config now rides the official `:term ghostel` module — unpinned to track `main`, since ghostel iterates faster than Doom's package pin
 
 ## FAQ
 

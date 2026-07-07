@@ -7,104 +7,28 @@
 
 ---
 
-## 🟢 완료 — ghostel 한글 IME 회귀: PR #510 **머지됨** + fork 은퇴 (Beat 1) 완료 (2026-07-07)
+## ✅ RECENT — ghostel: IME PR #510 머지 + 공식 :term 모듈 마이그레이션 완료 (2026-07-07)
 
-**현재 상태 (2026-07-07)**: PR **#510** https://github.com/dakra/ghostel/pull/510 **MERGED** — `1c70fc9`가 `dakra/ghostel main`에 들어감(SHA 보존 rebase 머지, upstream HEAD `eb806d1`). fork 은퇴 완료.
-- v0.41.0+3(`f77efee`) 위로 rebase → CI 전부 SUCCESS (byte-compile 28.2/29.4/snapshot, test, test-evil, test-zig, build-native, melpazoid).
-- dakra(owner)가 인라인 리뷰 1건 — "코드 코멘트 1~2줄로 줄여라 (상세는 test/git blame)". → 9줄 코멘트를 2줄로 trim, `--amend` + force-push (`adf2f02`→`1c70fc9`), 코멘트에 답글 완료.
-- fork 브랜치 `junghan0611/ghostel:fix/lisp-ime-readonly-compose` @ `1c70fc9`. 로컬/origin/PR 동기.
-- 로컬 full 검증: native 빌드(zig 0.15.2 = `/nix/store/n64wxy7nch118ggn9lbmda5a29jr775r-zig-0.15.2/bin`; 시스템 zig 0.16은 ghostty가 0.15.2 요구해서 실패) + `make test`/`test-native`/byte-compile/checkdoc 전부 green.
-- **완료**: `packages.el` ghostel/evil-ghostel recipe를 fork → `dakra/ghostel :branch main`으로 전환 + straight repos remote 재정렬(프롬프트 회피) + `doom sync` (build @ `eb806d1`, `ghostel-ime-mode` 로드 확인). Beat 1 완료. 다음은 여유될 때 🟢 Beat 2 (공식 모듈 채택).
+PR **#510** (read-only Lisp-IME fix, `1c70fc9`) 가 `dakra/ghostel main`에 머지 → fork 은퇴.
+공식 `:term ghostel (+everywhere)` 모듈로 이관 완료. **재시작 실측 통과** (한글 IME 조합 /
+evil-ghostel ESC→PTY / `+everywhere` compile·comint·eshell / popup 자동 evil-insert).
 
-**근본 원인 (확정)**: 어제(2026-06-24) upstream `9e8460a Make ghostel buffers read-only`가
-ghostel 버퍼를 `buffer-read-only = t`로 만들면서 한글이 깨졌다. **hangul 입력기가
-`buffer-read-only` 변수를 직접 검사**한다:
-```elisp
-;; leim/quail/hangul.el — hangul2/hangul3/hangul390 전부 동일
-(defun hangul2-input-method (key)
-  (if (or buffer-read-only ...) (list key)  ; read-only면 조합 없이 키 패스스루
-    ...compose...))
-```
-upstream이 read-only 적응하며 wrapper에 `inhibit-read-only t`만 감쌌는데, 그건 modification
-배리어·text-prop만 가리고 hangul의 변수 직접 검사는 못 뚫는다 → hangul이 즉시 `(list key)`로
-빠져 조합 안 함 → raw 키가 PTY로 forward. (live probe 실측: `pt-delta 0` + raw `d/k/j…` 전송.)
+- **버전 관리는 우리 손**: 공식 모듈은 `dakra/ghostel`을 stale SHA로 pin(Doom 재현성 정책,
+  항상 뒤처짐 — 실측 24커밋). `packages.el`의 `(unpin! ghostel evil-ghostel)`로 dakra/main
+  추적. 근거·불변식은 **packages.el 주석이 SSOT**. `doom sync -u`가 최신 pull.
+- **override 레이어 = `lisp/term-config.el`**: `after! ghostel`(doom-real-buffer-modes /
+  ghostel-shell / eval-cmds / spinner) + `use-package! ghostel-ime` + `after! evil-ghostel`
+  (`escape 'terminal`) + `my/ghostel-toggle`/`-here`·pi·zmx. 공식 `+ghostel/toggle`은 버그
+  (void `buffer-name` + no insert/IME)라 미사용.
+- 커밋: `61763b4`(모듈 이관) ← `b53f970`(fork 은퇴). 상세 설계·재현 명령·GPT 백업
+  (`~/.local/state/ghostel-ime-wip/`)은 아래 `## ghostel 한글 IME PR #343` 아카이브 참조.
 
-**수정 (발송됨)**: wrapper의 `(funcall original key)` 바인딩에 **`buffer-read-only nil` 추가**.
-- fork 브랜치 `junghan0611/ghostel:fix/lisp-ime-readonly-compose` @ `b15cb5d` (force-push 완료)
-- `lisp/ghostel-ime.el` 한 줄 + characterization test (`ghostel-test-ime-wrap-composes-in-read-only-buffer`,
-  hangul read-only 게이트 모델링 — 수정 빼면 실패 확인)
-- 검증: `make byte-compile` ✓ / `checkdoc`+`docquotes` ✓ / ime ert ✓ (10/10). live 실측 "김정한" forward 확인.
-- `packages.el`: ghostel recipe를 이 fork 브랜치로 전환 (evil-ghostel은 dakra/main 유지).
-
-**업스트림 재머지 (2026-06-27)**: 직전 `66a8778`은 orphan root commit이라 main과 공통 조상 없음.
-업스트림이 `92bfcc5 Release version 0.39.0`까지 진행 → fork 브랜치를 **새 main 위 단일 커밋으로 재구성**.
-- 방식: `git diff main fix -- ghostel-ime.el test/ghostel-ime-test.el`로 순수 추가분만 패치로 떠서
-  main(`92bfcc5`) 위에 재적용 → 커밋 `b15cb5d` → `--force-with-lease`로 origin 갱신 (`66a8778...b15cb5d`).
-- main 재확인: 0.39.0도 여전히 wrapper에 `inhibit-read-only`만 묶음 → **우리 수정 여전히 필요** (중복 아님).
-- 결과: 브랜치가 깨끗한 PR-ready 모양 (최신 업스트림 + 우리 커밋 1개, +44/-1).
-
-**다음 한 걸음**:
-- [x] ~~업스트림 재머지 + PR 발송~~ → #510 발송 완료 (2026-07-06).
-- [x] ~~owner 리뷰 대응~~ → dakra 코멘트 trim 요청 반영, `1c70fc9`.
-- [x] ~~머지 대기 → Beat 1~~ → PR #510 머지됨 (2026-07-07). `packages.el` recipe fork → `dakra/main` 전환 + straight remote 재정렬 + `doom sync` (build @ `eb806d1`). fork 은퇴 완료.
-- [ ] **(별개·미해결) reshow `number-or-marker-p nil`**: `my/ghostel-toggle` 재토글 때
-      `my/ghostel--enter-insert` → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장 타이밍에
-      `ghostel--cursor-pos`/viewport-row nil 참조. 원인 커밋 후보 `3431d79`/`adac637`. 한글과 별개 트랙.
-      급하면 `term-config.el`의 `my/ghostel--enter-insert` 호출 2곳 주석.
-- **참조**: 아래 `## ghostel 한글 IME PR #343` (설계 SSOT, 재현 명령, GPT 백업 `~/.local/state/ghostel-ime-wip/`).
-
-## 🟢 완료 — :term ghostel 공식 모듈 마이그레이션 (Beat 1+2, 2026-07-07)
-
-**배경**: Doom v3 재구조화로 모듈이 core → `sources/doom+`(doomemacs/modules 서브모듈)로 분리.
-거기에 **공식 `:term ghostel` 모듈** 신설 (`.doommodule` since `26.07`, maintainer @hlissner,
-`static/init.example.el`에 vterm을 "almost the best"로 강등하고 ghostel 등재). 우리는 이미
-`lisp/term-config.el`(325줄)에 `use-package! ghostel`을 daily driver로 통합 — 지금은 우리 게 더 앞섬.
-적당한 시점에 base를 공식 모듈로 위임하고 override만 남겨 유지보수 부담을 줄인다.
-
-**하드 의존 (선행 게이트)**: 공식 모듈 `packages.el`은 `dakra/ghostel @ 0f0a9bd` pin.
-우리 `packages.el:97`은 IME fix 위해 `junghan0611/ghostel` fork pin (위 🟡 IME 항목).
-→ **IME PR이 dakra에 머지되기 전엔 공식 모듈 recipe 그대로 못 씀.** 두 경로:
-- (a) IME PR 머지 후 → 공식 모듈 recipe 그대로 사용
-- (b) 그 전엔 → 공식 모듈 켜되 우리 `packages.el`에서 `(package! ghostel :recipe ...fork)` override로 pin만 덮기
-
-**공식 모듈이 덤으로 주는 것** (`+everywhere` 플래그, 우리엔 없음 → 획득):
-comint 통합, `compilation-start` advice, `ghostel-eshell` visual-command, solaire face 연동,
-persp `ghostel-buffer-name-function nil` 충돌 방지.
-
-**유지 필수 (공식에 없음 → override 레이어로 남김, 전부 term-config.el에 구현됨)**:
-- `ghostel-ime-mode`(한글, `use-package! ghostel-ime`), `evil-ghostel-escape 'terminal`(ESC 라우팅)
-- `doom-real-buffer-modes`에 `ghostel-mode` 등록 (선언형, app/irc `circe-mode` 패턴 — 기존 `doom-mark-buffer-as-real-h` 훅 대체)
-- popup rule + `my/ghostel-toggle`/`-here` — evil-insert 자동진입 + IME 활성화 포함.
-  공식 `+ghostel/toggle`은 prefix-arg 경로에서 `buffer-name`을 변수로 잘못 참조(void)하고 insert/IME 없음 (autoload.el 실측 확인).
-- `my/pi-ghostel-start`, `term-sessions`(zmx), `my/zmx-launch`, `ghostel-eval-cmds`, `ghostel-shell`, OSC 9;4 spinner
-
-**⚠️ 버전-lag 이슈 (핵심 — 2026-07-06 갱신)**: 공식 모듈 `packages.el`은 `dakra/ghostel @ 0f0a9bd`
-(2026-07-01, "nushell integration") pin — **현 upstream main보다 22커밋 뒤 + 우리 read-only fix 없음**.
-ghostel은 매우 빠르게 개발되어 Doom 모듈 pin이 항상 뒤처진다. → **공식 모듈을 켜더라도
-`packages.el`에서 ghostel recipe를 unpin(override)해서 우리가 원하는 최신 버전을 써야 한다.**
-이건 임시 우회가 아니라 상시 상태 — @hlissner이 pin을 우리 머지 이후로 bump하기 전까진 override 유지.
-따라서 마이그레이션은 @hlissner 스케줄에 안 묶인다 (recipe override로 우리가 통제).
-
-**두 박자로 분리 (묶지 말 것)**:
-
-*Beat 1 — fork 은퇴 ✅ 완료 (2026-07-07)*:
-- ~~`packages.el` ghostel/evil-ghostel recipe: fork → `dakra/ghostel :branch main`.~~ 완료.
-  straight repos remote를 dakra로 재정렬(interactive 프롬프트 회피) 후 `doom sync` (build @ `eb806d1`, `ghostel-ime-mode`·`ghostel-ime-lisp-composing-p` 로드 확인).
-- fork 유지보수 부담 소멸. "우리쪽 수정 최소화"의 절반 달성.
-
-*Beat 2 — 공식 모듈 채택 ✅ 완료 (2026-07-07)*:
-1. ~~`init.el` `:term`에 `(:unless my/termux-p (ghostel +everywhere))`~~ → doom-module struct `#s(doom-module ... :term ghostel (+everywhere))` 확인. `doom sync` clean, `+ghostel/toggle`/`here` autoload 등록.
-2. ~~`packages.el` ghostel recipe override~~ → **`(unpin! ghostel evil-ghostel)`** (tramp 스타일). 공식 모듈이 recipe 제공, 우리는 pin만 벗겨 dakra/main 추적. straight repo 여전히 `eb806d1`.
-3. ~~`term-config.el` override-only 축소~~ → base `use-package! ghostel`/`evil-ghostel` 제거, `after! ghostel`/`after! evil-ghostel` + `use-package! ghostel-ime` override 레이어로. paren 균형 확인.
-4. `my/ghostel-toggle` + `SPC o t/T` 유지 (user config가 모듈 뒤 로드 → 우리 map! 승리). 공식 `+ghostel/*` 미바인딩.
-5. 획득: **유지보수 위임 + `+everywhere`**(comint/compilation/eshell/solaire/persp).
-
-**⚠️ 남은 검증 (재시작 필요 — init.el 바뀜)**:
-- [ ] Emacs 재시작 후 실측: 한글 IME 조합, evil-ghostel ESC→PTY, `+everywhere` compile/comint/eshell가 ghostel로 렌더되는지, `my/ghostel-toggle` popup + evil-insert 자동진입.
-- [ ] **native module 재다운로드** — v0.41.0에서 min native 버전이 0.41.0로 bump. 기존 `.so`가 오래됐으면 `M-x ghostel-download-module` 또는 `ghostel-module-auto-install 'ask` 프롬프트. zig 빌드는 `/nix/store/...zig-0.15.2` 경로.
-- [ ] (선택) `ghostel-full-redraw` 옵션 참조 여부 점검 — v0.40.0에서 제거됨. 현재 우리 config엔 없음(확인).
-
-**참조**: 위 ghostel 한글 IME 항목 — PR #510 머지 완료. **Beat 1+2 완료**. 남은 것은 재시작 후 실측 + native 0.41 재다운로드.
+### 남은 개별 트랙 (한글 IME와 별개)
+- [ ] **reshow `number-or-marker-p nil`**: `my/ghostel-toggle` 재토글 시 `my/ghostel--enter-insert`
+      → `evil-ghostel--insert-state-entry` 커서 동기화가 재등장 타이밍에 `ghostel--cursor-pos`/
+      viewport-row nil 참조. 원인 후보 `3431d79`/`adac637`. 급하면 `term-config.el`의
+      `my/ghostel--enter-insert` 호출 2곳 주석. **마이그레이션(evil-ghostel 0.41) 후 재현되는지
+      재확인 필요** — 최신 버전에서 고쳐졌을 수 있음.
 
 ## 🟢 NEW — export-side frontmatter enrichment: 패키지 메타데이터 → md frontmatter 다리 (2026-06-29)
 
@@ -283,9 +207,13 @@ telega.el은 아직 이 타입 렌더러가 없어 `telega-ins--content` pcase f
 plist를 `telega-ins--content`로 통과시켜 출력 확인. 실측 트리거: OpenClaw/Gemini 봇이
 헤딩·리스트·테이블·코드블록 섞인 메시지를 보낼 때.
 
-## ghostel 한글 IME PR #343 재작성·발송 완료, **메인테이너 리뷰 대기** (2026-05-29)
+## ghostel 한글 IME PR #343 — 설계 SSOT (아카이브, PR #510으로 계승·머지됨) (2026-05-29)
 
-**상태**: ✅ **PR 발송 완료.** 재작성 → 단일 커밋 → force-push → 답글 → 닷파일 복원/검증 전부 끝. 이제 dakra/emil-e 리뷰만 기다림. 공이 메인테이너에게.
+> **SUPERSEDED (2026-07-07)**: 이 #343 트랙은 후속 PR **#510**으로 재작성되어 `dakra/ghostel main`에
+> 머지됨(위 RECENT 참조). 아래는 설계 SSOT·재현 명령·리뷰 히스토리 **아카이브** — reshow 버그 대응 등에서
+> 참조용으로만 보존한다. 활성 작업 아님.
+
+**상태(당시)**: ✅ **PR 발송 완료.** 재작성 → 단일 커밋 → force-push → 답글 → 닷파일 복원/검증 전부 끝. 이제 dakra/emil-e 리뷰만 기다림. 공이 메인테이너에게.
 
 - **PR #343**: https://github.com/dakra/ghostel/pull/343 (OPEN, draft)
 - **발송 커밋**: `2a9fd7d Add ghostel-ime-mode for Emacs Lisp input methods` — `fix/korean-ime-commit` 에 force-push (main=d3e3072 위 1 commit). 작업 브랜치 `feat/emacs-lisp-ime` 도 같은 커밋.
