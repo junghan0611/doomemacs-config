@@ -47,6 +47,15 @@
 
   (setq evil-want-fine-undo t) ; doom 'nil
 
+  ;; Let plain Emacs bindings through in insert state (M-b/M-i/M-f, C-a/C-e,
+  ;; C-k/C-w ...). Must use `setopt': this var has a custom `:set' that calls
+  ;; `evil-update-insert-state-bindings' to rebuild `evil-insert-state-map'
+  ;; live; a plain `setq' sets the value but leaves the map untouched. Setting
+  ;; it here (startup) also lands before evil-markdown's `:config' runs, so its
+  ;; `(:unless evil-disable-insert-state-bindings ...)' skips the markdown
+  ;; M-*/M-b/M-i insert bindings too.
+  (setopt evil-disable-insert-state-bindings t) ; default nil
+
   ;; Don't put overwritten text in the kill ring
   (setq evil-kill-on-visual-paste nil) ; default t
   ;; Don't create a kill entry on every visual movement.
