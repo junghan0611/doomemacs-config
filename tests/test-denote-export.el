@@ -187,8 +187,6 @@ Returns meta, bib, notes, or test based on parent directory name."
   "Test broken denote link export to markdown format.
 When denote-link--ol-resolve-link-to-target returns nil (file not found),
 should return plain text in brackets without error."
-  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
-
   (skip-unless (fboundp 'my/denote-link-ol-export))
 
   ;; Mock denote-link--ol-resolve-link-to-target to return nil (broken link)
@@ -207,8 +205,6 @@ should return plain text in brackets without error."
 
 (ert-deftest test-denote-link-export--broken-link-html ()
   "Test broken denote link export to HTML format."
-  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
-
   (skip-unless (fboundp 'my/denote-link-ol-export))
 
   (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
@@ -220,8 +216,6 @@ should return plain text in brackets without error."
 
 (ert-deftest test-denote-link-export--broken-link-latex ()
   "Test broken denote link export to LaTeX format."
-  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
-
   (skip-unless (fboundp 'my/denote-link-ol-export))
 
   (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
@@ -234,8 +228,6 @@ should return plain text in brackets without error."
 (ert-deftest test-denote-link-export--normal-link ()
   "Test normal denote link export (file exists).
 This tests that the fix doesn't break normal link export."
-  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
-
   (skip-unless (fboundp 'my/denote-link-ol-export))
 
   ;; Mock denote-link--ol-resolve-link-to-target to return valid path-id
@@ -246,7 +238,11 @@ This tests that the fix doesn't break normal link export."
                      "20251021T113500"
                      nil))))
 
-    (let ((result (my/denote-link-ol-export "20251021T113500" "Test Link" 'md)))
+    ;; `my/denote-markdown-export' matches "notes" against `org-hugo-base-dir',
+    ;; which the export daemon always sets before exporting.  Bind it here so
+    ;; the test does not depend on whoever loaded the module first.
+    (let* ((org-hugo-base-dir "~/repos/gh/notes/")
+           (result (my/denote-link-ol-export "20251021T113500" "Test Link" 'md)))
       (should (stringp result))
       ;; Should not be plain text - should have some link format
       (should-not (equal result "[Test Link]")))))
@@ -254,17 +250,14 @@ This tests that the fix doesn't break normal link export."
 (ert-deftest test-denote-link-export--no-wrong-type-argument-error ()
   "Critical test: Ensure broken links don't throw wrong-type-argument error.
 This was the original bug: file-relative-name receiving nil."
-  :expected-result (if (fboundp 'my/denote-link-ol-export) :passed :failed)
-
   (skip-unless (fboundp 'my/denote-link-ol-export))
 
   (cl-letf (((symbol-function 'denote-link--ol-resolve-link-to-target)
              (lambda (link &rest args) nil)))
 
-    ;; Should NOT signal wrong-type-argument error
-    (should-not
-     (should-error
-      (my/denote-link-ol-export "20251021T113500" "Test" 'md)
-      :type 'wrong-type-argument))))
+    ;; Must not signal wrong-type-argument: a broken link returns plain text.
+    ;; (`should-error' fails the test when no error is raised, so it cannot
+    ;; express "no error" -- assert on the returned value instead.)
+    (should (stringp (my/denote-link-ol-export "20251021T113500" "Test" 'md)))))
 
 ;;; test-denote-export.el ends here
