@@ -132,12 +132,11 @@ git commit이 둘째. 앞으로 같은 틀로 늘어난다.
       를 찾음 → sequential fallback. interactive M-x surface. 제거 vs `run.sh export`
       위임 vs `.py` 경로 교정 중 GLG 결정 후 손댐. docstring의 옛 경로/`clean-run.sh`
       참조도 같이 정리.
-- [ ] **denote-export test dead-path Tier 결정**: `test-denote-export.el`의
-      `../+denote-export.el`은 없음. 실제 함수 `my/denote-link-ol-export`는
-      `denote-export-config.el` 안에 있고 top-level `(require 'ox-hugo)` 때문에
-      `emacs -Q` 불가. 억지 full-load 금지.
-      - 선택 A: broken-link fallback 순수 분기 추출 → Tier A
-      - 선택 B: ox-hugo/denote/straight 로드 별도 runner → Tier C
+- [ ] **`test-denote-export.el` 잔여 정리**: Tier 결정은 끝남 — 선택 B(Tier C)로
+      `tests/test-hugo-tag-filter.el`이 straight build를 `load-path`에 올리고
+      `skip-unless`로 가드, 기존 runner 안에서 돈다 (v2026.7.9). 남은 것은
+      상단의 `../+denote-export.el` 로드 시도 블록: 그 파일은 없고 이제 모듈이
+      실제로 로드되므로 warning만 찍는 죽은 코드. 제거 vs 유지 GLG 결정.
 - [ ] **가이드 노트 Architecture 섹션 갱신**: `20251221T120044`의 옛 v2.0 서술이
       stale (`denote-export.sh` 진입, `lisp/denote-export.el` 오기, `docs/` 위치,
       mermaid run.sh 미언급). 새 헤딩1 호출 그래프와 일치하게 정정.

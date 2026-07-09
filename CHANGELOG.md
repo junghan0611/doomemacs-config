@@ -6,6 +6,53 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.7.9 — 가든 태그를 meta 자석으로 제한
+
+### Added
+
+- Garden tags are now restricted to the tag pool that `meta/*.org` headers
+  define (`lisp/denote-export-config.el` § 1.7).  A tag is a magnet —
+  `/tags/emacs` links to `meta/†-이맥스` — so a tag no meta note defines is a
+  dead URL.  Org sources may still accumulate stray tags; the filter drops them
+  at export time and never touches the org files.  No allowlist and no special
+  case: to publish a tag, write its meta note; to retire one, remove the
+  filetag.  Control lives in the notes, not in the export code.
+  Measured on the live garden: 2,437 unique tags → 1,213, nothing surviving
+  outside the pool.
+- Fail-closed guard: a pool below 500 tags aborts the export with a
+  `user-error`.  The headless daemon loads no Doom modules, so a wrong
+  `denote-directory` has happened before; silently wiping every tag in the
+  garden would otherwise look like a successful run.
+- `run.sh` asks before the lychee pass in `verify`/`fix` `[4/4]`.  Answering `n`
+  skips only the network check — the local content checks (host alias, internal
+  path, private endpoint, credential) still run in ~0.5s, so the step keeps its
+  value instead of being abandoned with C-c.
+- `jinx` spell checking config, `f10 O`/`f10 S` scratch bindings.
+
+### Changed
+
+- `org-export-with-tags` is now nil.  Heading tags carry Org bookkeeping
+  (`ARCHIVE`, `IMPORTANT`), render as `<span class="tag">` in the body, and never
+  create a `/tags/` page — tag curation belongs in `#+filetags:`.  This also
+  keeps `org-hugo-tag-processing-functions` from running on heading tags
+  (ox-hugo.el:2128), so the § 1.7 filter needs no guard against them.
+- `evil-disable-insert-state-bindings` enabled via `setopt` so the `:set`
+  handler rebuilds `evil-insert-state-map` live and evil-markdown skips its
+  `M-*`/`M-b`/`M-i` insert bindings.
+
+### Fixed
+
+- Five `test-denote-export.el` tests had never run.  `:expected-result` was
+  evaluated at load time, when `my/denote-link-ol-export` was still unbound,
+  freezing the result as `:failed`, while the matching `skip-unless` is
+  evaluated at run time.  Dropping the marker exposed two real defects:
+  `no-wrong-type-argument-error` asserted `(should-not (should-error ...))`,
+  which cannot pass because `should-error` itself fails the test when no error
+  is raised; and `normal-link` depended on `org-hugo-base-dir`, which only the
+  export daemon sets.  This settles the NEXT item "denote-export test dead-path
+  Tier 결정" in favour of Tier C — straight build on `load-path`, guarded by
+  `skip-unless`, inside the existing runner (`tests/test-hugo-tag-filter.el`).
+
 ## v2026.7.7 — ghostel 공식 :term 모듈 이관 + telega 리치 메시지 + export refs 브리지
 
 ### Added
