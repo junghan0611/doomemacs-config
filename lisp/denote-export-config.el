@@ -249,7 +249,13 @@ Runs on a temporary export copy - original file is NOT modified."
 (setq org-export-with-date t)                     ; CRITICAL: Export #+date field to frontmatter
 (setq org-export-date-timestamp-format "%e %B %Y")
 (setq org-export-use-babel nil)                   ; Faster export
-(setq org-export-with-tags 'not-in-toc)
+
+;; Heading tags are not garden content: they carry Org bookkeeping (ARCHIVE,
+;; IMPORTANT) and render as <span class="tag"> in the body without ever
+;; creating a /tags/ page.  Tag curation belongs in `#+filetags:'.  Setting
+;; this to nil also keeps `org-hugo-tag-processing-functions' from running on
+;; heading tags (ox-hugo.el:2128), so the Section 1.7 filter needs no guard.
+(setq org-export-with-tags nil)                   ; was 'not-in-toc
 
 ;;;; Section 1.5: Dblock Advice - include-date fix + folder prefix
 ;; Shared by both interactive Emacs (config.el → denote-export-config.el)
@@ -360,6 +366,114 @@ PARAMS: :from :to :excluded-dirs-regexp :id-only"
       ;; 기존 advice가 적용된 denote-org--insert-links 사용
       (denote-org--insert-links sorted (plist-get params :id-only) :include-date))
     (join-line))) ; remove trailing empty line
+
+;;;; Section 1.7: Hugo Tag Filter - export only meta-defined tags
+;;
+;; A tag is not a label, it is a magnet: /tags/emacs links to meta/†-이맥스.
+;; A tag no meta note defines is a dead URL.  Org sources may accumulate stray
+;; tags freely; the garden must not.  This filter drops them at export time.
+;; Org files are never modified.
+;;
+;; SSOT: the union of `#+filetags:' declared in meta/*.org headers.  There is
+;; no allowlist and no special case.  To publish a tag, write its meta note;
+;; to retire one, remove the filetag.  Control lives in the notes, not here.
+;;
+;; That is why section tags need no exception: `bib', `meta', `botlog' and
+;; `autholog' have meta notes and survive, while `journal', `notes', `llmlog'
+;; and `monthly' have none and drop out on their own.  The four that drop are
+;; recoverable from the folder name; `bib' is not (332 of its 983 uses sit
+;; outside bib/), which is exactly why a meta note defines it.
+;;
+;; Three call sites share `org-hugo-tag-processing-functions' (ox-hugo 0.12.x):
+;;
+;;   ox-hugo.el:4117  front-matter tags        -> filtered
+;;   ox-hugo.el:4130  front-matter categories  -> "@"-prefixed, must survive
+;;   ox-hugo.el:4245  tag groups               -> inert: `org-tag-groups-alist'
+;;                                                is nil (we declare :startgroup,
+;;                                                not :grouptags)
+;;
+;; A fourth site, ox-hugo.el:2128, processes heading tags.  It never runs here
+;; because `org-export-with-tags' is nil (Section 1): heading tags are not for
+;; the garden, they are cleaned up in `#+filetags:'.
+;;
+;; Order matters.  The default chain members rewrite underscores
+;; ("a_b" -> "a-b", "a__b" -> "a b") while the pool stores raw Org names, so
+;; this filter must run first.  `add-to-list' prepends by default.
+;;
+;; Known bypass: `#+hugo_tags:' short-circuits the hook entirely via the `or'
+;; at ox-hugo.el:4111.  86 journal notes and 1 meta note set it; their values
+;; are pool-resident or folder-recoverable, so nothing drifts today.
+
+(defconst my/org-hugo--tag-pool-scan-lines 15
+  "Line bound when scanning a meta note header for `#+filetags:'.
+Body occurrences must not enter the pool: the tag-taxonomy note
+meta/20231005T133900 quotes 108 `#+filetags:' examples in prose.
+Deepest genuine header hit measured across meta/ is line 10.")
+
+(defconst my/org-hugo--tag-pool-minimum 500
+  "Refuse to export when the meta tag pool is smaller than this.
+Measured pool size is 1,212 tags across 538 meta notes.  A pool far below
+that means `denote-directory' is wrong -- the headless export daemon does
+not load Doom modules, so this has happened before.  Exporting anyway would
+strip every tag in the garden and look like a successful run.")
+
+(defvar my/org-hugo--meta-tag-pool nil
+  "Cached hash table of meta-defined tags, or nil before first use.
+Rebuild with `my/org-hugo-invalidate-meta-tag-pool' after adding a meta
+note: the export daemon and GUI Emacs both outlive a single export.")
+
+(defun my/org-hugo--scan-filetags-pool (dir)
+  "Return a hash table of tags declared in `#+filetags:' headers under DIR.
+Only the first `my/org-hugo--tag-pool-scan-lines' lines of each Org file are
+read.  A missing DIR yields an empty table."
+  (let ((table (make-hash-table :test 'equal)))
+    (when (file-directory-p dir)
+      (dolist (file (directory-files dir t "\\.org\\'"))
+        (with-temp-buffer
+          (insert-file-contents file nil 0 8192)
+          (goto-char (point-min))
+          (when (re-search-forward
+                 "^#\\+filetags:[ \t]*\\(.*\\)$"
+                 (line-end-position my/org-hugo--tag-pool-scan-lines) t)
+            (dolist (tag (split-string (match-string 1) ":" t "[ \t]+"))
+              (puthash tag t table))))))
+    table))
+
+(defun my/denote-meta-tag-pool (&optional force)
+  "Return the cached hash table of meta-defined tags, building it if needed.
+With FORCE non-nil, rebuild unconditionally.  Signal a `user-error' when the
+pool is implausibly small: a silent full-garden tag wipe is far more expensive
+to undo than a failed export.  Recomputing per file would reread 538 meta
+notes for every exported note."
+  (when (or force (null my/org-hugo--meta-tag-pool))
+    (let* ((dir (expand-file-name "meta/" (denote-directory)))
+           (pool (my/org-hugo--scan-filetags-pool dir))
+           (size (hash-table-count pool)))
+      (when (< size my/org-hugo--tag-pool-minimum)
+        (user-error "Meta tag pool has only %d tags in %s; refusing to export"
+                    size dir))
+      (setq my/org-hugo--meta-tag-pool pool)))
+  my/org-hugo--meta-tag-pool)
+
+(defun my/org-hugo-invalidate-meta-tag-pool ()
+  "Rebuild the meta tag pool.  Run after adding or retagging a meta note."
+  (interactive)
+  (message "[Export] meta tag pool: %d tags"
+           (hash-table-count (my/denote-meta-tag-pool :force))))
+
+(defun my/org-hugo-tag-filter-by-meta-pool (tag-list _info)
+  "Drop tags from TAG-LIST that no meta note defines.
+Categories arrive here still carrying their \"@\" prefix -- ox-hugo strips it
+after the hook -- and always pass: they are a separate namespace, not part of
+the garden tag set."
+  (let ((pool (my/denote-meta-tag-pool)))
+    (seq-filter (lambda (tag)
+                  (or (string-prefix-p "@" tag)
+                      (gethash tag pool)))
+                tag-list)))
+
+(add-to-list 'org-hugo-tag-processing-functions
+             #'my/org-hugo-tag-filter-by-meta-pool)
 
 ;;;; Section 2: Denote Link Conversion
 ;; Migrated from denote-hugo.el
