@@ -417,10 +417,34 @@ that means `denote-directory' is wrong -- the headless export daemon does
 not load Doom modules, so this has happened before.  Exporting anyway would
 strip every tag in the garden and look like a successful run.")
 
+(defconst my/org-hugo--tag-pool-recheck-seconds 2.0
+  "Seconds to trust the cached pool before re-fingerprinting meta/.
+Fingerprinting costs ~16 ms and a batch export asks for the pool once per
+note, so checking every time would add ~35 s across the garden.  Rebuilding
+costs ~275 ms and happens only when meta/ actually changed.")
+
 (defvar my/org-hugo--meta-tag-pool nil
   "Cached hash table of meta-defined tags, or nil before first use.
-Rebuild with `my/org-hugo-invalidate-meta-tag-pool' after adding a meta
-note: the export daemon and GUI Emacs both outlive a single export.")
+Kept fresh automatically; see `my/org-hugo--meta-tag-pool-stamp'.")
+
+(defvar my/org-hugo--meta-tag-pool-stamp nil
+  "Fingerprint of meta/ when the pool was built: (FILE-COUNT . NEWEST-MTIME).
+The count catches deletions, which need not move the newest mtime.")
+
+(defvar my/org-hugo--meta-tag-pool-checked 0.0
+  "`float-time' of the last staleness check.")
+
+(defun my/org-hugo--meta-dir-stamp (dir)
+  "Return (FILE-COUNT . NEWEST-MTIME) over the Org files in DIR."
+  (let ((count 0)
+        (newest 0.0))
+    (when (file-directory-p dir)
+      (dolist (attr (directory-files-and-attributes dir nil "\\.org\\'" t))
+        (setq count (1+ count))
+        (let ((mtime (float-time (file-attribute-modification-time (cdr attr)))))
+          (when (> mtime newest)
+            (setq newest mtime)))))
+    (cons count newest)))
 
 (defun my/org-hugo--scan-filetags-pool (dir)
   "Return a hash table of tags declared in `#+filetags:' headers under DIR.
@@ -440,19 +464,42 @@ read.  A missing DIR yields an empty table."
     table))
 
 (defun my/denote-meta-tag-pool (&optional force)
-  "Return the cached hash table of meta-defined tags, building it if needed.
+  "Return the hash table of meta-defined tags, rebuilding it when meta/ moved.
 With FORCE non-nil, rebuild unconditionally.  Signal a `user-error' when the
 pool is implausibly small: a silent full-garden tag wipe is far more expensive
-to undo than a failed export.  Recomputing per file would reread 538 meta
-notes for every exported note."
-  (when (or force (null my/org-hugo--meta-tag-pool))
-    (let* ((dir (expand-file-name "meta/" (denote-directory)))
-           (pool (my/org-hugo--scan-filetags-pool dir))
-           (size (hash-table-count pool)))
-      (when (< size my/org-hugo--tag-pool-minimum)
-        (user-error "Meta tag pool has only %d tags in %s; refusing to export"
-                    size dir))
-      (setq my/org-hugo--meta-tag-pool pool)))
+to undo than a failed export.
+
+A cached pool goes stale the instant a meta note is retagged, and nothing
+notices: the new tag simply never reaches the garden.  Both holders of this
+cache outlive an edit -- a GUI session, and an export daemon that
+`denote-export-parallel.py' reuses across runs -- so the cache re-checks
+meta/ itself rather than waiting to be invalidated.  This shipped once as a
+stale-pool export: `monthly' and `weekly' were dropped from the notes that
+define them while a freshly started daemon kept them, in the same batch."
+  (let ((now (float-time)))
+    ;; Inside the throttle window a warm pool is served without touching the
+    ;; filesystem at all -- not even to resolve `denote-directory'.
+    (unless (or force (null my/org-hugo--meta-tag-pool))
+      (when (> (- now my/org-hugo--meta-tag-pool-checked)
+               my/org-hugo--tag-pool-recheck-seconds)
+        (setq my/org-hugo--meta-tag-pool-checked now)
+        (unless (equal (my/org-hugo--meta-dir-stamp
+                        (expand-file-name "meta/" (denote-directory)))
+                       my/org-hugo--meta-tag-pool-stamp)
+          (setq force t))))
+    (when (or force (null my/org-hugo--meta-tag-pool))
+      ;; Stamp before scanning: an edit landing mid-scan then shows up as a
+      ;; mismatch next time instead of being recorded as already absorbed.
+      (let* ((dir (expand-file-name "meta/" (denote-directory)))
+             (stamp (my/org-hugo--meta-dir-stamp dir))
+             (pool (my/org-hugo--scan-filetags-pool dir))
+             (size (hash-table-count pool)))
+        (when (< size my/org-hugo--tag-pool-minimum)
+          (user-error "Meta tag pool has only %d tags in %s; refusing to export"
+                      size dir))
+        (setq my/org-hugo--meta-tag-pool pool
+              my/org-hugo--meta-tag-pool-stamp stamp
+              my/org-hugo--meta-tag-pool-checked now))))
   my/org-hugo--meta-tag-pool)
 
 (defun my/org-hugo-invalidate-meta-tag-pool ()

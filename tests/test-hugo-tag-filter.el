@@ -49,6 +49,46 @@
      (skip-unless test-hugo-tag--loaded)
      ,@body))
 
+(defmacro test-hugo-tag--with-warm-pool (tags &rest body)
+  "Run BODY with a pool holding TAGS, stamped as just checked.
+Without the fresh stamp the pool re-fingerprints `denote-directory', which
+in a test process points at a path that does not exist."
+  (declare (indent 1))
+  `(let ((my/org-hugo--meta-tag-pool (make-hash-table :test 'equal))
+         (my/org-hugo--meta-tag-pool-stamp (cons 0 0.0))
+         (my/org-hugo--meta-tag-pool-checked (float-time)))
+     (dolist (tag ,tags)
+       (puthash tag t my/org-hugo--meta-tag-pool))
+     ,@body))
+
+(defmacro test-hugo-tag--with-meta-dir (root-var files &rest body)
+  "Bind ROOT-VAR to a temp denote directory holding meta/ FILES, then run BODY.
+FILES is an alist of (NAME . FILETAGS).  Inside BODY the pool is empty, the
+size floor is 1, and staleness is re-checked on every call."
+  (declare (indent 2))
+  `(let ((,root-var (make-temp-file "test-hugo-tag-" t)))
+     (unwind-protect
+         (let ((my/org-hugo--tag-pool-minimum 1)
+               (my/org-hugo--tag-pool-recheck-seconds 0.0)
+               (my/org-hugo--meta-tag-pool nil)
+               (my/org-hugo--meta-tag-pool-stamp nil)
+               (my/org-hugo--meta-tag-pool-checked 0.0))
+           (make-directory (expand-file-name "meta/" ,root-var) t)
+           (pcase-dolist (`(,name . ,tags) ,files)
+             (test-hugo-tag--write-meta ,root-var name tags))
+           (cl-letf (((symbol-function 'denote-directory) (lambda () ,root-var)))
+             ,@body))
+       (delete-directory ,root-var t))))
+
+(defun test-hugo-tag--write-meta (root name filetags)
+  "Write ROOT/meta/NAME declaring FILETAGS, and push its mtime forward.
+Two writes inside one test can otherwise land on the same timestamp."
+  (let ((file (expand-file-name (concat "meta/" name) root)))
+    (with-temp-file file
+      (insert (format "#+title: %s\n#+filetags: %s\n" name filetags)))
+    (set-file-times file (time-add nil 10))
+    file))
+
 ;;;; Pool scanning
 
 (test-hugo-tag--deftest test-hugo-tag--pool-reads-header
@@ -86,17 +126,14 @@
 ;;;; Filter behaviour
 
 (test-hugo-tag--deftest test-hugo-tag--drops-tags-without-a-meta-note
-  (let ((my/org-hugo--meta-tag-pool (make-hash-table :test 'equal)))
-    (puthash "emacs" t my/org-hugo--meta-tag-pool)
-    (puthash "bib" t my/org-hugo--meta-tag-pool)
+  (test-hugo-tag--with-warm-pool '("emacs" "bib")
     (should (equal (my/org-hugo-tag-filter-by-meta-pool
                     '("emacs" "journal" "bib" "stray") nil)
                    '("emacs" "bib")))))
 
 (test-hugo-tag--deftest test-hugo-tag--categories-survive
   "Categories reach the hook still carrying \"@\"; ox-hugo strips it after."
-  (let ((my/org-hugo--meta-tag-pool (make-hash-table :test 'equal)))
-    (puthash "emacs" t my/org-hugo--meta-tag-pool)
+  (test-hugo-tag--with-warm-pool '("emacs")
     (should (equal (my/org-hugo-tag-filter-by-meta-pool '("@book" "stray") nil)
                    '("@book")))))
 
@@ -113,11 +150,44 @@
                   (lambda () (file-name-directory (directory-file-name dir)))))
          (should-error (my/denote-meta-tag-pool :force) :type 'user-error))))))
 
-(test-hugo-tag--deftest test-hugo-tag--healthy-pool-caches
-  (let ((my/org-hugo--meta-tag-pool (make-hash-table :test 'equal)))
-    (puthash "emacs" t my/org-hugo--meta-tag-pool)
-    ;; cache is warm, so no denote-directory lookup and no size check
-    (should (eq (my/denote-meta-tag-pool) my/org-hugo--meta-tag-pool))))
+;;;; Staleness
+
+;; Shipped once: `monthly' and `weekly' were added to a meta note at 15:01 and
+;; the export at 15:06 dropped them from the very notes that define them --
+;; while a daemon started after the edit kept them, in the same batch.  The
+;; pool had been cached before the edit, and `denote-export-parallel.py' reuses
+;; daemons across runs.  Nothing errored; the tags just never reached the
+;; garden.  The cache therefore re-fingerprints meta/ instead of trusting
+;; itself, and these tests pin that.
+
+(test-hugo-tag--deftest test-hugo-tag--pool-rebuilds-when-a-meta-note-is-retagged
+  "A reused daemon must not keep serving the pool it cached before the edit."
+  (test-hugo-tag--with-meta-dir root '(("a.org" . ":alpha:"))
+    (should (gethash "alpha" (my/denote-meta-tag-pool)))
+    (should-not (gethash "beta" (my/denote-meta-tag-pool)))
+    (test-hugo-tag--write-meta root "a.org" ":alpha:beta:")
+    (should (gethash "beta" (my/denote-meta-tag-pool)))))
+
+(test-hugo-tag--deftest test-hugo-tag--pool-notices-a-new-meta-note
+  "Giving a stray tag its magnet must publish it without restarting Emacs."
+  (test-hugo-tag--with-meta-dir root '(("a.org" . ":alpha:"))
+    (should-not (gethash "journal" (my/denote-meta-tag-pool)))
+    (test-hugo-tag--write-meta root "b.org" ":journal:")
+    (should (gethash "journal" (my/denote-meta-tag-pool)))))
+
+(test-hugo-tag--deftest test-hugo-tag--pool-notices-a-deleted-meta-note
+  "Deleting a note need not move the newest mtime, so the stamp counts files."
+  (test-hugo-tag--with-meta-dir root '(("a.org" . ":alpha:") ("b.org" . ":beta:"))
+    (should (gethash "beta" (my/denote-meta-tag-pool)))
+    (delete-file (expand-file-name "meta/b.org" root))
+    (should-not (gethash "beta" (my/denote-meta-tag-pool)))))
+
+(test-hugo-tag--deftest test-hugo-tag--warm-pool-never-touches-the-disk
+  "Fingerprinting costs ~16 ms; a batch export must not pay it once per note."
+  (test-hugo-tag--with-warm-pool '("emacs")
+    (cl-letf (((symbol-function 'denote-directory)
+               (lambda () (error "pool re-fingerprinted inside the throttle window"))))
+      (should (eq (my/denote-meta-tag-pool) my/org-hugo--meta-tag-pool)))))
 
 (provide 'test-hugo-tag-filter)
 ;;; test-hugo-tag-filter.el ends here
