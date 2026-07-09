@@ -331,6 +331,20 @@ show_export_submenu() {
 # V/F 두 키로 통합된 검증/수정 파이프라인.
 # 각 단계는 독립적이라 한 단계만 적용/취소 가능.
 
+# [4/4]의 lychee는 네트워크 호출이라 수 분 걸린다. 나머지 content 검사
+# (host alias / internal path / endpoint / cred)는 로컬이라 몇 초면 끝나므로,
+# 단계를 통째로 건너뛰지 않고 lychee만 끌 수 있게 먼저 묻는다.
+# 출력: LYCHEE_FLAG 배열 (--lychee 또는 빈 배열)
+_ask_lychee() {
+  load_env_local
+  LYCHEE_FLAG=(--lychee)
+  read -p "GitHub 404 검사(lychee) 포함? 수 분 소요 (Y/n): " c
+  if [[ "$c" =~ ^[Nn]$ ]]; then
+    LYCHEE_FLAG=()
+    info "lychee 생략 — 로컬 검사만 수행 (GITHUB_404 미검출)"
+  fi
+}
+
 _verify_step_relref_summary() {
   info "[1/4] relref 검증"
   python3 "$PYTHON_VERIFY" "$HUGO_CONTENT_DIR" --summary || true
@@ -350,8 +364,8 @@ _verify_step_figures_summary() {
 
 _verify_step_content() {
   info "[4/4] content 위생 검증 (host alias / internal path / endpoint / cred / 404)"
-  load_env_local
-  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --summary --lychee || true
+  _ask_lychee
+  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --summary "${LYCHEE_FLAG[@]}" || true
 }
 
 _fix_step_relref() {
@@ -391,13 +405,13 @@ _fix_step_figures() {
 }
 
 _fix_step_content() {
-  info "[4/4] content 위생 정정 (dry-run, lychee 포함)"
-  load_env_local
-  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --lychee || true
+  info "[4/4] content 위생 정정 (dry-run)"
+  _ask_lychee
+  python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix "${LYCHEE_FLAG[@]}" || true
   echo ""
   read -p "content 위생 정정 적용? (y/N): " c
   if [[ "$c" =~ ^[Yy]$ ]]; then
-    python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix --lychee --apply
+    python3 "$PYTHON_CONTENT" "$HUGO_CONTENT_DIR" --fix "${LYCHEE_FLAG[@]}" --apply
   else
     info "content 적용 취소"
   fi
