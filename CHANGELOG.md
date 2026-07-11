@@ -6,6 +6,56 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.7.12 — 키바인딩은 얹는다, 덮지 않는다
+
+### Fixed
+
+- `map!`에서 prefix에 이름을 달지 않는다. `./run.sh G`로 Doom을 당긴 뒤 leader가
+  무너졌다 — `SPC f`가 `doom-leader-file-map` 19키를, `SPC h`가 표준 `help-map`
+  62키를, `SPC o`가 `doom-leader-open-map` 15키를 잃었고, `SPC j`를 나눠 쓰던 다섯
+  파일이 서로를 지워 1키만 남았다. 원인은 upstream
+  [`de2a3364a`](https://github.com/doomemacs/doomemacs/commit/de2a3364a): which-key가
+  Emacs 30.1에 내장되자 Doom이 `map!`에서 general.el을 걷어내고 라벨을 전역 regexp
+  테이블에서 네이티브 cons cell로 옮겼다. 그 결과 설명 붙은 `:prefix`가 **라벨만 다는
+  no-op에서 새 `make-sparse-keymap`을 바인딩하는 동작으로** 바뀌었다. 문법이 그대로라
+  조용히 깨졌다.
+
+  규칙은 한 줄이 됐다 — 키는 `(:prefix "f" …)`로만 밀어 넣는다. 이 형태는 그 키에 이미
+  있는 keymap 안으로 걸어 들어가므로 Doom의 바인딩이 살아남고 우리 것이 그 위에 얹힌다.
+  충돌 시엔 `config.el`이 나중에 로드되니 우리가 이기되, 그룹을 통째로 데려가지 않는다.
+  `:prefix-map`도 배제했다 — 그 키에 맵을 바인딩하는 건 똑같아서, Doom이 언젠가 그 키를
+  가져가는 날 같은 사고가 난다.
+
+  실측 복구: `SPC f`는 다시 `doom-leader-file-map` 본체(`eq`), `SPC h`는 `help-map`
+  본체, Doom 자체 라벨(file/notes/help/open/project/buffer) 보존, `SPC j`에 다섯 파일
+  바인딩 전부 누적, `SPC f y`는 여전히 Doom 기본을 이김.
+
+### Added
+
+- leader 그룹 라벨 SSOT (`lisp/keybindings-config.el`). 빌드인 which-key의
+  `which-key-add-keymap-based-replacements`는 기존 바인딩을 **제자리에서 이름만 바꾼다**
+  (`(106 keymap …)` → `(106 "pi-agent" keymap …)`). 맵을 교체하지 않고, 아직 없는
+  그룹에도 라벨을 심어둔다 — 비파괴적이면서 로드 순서와 무관하다. 그래서 11개 그룹
+  라벨을 파일마다 흩지 않고 한 블록에 모았다. leader 구성이 한 화면에 읽힌다.
+- `tests/test-keybinding-lint.el` — `lisp/`·`autoload/`를 스캔해 이름 붙은 prefix
+  두 형태를 모두 `file:line`으로 잡는 Tier A 게이트. 위반 파일을 넣어 실제로 잡히는
+  것까지 확인했다.
+
+### Changed
+
+- edge-tts leader 바인딩 비활성, `SPC -`를 whisper에 온전히 반환. 두 모듈이 `SPC - w`를
+  두고 다퉜고(`whisper-run` vs TTS org 워크플로우) 나중에 로드되는 TTS가 이겨 whisper의
+  녹음 키가 닿지 않았다 — TTS 맵이 whisper prefix를 통째로 덮고 있어 가려져 있던
+  충돌이다. TTS는 요즘 거의 안 쓰고 whisper는 매일 쓰니 `SPC -`를 넘겼다. 지우지 않고
+  주석 처리했으며, 주석 안의 형태는 이미 비파괴형이라 되살릴 때 빈 leader 자리만 고르면
+  된다.
+- 문서: `AGENTS.md § map! prefix 규약`(금지형/사용형/배경/게이트), `README § Keybindings
+  — layer, never replace`, "Things to Watch"에 진단 한 줄 —
+  `(lookup-key doom-leader-map "f")`가 `doom-leader-file-map`과 `eq`인지 보면 즉시 갈린다.
+
+- 가든 meta 태그 풀을 `meta/`가 바뀔 때 다시 만든다 (`4c7b77d`). 풀이 프로세스 수명 동안
+  캐시돼, meta 노트를 새로 쓴 뒤 export하면 새 자석이 반영되지 않았다.
+
 ## v2026.7.9 — 가든 태그를 meta 자석으로 제한
 
 ### Added
