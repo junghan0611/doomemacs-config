@@ -7,6 +7,38 @@
 
 ---
 
+## 🔴 감시 — Doom `map!` 키바인딩 재편, 흔들림 계속될 것 (2026-07-12)
+
+**상태**: 우리 쪽 대응 완료 (`v2026.7.12`). 하지만 **상류가 아직 움직이는 중**이라
+`./run.sh G` 할 때마다 또 조용히 깨질 수 있다. 지금은 **버티며 지켜보는 레인**이다.
+
+배경·규약: `CHANGELOG.md` `v2026.7.12`, `AGENTS.md` § map! prefix 규약.
+한 줄 요약: Doom이 `map!`에서 general.el을 걷어내(`de2a3364a`) 설명 붙은 `:prefix`가
+라벨 no-op에서 **keymap 바인딩**으로 바뀌었고, 우리 leader가 통째로 무너졌었다.
+
+**왜 계속 흔들리나**: Henrik이 `de2a3364a` 커밋 메시지에서 후속을 예고했다 —
+*"A follow up commit will be made to doomemacs/modules to use the new format and
+remove which-key boilerplate."* 즉 **Doom 모듈 쪽 leader 그룹 정의가 또 바뀐다.**
+`doom-leader-*-map`의 이름/구성이 움직이면 우리가 얹는 자리도 흔들린다.
+
+**대응 루틴 (`./run.sh G` 뒤에 매번)**:
+
+```bash
+./tests/run-tests.sh                      # lint — 이름 붙은 prefix 재발 차단
+# Emacs 재시작 후, 한 줄 진단:
+emacsclient -s user -e '(eq (lookup-key doom-leader-map "f") doom-leader-file-map)'
+#   t   → 정상 (Doom 맵 본체에 얹혀 있음)
+#   nil → 또 덮였다. AGENTS.md § map! prefix 규약부터 읽고 조사
+```
+
+- [ ] **감시**: `git -C ~/doomemacs log --oneline <last>..HEAD -- modules/doom/compat/+keybinds.el lisp/doom-keybinds.el` —
+      이 두 파일이 움직이면 그날은 키바인딩을 의심한다.
+- [ ] **재검토 2026-07-26 (2주)**: 그때도 `(:prefix (KEY . DESC))`가 기존 keymap을
+      재사용하지 않고 파괴하면 → **그때 PR 검토**. `make-sparse-keymap`을 새로 만드는
+      대신 그 키에 이미 keymap이 있으면 재사용하면 되는, 작은 수정이다. 재현 사례는
+      우리 손에 있다. **단, 가는 건 GLG가 부를 때만** — 에이전트가 먼저 제안하지 않는다
+      (AGENTS.md § upstream 대응 원칙).
+
 ## ghostel — 공식 :term 모듈 이관 완료 (v2026.7.7), 남은 트랙만 (2026-07-07)
 
 이관·fork 은퇴 상세는 `CHANGELOG.md` `v2026.7.7` 참조. 불변식 하나만: `packages.el`의
