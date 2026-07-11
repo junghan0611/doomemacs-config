@@ -455,34 +455,41 @@ SHOW-PROGRESS가 non-nil이면 진행 상황 버퍼를 표시."
         (when (> end start)
           (edge-tts-speak (buffer-substring-no-properties start end)))))))
 
-;;;; 키바인딩
+;;;; 키바인딩 — 2026-07-12 비활성
 
-(map! :leader
-      (:prefix ("-" . "voice")
-       :desc "TTS: 텍스트 입력" "t" #'edge-tts-speak
-       :desc "TTS: 영역 읽기" "r" #'edge-tts-speak-region
-       :desc "TTS: 라인 읽기" "l" #'edge-tts-speak-line
-       :desc "TTS: 문장 읽기" "s" #'edge-tts-speak-sentence
-       :desc "TTS: 문단 읽기" "p" #'edge-tts-speak-paragraph
-       :desc "TTS: 버퍼 읽기" "b" #'edge-tts-speak-buffer
-       :desc "TTS: 중지" "q" #'edge-tts-stop
-       :desc "TTS: 재재생" "R" #'edge-tts-replay-last
-       :desc "TTS: 음성 선택" "v" #'edge-tts-set-voice
-       :desc "TTS: 속도 조정" "V" #'edge-tts-set-rate
-       :desc "TTS: 파일 정리" "c" #'edge-tts-cleanup-old-files
-       :desc "TTS: Org TTS태그 저장(직접)" "o" #'edge-tts-save-org-tts-heading
-       :desc "TTS: Org TTS태그 저장+재생" "O" #'edge-tts-save-and-play-org-tts-heading
-       :desc "TTS: Org→txt 추출" "x" #'edge-tts-export-org-tts-to-txt
-       :desc "TTS: txt→mp3 변환" "m" #'edge-tts-convert-txt-to-mp3
-       :desc "TTS: Org 전체 워크플로우" "w" #'edge-tts-org-tts-full-workflow))
-
-;; AI 채팅 응답 읽기
-(map! :leader
-      (:prefix ("=" . "AI")
-       :desc "TTS: GPTel 응답" "T" #'edge-tts-speak-gptel-last-response))
-
-;; 전역 키바인딩 (선택적)
-(global-set-key (kbd "C-c t") #'edge-tts-speak-region)
+;; TTS 는 요즘 거의 안 쓴다. 반면 SPC - 는 whisper(STT) 가 실사용 중인데, 두
+;; 모듈이 `w' 를 두고 충돌했다 (whisper-run vs edge-tts-org-tts-full-workflow).
+;; 로드 순서상 여기가 이겨서 whisper 쪽이 가려졌다.  SPC - 를 whisper 에 온전히
+;; 넘기고 TTS 는 잠재운다.  다시 쓸 때는 M-x 로 명령을 직접 부르거나, 비어 있는
+;; leader 자리를 골라 아래를 되살린다 — 그때도 desc 붙은 :prefix 는 금지
+;; (AGENTS.md § map! prefix 규약).
+;;
+;; (map! :leader
+;;       (:prefix "-"
+;;        :desc "TTS: 텍스트 입력" "t" #'edge-tts-speak
+;;        :desc "TTS: 영역 읽기" "r" #'edge-tts-speak-region
+;;        :desc "TTS: 라인 읽기" "l" #'edge-tts-speak-line
+;;        :desc "TTS: 문장 읽기" "s" #'edge-tts-speak-sentence
+;;        :desc "TTS: 문단 읽기" "p" #'edge-tts-speak-paragraph
+;;        :desc "TTS: 버퍼 읽기" "b" #'edge-tts-speak-buffer
+;;        :desc "TTS: 중지" "q" #'edge-tts-stop
+;;        :desc "TTS: 재재생" "R" #'edge-tts-replay-last
+;;        :desc "TTS: 음성 선택" "v" #'edge-tts-set-voice
+;;        :desc "TTS: 속도 조정" "V" #'edge-tts-set-rate
+;;        :desc "TTS: 파일 정리" "c" #'edge-tts-cleanup-old-files
+;;        :desc "TTS: Org TTS태그 저장(직접)" "o" #'edge-tts-save-org-tts-heading
+;;        :desc "TTS: Org TTS태그 저장+재생" "O" #'edge-tts-save-and-play-org-tts-heading
+;;        :desc "TTS: Org→txt 추출" "x" #'edge-tts-export-org-tts-to-txt
+;;        :desc "TTS: txt→mp3 변환" "m" #'edge-tts-convert-txt-to-mp3
+;;        :desc "TTS: Org 전체 워크플로우" "w" #'edge-tts-org-tts-full-workflow))
+;;
+;; ;; AI 채팅 응답 읽기
+;; (map! :leader
+;;       (:prefix "="
+;;        :desc "TTS: GPTel 응답" "T" #'edge-tts-speak-gptel-last-response))
+;;
+;; ;; 전역 — C-c t 는 org-todo 계열과 가까워 되살릴 때 재검토할 것
+;; (global-set-key (kbd "C-c t") #'edge-tts-speak-region)
 
 ;;; 사용법
 ;;
