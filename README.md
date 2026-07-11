@@ -82,6 +82,27 @@ The living convention document is published in the garden and kept at a stable U
 
 - [Doom Emacs dotfile Elisp coding conventions](https://notes.junghanacs.com/notes/20240404T101052)
 
+## Keybindings — layer, never replace
+
+The stance here is to keep what Doom binds and only override the keys that actually need to change. So bindings are pushed in **non-destructively**: a `map!` in this config walks into the keymap Doom already put at a prefix and overwrites one key, leaving the rest of the group intact. `config.el` loads after Doom's modules, so on a genuine collision ours wins — without taking the group down with it.
+
+That means a prefix is never given a name in `map!`:
+
+```elisp
+;; No.  Both bind a keymap AT the key, destroying whatever prefix map is there.
+(map! :leader (:prefix     ("f" . "files")    "y" #'my/yank-buffer-absolute-path))
+(map! :leader (:prefix-map ("j" . "pi-agent") "a" #'my/zmx-launch))
+
+;; Yes.  Keys only.  Doom's doom-leader-file-map survives; SPC f y becomes ours.
+(map! :leader (:prefix "f" "y" #'my/yank-buffer-absolute-path))
+```
+
+This is not stylistic. Doom pulled general.el out of `map!` ([`de2a3364a`](https://github.com/doomemacs/doomemacs/commit/de2a3364a)) after which-key landed in Emacs 30.1, moving labels from general's global regexp table to native cons cells (`("label" . command)`). A described prefix used to be a no-op that only registered a label; it now binds a fresh `make-sparse-keymap`. The syntax never changed, so a config written against the old meaning breaks in silence — here it took out `doom-leader-file-map`, the standard `help-map`, and every group five different files were sharing.
+
+Group labels live in one place, the which-key SSOT block in [`keybindings-config.el`](lisp/keybindings-config.el). Built-in which-key renames the *existing* binding in place rather than replacing it, and will plant a label for a group that doesn't exist yet — so labeling is non-destructive and load-order-independent, and the whole leader layout reads in one screen.
+
+[`tests/test-keybinding-lint.el`](tests/test-keybinding-lint.el) fails the build on either named-prefix form, at `file:line`.
+
 ## Human-Agent Unified Agenda
 
 The core design: **one timeline for both human and AI**.
