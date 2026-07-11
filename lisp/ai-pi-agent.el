@@ -330,7 +330,7 @@ NO-WORKSPACE-SWITCH가 non-nil이면 workspace 전환 생략."
 ;;;; 키바인딩
 
 (map! :leader
-      (:prefix ("j" . "pi-agent")
+      (:prefix "j"
        :desc "Pi start"           "j" #'my/pi-start
        :desc "Pi find session"    "f" #'my/pi-find
        :desc "Pi session manager" "l" #'my/pi-manager-toggle

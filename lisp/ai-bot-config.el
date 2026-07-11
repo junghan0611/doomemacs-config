@@ -301,7 +301,7 @@ telega가 실행 중이 아니면 먼저 시작한다."
 ;;;; 키바인딩 (SPC j 확장)
 
 (map! :leader
-      (:prefix ("j" . "pi-agent")
+      (:prefix "j"
        :desc "telega fix auth" "M-t" #'my/telega-fix-auth
        :desc "Telega start"    "t" #'telega
        :desc "Telega chat bot" "T" #'my/telega-chat-bot))

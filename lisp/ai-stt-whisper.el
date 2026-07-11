@@ -40,7 +40,7 @@
 ;;;; Keybindings
 
 (map! :leader
-      (:prefix ("-" . "voice")
+      (:prefix "-"
        :desc "녹음/중지" "w" #'whisper-run
        :desc "파일 변환" "f" #'whisper-file
        :desc "언어 선택" "l" #'whisper-select-language))

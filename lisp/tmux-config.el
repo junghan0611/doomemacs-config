@@ -555,7 +555,7 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
 ;; SPC \은 efrit/beads 그룹 (ai-orchestration.el)
 (map! :leader
       (:prefix "\\"
-               (:prefix ("t" . "tmux-agents")
+               (:prefix "t"
                 ;; 세션 관리
                 :desc "Create session"      "c" #'+claude-create-session
                 :desc "List sessions"       "l" #'+claude-list-sessions
@@ -580,7 +580,7 @@ AGENT-NAME이 nil이면 모든 에이전트 확인."
                 :desc "Reject (n)"          "N" #'+claude-reject
                 :desc "Approve all"         "Y" #'+claude-approve-all
                 ;; emamux
-                (:prefix ("m" . "emamux")
+                (:prefix "m"
                  :desc "Send command"       "s" #'emamux:send-command
                  :desc "Run command"        "r" #'emamux:run-command
                  :desc "Run last command"   "l" #'emamux:run-last-command

@@ -143,8 +143,8 @@ pi-coding-agent 입력 버퍼에 삽입 후 전송."
 ;;;; 키바인딩
 
 (map! :leader
-      (:prefix ("j" . "pi-agent")
-       (:prefix ("p" . "present")
+      (:prefix "j"
+       (:prefix "p"
         :desc "발표 시작"         "p" #'my/present-start
         :desc "발표 종료"         "q" #'my/present-stop
         :desc "슬라이드→에이전트" "s" #'my/present-send-slide

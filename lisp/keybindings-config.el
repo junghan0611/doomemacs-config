@@ -14,10 +14,13 @@
 ;; - Mode-specific keymaps
 ;; - Evil keybindings
 ;;
-;; NOTE: map! (:prefix ("key" . "desc")) 사용 금지 (embark/citar 등 외부 키맵)
-;; → general.el이 which-key 라벨을 전역 등록하여 다른 맵에 오염됨
-;; → (:prefix "key") + which-key-add-keymap-based-replacements 사용
-;; → 자세한 설명: keybindings-denote-config.el Commentary 참조
+;; NOTE: map! 에서 prefix 에 이름을 달지 않는다 — 기존 키맵을 파괴한다.
+;; Doom이 general.el을 걷어내면서(upstream de2a3364a) desc 붙은 :prefix 는
+;; "라벨만 붙임"에서 "그 자리에 새 빈 keymap 을 만든다"로 의미가 바뀌었다.
+;; :prefix-map 도 그 키에 맵을 바인딩하므로 같은 위험을 진다.
+;; → 키는 언제나 (:prefix "key") 로 비파괴적으로 밀어 넣는다
+;; → 라벨은 아래 "Leader prefix labels — SSOT" 한곳에서 which-key 로 단다
+;; → 자세한 설명: AGENTS.md § map! prefix 규약
 
 ;;; Code:
 
@@ -137,7 +140,7 @@
 ;;;;; Files (f)
 
 (map! :leader
-      (:prefix ("f" . "files")
+      (:prefix "f"
                "y" #'my/yank-buffer-absolute-path
                "RET" #'my/yank-code-with-context
                "1" #'my/yank-code-with-context
@@ -147,7 +150,7 @@
 ;;;;; Notes (n)
 
 (map! :leader
-      (:prefix ("n" . "notes")
+      (:prefix "n"
                "g" #'+default/org-notes-search
                "SPC" #'my/org-journal-last-entry
                "L" #'my/org-store-link-id-optional
@@ -185,7 +188,7 @@
 
 ;; spacemacs's style
 (map! :leader
-      (:prefix ("l". "layout/workspace")
+      (:prefix "l"
        :desc "+workspace/other" "<tab>" #'+workspace/other
        :desc "+workspace/display" "d" #'+workspace/display
        :desc "+workspace/delete" "D" #'+workspace/delete
@@ -207,10 +210,13 @@
 
 ;;;;; Help (h)
 
+;; NOTE: Doom binds `help-map' itself at SPC h (see :config default
+;;   +evil-bindings.el).  So bindings under this prefix mutate the global
+;;   `help-map' — C-h t is the themes map here too, not `help-with-tutorial'.
 (map! :leader
-      (:prefix ("h" . "help")
+      (:prefix "h"
                "t" nil
-               (:prefix ("t" . "themes")
+               (:prefix "t"
                 :desc "Modus toggle"         "m" #'modus-themes-toggle
                 :desc "Modus select"         "M" #'modus-themes-select
                 :desc "Random EF Dark"          "d" #'modus-themes-load-random-dark
@@ -228,6 +234,30 @@
   (map! :leader
         (:prefix "p"
          "t" nil)))  ; disable project todos key binding
+
+;;;;; Leader prefix labels — SSOT
+
+;; 우리가 만든 leader 그룹의 which-key 라벨.  Doom 소유 prefix(f n h o p b …)는
+;; Doom 이 이미 이름을 달아뒀으니 여기 넣지 않는다.
+;;
+;; 라벨을 map! 의 (:prefix ("k" . "desc")) 로 달면 안 된다 — 그 형태는 해당 키에
+;; 새 빈 keymap 을 바인딩해서 기존 prefix 맵을 파괴한다 (AGENTS.md § map! prefix
+;; 규약).  `which-key-add-keymap-based-replacements' 는 pseudo-key 만 심으므로
+;; 기존 바인딩을 건드리지 않고, 아직 없는 prefix 도 만들어 두기만 한다 — 즉 어느
+;; 파일이 먼저 로드되든 결과가 같다.  그래서 흩어놓지 않고 여기 한곳에 모은다.
+(after! which-key
+  (which-key-add-keymap-based-replacements doom-leader-map
+    "l"     "layout/workspace"
+    "j"     "pi-agent"
+    "j p"   "present"
+    "h t"   "themes"
+    "-"     "voice"
+    "="     "AI"
+    "= g"   "gptel-buffer"
+    "n z"   "zotero"
+    "o m"   "meta-agent"
+    "\\ t"   "tmux-agents"
+    "\\ t m" "emamux"))
 
 ;;;; Key Functions
 
@@ -446,8 +476,8 @@
 (after! org-journal
   ;; Doom SPC n j j → org-journal-new-entry 를 오버라이드
   (map! :leader
-        (:prefix ("n" . "notes")
-         (:prefix ("j" . "journal")
+        (:prefix "n"
+         (:prefix "j"
           :desc "New entry (agenda)" "j" #'my/org-journal-new-entry
           :desc "Last entry"         "l" #'my/org-journal-last-entry)))
   (map! :map org-journal-mode-map

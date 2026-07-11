@@ -173,7 +173,7 @@ The ghostel counterpart of `+vterm/here'."
      (my/ghostel--enter-insert (current-buffer)))))
 
 (map! :leader
-      (:prefix ("o" . "open")
+      (:prefix "o"
        :desc "Toggle ghostel popup" "t" #'my/ghostel-toggle
        :desc "Ghostel here"         "T" #'my/ghostel-here))
 
@@ -258,7 +258,7 @@ its own CLI."
   ;; attaching to a live claude/pi session wants anyway.
   (setq term-sessions-preferred-frontend 'ghostel)
   (map! :leader
-        (:prefix ("j" . "pi-agent")
+        (:prefix "j"
          :desc "zmx sessions (consult)" "z" #'term-sessions-consult-session)))
 
 
@@ -314,7 +314,7 @@ the zcc/zcx/zagy/zep launchers in ~/.bashrc.local."
     (term-sessions-open name command)))
 
 (map! :leader
-      (:prefix ("j" . "pi-agent")
+      (:prefix "j"
        :desc "zmx launch harness" "a" #'my/zmx-launch))
 
 (provide 'term-config)

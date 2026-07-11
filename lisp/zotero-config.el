@@ -65,8 +65,8 @@
 
   ;; Doom Emacs 키바인딩 (zotero-save.el의 것을 덮어쓰기)
   (map! :leader
-        (:prefix-map ("n" . "notes")
-         (:prefix ("z" . "zotero")
+        (:prefix "n"
+         (:prefix "z"
           :desc "Save URL" "u" #'zotero-save-url
           :desc "Save URL at point" "p" #'zotero-save-url-at-point
           :desc "Save Org link" "l" #'zotero-save-org-link

@@ -517,7 +517,7 @@ has its own streaming wiring via fsm — leave it alone)."
          "TAB" #'gptel-menu
          "M-s" #'gptel-save-as-org-with-denote-metadata
          "M-l" #'gptel-clear-buffer+
-         (:prefix ("s" . "session")
+         (:prefix "s"
           :desc "clear" "l" #'gptel-clear-buffer+
           "p" #'gptel-save-as-org-with-denote-metadata
           )))
@@ -795,8 +795,8 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
 
   ;; 전역 (SPC = g)
   (map! :leader
-        (:prefix ("=" . "AI")
-                 (:prefix ("g" . "gptel-buffer")
+        (:prefix "="
+                 (:prefix "g"
                   :desc "Summarize buffer" "s" #'+gptel-summarize-buffer
                   :desc "Translate buffer" "t" #'+gptel-translate-buffer
                   :desc "DWIM (choose action)" "g" #'+gptel-buffer-dwim)))
@@ -805,7 +805,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   (after! eww
     (map! :map eww-mode-map
           :localleader
-          (:prefix ("G" . "gptel")
+          (:prefix "G"
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
@@ -813,7 +813,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   (after! elfeed
     (map! :map elfeed-show-mode-map
           :localleader
-          (:prefix ("G" . "gptel")
+          (:prefix "G"
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
@@ -821,7 +821,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   (after! pdf-tools
     (map! :map pdf-view-mode-map
           :localleader
-          (:prefix ("G" . "gptel")
+          (:prefix "G"
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 
@@ -829,7 +829,7 @@ eww, elfeed, pdf-view, nov 등 다양한 모드 지원."
   (after! nov
     (map! :map nov-mode-map
           :localleader
-          (:prefix ("G" . "gptel")
+          (:prefix "G"
            :desc "Summarize" "s" #'+gptel-summarize-buffer
            :desc "Translate" "t" #'+gptel-translate-buffer)))
 

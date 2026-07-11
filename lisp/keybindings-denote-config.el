@@ -14,21 +14,21 @@
 ;; ━━━ which-key 라벨 규칙 ━━━
 ;;
 ;; map!의 (:prefix ("key" . "desc") ...) 형태를 쓰면 안 된다.
-;; general.el이 which-key-replacement-alist에 nil(전역)로 라벨을 등록하여
-;; 다른 키맵(embark, citar 등)에서도 같은 키에 해당 라벨이 표시된다.
+;; Doom이 general.el을 걷어내면서(upstream de2a3364a) 이 형태는 그 키에
+;; **새 빈 keymap 을 바인딩**한다 — 원래 있던 prefix 맵이 통째로 날아간다.
+;; (예전 근거였던 "general 이 which-key 전역 alist 를 오염시킨다"는 general
+;;  which-key 연동이 사라져 더 이상 유효하지 않다. 새 근거가 더 강하다.)
+;;
+;; :prefix-map 도 결국 그 키에 맵을 바인딩하므로 같은 위험을 진다.
+;; 키는 언제나 비파괴적으로만 밀어 넣고, 라벨은 keymap 을 건드리지 않는
+;; which-key pseudo-key 로 단다.
 ;;
 ;; 올바른 방법:
-;;   1. map!에서는 (:prefix "key" ...) — desc 없이 키만 지정
-;;   2. 라벨은 which-key-add-keymap-based-replacements로 해당 키맵에만 등록
+;;   1. 키  — (:prefix "key" ...)  desc 없이 키만. 기존 맵 위에 얹힌다
+;;   2. 라벨 — which-key-add-keymap-based-replacements
+;;             leader 그룹 라벨은 keybindings-config.el 의 SSOT 블록에 모여 있다
 ;;
-;; Bad:
-;;   (map! :map my-map (:prefix ("e" . "extra") ...))
-;;   → 모든 키맵에서 "e" 키에 "extra" 라벨이 보임
-;;
-;; Good:
-;;   (map! :map my-map (:prefix "e" ...))
-;;   (which-key-add-keymap-based-replacements my-map "e" "extra")
-;;   → my-map에서만 "e" 키에 "extra" 라벨이 보임
+;; 자세한 설명과 사고 기록: AGENTS.md § map! prefix 규약
 
 ;;; Code:
 

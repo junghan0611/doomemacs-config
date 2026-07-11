@@ -141,6 +141,56 @@ without inventing a new idiom each time.
 - **Consistency first**: before adding a feature, search for the closest existing
   pattern in `lisp/` and mirror it unless there is a strong reason not to.
 
+### map! prefix 규약
+
+**우리 원칙**: Doom이 선언한 키바인딩은 그대로 쓴다. 정말 바꿔야 할 키만 그 위에
+얹는다. 겹치면 우리 것이 이기되, **Doom 것을 죽이지 않는다**. `config.el`은 Doom 모듈
+뒤에 로드되므로, 같은 키를 다시 `define-key` 하면 그 키만 우리 것으로 덮인다 — 이게
+정상 동작이고, 나머지 Doom 키는 살아있어야 한다.
+
+**규칙은 한 줄**: `map!`에서 prefix에 **이름을 달지 않는다**. 키는 비파괴적으로 밀어
+넣고, 라벨은 keymap을 건드리지 않는 경로로 따로 단다.
+
+```elisp
+;; 금지 — 둘 다 그 키에 keymap 을 "바인딩"한다
+(map! :leader (:prefix     ("f" . "files")   "y" #'foo))
+(map! :leader (:prefix-map ("j" . "pi-agent") "a" #'bar))
+
+;; 사용 — 키만 얹는다. 기존 맵이 있으면 그 안으로 들어가고, 없으면 만들어진다
+(map! :leader (:prefix "f" "y" #'foo))
+(map! :leader (:prefix "j" "a" #'bar))
+```
+
+라벨은 `lisp/keybindings-config.el`의 **`Leader prefix labels — SSOT`** 블록 한곳에서
+`which-key-add-keymap-based-replacements`로 단다. 이건 pseudo-key만 심어서 기존
+바인딩을 절대 덮지 않고, 아직 없는 prefix는 만들어 두기만 한다 — 어느 파일이 먼저
+로드되든 결과가 같다. Doom 소유 prefix(`f` `n` `h` `o` `p` `b` …)는 Doom이 이미 이름을
+달아뒀으니 넣지 않는다.
+
+**왜 그렇게 됐나.** Doom이 `map!`에서 general.el을 걷어내면서(upstream `de2a3364a`,
+2026-07) 의미가 바뀌었다. which-key가 Emacs 30.1에 내장되자 Henrik이 퇴출 결정을 뒤집고
+core로 재통합했고, 라벨을 general의 전역 regexp 테이블에서 **네이티브 cons cell**
+(`("label" . command)`)로 옮겼다.
+
+| | 이전 (general) | 지금 (네이티브) |
+|---|---|---|
+| `:desc`가 만드는 것 | `(:ignore t :which-key "desc")` | `(cons "desc" def)` |
+| prefix 선언 시 | `:ignore` → **define-key 건너뜀** (라벨만) | `(cons "desc" (make-sparse-keymap))` → **새 빈 맵을 바인딩** |
+
+즉 desc 붙은 `:prefix`는 이제 **그 자리의 기존 prefix 맵을 통째로 파괴한다**. Doom의
+`doom-leader-file-map`, 표준 `help-map`, 다른 파일이 선언한 prefix가 전부 날아간다.
+문법은 그대로라 조용히 깨진다. `:prefix-map`은 `defvar` 덕에 우리 파일끼리는 맵을
+재사용하지만, 그 키에 맵을 바인딩하는 건 똑같아서 Doom이 나중에 그 키를 가져가면 같은
+사고가 난다. 그래서 둘 다 쓰지 않는다.
+
+**게이트**: `tests/test-keybinding-lint.el`이 `lisp/`·`autoload/`를 스캔해 두 형태를
+모두 file:line으로 잡는다. `tests/run-tests.sh`에 자동 포함.
+
+**주의**: Doom은 `SPC h`에 표준 `help-map`을 직접 바인딩한다
+(`:config default` `+evil-bindings.el:343`). 그래서 `(:prefix "h" ...)` 아래 정의는
+전역 `help-map`을 변형한다 — 이 리포에서 `C-h t`는 `help-with-tutorial`이 아니라
+테마 맵이다 (의도된 것).
+
 ## Emacs Server Sockets
 
 | Socket | Purpose | How it starts |
@@ -330,5 +380,6 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 - Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard
 - WezTerm + terminal Emacs + built-in Korean input is a custom path; if minibuffer/search prompt spacing breaks, inspect TTY width drift first — especially hardcoded Unicode ellipsis (`…`) in Consult prompt/path truncation before blaming Hangul input
 - **헤드리스 데몬은 Doom 모듈을 로드하지 않는다** (`bin/denote-export.el`, `bin/agent-server.el`). buffer-local org 변수(`org-attach-id-dir`, `org-download-image-dir` 등)가 GUI에서만 자동으로 잡히는 경우 가든에 broken figure가 누적된다. `workflow-shared.el`에 SSOT applier로 두고 양쪽에서 호출 — 회귀 시 첫 의심 지점. (사례: 2026-05-10 commit b348898 / d8b977a)
+- **키바인딩이 통째로 사라지면 `map!` prefix부터 의심한다**. `./run.sh G`로 Doom을 당긴 뒤 `SPC f s`·`SPC h d` 같은 Doom 기본키가 `undefined`가 되면, 십중팔구 desc 붙은 `:prefix`가 기존 prefix 맵을 덮은 것이다. 진단은 `emacsclient -s user`로 `(lookup-key doom-leader-map "f")`가 `doom-leader-file-map`과 `eq`인지 보면 즉시 갈린다. 규약과 배경은 § map! prefix 규약, 게이트는 `tests/test-keybinding-lint.el`. (사례: 2026-07-12, upstream `de2a3364a`)
 - 가든 broken은 빌드를 깨지 않는다. `./run.sh verify` → `./run.sh fix` 흐름으로 주기적 청소
 - **export 직후에는 항상 `./run.sh fix`를 같이**: ox-hugo가 link 내장 헤딩 anchor에 `{#title--relref-section-id-dot-md}` 노이즈를 흘리는 회귀가 살아있다. fix 단계 [2/3] `--fix-anchors`가 안전망 — 안 돌리면 export 직후 짧게 노출됨. "버그 새로 생긴 것 같다" 착각의 단골 원인.

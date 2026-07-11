@@ -440,7 +440,7 @@ AGENTS는 ((name1 . cmd1) (name2 . cmd2) ...) 형식."
 
 (map! :leader
       (:prefix "\\"
-       (:prefix ("z" . "zellij")
+       (:prefix "z"
         ;; Session
         :desc "Open layout"       "o" #'+zellij-open-layout
         :desc "Attach session"    "a" #'+zellij-attach-session
