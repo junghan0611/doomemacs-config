@@ -21,6 +21,11 @@
   :demand t
   :commands
   (denote denote-create-note denote-insert-link denote-show-backlinks-buffer denote-link-ol-store)
+  ;; Fontify Denote file names in every Dired buffer. Unconditional rather than
+  ;; `denote-dired-mode-in-directories': notes also live in dynamically
+  ;; discovered silos (repo docs/, claude-memory), which no static directory
+  ;; list can track. Non-matching file names simply get no face.
+  :hook (dired-mode . denote-dired-mode)
   :init
   ;; Doom sets find-file-visit-truename → buffer-file-name resolves symlinks
   ;; denote-directory must match resolved path for org-store-link to work
