@@ -446,8 +446,15 @@ Rename 후 검증: front-matter의 #+title, #+filetags 와 파일명이 일치�
           ;; 으로 죽었다.  cwd 를 repo 안으로 고정한다. (issue #9)
           (default-directory (file-name-directory (expand-file-name file))))
       (condition-case err
-          (let* ((new-name (denote-rename-file-using-front-matter file))
-                 (result-file (or new-name file))
+          (let* ((id (denote-retrieve-filename-identifier file))
+                 ;; `denote-rename-file-using-front-matter' returns the value of
+                 ;; its final `denote-update-dired-buffers' (nil in a headless
+                 ;; daemon), NOT the new path — trusting it reported "old → old"
+                 ;; while the on-disk rename actually succeeded.  Re-resolve by ID
+                 ;; from disk instead; `denote-get-path-by-id' globs fresh with no
+                 ;; cache, and the identifier is invariant across rename. (issue #3)
+                 (_ (denote-rename-file-using-front-matter file))
+                 (result-file (or (and id (denote-get-path-by-id id)) file))
                  (result-name (file-name-nondirectory result-file))
                  ;; Post-rename verification
                  (warnings nil))
@@ -1262,11 +1269,26 @@ Control keys (not front matter fields):
           (error
            (format "ERROR: %s — %s" id (error-message-string err))))))))
 
+(defconst agent-server--related-notes-heading-re
+  "^\\*+ \\(?:관련노트\\|관련 노트\\|관련\\|Related\\)\\(?:[ \t]+:[[:alnum:]_@#%:]+:\\)?[ \t]*$"
+  "Regexp matching a related-notes section heading.
+Anchored to the *entire* heading title (with optional trailing org
+tags), so only an exact '관련노트' / '관련 노트' / '관련' / 'Related' matches.
+This is deliberate: sibling sections '관련메타' (auto-magnet, the most
+common heading in the corpus), '관련링크', and '관련 레퍼런스' must NOT be
+captured — appending denote links into them was the 2026-07 regression,
+caused by the old `관련' + whitespace pattern that both missed the
+standard no-space '관련노트' and false-matched '관련 <other>'.
+Keep in sync with the copy in tests/test-agent-denote-link.el.")
+
 (defun agent-denote-add-link (id target-id description)
   "Add a denote link to file ID, pointing to TARGET-ID.
 
-Looks for a '관련' or '관련 노트' or 'Related' heading.
-If found, appends the link there.  If not, creates '** 관련' at end of file.
+Looks for the standard '관련노트' section (also '관련 노트', '관련',
+'Related').  Match is anchored to the whole heading title, so sibling
+headings like '관련메타', '관련링크', or '관련 레퍼런스' are never touched.
+If found, appends the link as the last item there.  If not, creates a
+top-level '* 관련노트' at end of file.
 
 DESCRIPTION is the link text.  Returns OK/ERROR string."
   (let* ((file (denote-get-path-by-id id)))
@@ -1285,19 +1307,17 @@ DESCRIPTION is the link text.  Returns OK/ERROR string."
                       (save-excursion
                         (goto-char (point-min))
                         (let ((link-text (format "- [[denote:%s][%s]]\n" target-id description))
-                              ;; \\s- : 공백 syntax 클래스. "[ \\t]" 은 `[...]` 안에서 글자 t 를
-                              ;; 매칭해 "관련test" 를 오매칭.
-                              (related-re "^\\*+ \\(관련 노트\\|관련\\|Related\\)\\(\\s-\\|$\\)"))
+                              (related-re agent-server--related-notes-heading-re))
                           (if (re-search-forward related-re nil t)
                               ;; Found related heading — append after last item
                               (progn
                                 (org-end-of-subtree t)
                                 (unless (bolp) (insert "\n"))
                                 (insert link-text))
-                            ;; No related heading — create at end
+                            ;; No related heading — create the standard section
                             (goto-char (point-max))
                             (unless (bolp) (insert "\n"))
-                            (insert (format "\n** 관련\n%s" link-text)))
+                            (insert (format "\n* 관련노트\n%s" link-text)))
                           (save-buffer)
                           (format "OK: Added link to %s in %s"
                                   target-id (file-name-nondirectory file)))))

@@ -25,6 +25,9 @@ ORG_ROOT="$HOME/org"
 AGENT_DAEMON="server"
 AGENT_LOAD="$BIN_DIR/agent-server.el"
 AGENT_SOCKET="/run/user/$(id -u)/emacs/$AGENT_DAEMON"
+# Dedicated init dir (Doom bypass). Also the unique pgrep token for the daemon:
+# no other process carries `--init-directory=/tmp/agent-emacs-init`.
+AGENT_INIT_DIR="/tmp/agent-emacs-init"
 
 # Pi full Doom daemon (TTY emacsclient attach target)
 PI_DAEMON="pi"
@@ -496,19 +499,57 @@ cmd_agent_start() {
   info "에이전트 서버 시작..."
   # --init-directory: Doom init 우회 (서버 충돌 방지)
   # agent-server.el이 straight build에서 직접 load-path 구성
-  mkdir -p /tmp/agent-emacs-init
-  emacs --init-directory=/tmp/agent-emacs-init --daemon="$AGENT_DAEMON" --load "$AGENT_LOAD" 2>&1 | tail -5
+  mkdir -p "$AGENT_INIT_DIR"
+  emacs --init-directory="$AGENT_INIT_DIR" --daemon="$AGENT_DAEMON" --load "$AGENT_LOAD" 2>&1 | tail -5
   success "에이전트 서버 시작됨"
 }
 
+# Daemon PIDs by cmdline. Start-anchored on the emacs binary (`^[^ ]*emacs `)
+# so a mere shell command *mentioning* the token — e.g. this script's own
+# pgrep — can never match; only a real emacs daemon does. Empty (exit 0) when
+# none.
+_agent_daemon_pids() {
+  pgrep -f -- "^[^ ]*emacs .*--init-directory=$AGENT_INIT_DIR" 2>/dev/null || true
+}
+
+_pi_daemon_pids() {
+  pgrep -f -- "^[^ ]*emacs .*--daemon=$PI_DAEMON" 2>/dev/null || true
+}
+
 cmd_agent_stop() {
-  if [[ ! -S "$AGENT_SOCKET" ]]; then
+  if [[ ! -S "$AGENT_SOCKET" ]] && [[ -z "$(_agent_daemon_pids)" ]]; then
     info "실행 중이 아님"
     return 0
   fi
-  emacsclient -s "$AGENT_DAEMON" --eval '(kill-emacs)' 2>/dev/null || true
-  # Cleanup: 소켓이 남아있으면 강제 제거
+  # 1) Graceful, BOUNDED. A hung daemon (busy in a synchronous eval) never
+  #    services this request, so without `timeout` the whole restart blocks
+  #    until the caller's own timeout fires. 5s is plenty for a healthy daemon.
+  timeout 5 emacsclient -s "$AGENT_DAEMON" --eval '(kill-emacs)' &>/dev/null || true
   sleep 0.5
+  # 2) Force-stop fallback. If the daemon didn't exit (socket or PID still
+  #    around) it was hung — kill by PID, escalate to -9 if it resists.
+  if [[ -S "$AGENT_SOCKET" ]] || [[ -n "$(_agent_daemon_pids)" ]]; then
+    local pids
+    pids="$(_agent_daemon_pids)"
+    if [[ -n "$pids" ]]; then
+      warn "graceful 무응답 — daemon 강제 종료 (PID: $pids)"
+      # word-split intended: one signal per PID
+      # shellcheck disable=SC2086
+      kill $pids 2>/dev/null || true
+      for _ in 1 2 3 4 5 6; do
+        [[ -z "$(_agent_daemon_pids)" ]] && break
+        sleep 0.5
+      done
+      pids="$(_agent_daemon_pids)"
+      if [[ -n "$pids" ]]; then
+        warn "SIGTERM 무시 — SIGKILL"
+        # shellcheck disable=SC2086
+        kill -9 $pids 2>/dev/null || true
+        sleep 0.5
+      fi
+    fi
+  fi
+  # 3) Stale socket cleanup — dead daemons leave the socket behind.
   [[ -S "$AGENT_SOCKET" ]] && rm -f "$AGENT_SOCKET" && warn "Stale 소켓 제거됨"
   success "에이전트 서버 중지됨"
 }
@@ -562,12 +603,35 @@ cmd_pi_start() {
 }
 
 cmd_pi_stop() {
-  if [[ ! -S "$PI_SOCKET" ]]; then
+  if [[ ! -S "$PI_SOCKET" ]] && [[ -z "$(_pi_daemon_pids)" ]]; then
     info "Pi Emacs daemon이 실행 중이 아님"
     return 0
   fi
-  timeout 5 $PI_CLIENT --eval '(kill-emacs)' 2>/dev/null || true
+  # Bounded graceful stop — a hung daemon never services this eval. (see cmd_agent_stop)
+  timeout 5 $PI_CLIENT --eval '(kill-emacs)' &>/dev/null || true
   sleep 0.5
+  # Force-stop fallback: hung daemon → kill by PID, escalate to -9 if it resists.
+  if [[ -S "$PI_SOCKET" ]] || [[ -n "$(_pi_daemon_pids)" ]]; then
+    local pids
+    pids="$(_pi_daemon_pids)"
+    if [[ -n "$pids" ]]; then
+      warn "graceful 무응답 — pi daemon 강제 종료 (PID: $pids)"
+      # word-split intended: one signal per PID
+      # shellcheck disable=SC2086
+      kill $pids 2>/dev/null || true
+      for _ in 1 2 3 4 5 6; do
+        [[ -z "$(_pi_daemon_pids)" ]] && break
+        sleep 0.5
+      done
+      pids="$(_pi_daemon_pids)"
+      if [[ -n "$pids" ]]; then
+        warn "SIGTERM 무시 — SIGKILL"
+        # shellcheck disable=SC2086
+        kill -9 $pids 2>/dev/null || true
+        sleep 0.5
+      fi
+    fi
+  fi
   [[ -S "$PI_SOCKET" ]] && rm -f "$PI_SOCKET" && warn "Stale 소켓 제거됨"
   success "Pi Emacs daemon 중지됨"
 }

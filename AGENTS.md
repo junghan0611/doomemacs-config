@@ -229,9 +229,15 @@ The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-da
 ```bash
 ./run.sh agent start    # Start (checks stale socket)
 ./run.sh agent status   # Health check
-./run.sh agent restart  # Stop + start
+./run.sh agent restart  # Bounded stop → start (recovers a HUNG daemon)
 ./run.sh agent eval     # Interactive eval
 ```
+
+`stop`/`restart` are hung-daemon safe: graceful `(kill-emacs)` is bounded by a
+5s `timeout`, and if the daemon is stuck in a synchronous eval and never
+answers, its PID (found by the unique `--init-directory=$AGENT_INIT_DIR` token)
+is killed — escalating to `-9` — before the stale socket is cleaned and `start`
+runs. So a wedged daemon no longer needs a manual `kill` + `rm socket`.
 
 ### workflow-shared.el — the contract
 
@@ -390,5 +396,6 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 - WezTerm + terminal Emacs + built-in Korean input is a custom path; if minibuffer/search prompt spacing breaks, inspect TTY width drift first — especially hardcoded Unicode ellipsis (`…`) in Consult prompt/path truncation before blaming Hangul input
 - **헤드리스 데몬은 Doom 모듈을 로드하지 않는다** (`bin/denote-export.el`, `bin/agent-server.el`). buffer-local org 변수(`org-attach-id-dir`, `org-download-image-dir` 등)가 GUI에서만 자동으로 잡히는 경우 가든에 broken figure가 누적된다. `workflow-shared.el`에 SSOT applier로 두고 양쪽에서 호출 — 회귀 시 첫 의심 지점. (사례: 2026-05-10 commit b348898 / d8b977a)
 - **키바인딩이 통째로 사라지면 `map!` prefix부터 의심한다**. `./run.sh G`로 Doom을 당긴 뒤 `SPC f s`·`SPC h d` 같은 Doom 기본키가 `undefined`가 되면, 십중팔구 desc 붙은 `:prefix`가 기존 prefix 맵을 덮은 것이다. 진단은 `emacsclient -s user`로 `(lookup-key doom-leader-map "f")`가 `doom-leader-file-map`과 `eq`인지 보면 즉시 갈린다. 규약과 배경은 § map! prefix 규약, 게이트는 `tests/test-keybinding-lint.el`. (사례: 2026-07-12, upstream `de2a3364a`)
+- **`agent-denote-add-link`가 링크를 엉뚱한 섹션에 넣으면 heading regex를 의심한다**. 표준 관련노트 heading은 **붙여쓴 `* 관련노트`** (corpus 442건)인데, `관련`뒤에 공백/EOL을 요구하던 옛 regex는 이 표준을 **못 잡고** `관련 레퍼런스`·`관련링크`·`관련메타`(자석, 985건) 같은 형제 섹션을 오매칭했다. SSOT는 `agent-server--related-notes-heading-re` (heading 전체를 앵커), 게이트는 `tests/test-agent-denote-link.el` (regex를 소스에서 직접 읽어 드리프트 방지). (사례: 2026-07-17, GPT autholog 수선 중 보고)
 - 가든 broken은 빌드를 깨지 않는다. `./run.sh verify` → `./run.sh fix` 흐름으로 주기적 청소
 - **export 직후에는 항상 `./run.sh fix`를 같이**: ox-hugo가 link 내장 헤딩 anchor에 `{#title--relref-section-id-dot-md}` 노이즈를 흘리는 회귀가 살아있다. fix 단계 [2/3] `--fix-anchors`가 안전망 — 안 돌리면 export 직후 짧게 노출됨. "버그 새로 생긴 것 같다" 착각의 단골 원인.
