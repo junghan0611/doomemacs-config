@@ -1151,18 +1151,59 @@ Workflow:
         (match-string 1)
       nil)))
 
-(defun my/org-open-exported-markdown-in-hugo-content ()
-  "Open the Markdown file exported from the current Org-mode buffer.
-File is located in the `org-hugo-base-dir` content folder."
-  (interactive)
-  (let* ((exportfilename (my/get-export-file-name-from-buffer))
-         (content-dir (concat (file-name-as-directory org-hugo-base-dir)
-                              (format "content/%s/" org-hugo-section)))
-         (exportfilepath (when (and exportfilename org-hugo-base-dir)
-                           (expand-file-name exportfilename content-dir))))
-    (if (and exportfilepath (file-exists-p exportfilepath))
-        (find-file exportfilepath)
-      (message "Markdown file not found: %s" exportfilepath))))
+(defconst my/garden-mirror-pages-directory
+  (expand-file-name "~/repos/gh/garden2wikidocs/pages/")
+  "Directory containing Markdown pages generated for the garden mirror.")
+
+(defun my/org--current-denote-identifier ()
+  "Return the Denote identifier represented by the current buffer."
+  (or (and buffer-file-name
+           (denote-retrieve-filename-identifier buffer-file-name))
+      (when-let* ((export-name (my/get-export-file-name-from-buffer)))
+        (file-name-base (substring-no-properties export-name)))))
+
+(defun my/org--find-markdown-by-id (identifier root &optional section)
+  "Find IDENTIFIER.md below ROOT, preferring SECTION when non-nil."
+  (when (file-directory-p root)
+    (let ((section-file
+           (when section
+             (expand-file-name
+              (format "%s/%s.md" section identifier)
+              root))))
+      (if (and section-file (file-exists-p section-file))
+          section-file
+        (car (directory-files-recursively
+              root
+              (format "\\`%s\\.md\\'" (regexp-quote identifier))))))))
+
+(defun my/org-open-exported-markdown-in-hugo-content (&optional mirror)
+  "Open the garden counterpart of the current Denote file.
+
+Without a prefix, toggle between the Org source and its exported Markdown under
+`org-hugo-base-dir'.  With prefix argument MIRROR, toggle between the Org source
+and `my/garden-mirror-pages-directory'.  When called from the third counterpart,
+open the Markdown selected by MIRROR.  Files are matched by Denote identifier."
+  (interactive "P")
+  (let* ((identifier (my/org--current-denote-identifier))
+         (source (and identifier (denote-get-path-by-id identifier)))
+         (markdown-root
+          (if mirror
+              my/garden-mirror-pages-directory
+            (expand-file-name "content/" org-hugo-base-dir)))
+         (markdown
+          (and identifier
+               (my/org--find-markdown-by-id
+                identifier markdown-root org-hugo-section)))
+         (at-markdown
+          (and buffer-file-name markdown
+               (file-equal-p buffer-file-name markdown)))
+         (target (if at-markdown source markdown)))
+    (unless identifier
+      (user-error "Current buffer has no Denote identifier"))
+    (unless target
+      (user-error "%s counterpart not found for %s"
+                  (if at-markdown "Org" "Markdown") identifier))
+    (find-file target)))
 
 (defun my/insert-hugo-export-file-name ()
   "Add metadata to current org-mode file containing export file name.

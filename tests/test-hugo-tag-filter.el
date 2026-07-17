@@ -189,5 +189,48 @@ Two writes inside one test can otherwise land on the same timestamp."
                (lambda () (error "pool re-fingerprinted inside the throttle window"))))
       (should (eq (my/denote-meta-tag-pool) my/org-hugo--meta-tag-pool)))))
 
+;;;; Garden counterpart navigation
+
+(test-hugo-tag--deftest test-garden-navigation--toggles-source-export-and-mirror
+  "The prefix argument selects the source/mirror pair instead of source/export."
+  (test-helper/with-temp-dir
+   (lambda (root)
+     (let* ((identifier "20260713T000000")
+            (source (expand-file-name
+                     "org/journal/20260713T000000--journal.org" root))
+            (hugo-root (expand-file-name "hugo/" root))
+            (export (expand-file-name
+                     "content/journal/20260713T000000.md" hugo-root))
+            (mirror-root (expand-file-name "mirror/" root))
+            (mirror (expand-file-name
+                     "journal/20260713T000000.md" mirror-root))
+            (org-hugo-base-dir hugo-root)
+            (org-hugo-section "journal")
+            (my/garden-mirror-pages-directory mirror-root)
+            opened)
+       (dolist (file (list source export mirror))
+         (make-directory (file-name-directory file) t)
+         (write-region "" nil file nil 'silent))
+       ;; Markdown buffers have the global default section, so recursive lookup
+       ;; must recover a journal page when the preferred section is wrong.
+       (should (file-equal-p
+                (my/org--find-markdown-by-id
+                 identifier (expand-file-name "content/" hugo-root) "notes")
+                export))
+       (cl-letf (((symbol-function 'denote-get-path-by-id)
+                  (lambda (id) (and (string= id identifier) source)))
+                 ((symbol-function 'find-file)
+                  (lambda (file) (setq opened file))))
+         (dolist (case `((,source nil ,export)
+                         (,export nil ,source)
+                         (,source t ,mirror)
+                         (,mirror t ,source)
+                         (,export t ,mirror)
+                         (,mirror nil ,export)))
+           (with-temp-buffer
+             (setq buffer-file-name (nth 0 case))
+             (my/org-open-exported-markdown-in-hugo-content (nth 1 case))
+             (should (file-equal-p opened (nth 2 case))))))))))
+
 (provide 'test-hugo-tag-filter)
 ;;; test-hugo-tag-filter.el ends here

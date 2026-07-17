@@ -138,7 +138,7 @@
 (map! :map my/denote-map
       (:prefix "p"
        :desc "Hugo lastmod"         "1" #'my/insert-hugo-lastmod-time-stamp
-       :desc "Open in hugo"         "o" #'my/org-open-exported-markdown-in-hugo-content
+       :desc "Open garden counterpart" "o" #'my/org-open-exported-markdown-in-hugo-content
        :desc "Export directory"     "E" #'my/org-hugo-export-directory
        :desc "Update dblocks"       "u" #'my/org-update-all-dblocks
        :desc "Update garden all"    "U" #'my/update-dblock-garden-all
