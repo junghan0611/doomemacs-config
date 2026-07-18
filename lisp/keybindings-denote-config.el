@@ -234,6 +234,7 @@
       :desc "Dblock meta links"     "M-i" #'my/denote-org-dblock-insert-meta-links
       :desc "Link"                  "l" #'denote-link
       :desc "Link after creating"   "L" #'denote-link-after-creating-with-command
+      :desc "Link headline"         "M-l" #'my/org-link-to-headline
       :desc "Consult notes"         "n" #'consult-notes
       :desc "Screenshot"            "!" #'my/consult-org-screenshot
       :desc "Search all notes"      "G" #'consult-notes-search-in-all-notes

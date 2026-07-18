@@ -468,6 +468,8 @@
         ";" #'my/clear-nbsp-and-ascii-punctuations
         ":" #'my/insert-nbsp-simple-all
         "M-r" #'my/refile-heading-to-denote-file
+        ;; links prefix `l' is Doom-owned; add our key without naming it
+        (:prefix "l" "h" #'my/org-link-to-headline)
         )
   )
 

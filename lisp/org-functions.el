@@ -115,6 +115,37 @@
             (end-of-line)
             (insert "\n" lastmod-line)))))))
 
+;;;; my/org-link-to-headline — intra-document internal link
+
+;; Insert a fuzzy `[[*Heading][desc]]' link to another headline in the same
+;; buffer.  Unlike denote:ID links (cross-file), this stays inside one file, so
+;; an agent handed the source file already holds the whole target — following
+;; the link needs no extra fetch.  Used to thread a journal's time-stamped
+;; headings into a "prior thought" graph along one timeline: a later heading
+;; links back to an earlier one without rewriting the earlier text, keeping the
+;; timestamps honest.
+;;
+;; Origin: reddit.com/r/emacs/comments/yjobc2/comment/iur16c7/
+
+(defun my/org--headline-titles ()
+  "Return raw titles of all headlines in the current buffer.
+Titles drop the leading stars, TODO keyword, priority cookie and tags,
+so a chosen title matches `[[*Heading]]' fuzzy search regardless of a
+TODO/NEXT keyword on the target heading."
+  (org-element-map (org-element-parse-buffer 'headline) 'headline
+    (lambda (h) (org-element-property :raw-value h))))
+
+(defun my/org-link-to-headline ()
+  "Insert an internal link to a headline in the current buffer.
+Prompt for a headline, then a description defaulting to the headline
+text, and insert a fuzzy `[[*Heading][desc]]' link that jumps within
+the file."
+  (interactive)
+  (let* ((titles (my/org--headline-titles))
+         (choice (completing-read "Heading: " titles nil t))
+         (desc (read-string "Description: " choice)))
+    (org-insert-link nil (concat "*" choice) desc)))
+
 ;;;; Provide
 
 (provide 'org-functions)
