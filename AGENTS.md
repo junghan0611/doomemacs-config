@@ -21,6 +21,7 @@ config.el               # Loader only — requires lisp/*.el
 ├── lisp/ (39 files)    # One concern = one file
 ├── bin/                # Standalone scripts (no Doom dependency)
 ├── autoload/           # ;;;###autoload lazy functions
+├── neomacs/            # Neomacs vanilla minimal profile + K-review probes (issue #8)
 ├── run.sh              # Unified CLI/TUI: sync, export, agent, unstable
 └── flake.nix           # Emacs 31 preview channel (Savannah emacs-31) via nix
 ```
@@ -207,6 +208,7 @@ PR은 최후 수단이고, 관찰 기간을 거친 뒤 **GLG가 명시적으로 
 | `"user"` | GLG's GUI Emacs | `doom run` (Doom auto-calls `server-start` for GUI) |
 | `"server"` | Agent daemon | `run.sh agent start` (separate `--init-directory`) |
 | `"doom-unstable"` | Emacs preview channel | `bin/emacs-unstable.sh` (or `run.sh unstable`) |
+| `"neomacs"` | Neomacs vanilla profile | `bin/neomacs.sh --daemon` |
 
 The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon instances (`emacs -nw`, `doom run`) run independently.
 
@@ -238,6 +240,29 @@ The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-da
 answers, its PID (found by the unique `--init-directory=$AGENT_INIT_DIR` token)
 is killed — escalating to `-9` — before the stale socket is cleaned and `start`
 runs. So a wedged daemon no longer needs a manual `kill` + `rm socket`.
+
+### Neomacs K-review — `bin/neomacs.sh`
+
+[Neomacs](https://github.com/eval-exec/neomacs)(Emacs 코어의 Rust 재작성) 위에서
+도는 **빌트인 전용 바닐라 프로파일**. 이슈 #8. Doom과 완전 분리 —
+별도 `--init-directory`(`neomacs/`), 별도 server name, 공유 상태 없음.
+
+```bash
+./bin/neomacs.sh --fetch        # 릴리즈 AppImage
+./bin/neomacs.sh --probe        # 프로브 전체 (배치)
+./bin/neomacs.sh --gnu --probe  # 같은 프로파일을 GNU Emacs로 — 베이스라인
+```
+
+**핵심 규약: 프로파일은 Neomacs와 stock GNU Emacs 양쪽에서 동일하게 돌아야 한다.**
+갈라짐이 나왔을 때 Neomacs 탓인지 우리 설정 탓인지 `--gnu` 한 번으로 갈리기
+때문이다. 그래서 `neomacs/` 아래에는 Doom 매크로·외부 패키지·`use-package`가
+들어가면 안 된다. (실제로 첫 실측에서 `ucs-normalize` FAIL이 양쪽 동일하게 나서
+Neomacs 결함이 아니라 프로브 버그임이 즉시 드러났다.)
+
+프로브는 **파일마다 별도 프로세스**로 돈다 — 런타임을 죽이는 버그가 나머지 보고를
+막지 않게. 크래시 자체가 산출물이다.
+
+측정 결과와 upstream 이슈 대조는 `neomacs/README.md`가 SSOT.
 
 ### workflow-shared.el — the contract
 

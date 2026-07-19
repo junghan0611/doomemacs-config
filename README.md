@@ -28,7 +28,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 
 | | |
 |---|---|
-| **Emacs** | 30.2 (system stable) + preview channel (Savannah `emacs-31`, Emacs 31 pre-release) |
+| **Emacs** | 30.2 (system stable) + preview channel (Savannah `emacs-31`, Emacs 31 pre-release) + Neomacs (Rust core, review track) |
 | **Framework** | Doom Emacs (hlissner style) |
 | **Notes** | 3,300+ Denote org-mode files in `~/org/` |
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,100+ published |
@@ -59,6 +59,7 @@ doomemacs-config/
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
 │   ├── emacs-unstable.sh        # Emacs 31 preview channel launcher
+│   ├── neomacs.sh               # Neomacs vanilla profile launcher + probe runner
 │   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
 │   ├── site-policy.el           # SSOT for host aliases, internal-path patterns, lychee opts
 │   ├── verify-relref.py         # Hugo relref link validator + fixer
@@ -66,6 +67,10 @@ doomemacs-config/
 │   ├── verify-content.py        # Garden content hygiene (host alias, internal path, GitHub 404)
 │   ├── verify-org-links.py      # Stage 1.5 — ~/org GitHub URL lychee verify (read-only)
 │   └── check-description.sh     # Check for missing description / abstract
+│
+├── neomacs/             # Neomacs vanilla minimal profile (builtin-only, Doom-free)
+│   ├── early-init.el / init.el   # Runs on Neomacs AND stock GNU Emacs
+│   └── probe/                    # K-review probes — Korean org, export, TLS, real corpus
 │
 ├── prompts/             # gptel-agent system prompts (overrides upstream)
 │   └── gptel-agent.md            # Subagent-free variant of upstream default
@@ -244,6 +249,27 @@ A second Emacs install built via [emacs-overlay](https://github.com/nix-communit
 ```
 
 Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system stable Emacs.
+
+## Neomacs — Korean (K) review track
+
+[Neomacs](https://github.com/eval-exec/neomacs) rewrites the Emacs core (~300K lines
+of C) in Rust. `neomacs/` holds a **builtin-only vanilla profile** for it, plus probes
+that turn Korean behavior into reproducible reports. Doom is not involved: separate
+`--init-directory`, separate server name, no shared state.
+
+```bash
+./bin/neomacs.sh --fetch        # download a release AppImage (no source build)
+./bin/neomacs.sh                # GUI
+./bin/neomacs.sh --probe        # run all probes in batch
+./bin/neomacs.sh --gnu --probe  # same profile on stock GNU Emacs — the baseline
+```
+
+The profile must run identically on Neomacs and stock GNU Emacs, so `--gnu` decides
+whether a divergence belongs to Neomacs or to this config. Probes run one process per
+file, because a crash that kills the runtime is itself a finding.
+
+Upstream is followed but not petitioned — see `neomacs/README.md` for the current
+measurement table, known divergences, and the standing verdict.
 
 ## run.sh — Unified Management
 

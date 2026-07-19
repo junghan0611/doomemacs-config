@@ -29,6 +29,16 @@ ccmenu
 # Generated/cache files
 bin/.last-export/
 
+# Neomacs profile runtime state — the profile dir doubles as user-emacs-directory,
+# so Emacs writes its state next to the tracked config files.
+neomacs/history
+neomacs/recentf*
+neomacs/auto-save-list/
+neomacs/elpa/
+neomacs/eln-cache/
+neomacs/transient/
+neomacs/.cache/
+
 # Personal dictionaries and abbreviations (machine-specific)
 # var/abbrev_defs
 # var/aspell.en.pws
