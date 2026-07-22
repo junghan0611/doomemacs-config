@@ -5,7 +5,7 @@ This is not a toy dotfile. Read this before touching anything.
 
 ## What This Repo Is
 
-A 16K-line Doom Emacs configuration that serves as the **frontend for a human-agent collaborative ecosystem**. Emacs here is not just a text editor — it is the harness where:
+A 20K-line Doom Emacs configuration that serves as the **frontend for a human-agent collaborative ecosystem**. Emacs here is not just a text editor — it is the harness where:
 
 - **GLG (힣)** writes, thinks, and manages knowledge in org-mode
 - **Agents** (Entwurf, secretaries, 힣봇s) read/write the same org files, stamp agenda entries, publish to the digital garden
@@ -18,7 +18,7 @@ The agent server (`bin/agent-server.el`) exposes elisp APIs over socket `"server
 ```
 init.el                 # Doom modules + single-instance guard
 config.el               # Loader only — requires lisp/*.el
-├── lisp/ (39 files)    # One concern = one file
+├── lisp/ (43 files)    # One concern = one file
 ├── bin/                # Standalone scripts (no Doom dependency)
 ├── autoload/           # ;;;###autoload lazy functions
 ├── neomacs/            # Neomacs vanilla minimal profile + K-review probes (issue #8)
@@ -422,5 +422,17 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 - **헤드리스 데몬은 Doom 모듈을 로드하지 않는다** (`bin/denote-export.el`, `bin/agent-server.el`). buffer-local org 변수(`org-attach-id-dir`, `org-download-image-dir` 등)가 GUI에서만 자동으로 잡히는 경우 가든에 broken figure가 누적된다. `workflow-shared.el`에 SSOT applier로 두고 양쪽에서 호출 — 회귀 시 첫 의심 지점. (사례: 2026-05-10 commit b348898 / d8b977a)
 - **키바인딩이 통째로 사라지면 `map!` prefix부터 의심한다**. `./run.sh G`로 Doom을 당긴 뒤 `SPC f s`·`SPC h d` 같은 Doom 기본키가 `undefined`가 되면, 십중팔구 desc 붙은 `:prefix`가 기존 prefix 맵을 덮은 것이다. 진단은 `emacsclient -s user`로 `(lookup-key doom-leader-map "f")`가 `doom-leader-file-map`과 `eq`인지 보면 즉시 갈린다. 규약과 배경은 § map! prefix 규약, 게이트는 `tests/test-keybinding-lint.el`. (사례: 2026-07-12, upstream `de2a3364a`)
 - **`agent-denote-add-link`가 링크를 엉뚱한 섹션에 넣으면 heading regex를 의심한다**. 표준 관련노트 heading은 **붙여쓴 `* 관련노트`** (corpus 442건)인데, `관련`뒤에 공백/EOL을 요구하던 옛 regex는 이 표준을 **못 잡고** `관련 레퍼런스`·`관련링크`·`관련메타`(자석, 985건) 같은 형제 섹션을 오매칭했다. SSOT는 `agent-server--related-notes-heading-re` (heading 전체를 앵커), 게이트는 `tests/test-agent-denote-link.el` (regex를 소스에서 직접 읽어 드리프트 방지). (사례: 2026-07-17, GPT autholog 수선 중 보고)
+- **gptel 백엔드/모델을 늘리지 않는다.** 백엔드는 OpenAI-sub(ChatGPT 구독 OAuth)
+  하나, 모델은 `my/gptel-models` 셋(`gpt-5.6-terra`/`-sol`/`-luna`)이 SSOT다. 모델은
+  닷파일이 따라갈 수 없는 속도로 나오니 **추가는 그 한 줄에서만** 한다. 모델 스펙을
+  손으로 베끼지 않는다 — `my/gptel--model-specs`가 upstream `gptel--openai-models`에서
+  끌어온다. 이전에 쌓였다 걷어낸 것: DeepSeek, OpenRouter(gemini 4종), Claude-Code
+  docker wrapper, CLIProxy. 되살리려면 GLG 판단을 먼저 받는다. (2026-07-22, `950bd05`)
+- **`evil-collection`이 gptel 키를 가져가면 죽은 옵션부터 의심한다.** upstream이
+  `evil-collection-gptel-want-ret-to-send`를 지우고 REPL 공통 `repl-submit` 추상
+  바인딩으로 옮기면서, 껐던 "RET 전송"이 조용히 되살아나 있었다 (커밋 `c9d9217` 의도
+  역행). 죽은 `setq`는 아무 신호도 주지 않는다. 지금은 `evil-collection-binding-overrides`
+  의 per-map `:enabled` 람다로 gptel에서만 끈다. 전송은 `C-c RET`(gptel 기본) /
+  `M-RET` / `S-RET`(menu). (2026-07-22)
 - 가든 broken은 빌드를 깨지 않는다. `./run.sh verify` → `./run.sh fix` 흐름으로 주기적 청소
 - **export 직후에는 항상 `./run.sh fix`를 같이**: ox-hugo가 link 내장 헤딩 anchor에 `{#title--relref-section-id-dot-md}` 노이즈를 흘리는 회귀가 살아있다. fix 단계 [2/3] `--fix-anchors`가 안전망 — 안 돌리면 export 직후 짧게 노출됨. "버그 새로 생긴 것 같다" 착각의 단골 원인.

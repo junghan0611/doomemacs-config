@@ -7,40 +7,18 @@
 
 ---
 
-## 🟢 검수 대기 — gptel 대정리, 커밋 전 실사용 확인 (2026-07-22)
+## ✅ gptel 대정리 — 완료·검증됨 (2026-07-22, `950bd05`)
 
-**상태**: 코드 완료, `tests/run-tests.sh` 83/83, **커밋 안 함**. GLG가 직접 써보고 판정.
+백엔드 하나(OpenAI-sub OAuth) + 모델 셋(`my/gptel-models` SSOT)으로 정리. 제거:
+DeepSeek / OpenRouter(gemini 4종) / Claude-Code docker wrapper / CLIProxy / elfeed
+6모델 벤치마크. **GLG 실사용 확인**: elfeed 요약 ✓, magit 커밋 메시지 ✓.
 
-백엔드를 OpenAI-sub(ChatGPT 구독 OAuth) 하나로, 모델을 셋으로 줄였다. 7파일
-`+151/-359`. SSOT는 `lisp/ai-gptel.el`의 `my/gptel-models` 한 곳.
+곁가지로 upstream 드리프트 하나를 잡았다 — `evil-collection`이 gptel 전용 옵션을
+지우면서 껐던 "RET 전송"이 되살아나 있었다. 상세는 `AGENTS.md` § Things to Watch
+두 항목, 규약은 `README.md` § One backend, three models.
 
-| 역할 | 모델 | 쓰는 자리 |
-|---|---|---|
-| 기본 | `gpt-5.6-terra` | 채팅, 요약/번역 버퍼 |
-| 무거움 | `gpt-5.6-sol` | 수동 전환 (`my/gptel-switch-model`) |
-| 빠름 | `gpt-5.6-luna` | quick, magit 커밋, 인라인 번역, elfeed |
-
-**제거**: DeepSeek / OpenRouter(gemini 4종 + gpt-5.1) / Claude-Code wrapper +
-`docker/claude-wrapper/` / CLIProxy(`lisp/ai-gptel-local-proxy.el`, gitignore된 로컬
-파일이라 백업은 스크래치패드) / elfeed 6모델 벤치마크 / `my/gptel-switch-to-*` 4개
-→ `my/gptel-switch-model` 하나. Gemini **이미지 생성**(`my/gemini-generate-image`)은
-남겼다 — 채팅 모델이 아니라 별개 계열.
-
-**손으로 확인할 것** (배치 테스트가 닿지 않는 자리):
-
-1. `SPC = g s` / `g t` — 버퍼 요약·번역 응답 오는가 (terra)
-2. elfeed `z` / `Z` — 요약·전문번역 (luna)
-3. `M-g SPC` 인라인 번역 + `C-u` 교체 모드
-4. embark `[` → `gptel-quick`
-5. magit 커밋 메시지 생성
-6. **`RET`이 더 이상 전송하지 않는가** — 전송은 `C-c RET` / `M-RET` / `S-RET`(menu)
-7. `gptel-menu` 모델 목록에 셋만 뜨고 컨텍스트·비용이 보이는가
-
-**되돌릴 자리는 셋, 서로 독립적이다**: 모델 SSOT 블록 / evil-collection
-`repl-submit` override 블록 / elfeed 벤치마크 삭제분.
-
-**미결**: 테스트 보강 범위 — § gptel / gptel-agent 모니터링 의 "테스트 가능성" 표.
-GLG 판정 대기. 판정 전에 리팩터 착수하지 말 것.
+**남은 것은 테스트 보강 판정 하나** — § gptel / gptel-agent 모니터링 의 "테스트
+가능성" 표. GLG 판정 전에 리팩터 착수하지 말 것.
 
 ---
 

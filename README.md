@@ -8,7 +8,7 @@
 
 If you glance at `config.el` and think "just another messy dotfile" — look closer.
 
-**What you're seeing is a harness.** A 16K-line Emacs configuration where a human (GLG/힣) and AI agents operate on the same `~/org/` knowledge base of 3,300+ notes. They share a unified agenda. They stamp timestamps on the same datetree. The agents publish comments on the digital garden. The human refines, connects, and creates.
+**What you're seeing is a harness.** A 20K-line Emacs configuration where a human (GLG/힣) and AI agents operate on the same `~/org/` knowledge base of 3,500+ notes. They share a unified agenda. They stamp timestamps on the same datetree. The agents publish comments on the digital garden. The human refines, connects, and creates.
 
 The solutions here are not fancy. A 33-minute full export. Shell scripts calling Emacs daemons. Org files instead of databases. If you're looking for cutting-edge infrastructure, this will disappoint. But look at the layer above: **Emacs is a meta-editor. Org-mode is a meta-document format.** The point is not the speed of any single operation — it's that the entire system composes. Org files become Hugo pages, become semantic memory, become agent context, become new org files. The 33-minute export runs unattended while GLG sleeps; incremental runs finish in seconds.
 
@@ -16,7 +16,7 @@ The solutions here are not fancy. A 33-minute full export. Shell scripts calling
 
 And this timeline is not hidden inside Emacs. [geworfen](https://github.com/junghan0611/geworfen) throws it into the world — a WebTUI at [agenda.junghanacs.com](https://agenda.junghanacs.com) that renders the same `org-agenda` data live. Human journal entries, agent commit stamps, diary schedules — all on one public time axis. The same elisp function agents call, the same data the browser fetches.
 
-The "clunky terminal screens" you see? They are nodes in a living graph: Emacs → org-mode → Denote notes → Hugo [digital garden](https://github.com/junghanacs/notes.junghanacs.com) → semantic memory → agent skills → back to Emacs. Every ugly buffer is a connection point.
+The "clunky terminal screens" you see? They are nodes in a living graph: Emacs → org-mode → Denote notes → Hugo [digital garden](https://github.com/junghan0611/garden) → semantic memory → agent skills → back to Emacs. Every ugly buffer is a connection point.
 
 **Why Emacs in a terminal matters**: This full Doom Emacs runs in TTY with clipboard integration, Korean input, and remote access over SSH — identical to GUI. An agent can spawn Emacs anywhere via `emacsclient`, eval elisp, read org files, stamp agenda entries. The terminal is not a limitation. It is the universal interface — the one that works on a laptop, a NUC, an Oracle ARM server, and a Galaxy Fold.
 
@@ -30,10 +30,11 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 |---|---|
 | **Emacs** | 30.2 (system stable) + preview channel (Savannah `emacs-31`, Emacs 31 pre-release) + Neomacs (Rust core, review track) |
 | **Framework** | Doom Emacs (hlissner style) |
-| **Notes** | 3,300+ Denote org-mode files in `~/org/` |
-| **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,100+ published |
+| **Notes** | 3,500+ Denote org-mode files in `~/org/` |
+| **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,200+ published |
 | **Platforms** | NixOS (laptop, NUC, Oracle ARM), Termux (Galaxy Fold4) |
-| **Lines** | ~16K across config + lisp + bin + scripts |
+| **Lines** | ~20K across config + lisp + bin + scripts |
+| **AI** | gptel on one backend — ChatGPT subscription OAuth, three models |
 
 ## Structure
 
@@ -44,7 +45,7 @@ doomemacs-config/
 ├── packages.el          # Package declarations
 ├── per-machine.el       # Machine-specific (git-ignored)
 │
-├── lisp/                # Modular config (39 files, one concern each)
+├── lisp/                # Modular config (43 files, one concern each)
 │   ├── ai-*.el              # AI/Agent integration (6)
 │   ├── denote-*.el          # Denote ecosystem (4)
 │   ├── org-*.el             # Org-mode (2)
@@ -74,6 +75,10 @@ doomemacs-config/
 │
 ├── prompts/             # gptel-agent system prompts (overrides upstream)
 │   └── gptel-agent.md            # Subagent-free variant of upstream default
+│
+├── tests/               # ERT suite — `emacs -Q --batch`, no Doom (Tier A)
+│   ├── run-tests.sh              # Auto-discovers test-*.el
+│   └── TESTING-GUIDELINES.org    # Tier A/B/C partition — what is worth testing
 │
 ├── run.sh               # Unified CLI/TUI management
 └── flake.nix            # Emacs 31 preview Nix build (Savannah emacs-31)
@@ -207,6 +212,39 @@ everything flows through agent presets.
 | Whisper STT | `ai-stt-whisper.el` | Speech-to-text via Groq whisper-large-v3 |
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | Terminal multiplexer orchestration |
+
+### One backend, three models
+
+Models ship faster than a dotfile can absorb them. Every new release used to arrive
+as another backend, another hand-copied spec block, another `my/gptel-switch-to-*`
+command — and the ones that stopped being used never left. So the surface was cut
+down to a single backend: **OpenAI-sub**, the ChatGPT subscription over OAuth
+(`gptel-make-openai-oauth`, Codex Responses endpoint). DeepSeek, OpenRouter with its
+hand-maintained Gemini specs, a Dockerized Claude wrapper, and a local Claude proxy
+were all removed rather than left to rot.
+
+| Role | Model | Where it is used |
+|------|-------|------------------|
+| Default | `gpt-5.6-terra` | Chat, buffer summarize/translate |
+| Heavy | `gpt-5.6-sol` | Manual switch via `my/gptel-switch-model` |
+| Fast | `gpt-5.6-luna` | `gptel-quick`, magit commit messages, inline translate, elfeed |
+
+`my/gptel-models` in [`ai-gptel.el`](lisp/ai-gptel.el) is the SSOT — adding a model is
+one line there. Passing `:models` explicitly also matters for a subtler reason:
+without it the backend advertises upstream's full default list (nine entries, back to
+`gpt-5.2`), so the menu fills with models that are never used.
+
+Specs are not restated here. `gptel--process-models` only attaches a symbol plist when
+a model arrives as a cons cell — a bare symbol lands with an empty one, and the menu
+loses context window, cost, and capabilities. `my/gptel--model-specs` pulls each spec
+out of upstream's own `gptel--openai-models` instead of duplicating it, so the numbers
+follow gptel and an unknown model degrades to a bare symbol rather than erroring.
+
+Three advices remain pinned to this backend, each documented at its definition with
+the condition that would make it deletable — the Codex endpoint's mandatory
+`stream=true`, a per-request `max_output_tokens` warning, and `gptel-agent`'s
+unconditional 8192 token cap. They are re-verified against upstream periodically;
+`NEXT.md` § gptel monitoring carries the current measurement and its date.
 
 ### Custom gptel-agent prompts (`prompts/`)
 
@@ -404,8 +442,8 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs preview channel term
 
 ## Links
 
-- [Digital Garden](https://notes.junghanacs.com) — 2,100+ notes published from this setup
-- [Garden repo](https://github.com/junghanacs/notes.junghanacs.com) — Hugo source for the digital garden
+- [Digital Garden](https://notes.junghanacs.com) — 2,200+ notes published from this setup
+- [Garden repo](https://github.com/junghan0611/garden) — Hugo source for the digital garden
 - [geworfen](https://github.com/junghan0611/geworfen) — org-agenda live at [agenda.junghanacs.com](https://agenda.junghanacs.com)
 - [agent-config](https://github.com/junghan0611/agent-config) — Pi agent harness (skills, delegation, memory)
 - [memex-kb](https://github.com/junghan0611/memex-kb) — Org-mode → any format conversion
