@@ -20,19 +20,8 @@
 ;;   elfeed entry → Z → 전문 한국어 번역 → 인라인 표시
 ;;   elfeed entry → a → remember 메모 (elfeed 링크 자동 삽입)
 ;;
-;; 번역 벤치마크 (2026-02-26, 719자 영어, 6개 모델 동시 비교):
-;;   | # | 모델                          | 속도  | 품질 | 용도            |
-;;   |---+-------------------------------+-------+------+-----------------|
-;;   | 1 | Claude Haiku 4.5 (OpenRouter)  | 2.7초 | ○   | 속도 최우선     |
-;;   | 2 | Gemini 3 Flash (OpenRouter) ★  | 3.8초 | ◎   | 일상 번역 (기본)|
-;;   | 3 | Claude Sonnet 4.6 (CLIProxy)   | 5.8초 | ◎   | 정밀 번역/책    |
-;;   | 4 | GPT-5 Mini (OpenRouter)        | 6.5초 | ○   | 범용            |
-;;   | 5 | DeepSeek Chat                  | 6.8초 | ○   | 폴백            |
-;;   | 6 | Gemini 2.5 Flash (OpenRouter)  | 6.8초 | ◎   | 레거시          |
-;;
-;;   → 기본: #2 Gemini 3 Flash (속도+품질 최적, 괄호 병기 자연스러움)
-;;   → 책/논문: #3 Sonnet 4.6 (문어체, 정확, $0 구독)
-;;   → M-x +elfeed-translate-benchmark 로 재측정 가능
+;; 모델은 ai-gptel.el의 OpenAI-sub 하나로 통일 — 빠른 모델
+;; (`my/gptel-model-fast')이 기본. 다중 백엔드 비교 벤치마크는 제거했다.
 
 ;;; Code:
 
@@ -150,7 +139,7 @@ nil이면 OpenAI-sub (ChatGPT 구독) 사용. 없으면 현재 gptel-backend.")
 
 (defvar +elfeed-gptel-model nil
   "elfeed 요약/번역용 gptel 모델.
-nil이면 gpt-5.4-mini 사용.")
+nil이면 `my/gptel-model-fast' 사용.")
 
 (defvar +elfeed-max-entry-length 3000
   "LLM에 보낼 엔트리 텍스트 최대 길이.")
@@ -211,12 +200,12 @@ Translate the following article to natural Korean.
 (defun +elfeed--gptel-request (prompt system-msg callback)
   "PROMPT를 gptel로 비동기 전송, 결과를 CALLBACK에 전달.
 SYSTEM-MSG는 시스템 프롬프트.
-기본: OpenAI-sub gpt-5.4-mini (구독 활용, 빠른 응답)."
+기본: OpenAI-sub + `my/gptel-model-fast' (구독 활용, 빠른 응답)."
   (let ((gptel-backend (or +elfeed-gptel-backend
                            gptel-openai-sub-backend
                            gptel-backend))
         (gptel-model (or +elfeed-gptel-model
-                         'gpt-5.4-mini)))
+                         my/gptel-model-fast)))
     (gptel-request prompt
       :system system-msg
       :callback (lambda (response info)
@@ -343,83 +332,6 @@ SYSTEM-MSG는 시스템 프롬프트.
           (elfeed-meta entry :summary-ko) nil
           (elfeed-meta entry :translation) nil)
     (message "캐시 삭제: %s" (elfeed-entry-title entry))))
-
-;;;;; 번역 벤치마크
-
-(defvar +elfeed-bench--text
-  "Anthropic this week revised its legal terms to clarify its policy forbidding the use of third-party harnesses with Claude subscriptions. Claude Code is a harness or wrapper that integrates with the user's terminal and routes prompts to the available Claude model in conjunction with other tools. Many other tools serve as harnesses for models, such as OpenAI Codex, Google Antigravity, and Pi. Harnesses exist because interacting with a machine learning model itself is not a great user experience. One of the ways that Anthropic has chosen to build brand loyalty is by selling tokens to subscription customers at a monthly price that ends up being less costly than pay-as-you-go token purchases through the Claude API."
-  "벤치마크 테스트 텍스트 (719자).")
-
-(defvar +elfeed-bench--results nil)
-(defvar +elfeed-bench--pending 0)
-
-(defun +elfeed-bench--send (name backend model)
-  "NAME 백엔드로 번역 요청 전송 (벤치마크용)."
-  (let ((start-time (current-time))
-        (gptel-backend backend)
-        (gptel-model model))
-    (gptel-request +elfeed-bench--text
-      :system +elfeed-translate-full-system-prompt
-      :callback (lambda (response _info)
-                  (let ((elapsed (float-time (time-subtract (current-time) start-time))))
-                    (push (list name elapsed response) +elfeed-bench--results)
-                    (cl-decf +elfeed-bench--pending)
-                    (when (= +elfeed-bench--pending 0)
-                      (+elfeed-bench--show)))))))
-
-(defun +elfeed-bench--show ()
-  "벤치마크 결과 표시."
-  (with-current-buffer (get-buffer-create "*번역 벤치마크*")
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (org-mode)
-      (insert (format "* 번역 벤치마크 결과 (%s)\n\n" (format-time-string "%Y-%m-%d %H:%M:%S")))
-      (insert (format "원문: %d자 (영어)\n\n" (length +elfeed-bench--text)))
-      (dolist (r (sort (copy-sequence +elfeed-bench--results)
-                       (lambda (a b) (< (nth 1 a) (nth 1 b)))))
-        (insert (format "** %s — %.1f초\n\n%s\n\n"
-                        (nth 0 r) (nth 1 r)
-                        (or (nth 2 r) "ERROR"))))
-      (goto-char (point-min))))
-  (pop-to-buffer "*번역 벤치마크*"))
-
-(defvar +elfeed-bench--models
-  '(;; OpenRouter 모델들
-    ("Gemini 3 Flash"      openrouter google/gemini-3-flash-preview)
-    ("Gemini 2.5 Flash"    openrouter google/gemini-2.5-flash)
-    ("GPT-5 Mini"          openrouter openai/gpt-5-mini)
-    ("Claude Haiku 4.5"    openrouter anthropic/claude-haiku-4.5)
-    ;; CLIProxyAPI
-    ("Claude Sonnet (Proxy)" cliproxy claude-sonnet-4-6)
-    ;; DeepSeek
-    ("DeepSeek Chat"       deepseek deepseek-chat))
-  "벤치마크 대상 모델 목록. (이름 백엔드타입 모델명)")
-
-(defun +elfeed-translate-benchmark ()
-  "모든 사용 가능한 백엔드로 번역 벤치마크 실행.
-결과는 *번역 벤치마크* 버퍼에 속도순 표시."
-  (interactive)
-  (setq +elfeed-bench--results nil)
-  (setq +elfeed-bench--pending 0)
-  (dolist (spec +elfeed-bench--models)
-    (let* ((name (nth 0 spec))
-           (type (nth 1 spec))
-           (model (nth 2 spec))
-           (backend (pcase type
-                      ('openrouter (and (boundp 'gptel-openrouter-backend)
-                                       gptel-openrouter-backend))
-                      ('cliproxy (and (boundp 'gptel-cliproxy-backend)
-                                      (fboundp 'gptel--cliproxy-available-p)
-                                      (gptel--cliproxy-available-p)
-                                      gptel-cliproxy-backend))
-                      ('deepseek (and (boundp 'gptel-deepseek-backend)
-                                      gptel-deepseek-backend)))))
-      (when backend
-        (cl-incf +elfeed-bench--pending)
-        (+elfeed-bench--send name backend model))))
-  (if (> +elfeed-bench--pending 0)
-      (message "벤치마크 시작 — %d개 요청 동시 전송..." +elfeed-bench--pending)
-    (message "사용 가능한 백엔드가 없습니다")))
 
 ;;;;; remember 연동 (annotation)
 

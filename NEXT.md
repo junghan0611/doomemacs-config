@@ -7,6 +7,43 @@
 
 ---
 
+## 🟢 검수 대기 — gptel 대정리, 커밋 전 실사용 확인 (2026-07-22)
+
+**상태**: 코드 완료, `tests/run-tests.sh` 83/83, **커밋 안 함**. GLG가 직접 써보고 판정.
+
+백엔드를 OpenAI-sub(ChatGPT 구독 OAuth) 하나로, 모델을 셋으로 줄였다. 7파일
+`+151/-359`. SSOT는 `lisp/ai-gptel.el`의 `my/gptel-models` 한 곳.
+
+| 역할 | 모델 | 쓰는 자리 |
+|---|---|---|
+| 기본 | `gpt-5.6-terra` | 채팅, 요약/번역 버퍼 |
+| 무거움 | `gpt-5.6-sol` | 수동 전환 (`my/gptel-switch-model`) |
+| 빠름 | `gpt-5.6-luna` | quick, magit 커밋, 인라인 번역, elfeed |
+
+**제거**: DeepSeek / OpenRouter(gemini 4종 + gpt-5.1) / Claude-Code wrapper +
+`docker/claude-wrapper/` / CLIProxy(`lisp/ai-gptel-local-proxy.el`, gitignore된 로컬
+파일이라 백업은 스크래치패드) / elfeed 6모델 벤치마크 / `my/gptel-switch-to-*` 4개
+→ `my/gptel-switch-model` 하나. Gemini **이미지 생성**(`my/gemini-generate-image`)은
+남겼다 — 채팅 모델이 아니라 별개 계열.
+
+**손으로 확인할 것** (배치 테스트가 닿지 않는 자리):
+
+1. `SPC = g s` / `g t` — 버퍼 요약·번역 응답 오는가 (terra)
+2. elfeed `z` / `Z` — 요약·전문번역 (luna)
+3. `M-g SPC` 인라인 번역 + `C-u` 교체 모드
+4. embark `[` → `gptel-quick`
+5. magit 커밋 메시지 생성
+6. **`RET`이 더 이상 전송하지 않는가** — 전송은 `C-c RET` / `M-RET` / `S-RET`(menu)
+7. `gptel-menu` 모델 목록에 셋만 뜨고 컨텍스트·비용이 보이는가
+
+**되돌릴 자리는 셋, 서로 독립적이다**: 모델 SSOT 블록 / evil-collection
+`repl-submit` override 블록 / elfeed 벤치마크 삭제분.
+
+**미결**: 테스트 보강 범위 — § gptel / gptel-agent 모니터링 의 "테스트 가능성" 표.
+GLG 판정 대기. 판정 전에 리팩터 착수하지 말 것.
+
+---
+
 ## 🟡 관찰 레인 — Neomacs, 아직 실사용 아님. 재검토 2026-08-02 (2026-07-19)
 
 **GLG 판정: 실사용 수준 아님. 메뉴가 흔들린다. 일단 해보는 것 정도.**
@@ -812,13 +849,51 @@ skills 인프라 + 다른 14 default tool 은 그대로 유지.
 
 ### upstream 변경 시 advice 재검토 자리
 
+**2026-07-22 실측 재확인** — 셋 다 살아있음. 근거는 배치 실행 결과:
+
+- stream: `gptel-request` 는 여전히 `(stream nil)` 기본 (`gptel-request.el:2042`)이고
+  OAuth backend 의 `gptel--request-data` 는 temperature·max_output_tokens 만 뗀다
+  → body 에 `:stream :json-false` 그대로. **advice 유지.**
+- max_output_tokens: upstream 이 **키는 이제 떼준다** (`gptel-openai-oauth.el:68`).
+  대신 `display-warning` 을 매 요청 때린다. `gptel-agent.el:690` 은 아직 8192 박음.
+  → advice 에 남은 역할은 **경고 소음 차단 하나**. 기능 방어는 upstream 이 가져감.
+- `evil-collection-gptel-want-ret-to-send` (신규 발견): upstream 에서 **삭제됨**.
+  REPL 공통 `repl-submit` 추상 바인딩으로 이관 + `evil-collection-repl-submit-state`
+  기본 `normal` → **normal RET 이 다시 전송하고 있었다** (커밋 `c9d9217` 의도 역행).
+  죽은 setq 를 들고 있어서 안 보였다. per-map `:enabled` 람다로 gptel 만 끔.
+
 | advice | 불필요해질 조건 | tracking |
 |--------|-----------------|----------|
 | `+gptel--codex-stream-advice` | `gptel` 의 `gptel-request` wrapping point 또는 stream 자리 설계 결정 | [gptel #1432](https://github.com/karthink/gptel/issues/1432), [gptel-agent #107](https://github.com/karthink/gptel-agent/issues/107) |
-| `+gptel--codex-clear-max-tokens-advice` | `gptel-agent.el:690` 의 `gptel-max-tokens 8192` 무조건 박는 자리에 OAuth backend 가드 추가될 때 | [gptel-agent #108](https://github.com/karthink/gptel-agent/issues/108) |
+| `+gptel--codex-clear-max-tokens-advice` | `gptel-agent.el:690` 의 `gptel-max-tokens 8192` 무조건 박는 자리에 OAuth backend 가드 추가될 때 (upstream 이 키 제거는 이미 함, 경고만 남음) | [gptel-agent #108](https://github.com/karthink/gptel-agent/issues/108) |
+| `evil-collection-binding-overrides` `repl-submit` | evil-collection 이 map 단위 opt-out 을 1급으로 제공하거나 `repl-submit-state` 기본이 바뀔 때 | — |
 | `+gptel--disable-tool-confirmations` | `gptel-agent` 의 default tool 의 `:confirm t` 자리 변경 시 (영향 가능) | — |
 | `+gptel-agent--inject-user-prompt` | `gptel-agent` 의 `agents/*.md` frontmatter format 변경 시 (영향 가능) | — |
 | `gptel-agent-dirs` append + `prompts/gptel-agent.md` | upstream 이 subagent 가이드를 별도 toggle 로 분리 (예: `gptel-agent-subagents-enabled`) 시 | — |
+
+### 테스트 가능성 — 조사 완료, 착수 판정 대기 (2026-07-22)
+
+`tests/TESTING-GUIDELINES.org` 는 `ai-gptel.el` 을 **Tier B (테스트 안 함)** 으로
+분류해뒀다. 그런데 오늘 이후 이 파일은 `setq` 더미가 아니라 SSOT(`my/gptel-models`)
+와 upstream 계약 3건을 들고 있다. 분류를 다시 볼 자리다.
+
+**구조적 장벽 하나**: `emacs -Q` 에서 `(require 'ai-gptel)` 이 안 된다 —
+`use-package!` / `after!` / `map!` 이 void-function. 요약/번역의 순수 함수들이
+`(after! gptel ...)` 안(현재 `lisp/ai-gptel.el:543-615`)에 들어있어서 그렇다.
+
+| 대상 | Tier | 비용 | 값어치 |
+|---|---|---|---|
+| 모델 SSOT lint (텍스트 스캔) | A | 낮음 — `test-keybinding-lint.el` 복제, ~40줄 | 오늘 같은 드리프트 재발 차단 |
+| upstream 계약 게이트 (advice 3종 + 모델 존재 + `C-c RET`) | **C — 러너 없음** | 중간 — 러너 신설 + ~120줄 | upstream 이 고치면 테스트가 깨져서 **advice 지울 때를 알려줌** |
+| 요약/번역 순수부 (`+gptel--format-content-for-llm`, generic extractor) | A, **추출 선행** | 중간 — 73줄을 `after!` 밖 새 파일로 | 프롬프트 조립 회귀 방어 |
+| 요약/번역 실동작 (응답 품질) | 불가 | — | 네트워크·구독·비결정. 수동 스모크가 맞는 도구 |
+
+Tier C 러너는 가이드라인이 이미 자리를 지정해뒀는데(§ Tier C) **아직 안 만들었다.**
+만든다면 `tests/run-integration.sh` + `tests/integration/` — `-Q` 런의 vanilla
+불변식과 섞지 않는다.
+
+**착수 순서 추천**: 계약 게이트(C) → SSOT lint(A) → 순수부 추출(A).
+오늘 세 건을 손으로 판정하느라 쓴 시간이 그대로 C 의 값어치다.
 
 ### 답변 push 완료 (2026-05-26)
 

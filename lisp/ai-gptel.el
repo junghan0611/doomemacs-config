@@ -9,10 +9,17 @@
 
 ;; gptel 중심 AI 설정 — 백엔드/모델, 빠른 조회(quick), 버퍼 요약/번역, embark 통합
 ;;
+;; 백엔드는 OpenAI-sub (ChatGPT 구독 OAuth) 하나. 모델도 셋뿐이다:
+;;   gpt-5.6-sol   무거운 작업 — 필요할 때만 수동 호출
+;;   gpt-5.6-terra 기본 — 채팅, 요약/번역 버퍼
+;;   gpt-5.6-luna  빠른 자리 — quick, magit 커밋, 인라인 번역
+;; 모델이 계속 새로 나오는 자리라 백엔드/모델 목록을 넓히지 않는다.
+;; 넣고 싶으면 이 파일 한 곳(`my/gptel-models')만 고친다.
+;;
 ;; 구조:
 ;;   1. Evil Collection 설정
 ;;   2. gptel 코어 (use-package!)
-;;      - 백엔드: OpenAI-sub (기본, gpt-5.4), OpenRouter, Claude-Code
+;;      - 백엔드: OpenAI-sub (OAuth)
 ;;      - gptel-org, gptel-quick, gptel-prompt
 ;;   3. 버퍼 요약/번역 (+gptel-buffer)
 ;;   4. Embark + gptel 통합
@@ -22,7 +29,34 @@
 
 ;;;; Evil Collection
 
-(setq evil-collection-gptel-want-ret-to-send nil)
+;; RET 이 gptel 버퍼에서 전송하지 않게 — 원래 의도는 commit c9d9217
+;; "fix(gptel): Prevent `RET` from sending message in gptel".
+;;
+;; 그때 쓰던 `evil-collection-gptel-want-ret-to-send' 는 upstream 에서
+;; 사라졌다. 지금은 gptel 전용 옵션이 아니라 REPL 계열 공통 추상 바인딩
+;; (`repl-submit' / `repl-newline')이 `evil-collection-binding-defaults'
+;; 에 있고, `evil-collection-repl-submit-state' 기본값 `normal' 때문에
+;; **normal state 의 RET 이 `gptel-send'** 로 간다. 죽은 setq 를 계속
+;; 들고 있어서 조용히 되돌아가 있었다.
+;;
+;; `:enabled' 는 (MAP-SYM ID KEYS COMMAND) 람다를 받는다 — gptel 에서만
+;; 끄고 cider/eshell/vterm 등 다른 REPL 은 건드리지 않는다. insert state
+;; 의 `repl-newline' 은 살아있어 RET 은 그대로 개행.
+;; 기존 override 가 있으면 앞에 얹는다 (`assq' 라 첫 항목이 이긴다).
+;;
+;; 전송은 명시적인 키로만 — 실수로 날아가지 않게:
+;;   C-c RET        gptel 이 minor mode 키맵에 직접 박아둔 기본 (gptel.el:1014).
+;;                  minor mode 맵이라 org-mode 의 C-c RET 보다 우선한다.
+;;   M-RET          아래 `map!' 에서 추가.
+;;   S-RET          `gptel-menu' — 옵션 확인하고 거기서 확정.
+;;   RET            전송 안 함. normal 은 `evil-ret', insert 는 개행.
+(setq evil-collection-binding-overrides
+      (cons (list 'repl-submit
+                  :enabled (lambda (map-sym &rest _)
+                             (not (eq map-sym 'gptel-mode-map))))
+            (bound-and-true-p evil-collection-binding-overrides)))
+
+;; 이 둘은 upstream 에 그대로 살아있다 (menu 가 to-send 보다 우선).
 (setq evil-collection-gptel-want-shift-ret-menu t)
 (setq evil-collection-gptel-want-shift-ret-to-send nil)
 
@@ -41,7 +75,8 @@
 
   (setq gptel-include-reasoning nil)
   (setq gptel-default-mode 'org-mode)
-  (set-popup-rule! "^\\*OpenRouter\\*$" :side 'right :size 84 :vslot 100 :quit t)
+  ;; gptel chat 버퍼는 백엔드 이름으로 열린다 — `*OpenAI-sub*`
+  (set-popup-rule! "^\\*OpenAI-sub\\*$" :side 'right :size 84 :vslot 100 :quit t)
   (set-popup-rule! "^\\*gptel-buffer\\*$" :side 'right :size 0.4 :vslot 99 :quit nil :select t)
 
 ;;;;;; gptel-org
@@ -63,167 +98,54 @@
           )
     (setq-default gptel-org-branching-context t))
 
-;;;;; 백엔드 (Backends)
-
-;;;;;; DeepSeek (OpenAI-compatible /v1/chat/completions — Codex Responses API 비교 자리)
-
-  ;; deepseek-chat: tool 지원. deepseek-reasoner: tool 미지원 (DeepSeek 측 제약).
-  ;; tool 검증/사용은 반드시 deepseek-chat로 — `my/gptel-switch-to-deepseek` 기본값.
-  (setq gptel-deepseek-backend
-        (gptel-make-deepseek "DeepSeek"
-          :stream t
-          :key (lambda () (password-store-get "work/api/deepseek/goqual-from-che-new"))))
-
-;;;;;; OpenRouter
-
-  (defconst gptel--openrouter-models
-    '(
-      (google/gemini-2.5-flash
-       :description "Best in terms of price-performance, with well-rounded capabilities"
-       :capabilities (tool-use json media audio video)
-       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
-                    "application/pdf" "text/plain" "text/csv" "text/html"
-                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
-                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
-       :context-window 1048               ; 65536 output token limit
-       :input-cost 0.30
-       :output-cost 2.50
-       :cutoff-date "2025-01")
-
-      (google/gemini-3-flash-preview
-       :description "Most intelligent Gemini model built for speed"
-       :capabilities (tool-use json media audio video)
-       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
-                    "application/pdf" "text/plain" "text/csv" "text/html"
-                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
-                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
-       :context-window 1048               ; 65536 output token limit
-       :input-cost 0.50
-       :output-cost 3.00
-       :cutoff-date "2025-01")
-
-      (google/gemini-2.5-pro
-       :description "Most powerful Gemini thinking model with state-of-the-art performance"
-       :capabilities (tool-use json media audio video)
-       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
-                    "application/pdf" "text/plain" "text/csv" "text/html"
-                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
-                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
-       :context-window 1048               ; 65536 output token limit
-       :input-cost 1.25                   ; 2.50 for >200k tokens
-       :output-cost 10.00                 ; 15 for >200k tokens
-       :cutoff-date "2025-01")
-
-      (google/gemini-3.1-pro-preview
-       :description "Most intelligent Gemini model with SOTA reasoning and multimodal understanding"
-       :capabilities (tool-use json media audio video)
-       :mime-types ("image/png" "image/jpeg" "image/webp" "image/heic" "image/heif"
-                    "application/pdf" "text/plain" "text/csv" "text/html"
-                    "audio/mpeg" "audio/wav" "audio/ogg" "audio/flac" "audio/aac" "audio/mp3"
-                    "video/mp4" "video/mpeg" "video/avi" "video/quicktime" "video/webm")
-       :context-window 1048               ; 65536 output token limit
-       :input-cost 2.0                    ; 4.0 for >200k tokens
-       :output-cost 12.00                 ; 18.0 for >200k tokens
-       :cutoff-date "2025-01")
-
-      ;; openai/gpt-5.1, 400k, "The best model for coding and agentic tasks"
-      (openai/gpt-5.1-chat
-       :description
-       "GPT-5.1 Chat (AKA Instant is the fast, lightweight member of the 5.1 family, optimized for low-latency chat while retaining strong general intelligence. "
-       :capabilities (media tool-use json url)
-       :mime-types ("image/jpeg" "image/png" "image/gif" "image/webp")
-       :context-window 128 ; 400
-       :input-cost 1.25
-       :output-cost 10
-       :cutoff-date "2024-09")
-      )
-    )
-
-  (setq gptel-openrouter-backend
-        (gptel-make-openai "OpenRouter"
-          :host "openrouter.ai"
-          :endpoint "/api/v1/chat/completions"
-          :stream t
-          :key (lambda () (password-store-get "work/api/openrouter/junghanacs/gptel"))
-          :models gptel--openrouter-models))
-  (setq gptel-openrouter-chat-model 'openai/gpt-5.1-chat) ; < 1.0s latency
-  (setq gptel-openrouter-flash-model 'google/gemini-3-flash-preview) ; 3.8s bench, best speed+quality
-  (setq gptel-openrouter-pro-model 'google/gemini-2.5-pro) ; < 2.5s latency
-
-;;;;;; Claude-Code (via wrapper)
-
-  ;; [서비스 관리] - run-claude-wrapper 스크립트 사용
-  ;; run-claude-wrapper              # 서비스 시작
-  ;; run-claude-wrapper --update     # 최신 코드로 재빌드
-  ;; run-claude-wrapper --stop       # 서비스 중지
-  ;; run-claude-wrapper --status     # 상태 확인
-  ;;
-  ;; [지원 기능]
-  ;; - 파일 접근: Read, Write, Edit, Glob, Grep
-  ;; - 명령 실행: Bash
-  ;; - 웹검색: WebSearch, WebFetch
-  ;; - 시스템 프롬프트: gptel 메시지 전달
-  ;;
-  ;; [gptel에서 사용]
-  ;; M-x gptel → 백엔드 메뉴에서 "Claude-Code" 선택
-  ;; 또는: (setq gptel-backend gptel-claude-code-backend)
-  (setq gptel-claude-code-backend
-        (gptel-make-openai "Claude-Code"
-          :host "localhost:28000"
-          :endpoint "/v1/chat/completions"
-          :protocol "http"
-          :stream t
-          :key "not-needed"
-          :models '((claude-sonnet-4-6
-                     :description "Sonnet 4.6 + tool-use (Read/Write/Bash)"
-                     :capabilities (media tool-use)
-                     :context-window 200
-                     :input-cost 3
-                     :output-cost 15)
-                    (claude-opus-4-6
-                     :description "Opus 4.6 + tool-use (Read/Write/Bash)"
-                     :capabilities (media tool-use)
-                     :context-window 200
-                     :input-cost 5
-                     :output-cost 25)
-                    (claude-haiku-4-5-20251001
-                     :description "Haiku 4.5 + tool-use (fastest)"
-                     :capabilities (media tool-use)
-                     :context-window 200
-                     :input-cost 1
-                     :output-cost 5))))
-
-  ;; Claude-Code 백엔드용 enable_tools 자동 추가
-  (defvar gptel-claude-code-enable-tools t
-    "When non-nil, enable Claude Code tools (Read, Write, Bash, etc.).")
-
-  (defun gptel--claude-code-add-enable-tools (orig-fun &rest args)
-    "Advice to add enable_tools to Claude-Code requests."
-    (let ((result (apply orig-fun args)))
-      (when (and gptel-claude-code-enable-tools
-                 (eq gptel-backend gptel-claude-code-backend))
-        (setq result (append result `(:enable_tools t))))
-      result))
-
-  (advice-add 'gptel--request-data :around #'gptel--claude-code-add-enable-tools)
+;;;;; 백엔드 (Backend)
 
 ;;;;;; OpenAI-sub (ChatGPT Plus/Pro subscription via OAuth)
 
-  ;; gpt-5.4, gpt-5.4-mini, gpt-5.4-nano, gpt-5.4-pro 등 구독으로 사용.
   ;; 첫 호출 시 브라우저로 OpenAI 로그인. 토큰은 로컬 캐시.
   ;; 수동: M-x gptel-openai-oauth-login
   ;; gptel-openai-oauth.el은 upstream gptel master (>= 56e5b06)에만 존재 —
   ;; fboundp 가드는 패키지 회귀 안전망 (정상 환경에선 항상 등록됨).
+
+  ;; :models 를 명시하지 않으면 upstream 기본값이 gpt-5.2/5.3-codex/5.4/5.5 까지
+  ;; 9개를 메뉴에 흘린다. 쓰는 셋만 남긴다 — 새 모델은 여기 한 줄로 들어온다.
+  (defconst my/gptel-models '(gpt-5.6-terra gpt-5.6-sol gpt-5.6-luna)
+    "OpenAI-sub 백엔드에 등록할 모델. 첫 항목이 `gptel-menu' 기본 노출 순서 선두.")
+
+  (defconst my/gptel-model-default 'gpt-5.6-terra
+    "기본 모델. 채팅과 요약/번역 버퍼가 쓴다.")
+
+  (defconst my/gptel-model-heavy 'gpt-5.6-sol
+    "무거운 작업용. 필요할 때만 수동 전환.")
+
+  (defconst my/gptel-model-fast 'gpt-5.6-luna
+    "빠른 자리용 — gptel-quick, magit 커밋 메시지, 인라인 번역.")
+
+  (defun my/gptel--model-specs (models)
+    "Return MODELS with their upstream specs attached.
+`gptel--process-models' only assigns a symbol plist when the model
+arrives as a cons cell; bare symbols land with an empty plist, so the
+menu loses context window, cost and capabilities.  Pull the spec from
+`gptel--openai-models' instead of restating it here — upstream stays
+the single source of truth, and an unknown model degrades to a bare
+symbol rather than erroring."
+    (mapcar (lambda (model) (or (assq model gptel--openai-models) model))
+            models))
+
   (defvar gptel-openai-sub-backend nil
     "OpenAI ChatGPT Plus/Pro subscription backend via OAuth.")
   (when (fboundp 'gptel-make-openai-oauth)
     (setq gptel-openai-sub-backend
-          (gptel-make-openai-oauth "OpenAI-sub")))
+          (gptel-make-openai-oauth "OpenAI-sub"
+            :models (my/gptel--model-specs my/gptel-models))))
 
 ;;;;;; Codex streaming advice
 
   ;; Codex endpoint(/backend-api/codex/responses)은 stream=true 필수.
   ;; gptel-request는 기본 :stream nil → "Stream must be set to true" 400.
+  ;; 2026-07-22 재확인: upstream 미해결. `gptel-request' 는 여전히 `(stream nil)'
+  ;; 기본이고, OAuth backend 의 `gptel--request-data' 는 temperature 와
+  ;; max_output_tokens 만 떼낸다 → body 에 `:stream :json-false' 그대로 나감.
   ;; elfeed/gptel-quick/gptel-magit 등이 모두 영향 — advice로 한 번에 해결.
   ;; OpenAI-sub 백엔드 감지 시: :stream t 강제 + 청크 누적 → user
   ;; callback에 풀 응답 한 번에 전달 (non-streaming 인터페이스 보존).
@@ -261,9 +183,11 @@ has its own streaming wiring via fsm — leave it alone)."
 
 ;;;;;; Codex max_output_tokens advice
 
-  ;; gptel-agent.el L690이 chat buffer 생성 시 무조건 8192 박음 — Codex(OAuth)
-  ;; backend는 max_output_tokens 자체를 거부 (`88e4999` 패치 warning 매 요청 발동).
-  ;; gptel--request-data 호출 직전 dynamic let으로 nil 강제 → plist-put skip.
+  ;; gptel-agent.el L690이 chat buffer 생성 시 무조건 8192 박음.
+  ;; upstream `gptel--request-data' (gptel-openai-oauth.el L68) 이 이제 그 키를
+  ;; **떼주긴 한다** — 대신 `display-warning' 을 매 요청 때린다. 기능은 upstream
+  ;; 이 막았고 이 advice 에 남은 일은 그 경고 소음 차단뿐.
+  ;; gptel--request-data 호출 직전 dynamic let으로 nil 강제 → 키 자체가 안 생김.
   ;; 다른 backend는 영향 없음. upstream gptel-agent.el L690 패치 후보 자리.
   (defun +gptel--codex-clear-max-tokens-advice (orig-fun &rest args)
     "Force `gptel-max-tokens' nil for Codex (OAuth) backend — silence warning."
@@ -275,11 +199,11 @@ has its own streaming wiring via fsm — leave it alone)."
 
   (advice-add 'gptel--request-data :around #'+gptel--codex-clear-max-tokens-advice)
 
-;;;;; Tools (PoC — DeepSeek + OpenAI-sub 양 backend round-trip 검증용)
+;;;;; Tools (PoC — tool round-trip 검증용)
 
   ;; 큰 그림: ~/.claude/skills/ 화이트리스트 → gptel-make-tool 자동 등록.
   ;; 예: botlog skill 등록되면 "오늘 작업 botlog로 기록해" 한 마디로 호출.
-  ;; 현 단계는 tool round-trip이 양 backend에서 정상 닫히는지 sanity.
+  ;; 현 단계는 tool round-trip이 정상 닫히는지 sanity.
   ;;
   ;; gptel-use-tools 명시 (anti-regression):
   ;; transient menu (`gptel-menu` → `T`)에서 `force`로 바꾸면 정의상 매 턴
@@ -288,13 +212,12 @@ has its own streaming wiring via fsm — leave it alone)."
   (setq gptel-use-tools t)
   (setq-default gptel-use-tools t)
 
-  ;; 검증 매트릭스 (2026-05-26):
-  ;;   DeepSeek deepseek-chat + use-tools t      → 1회, 2.7s 닫힘  ✓
-  ;;   OpenAI-sub gpt-5.4    + use-tools t      → 1회, 4.58s 닫힘 ✓
-  ;;   양 backend            + use-tools 'force → 무한 loop (정의상 정상 동작)
+  ;; 검증 (2026-05-26, gpt-5.4 기준):
+  ;;   use-tools t      → 1회, 4.58s 닫힘 ✓
+  ;;   use-tools 'force → 무한 loop (정의상 정상 동작)
   ;;
   ;; 사용: chat buffer에서 "What time is it?" → `get_current_time` 자동 호출.
-  ;; backend 전환은 `my/gptel-switch-to-*`, model은 `gptel-menu`에서.
+  ;; model 전환은 `my/gptel-switch-model` 또는 `gptel-menu`에서.
   (gptel-make-tool
    :name "get_current_time"
    :description "Return the current local time in ISO-8601 format (YYYY-MM-DDTHH:MM:SS+ZZZZ)."
@@ -302,64 +225,30 @@ has its own streaming wiring via fsm — leave it alone)."
    :category "time"
    :function (lambda () (format-time-string "%Y-%m-%dT%H:%M:%S%z")))
 
-;;;;; 기본 백엔드 선택 & 전환
+;;;;; 기본 모델 선택 & 전환
 
   ;; 시스템 프롬프트 설정 (+user-info.el에서 정의)
   (setq gptel--system-message user-llm-system-prompt)
 
-  ;; Magit 백엔드 (gpt-5.4-mini — 커밋 메시지 충분, 구독 활용)
+  ;; Magit 커밋 메시지 — 빠른 모델로 충분
   (setq gptel-magit-backend gptel-openai-sub-backend)
-  (setq gptel-magit-model 'gpt-5.4-mini)
+  (setq gptel-magit-model my/gptel-model-fast)
 
-  ;; Claude-Code 서버 상태 확인
-  (defun gptel--claude-code-server-available-p ()
-    "Check if Claude-Code wrapper server is running on localhost:28000."
-    (condition-case nil
-        (let ((url-request-method "GET")
-              (url-show-status nil))
-          (with-current-buffer
-              (url-retrieve-synchronously "http://localhost:28000/health" t nil 2)
-            (goto-char (point-min))
-            (and (search-forward "healthy" nil t) t)))
-      (error nil)))
-
-  ;; 기본 백엔드: OpenAI-sub (ChatGPT 구독, gpt-5.4).
-  ;; OAuth 토큰 캐시되면 부팅 후 즉시 사용. 답변 속도 빠름.
-  ;; 다른 백엔드는 `my/gptel-switch-to-*` 명령으로 수동 전환.
+  ;; 기본: OpenAI-sub + terra.
+  ;; OAuth 토큰 캐시되면 부팅 후 즉시 사용.
   (setq gptel-backend gptel-openai-sub-backend)
-  (setq gptel-model 'gpt-5.4)
+  (setq gptel-model my/gptel-model-default)
 
-  ;; 수동 백엔드 전환
-  (defun my/gptel-switch-to-openai-sub ()
-    "Switch gptel backend to OpenAI-sub (ChatGPT subscription, gpt-5.4)."
-    (interactive)
+  (defun my/gptel-switch-model (model)
+    "Switch `gptel-model' to MODEL on the OpenAI-sub backend.
+Interactively prompt among `my/gptel-models'."
+    (interactive
+     (list (intern (completing-read
+                    "gptel model: " (mapcar #'symbol-name my/gptel-models)
+                    nil t nil nil (symbol-name my/gptel-model-default)))))
     (setq gptel-backend gptel-openai-sub-backend)
-    (setq gptel-model 'gpt-5.4)
-    (message "Switched to OpenAI-sub backend (gpt-5.4)"))
-
-  (defun my/gptel-switch-to-claude-code ()
-    "Switch gptel backend to Claude-Code (requires server running)."
-    (interactive)
-    (if (gptel--claude-code-server-available-p)
-        (progn
-          (setq gptel-backend gptel-claude-code-backend)
-          (setq gptel-model 'claude-sonnet-4-6)
-          (message "Switched to Claude-Code backend"))
-      (message "Claude-Code server not available! Run: run-claude-wrapper")))
-
-  (defun my/gptel-switch-to-openrouter ()
-    "Switch gptel backend to OpenRouter."
-    (interactive)
-    (setq gptel-backend gptel-openrouter-backend)
-    (setq gptel-model gptel-openrouter-chat-model)
-    (message "Switched to OpenRouter backend"))
-
-  (defun my/gptel-switch-to-deepseek ()
-    "Switch gptel backend to DeepSeek (deepseek-chat)."
-    (interactive)
-    (setq gptel-backend gptel-deepseek-backend)
-    (setq gptel-model 'deepseek-chat)
-    (message "Switched to DeepSeek backend (deepseek-chat)"))
+    (setq gptel-model model)
+    (message "gptel model: %s" model))
 
 ;;;;; gptel-quick — 빠른 조회
 
@@ -369,9 +258,9 @@ has its own streaming wiring via fsm — leave it alone)."
   ;; M-RET 채팅 버퍼로 이어서 질문
   ;; C-g   닫기
 
-  ;; gptel-quick: OpenAI-sub gpt-5.4-mini (구독 활용, 빠른 echo area 응답)
+  ;; gptel-quick: 빠른 모델 (echo area 즉답)
   (setq gptel-quick-backend gptel-openai-sub-backend)
-  (setq gptel-quick-model 'gpt-5.4-mini)
+  (setq gptel-quick-model my/gptel-model-fast)
   (setq gptel-quick-word-count 30) ; 기본 12 → 30 (한글 ~15자 분량)
   (setq gptel-quick-timeout 15)    ; 기본 10 → 15초
   (setq gptel-quick-display nil)   ; use echo area
@@ -637,19 +526,18 @@ has its own streaming wiring via fsm — leave it alone)."
     "요약용 중간 temperature - 핵심 추출 + 약간의 재구성 허용.")
 
   (defvar +gptel-buffer-backend nil
-    "요약/번역 전용 백엔드. nil이면 gptel-openrouter-backend 사용.")
+    "요약/번역 전용 백엔드. nil이면 `gptel-openai-sub-backend' 사용.")
 
-  (defvar +gptel-buffer-model gptel-openrouter-flash-model
+  (defvar +gptel-buffer-model my/gptel-model-default
     "요약/번역 전용 모델. 긴 컨텍스트 지원 필요.")
 
   (defun my/gptel-buffer-model-toggle ()
-    "Toggle +gptel-buffer-model between Flash and Pro."
+    "Toggle `+gptel-buffer-model' between the default and heavy model."
     (interactive)
     (setq +gptel-buffer-model
-          (if (eq +gptel-buffer-model gptel-openrouter-flash-model)
-              gptel-openrouter-pro-model
-            gptel-openrouter-flash-model
-            ))
+          (if (eq +gptel-buffer-model my/gptel-model-default)
+              my/gptel-model-heavy
+            my/gptel-model-default))
     (message "gptel-buffer 모델: %s" +gptel-buffer-model))
 
 ;;;;; 컨텐츠 추출 (Content Extractors)
@@ -730,11 +618,10 @@ has its own streaming wiring via fsm — leave it alone)."
   (defun +gptel--send-to-buffer (content system-message action-name &optional temperature)
     "CONTENT를 gptel 사이드 버퍼로 보내고 SYSTEM-MESSAGE로 요청.
 ACTION-NAME은 표시용 (예: \"요약\", \"번역\").
-TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용).
-항상 OpenRouter/Gemini 모델 사용 (긴 컨텍스트 지원)."
+TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용)."
     (let* ((formatted (+gptel--format-content-for-llm content))
            (buf (get-buffer-create +gptel-buffer-name))
-           (target-backend (or +gptel-buffer-backend gptel-openrouter-backend))
+           (target-backend (or +gptel-buffer-backend gptel-openai-sub-backend))
            (target-model +gptel-buffer-model))
       (with-current-buffer buf
         (unless (derived-mode-p 'org-mode)
@@ -936,8 +823,8 @@ SNS·Emacs Everywhere 즉시 변환은 `my/gptel-translate-region-inline' 참고
                    (list (car b) (cdr b))))
     (let ((text (buffer-substring-no-properties beg end))
           (gptel-backend gptel-openai-sub-backend)
-          (gptel-model 'gpt-5.4-mini))
-      (message "번역 중... (gpt-5.4-mini)")
+          (gptel-model my/gptel-model-fast))
+      (message "번역 중... (%s)" my/gptel-model-fast)
       (gptel-request text
         :system +gptel-translate-bidirectional-system-message
         :callback (lambda (response info)
@@ -953,16 +840,16 @@ SNS·Emacs Everywhere 즉시 변환은 `my/gptel-translate-region-inline' 참고
     "선택 영역(또는 현재 문단)을 한↔영 번역하여 결과를 그 자리에 표시.
 기본: 영역 바로 아래에 번역문 삽입 (대화·메모 워크플로).
 C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
-모델은 gpt-5.4-mini 고정 (속도 우선)."
+모델은 `my/gptel-model-fast' 고정 (속도 우선)."
     (interactive (let ((b (my/gptel--region-or-paragraph-bounds)))
                    (list (car b) (cdr b) current-prefix-arg)))
     (let ((text (buffer-substring-no-properties beg end))
           (gptel-backend gptel-openai-sub-backend)
-          (gptel-model 'gpt-5.4-mini)
+          (gptel-model my/gptel-model-fast)
           (replace-mode (and arg t))
           (target-buf (current-buffer))
           (insert-pos (copy-marker end t)))
-      (message "번역 중... (gpt-5.4-mini%s)"
+      (message "번역 중... (%s%s)" my/gptel-model-fast
                (if replace-mode " · 교체" " · 아래 삽입"))
       (gptel-request text
         :system +gptel-translate-bidirectional-system-message

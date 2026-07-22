@@ -38,7 +38,7 @@
       "M-O" #'embark-dwim
       "C-h B" #'embark-bindings
       ;; gptel — quick translate (Emacs Everywhere SNS workflow)
-      ;; 영역 또는 현재 문단 → gpt-5.4-mini 한↔영. C-u 면 영역 교체.
+      ;; 영역 또는 현재 문단 → 빠른 모델로 한↔영. C-u 면 영역 교체.
       "M-g SPC" #'my/gptel-translate-region-inline
       ;; Org global
       "C-c l" #'org-store-link

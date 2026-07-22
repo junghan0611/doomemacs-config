@@ -198,7 +198,6 @@
 ;; (require 'android-config)              ; Android/Kotlin 개발 환경
 (require 'utils-config)
 (require 'project-config)
-;; (load! "lisp/ai-gptel-local-proxy" nil t) ; 로컬 전용 프록시 (없으면 무시)
 (require 'elfeed-config)             ; elfeed + gptel 인라인 요약/번역 + remember
 (require 'zotero-config)             ; zotero translation server (조건부 로딩)
 ;; (require 'ai-orchestration)          ; efrit/beads (조건부 로딩)

@@ -200,7 +200,7 @@ everything flows through agent presets.
 | Module | File | Purpose |
 |--------|------|---------|
 | **gptel-agent** | `ai-gptel.el` (`use-package! gptel-agent`) | **Primary chat/agent surface** — agent presets, skills, in-buffer tool execution |
-| GPTel core | `ai-gptel.el` | Multi-backend wiring (Claude, OpenAI-sub OAuth, Gemini, DeepSeek, local) + Codex stream advice |
+| GPTel core | `ai-gptel.el` | Single backend — OpenAI-sub (ChatGPT subscription OAuth), three models (`gpt-5.6-terra`/`-sol`/`-luna`) + Codex stream advice |
 | Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
