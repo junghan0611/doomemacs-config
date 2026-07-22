@@ -6,6 +6,106 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.7.22 — 표면을 줄이고, 상류를 따라간다
+
+### Changed
+
+- **gptel: 백엔드 하나, 모델 셋.** 모델은 닷파일이 따라갈 수 없는 속도로 나온다. 새
+  릴리즈가 나올 때마다 백엔드가 하나씩, 손으로 베낀 스펙 블록이 하나씩,
+  `my/gptel-switch-to-*` 명령이 하나씩 늘었고 — 안 쓰게 된 것들은 그대로 남았다.
+  표면을 **OpenAI-sub** (ChatGPT 구독 OAuth, Codex Responses endpoint) 하나로 자르고
+  모델을 셋으로 줄였다: `gpt-5.6-terra`(기본), `gpt-5.6-sol`(무거운 것),
+  `gpt-5.6-luna`(빠른 것 — quick / magit 커밋 메시지 / 인라인 번역 / elfeed).
+  `my/gptel-models` 한 줄이 SSOT다.
+
+  `:models`를 명시하는 게 중요한 자리였다 — 안 넘기면 backend가 upstream 기본
+  목록(9개, `gpt-5.2`까지)을 그대로 광고해서 메뉴가 안 쓰는 모델로 찬다.
+
+  스펙은 다시 적지 않는다. `gptel--process-models`는 모델이 **cons cell로 올 때만**
+  심볼 plist를 붙인다 — 맨 심볼은 빈 plist로 착지해서 메뉴가 컨텍스트·비용·capabilities를
+  잃는다. `my/gptel--model-specs`가 upstream `gptel--openai-models`에서 스펙을 끌어오므로
+  수치가 gptel을 따라가고, 모르는 모델은 에러 대신 맨 심볼로 degrade한다.
+
+  검증: `gpt-5.6-{terra,sol,luna}` 모두 ctx 1050k / caps `(media tool-use json url
+  responses-api)` 실측 확인. GLG 실사용 — elfeed 요약, magit 커밋 메시지.
+
+### Removed
+
+- gptel 레거시 백엔드 일체: DeepSeek, OpenRouter(하드코딩된 Gemini 4종 + `gpt-5.1-chat`
+  스펙 75줄), Claude-Code docker wrapper(`docker/claude-wrapper/` + `enable_tools`
+  advice + health check), CLIProxy(`lisp/ai-gptel-local-proxy.el`, `config.el`에서 이미
+  주석 처리돼 있던 것). elfeed 6모델 번역 벤치마크(77줄)도 함께 — 백엔드가 하나면 비교할
+  것이 없다. `my/gptel-switch-to-*` 4개는 `my/gptel-switch-model` 하나로 접었다.
+  Gemini **이미지 생성**(`my/gemini-generate-image`)은 남겼다 — 채팅 모델이 아니다.
+
+### Added
+
+- **Neomacs 바닐라 프로파일 + K-review 프로브** (`neomacs/`, `bin/neomacs.sh`).
+  Emacs 코어(~300K줄 C)를 Rust로 재작성한 [Neomacs](https://github.com/eval-exec/neomacs)
+  위의 빌트인 전용 프로파일. Doom과 완전 분리 — 별도 `--init-directory`, 별도 server
+  name, 공유 상태 없음. **Neomacs와 stock GNU Emacs 양쪽에서 동일하게 돌아야 한다**는
+  게 핵심 규약이라, 갈라짐이 나왔을 때 `--gnu` 한 번으로 런타임 탓인지 우리 설정 탓인지
+  갈린다. 프로브는 파일마다 별도 프로세스로 돌아 런타임을 죽이는 버그가 나머지 보고를
+  막지 않는다 — 크래시 자체가 산출물이다.
+
+  실측 (Neomacs 0.0.13 vs GNU Emacs 31.0.50): 61 OK / 4 FAIL, 실제 837노트 코퍼스는
+  0 FAIL. **GUI는 아직 못 쓴다** (메뉴 흔들림) — 그래서 데일리 드라이버가 아니라 2주
+  관찰 레인이 붙은 기록으로 들어간다. 갈라짐 2건은 재현 케이스로 프로브에 박아뒀다:
+  #121의 뿌리는 핸드셰이크가 아니라 `:nowait` (blocking connect는 TLS를 협상하는데 async는
+  안 해서 url-http가 평문으로 폴백 → ELPA 빈 archive), 그리고 `org-table-align`이 링크를
+  표시 폭이 아니라 원시 대괄호 형태로 재서 링크 든 표를 부풀리는 것. upstream 이슈·PR은
+  내지 않았다.
+- `my/org-link-to-headline` — 같은 버퍼의 다른 헤딩으로 fuzzy `[[*Heading][desc]]` 링크.
+  저널의 시각 헤딩들이 앞선 생각과 한 타임라인 위에서 엮인다. 이전 텍스트를 고쳐 쓰지
+  않고, 소스 파일을 받은 에이전트는 이미 타깃 전체를 들고 있어 추가 fetch가 없다.
+  `SPC m l h` (org localleader) / `SPC n M-l` (denote leader).
+- Denote ID로 가든 짝 이동 — Org 소스 ↔ Hugo export ↔ 가든 미러 페이지 토글. prefix
+  인자로 미러 선택, 모든 경로 ERT 커버.
+- `tests/test-agent-denote-link.el` — 정규식을 소스에서 직접 읽어 게이트가 실제 코드와
+  드리프트할 수 없게 한다.
+- `tests/` 를 README 구조 트리에 노출. 키바인딩 절이 `test-keybinding-lint.el`을
+  참조하는데 정작 트리에 없었다.
+
+### Fixed
+
+- **`evil-collection`이 껐던 RET 전송을 조용히 되살려놨다.** 커밋 `c9d9217`
+  ("Prevent `RET` from sending message in gptel")에서 끈 동작이 되돌아와 있었다. upstream이
+  gptel 전용 옵션 `evil-collection-gptel-want-ret-to-send`를 **삭제하고** REPL 공통
+  `repl-submit` 추상 바인딩으로 옮겼는데, `evil-collection-repl-submit-state` 기본값이
+  `normal`이라 normal state RET이 다시 `gptel-send`로 갔다. 죽은 `setq`는 아무 신호도
+  주지 않아서 방패처럼 보였다. 지금은 `evil-collection-binding-overrides`의 per-map
+  `:enabled` 람다로 gptel에서만 끈다 — cider/eshell/vterm은 그대로. 전송은 `C-c RET`
+  (gptel이 minor mode 키맵에 직접 박아둔 기본), `M-RET`, `S-RET`(menu).
+- 행(hang)에 빠진 agent/pi 데몬 복구. `stop`이 5s `timeout`으로 묶이고, 안 죽으면 PID
+  강제 종료(`-9`까지 에스컬레이션) + stale socket 정리 후 `start`. 데몬 PID는
+  start-anchored emacs cmdline으로 매칭해서 토큰을 언급한 셸 명령이 잡히는 일이 없다.
+- `agent-denote-add-link`가 링크를 엉뚱한 섹션에 넣던 것. 표준 heading은 **붙여쓴
+  `* 관련노트`**(코퍼스 442건)인데 옛 regex가 이걸 못 잡고 `관련메타`·`관련링크`·
+  `관련 레퍼런스` 같은 형제 섹션을 오매칭했다. heading 전체를 앵커하는 regex로 교체.
+- `rename-by-front-matter`가 새 경로 대신 rename 함수의 dired-buffer 반환값을 보고하던 것
+  (`old -> old`으로 찍혔다). `denote-get-path-by-id`로 실제 경로를 보고한다.
+- `denote-dired-mode` hook 복원. `e200ee2`에서 denote 3.x `-extras` require 마이그레이션과
+  함께 지워진 뒤 돌아오지 않았고, 손으로 토글하지 않으면 Dired가 포맷되지 않았다.
+  scoped 변종(`denote-dired-mode-in-directories`) 대신 무조건 hook을 쓴다 — scoped 쪽은
+  `denote-dired-directories` 기본값이 `~/org/` 정확히라 정작 노트가 사는 하위
+  디렉터리(`notes/`, `journal/`, `llmlog/`)를 빼고, `denote-silo-discover-repo-docs`가
+  런타임에 찾는 silo도 못 따라간다. 비용은 무시할 만하다 — font-lock은 JIT이라 보이는
+  영역만 칠한다. 71,696줄 `/nix/store` Dired 실측: 화면당 1ms, 줄당 ~18us, 앵커 매처는
+  Denote 아닌 파일에서 첫 이름 검사에 빠진다.
+- README의 은퇴한 `junghanacs` org 링크 2곳. 가든 리포는 `junghan0611/garden`이고 옛
+  URL은 이미 `oldorg` remote로 밀려나 있었다.
+
+### Docs
+
+- README `One backend, three models` 절 — 왜 표면을 잘랐는지, terra/sol/luna 역할,
+  `my/gptel-models` SSOT, 스펙을 손으로 안 베끼는 이유.
+- 실측 수치 갱신: ~20K 라인, 3,500+ 노트, 2,200+ 게시, `lisp/` 43파일.
+- `AGENTS.md` § Things to Watch 두 항목 — gptel 백엔드/모델 표면을 넓히지 않는다,
+  그리고 evil-collection이 gptel 키를 가져가면 죽은 옵션부터 의심한다.
+- upstream 대응 자세를 리포의 기본 자세로 명문화 — 상류가 움직이면 따라가는 게 우리
+  일이다. `map!` prefix 재편은 감시 레인으로 열어뒀다 (Henrik이 `de2a3364a`에서
+  doomemacs/modules 후속을 예고했고, 그러면 우리가 얹는 leader 그룹이 또 움직인다).
+
 ## v2026.7.12 — 키바인딩은 얹는다, 덮지 않는다
 
 ### Fixed

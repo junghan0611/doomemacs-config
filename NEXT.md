@@ -7,21 +7,6 @@
 
 ---
 
-## ✅ gptel 대정리 — 완료·검증됨 (2026-07-22, `950bd05`)
-
-백엔드 하나(OpenAI-sub OAuth) + 모델 셋(`my/gptel-models` SSOT)으로 정리. 제거:
-DeepSeek / OpenRouter(gemini 4종) / Claude-Code docker wrapper / CLIProxy / elfeed
-6모델 벤치마크. **GLG 실사용 확인**: elfeed 요약 ✓, magit 커밋 메시지 ✓.
-
-곁가지로 upstream 드리프트 하나를 잡았다 — `evil-collection`이 gptel 전용 옵션을
-지우면서 껐던 "RET 전송"이 되살아나 있었다. 상세는 `AGENTS.md` § Things to Watch
-두 항목, 규약은 `README.md` § One backend, three models.
-
-**남은 것은 테스트 보강 판정 하나** — § gptel / gptel-agent 모니터링 의 "테스트
-가능성" 표. GLG 판정 전에 리팩터 착수하지 말 것.
-
----
-
 ## 🟡 관찰 레인 — Neomacs, 아직 실사용 아님. 재검토 2026-08-02 (2026-07-19)
 
 **GLG 판정: 실사용 수준 아님. 메뉴가 흔들린다. 일단 해보는 것 정도.**
