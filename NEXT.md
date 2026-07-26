@@ -7,6 +7,50 @@
 
 ---
 
+## 🟢 Emacs 31.0.91 (pretest 2) 판올림 — 빌드까지 완료, 첫 기동만 남음 (2026-07-26)
+
+unstable 채널이 **31.0.90 = pretest 1**(2026-06-06 핀)에 서 있었다. upstream이 7월 24일
+**31.0.91 = pretest 2**를 내서 한 칸 올렸다.
+
+**핀 자리를 브랜치 → 태그로 바꿨다.** 이전 핀 `3801c09a`는 `emacs-31` **브랜치 중간
+커밋**이라 재현 자리가 계속 흔들렸다. 이제 `refs/tags/emacs-31.0.91^{}` = `57581b8b`.
+다음 pretest 때도 같은 자리에서 태그로만 올린다 (`flake.nix` 주석에 절차 박아둠).
+
+| ref | commit |
+|---|---|
+| `refs/tags/emacs-31.0.90` (pretest 1) | `0ee48ac4` |
+| **`refs/tags/emacs-31.0.91`** (pretest 2 — 현재 핀) | **`57581b8b`** |
+| `refs/heads/emacs-31` (브랜치 HEAD, 안 씀) | `39cb1e48` |
+
+**완료**:
+- [x] hash 재계산 — `sha256-3nvCiLiEtII1C57CLfDIbVqhiwadYViF9Nv32yDtLIQ=`
+      (fake-hash 트릭. `nix-prefetch-git`은 시스템에 없고, 같은 fetcher를 쓰는
+      fake-hash 쪽이 파라미터 드리프트가 없다 — 절차는 `flake.nix` 주석이 SSOT)
+- [x] `flake.nix` `name`/`version`/`rev`/`hash` 교체
+- [x] `nix build .#emacs-unstable` 성공 → `/nix/store/14c0qzr…-emacs-with-packages-31-31.0.91`
+- [x] `emacs --version` = **GNU Emacs 31.0.91**, `(require 'vterm)` OK (native-comp된
+      `.eln`이 `31.0.91-ef5c49a5`로 새로 붙음)
+- [x] GC root(`~/.local/state/nix/gcroots/emacs-unstable`) 갱신 — nix-gc 보호 유지
+- [x] 기능 플래그 이전과 동일: `NATIVE_COMP TREE_SITTER SQLITE3 HARFBUZZ X11 LUCID …`
+- [x] 바꿀 자리 전수 확인 — 버전 하드코딩은 `flake.nix` **하나뿐**.
+      `bin/emacs-unstable.sh`는 `nix build … --print-out-paths`로 경로를 받아오고
+      README/AGENTS는 "Emacs 31 pre-release"라고만 써서 손댈 것 없음
+
+**남은 한 걸음 — 첫 기동은 느리다 (GLG 자리)**:
+- [ ] `./run.sh unstable` 최초 실행. **straight/eln 캐시가 Emacs 버전 단위**라
+      `build-31.0.90` → `build-31.0.91`, eln `31.0.90-7d500e8c` → 새 해시로 **전 패키지
+      재빌드**가 한 번 일어난다 (현 straight 839M). 첫 기동만 오래 걸리고 이후 정상.
+      깨지면 `doom sync` 한 번.
+- [ ] 안정화 확인 뒤 낡은 `~/doomemacs-unstable/.local/straight/build-31.0.90`(839M)과
+      `cache/eln/31.0.90-*` 정리 — **롤백 여지를 남기려면 당분간 둔다.** GLG 판단.
+
+**격리 확인**: daily driver인 안정 Emacs 30.2(`/etc/profiles/per-user/junghan/bin/emacs`)는
+안 건드린다. `EMACSDIR=~/doomemacs-unstable` + `server-name=doom-unstable`로 분리돼 있고,
+판올림 시점에 doom-unstable 데몬은 떠 있지 않았다(소켓 `pi`/`server`/`user`만). 깨지면
+`flake.nix` 한 커밋 되돌리고 재빌드하면 끝 — 소스는 이미 store에 있어 재클론 없음.
+
+---
+
 ## 🟡 관찰 레인 — Neomacs, 아직 실사용 아님. 재검토 2026-08-02 (2026-07-19)
 
 **GLG 판정: 실사용 수준 아님. 메뉴가 흔들린다. 일단 해보는 것 정도.**
@@ -20,13 +64,49 @@
 빌드는 필요 없다 (`appimage-run` + 릴리즈 AppImage). 프로파일·프로브·런처는
 `neomacs/` + `bin/neomacs.sh`, 측정 SSOT는 `neomacs/README.md`.
 
-**다음 회차 (2026-08-02) 할 일**:
-1. `./bin/neomacs.sh --fetch` — 그때의 최신 릴리즈 (오늘 v0.0.13)
-2. `./bin/neomacs.sh --probe` + `--gnu --probe` — 대조표 갱신
-3. **GUI 기동 후 GLG가 메뉴·커서 직접 확인** — 이게 판정 기준
-4. 갈라짐 2건이 살아있는지 확인 (아래)
+### 갱신 (2026-07-26) — v0.0.14 나왔다. 커서 수정이 우리 관측과 정면으로 맞는다
 
-**갈라짐 2건 (기록용, 제출하지 않음)**:
+**upstream v0.0.14** (2026-07-24, `v0.0.13...v0.0.14` = **166 커밋**). 우리 핀은
+`bin/neomacs.sh:34` `NEOMACS_VERSION=0.0.13`, 로컬 AppImage도 0.0.13 (7/19 받은 것).
+
+GLG 관측("화면 문제가 개선된 것 같다")을 커밋 로그로 대조한 결과 — **맞다.** 아래
+셋이 우리가 적어둔 갈라짐 #3과 같은 자리를 만진다:
+
+| commit | 날짜 | 내용 |
+|---|---|---|
+| `8390c982` | 07-22 | `fix(display): non-selected window cursor drawn one row too low (missing ascent)` |
+| `85bc6928` | 07-23 | `fix(cursor): stop the cursor jumping to line 1 at the empty last line` |
+| `fb946ed2` | 07-21 | `fix(frame): reserve menu+tool-bar height so the default GUI frame is 80x35` |
+
+우리 기록은 *"커서 Y가 셀보다 17px 아래 (`cursor=(8.0,703.0)` vs `cell=(8.0,686.0)`)"* —
+upstream이 고쳤다는 **"one row too low (missing ascent)"** 와 방향·성격이 일치한다.
+ascent 누락이면 딱 한 행 높이만큼 아래로 밀린다. **다만 이건 로그 대조일 뿐이다.
+판정은 여전히 GUI에서 사람이 두드리는 것** — 지난 회차가 남긴 교훈 그대로.
+
+같이 들어온 것 중 우리 갈라짐과 겹치는 자리: `8f4bcf2b fix(treesit): honor Emacs
+regexp syntax` (미착수 항목의 treesit), `119bde3e fix(display): honor stretch line
+prefixes`, `09a90d0d fix(frame): seed GUI scroll-bar/fringe/border frame params like
+GNU`, 그리고 `ci: test Doom installation compatibility (#165)` — upstream이 Doom
+설치를 CI에 넣기 시작했다.
+
+**다음 회차 할 일** (재검토일 2026-08-02이지만 v0.0.14가 이 정도면 앞당길 만하다.
+Emacs 31 판올림 뒤 순서):
+1. `./bin/neomacs.sh --fetch v0.0.14` + `bin/neomacs.sh:34` `NEOMACS_VERSION` 0.0.14로
+2. `./bin/neomacs.sh --probe` + `--gnu --probe` — 대조표 갱신
+3. **⚠ `--gnu` 베이스라인 라벨이 틀렸을 수 있다 (2026-07-26 확인)**. `bin/neomacs.sh:126`
+   의 `--gnu`는 **PATH의 맨몸 `emacs`** 를 부르는데, 지금 PATH는
+   `/etc/profiles/per-user/junghan/bin/emacs` = **30.2**다. flake preview는 31.0.90.
+   그런데 `neomacs/README.md:48,52` + `probe/probe-org-korean.el:135` +
+   `probe/probe-tls.el:84` + `CHANGELOG.md:51`은 전부 **"GNU Emacs 31.0.50"** 이라
+   적혀 있다 — **어느 쪽과도 안 맞는다.** 다음 회차에 베이스라인을 어느 Emacs로
+   고정할지부터 정하고(30.2 stable / 31.0.91 preview 중 택1, 아니면 둘 다 재고), 네
+   자리 표기를 실측값으로 일괄 정정한다. 베이스라인이 흔들리면 "Neomacs 탓이냐 우리
+   설정 탓이냐"를 가르는 `--gnu` 대조 자체가 무의미해진다.
+4. **GUI 기동 후 GLG가 메뉴·커서 직접 확인** — 이게 판정 기준
+5. 갈라짐 3건이 살아있는지 확인 (아래). 특히 #3 커서는 고쳐졌을 가능성이 높다
+6. `neomacs/README.md` 측정 SSOT 갱신 (0.0.13 표 → 0.0.14 표, 회차 기록 유지)
+
+**갈라짐 3건 (기록용, 제출하지 않음)**:
 
 1. **#121의 뿌리는 `:nowait`** — 핸드셰이크는 6월 rustls facade로 이미 고쳐졌다.
    `(open-network-stream ... :type 'tls :nowait t)`가 TLS를 협상하지 않아 평문으로
@@ -41,6 +121,8 @@
 3. **GUI 메뉴 흔들림** (GLG 관측, 실사용 차단 요인). 로그 쪽 관측은 wgpu
    `cursor_glyph_mismatch` 대량 발생 — 커서 Y가 셀보다 17px 아래
    (`cursor=(8.0,703.0)` vs `cell=(8.0,686.0)`). 같은 렌더러 계열인지는 미확정.
+   → **v0.0.14 수정 후보 있음** (`8390c982` / `85bc6928` / `fb946ed2`, 위 갱신 참조).
+   재측정 때 이 항목부터 본다.
 
 **하지 않기로 한 것**: upstream PR·이슈 제출. 재현 케이스는 프로브에 박혀 있으니
 필요해지면 그때 꺼낸다. 에이전트가 먼저 제안하지 않는다.

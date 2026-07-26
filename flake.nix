@@ -19,14 +19,21 @@
       # upstream master snapshot이라 이미 32.0.50일 수 있으므로, 31 pre-release를
       # 원하면 Savannah `emacs-31` release branch를 명시적으로 고정한다.
       # Output name `emacs-unstable`은 기존 launcher/alias 호환을 위해 유지.
+      #
+      # 핀은 브랜치 HEAD가 아니라 **pretest tag 커밋**에 박는다. HEAD는 태그 이후
+      # 커밋이 계속 쌓여 재현 자리가 흔들린다. 다음 pretest로 올릴 때:
+      #   git ls-remote https://git.savannah.gnu.org/git/emacs.git 'refs/tags/emacs-31.0.*'
+      # 에서 `^{}` 붙은 (peeled) 커밋을 rev 로 쓰고, hash 는 더미로 바꿔 `nix build`
+      # 실패 메시지의 `got:` 값을 옮긴다.
       emacs-31 = pkgs.emacs-git.overrideAttrs (_old: {
         pname = "emacs-31";
-        name = "emacs-31-31.0.90";
-        version = "31.0.90";
+        name = "emacs-31-31.0.91";
+        version = "31.0.91";
         src = pkgs.fetchgit {
           url = "https://git.savannah.gnu.org/git/emacs.git";
-          rev = "3801c09ae22fe5bc0bf42546b2747824cb9fe0b6"; # refs/heads/emacs-31
-          hash = "sha256-eZpiiIdex79eC6hrCFALpkTc9dyCOArHoZs6j8eUwPk=";
+          # refs/tags/emacs-31.0.91^{} — pretest 2 (2026-07-24)
+          rev = "57581b8bc2f73229d1f03dd5655aabb4a6de6183";
+          hash = "sha256-3nvCiLiEtII1C57CLfDIbVqhiwadYViF9Nv32yDtLIQ=";
         };
       });
 
