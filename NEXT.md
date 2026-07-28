@@ -308,6 +308,67 @@ git commit이 둘째. 앞으로 같은 틀로 늘어난다.
 - [ ] **옵션**: andenken 소규모 리팩터 (`--search-sessions-window`의 `cl-loop` →
       `seq-map-indexed`)는 green 하에만. 백엔드 2e(`--view session`)가 더 큰 가치.
 
+## 🟡 telega `telega-server-libs-prefix` — 버전순이 아니라 해시순으로 고르고 있다 (2026-07-28)
+
+**지금은 정상 동작한다. 급하지 않다.** 다만 다음 tdlib 범프에서 조용히 틀릴 자리라 남긴다.
+
+**배경**: telega.el master가 `0.8.660`으로 올라가며 `telega-tdlib-min-version`을
+**1.8.66**으로 올렸다. nixos-26.05는 1.8.65에서 멈춰 있어 unstable 오버레이로
+넘겼다 (nixos-config `c7cd5c8` — `nixpkgs-unstable` input + tdlib 단일 오버레이,
+x86_64/aarch64 둘 다 캐시 hit). rebuild → `telega-server` 재빌드까지 끝났고
+`ldd`가 `…-tdlib-1.8.66/lib/libtdjson.so.1.8.66`을 문다.
+
+**문제 자리** — `lisp/ai-bot-config.el:32-37`:
+
+```elisp
+(car (last (sort (seq-filter #'file-directory-p
+                             (file-expand-wildcards "/nix/store/*-tdlib-*"))
+                 #'string<)))
+```
+
+주석은 "버전순 정렬"이라고 하지만 `string<`가 비교하는 건 `/nix/store/` 바로 뒤의
+**해시**다 (`/nix/store/<hash>-tdlib-<ver>`). 버전은 뒤에 있어서 정렬에 거의 영향이 없다.
+지금 store 상태:
+
+```
+k2ghxd12…-tdlib-1.8.65
+r2i45ly1…-tdlib-1.8.63
+vqbkpqkr…-tdlib-1.8.63
+z3fjcpgm…-tdlib-1.8.66   ← 우연히 해시가 z… 라 꼴찌 = 선택됨 ✓
+```
+
+즉 **이번에 맞은 건 운이다.** 다음 tdlib 해시가 `a…`로 시작하면 옛 버전을 계속 물고,
+증상은 min-version 에러로만 나타나 원인이 안 보인다. 화석(1.8.63 둘, 1.8.65)이 계속
+후보에 끼고 GC 여부에 따라 목록이 또 달라지는 것도 같은 뿌리.
+
+**교체안** — store를 스캔하지 말고 nix가 *지금 선언한* 그 tdlib을 프로필 심볼릭으로
+역추적한다. 값 검증 완료 (`readlink -f` → `…-tdlib-1.8.66/lib/libtdjson.so.1.8.66`):
+
+```elisp
+;; NixOS: 선언된 tdlib을 프로필 심볼릭으로 역추적 (store 스캔·버전 추측 없음)
+(setq telega-server-libs-prefix
+      (let ((so "/etc/profiles/per-user/junghan/lib/libtdjson.so"))
+        (when (file-exists-p so)
+          (directory-file-name
+           (file-name-directory
+            (directory-file-name
+             (file-name-directory (file-truename so))))))))
+```
+
+GC로 화석이 사라져도 프로필이 붙잡은 경로라 안전하고, rebuild 하는 순간 새 버전을 가리킨다.
+
+- [ ] 위 교체 적용 + `M-x telega-server-build` 후 `ldd ~/.telega/telega-server | grep tdjson`으로
+      확인. 실패해도 되돌리기는 한 줄.
+
+**참고 — `LIBS_PREFIX`를 프로필 루트로 주면 안 된다.** `telega.el/server/Makefile`은
+`LIBS_PREFIX` 미설정일 때만 `pkg-config --cflags/--libs tdjson`으로 떨어지는데,
+`PKG_CONFIG_PATH`가 셸에도 Emacs 데몬 환경에도 없어서 그 분기는 `No package 'tdjson'`으로
+죽는다. 그렇다고 `LIBS_PREFIX=/etc/profiles/per-user/junghan`도 안 된다 — home-manager가
+`lib/`와 `lib/pkgconfig/`는 링크하지만 **`include/`는 비워둬서** 헤더를 못 찾는다.
+store prefix를 직접 주는 현재 방식이 맞고, 위 교체는 그 *구하는 법*만 고친다.
+
+---
+
 ## telega `messageRichMessage` 렌더러 — telega/tdlib 버전업 시 주기 점검 (2026-06-18)
 
 **상태**: ✅ 적용·live 검증 완료. **이건 깨지기 쉽다 — telega가 따라잡으면 점검·제거 대상.**
