@@ -146,20 +146,32 @@ nil이면 `my/gptel-model-fast' 사용.")
 
 (defvar +elfeed-summary-system-prompt
   "You are a reading assistant for an RSS feed reader.
-Summarize the article concisely in English:
-- 1-2 sentence TLDR
-- 3-5 bullet points for key takeaways
-- Keep it brief — this helps the reader decide whether to read the full article."
-  "영어 요약 프롬프트. 영어로 먼저 요약 → 번역 시 품질 향상.")
+Summarize the article concisely in English.
+
+Format rules (strict — output is later pasted into Org-mode):
+- First line: TLDR: <1-2 sentences>
+- Then 3-5 key takeaways as a plain list
+- List markers MUST be hyphen-minus only: `- item`
+- NEVER use `*` or `+` as list markers (Org treats `*` as a heading)
+- NEVER use Markdown headings (# ## ###)
+- NEVER use `**bold**` — plain text only
+- Keep it brief — help the reader decide whether to open the full article."
+  "영어 요약 프롬프트. 영어로 먼저 요약 → 번역 시 품질 향상.
+Org-safe: hyphen lists only, no md headings/bold.")
 
 (defvar +elfeed-translate-system-prompt
   "You are a professional translator.
 Translate the following English summary to natural Korean.
-- Maintain bullet point structure
+
+Format rules (strict — output is later pasted into Org-mode):
+- Keep structure: TLDR line, then hyphen list items (`- `)
+- NEVER use `*` or `+` as list markers (Org treats leading `*` as a heading)
+- NEVER introduce Markdown headings (# ## ###) or `**bold**`
 - Use natural Korean expressions
 - Keep technical terms in English where appropriate
 - Do NOT add any preamble or explanation"
-  "요약 결과를 한국어로 번역하는 프롬프트.")
+  "요약 결과를 한국어로 번역하는 프롬프트.
+Org-safe: preserve hyphen lists; never emit `*` bullets.")
 
 (defvar +elfeed-translate-full-system-prompt
   "You are a professional translator.
@@ -335,9 +347,45 @@ SYSTEM-MSG는 시스템 프롬프트.
 
 ;;;;; remember 연동 (annotation)
 
+;; Summary text comes from LLMs that default to Markdown.  Raw paste into
+;; remember.org turns `* item' into Org headings and `**bold**' into noise.
+;; Two defenses:
+;;   1. prompts above demand hyphen lists / no md headings
+;;   2. +elfeed--org-safe-summary rewrites residual md before insert
+;; Target shape (see notes/20231020T210500--remember.org):
+;;   * [stamp] short title          ← remember-text-format-function
+;;   ** Full title
+;;   feed | date
+;;   [[elfeed:...]]
+;;   #+begin_quote / [!note] / 요약: / body / #+end_quote
+
+(defun +elfeed--org-safe-summary (summary)
+  "Rewrite markdown-ish SUMMARY so it is safe inside an Org buffer.
+
+- `**bold**' → `*bold*'
+- Markdown AT;DR/section headings (`#', `##', …) stripped to plain text
+- Unordered list markers `* '/`+ ' at bol → `- ' (Org heading trap)
+Does not touch already-safe Org `*bold*' inline emphasis."
+  (let ((s (string-trim summary)))
+    ;; **bold** → *bold* (mid-line, then bol)
+    (setq s (replace-regexp-in-string
+             "\\([^*]\\)\\*\\*\\([^*\n]+\\)\\*\\*" "\\1*\\2*" s))
+    (setq s (replace-regexp-in-string
+             "^\\*\\*\\([^*\n]+\\)\\*\\*" "*\\1*" s))
+    ;; # ## ### headings → plain line
+    (setq s (replace-regexp-in-string "^[ \t]*#+[ \t]+" "" s))
+    ;; "* item" / "+ item" list markers → "- item"
+    ;; Require whitespace after the marker so inline *bold* at bol is kept.
+    (setq s (replace-regexp-in-string
+             "^\\([ \t]*\\)[*+]\\([ \t]+\\)" "\\1-\\2" s))
+    ;; markdown hr noise
+    (setq s (replace-regexp-in-string "^[ \t]*---+[ \t]*$" "" s))
+    (string-trim s)))
+
 (defun +elfeed-remember ()
   "현재 elfeed 엔트리에 대한 메모를 remember로 작성.
-elfeed:URL#ID 링크를 자동 삽입. ~/org/remember.org에 저장 (Syncthing 동기화)."
+elfeed:URL#ID 링크를 자동 삽입. 요약이 있으면 Org-safe quote 블록으로 감싼다.
+저장: `remember-data-file' (Syncthing 동기화)."
   (interactive)
   (unless (derived-mode-p 'elfeed-show-mode)
     (user-error "Not in elfeed-show buffer"))
@@ -346,16 +394,26 @@ elfeed:URL#ID 링크를 자동 삽입. ~/org/remember.org에 저장 (Syncthing �
          (title (elfeed-entry-title entry))
          (feed (elfeed-feed-title (elfeed-entry-feed entry)))
          (date (format-time-string "%Y-%m-%d"
-                 (seconds-to-time (elfeed-entry-date entry))))
+                                   (seconds-to-time (elfeed-entry-date entry))))
          (link (format "[[elfeed:%s#%s][%s]]"
                        (car (elfeed-entry-id entry))
                        (cdr (elfeed-entry-id entry))
                        title))
-         ;; 요약이 있으면 포함
-         (summary (elfeed-meta entry :summary-ko))
-         (initial (concat (format "** %s\n%s | %s\n%s\n" title feed date link)
-                          (when summary (format "\n요약:\n%s\n" summary))
-                          "\n")))
+         (raw-summary (elfeed-meta entry :summary-ko))
+         (summary (and raw-summary
+                       (not (string-empty-p (string-trim raw-summary)))
+                       (+elfeed--org-safe-summary raw-summary)))
+         (initial
+          (concat (format "** %s\n" title)
+                  (format "%s | %s\n" feed date)
+                  (format "%s\n" link)
+                  (when summary
+                    (concat "\n#+begin_quote\n"
+                            "[!note]\n\n"
+                            "요약:\n"
+                            summary
+                            "\n#+end_quote\n"))
+                  "\n")))
     (remember initial)))
 
 ;;;; Keybindings

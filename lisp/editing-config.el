@@ -201,13 +201,31 @@ only those in the selected frame."
 
 ;;;; remember (builtin annotation)
 
+;; Append target is an Org note (remember.org).  Default remember format is
+;; `** Mon ... (desc)' which is fine as a heading, but we prefer an Org
+;; timestamp headline so entries show up cleanly in agenda-adjacent browsing:
+;;   * [2026-08-02 Sun 08:46] short title
+;;   <body — often ** Full title + quote block from +elfeed-remember>
+(defun my/remember-org-format (text)
+  "Format remember TEXT as an Org entry with an inactive timestamp heading.
+First non-empty line (stars stripped) becomes the short title."
+  (let* ((first (car (split-string text "\n" t)))
+         (desc (replace-regexp-in-string "^\\*+\\s-*" "" (or first "note")))
+         (desc (string-trim desc))
+         (desc (if (> (length desc) 72) (substring desc 0 72) desc))
+         (stamp (format-time-string "%Y-%m-%d %a %H:%M")))
+    (concat "* [" stamp "] " desc "\n\n"
+            (string-trim-right text) "\n")))
+
 (use-package! remember
   :commands remember
   :init
   (setq
    remember-notes-initial-major-mode 'org-mode
    remember-notes-auto-save-visited-file-name t)
-  :config (setq remember-data-file (my/org-remember-file)))
+  :config
+  (setq remember-data-file (my/org-remember-file)
+        remember-text-format-function #'my/remember-org-format))
 
 ;;;; adoc-mode (AsciiDoc)
 

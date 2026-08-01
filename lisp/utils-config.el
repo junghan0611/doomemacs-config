@@ -30,15 +30,7 @@
    '(custom user pid ppid sess tree pcpu pmem rss start time state (args comm))))
 
 
-;;;; remember
-
-(use-package! remember
-  :commands remember
-  :init
-  (setq
-   remember-notes-initial-major-mode 'org-mode
-   remember-notes-auto-save-visited-file-name t)
-  :config (setq remember-data-file (my/org-remember-file)))
+;;;; remember — SSOT is lisp/editing-config.el (org format + data-file)
 
 (provide 'utils-config)
 

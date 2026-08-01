@@ -18,6 +18,13 @@ All notable changes to this project will be documented here. Format follows
   마크다운 `**bold**` → org `*bold*`. journal 제외. org-element로 src/drawer/code
   보호. dry-run → y/N → apply. 구현: `bin/fix-org-mdbold.el`.
 
+### Fixed
+
+- **elfeed → remember Org 안전.** 요약의 `* item` / `**bold**` / `# heading`이
+  remember.org 헤딩을 박살 내던 문제. (1) 요약·번역 프롬프트를 hyphen-list only로
+  고정 (2) 삽입 전 `+elfeed--org-safe-summary` sanitize (3) 요약을 `#+begin_quote`
+  `[!note]`로 감쌈 (4) `remember-text-format-function`으로 `* [stamp] title` 헤딩.
+
 ## v2026.8.2 — 인간 검색면만 얇게, 작업면은 나눈다
 
 ### Added
