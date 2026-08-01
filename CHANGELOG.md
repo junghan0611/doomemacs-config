@@ -12,6 +12,12 @@ All notable changes to this project will be documented here. Format follows
   내보내는 `~/sync/...`, `~/claude-memory/...` dead md 링크를 놓쳤다. SSOT
   `site-policy.el` 패턴을 `^~/`로 넓혀 F(content fix)가 plain text로 접게 한다.
 
+### Added
+
+- **`./run.sh fix-bold` (B)** — 가든 퍼블리시 면(`notes/bib/meta/botlog`)에서
+  마크다운 `**bold**` → org `*bold*`. journal 제외. org-element로 src/drawer/code
+  보호. dry-run → y/N → apply. 구현: `bin/fix-org-mdbold.el`.
+
 ## v2026.8.2 — 인간 검색면만 얇게, 작업면은 나눈다
 
 ### Added

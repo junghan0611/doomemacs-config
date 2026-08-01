@@ -329,9 +329,12 @@ GUI 에서만 자동으로 잡히는 설정은 여기에 SSOT로 두고 명시 �
 - `.lycheecache` (.gitignored) 1d 캐시. `cache-exclude-status: "404"` 안전망 — agenda-stamp가 박는 SHA URL은 push 사이클로 404→200 변하므로 캐시 시 false positive 지속.
 - `max-concurrency: 16` (기본 128은 abuse detection 걸림).
 
-### Org Hygiene — `./run.sh fix-org`
+### Org Hygiene — `./run.sh fix-org` / `./run.sh fix-bold`
 
-~/org 원본 link 정정 (Stage 1). 가든 export hook 옆에 두는 SSOT 변환:
+~/org 원본 정정. 가든 export hook 옆에 두는 위생 축.
+
+#### fix-org — link 정정 (Stage 1)
+
 
 | 케이스 | 변환 |
 |--------|------|
@@ -353,6 +356,20 @@ GUI 에서만 자동으로 잡히는 설정은 여기에 SSOT로 두고 명시 �
 
 **SSOT**: `bin/site-policy.el`. `host-aliases` 한 줄 추가하면 `fix-org` / `verify-content` / `verify-org-links` 세 도구가 동시에 인지.
 
+#### fix-bold — markdown `**bold**` → org `*bold*`
+
+에이전트가 org에 마크다운 bold를 심는 습관 교정. **가든 퍼블리시 면만.**
+
+| | |
+|---|---|
+| 스코프 | `notes/` `bib/` `meta/` `botlog/` 만 |
+| **제외** | `journal/` — GLG 수동 export, 절대 스캔 안 함 |
+| 보호 | src/example/export/verse/comment, drawer, code/verbatim/fixed-width (org-element) |
+| 흐름 | `B` / `./run.sh fix-bold` — dry-run → `y/N` → apply. `--apply`는 prompt 생략 |
+| 구현 | `bin/fix-org-mdbold.el` |
+
+export hook(`denote-export-config.el`)도 temp 버퍼에서 mid-line `**`를 고치지만 **원본은 안 건드린다.** 원본 위생은 이 명령.
+
 ### Garden Deploy Workflow
 
 전체 export 후 표준 운영 흐름. ~/org 변경부터 가든 publish까지:
@@ -362,6 +379,7 @@ Phase           Command                                  Purpose
 ─────           ───────                                  ───────
 1. Org 위생     O ) ./run.sh fix-org                     ~/repos/gh/ file: → GitHub URL
    (선택)         CLI: ./run.sh fix-org --check          broken GitHub URL 검출 (token 필요)
+                  B ) ./run.sh fix-bold                  **bold** → *bold* (notes/bib/meta/botlog)
 
 2. Export       7 ) ./run.sh export <dir>                증분
                 8 ) ./run.sh export <dir> --force        전체 재구축

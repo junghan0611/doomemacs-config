@@ -117,6 +117,8 @@ show_menu() {
   echo "  ${YELLOW}Org Hygiene${NC} (~/org 원본 — site-policy.el SSOT 기반)"
   echo "    O) fix-org    (link 정정, dry-run + --apply)"
   echo "       CLI: ./run.sh fix-org --check  (~/org GitHub URL lychee 검증, read-only)"
+  echo "    B) fix-bold   (**bold** → *bold*, notes/bib/meta/botlog only — journal 제외)"
+  echo "       CLI: ./run.sh fix-bold [--apply]"
   echo ""
   echo "  ${YELLOW}Emacs unstable${NC} (preview channel: emacs-31)"
   echo "    i) unstable run      (doom run, GUI)"
@@ -461,6 +463,35 @@ cmd_fix_org() {
   fi
 }
 
+# Garden-only markdown **bold** → org *bold* (notes/bib/meta/botlog).
+# journal/ is out of scope. dry-run default; y/N or --apply.
+cmd_fix_bold() {
+  local target="$HOME/org"
+  if [[ -n "${1:-}" && "$1" != --* ]]; then
+    target="$1"
+    shift
+  fi
+
+  for arg in "$@"; do
+    if [[ "$arg" == "--apply" ]]; then
+      info "fix-bold --apply: ${target} (notes/bib/meta/botlog, journal 제외)"
+      emacs --batch -Q --load "$BIN_DIR/fix-org-mdbold.el" -- "$target" --apply
+      return
+    fi
+  done
+
+  info "fix-bold dry-run: ${target} (notes/bib/meta/botlog, journal 제외)"
+  emacs --batch -Q --load "$BIN_DIR/fix-org-mdbold.el" -- "$target"
+  echo ""
+  read -p "위 변경 적용? (y/N): " c
+  if [[ "$c" =~ ^[Yy]$ ]]; then
+    info "fix-bold --apply: ${target}"
+    emacs --batch -Q --load "$BIN_DIR/fix-org-mdbold.el" -- "$target" --apply
+  else
+    info "취소"
+  fi
+}
+
 cmd_verify() {
   [[ -d "$HUGO_CONTENT_DIR" ]] || { err "content 디렉토리 없음: $HUGO_CONTENT_DIR"; return 1; }
   _verify_step_relref_summary
@@ -730,8 +761,9 @@ cli_mode() {
     verify)  cmd_verify ;;
     fix)     cmd_fix ;;
     fix-org) cmd_fix_org "$@" ;;
+    fix-bold|fix-mdbold) cmd_fix_bold "$@" ;;
     help|--help|-h)
-      echo "CLI: ./run.sh <sync|sync-update|doctor|doom-pull|dblock|export|agent|pi|unstable|verify|fix|fix-org> [args]"
+      echo "CLI: ./run.sh <sync|sync-update|doctor|doom-pull|dblock|export|agent|pi|unstable|verify|fix|fix-org|fix-bold> [args]"
       echo "     doom-pull [stable|unstable|all]   # default: all"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
@@ -805,6 +837,7 @@ main() {
       V) cmd_verify ;;
       F) cmd_fix ;;
       O) cmd_fix_org ;;
+      B) cmd_fix_bold ;;
       0|q) echo ""; success "종료"; exit 0 ;;
       *) warn "잘못된 선택: $choice" ;;
     esac

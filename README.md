@@ -62,6 +62,7 @@ doomemacs-config/
 │   ├── emacs-unstable.sh        # Emacs 31 preview channel launcher
 │   ├── neomacs.sh               # Neomacs vanilla profile launcher + probe runner
 │   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
+│   ├── fix-org-mdbold.el        # **bold** → *bold* on garden dirs only (not journal)
 │   ├── site-policy.el           # SSOT for host aliases, internal-path patterns, lychee opts
 │   ├── verify-relref.py         # Hugo relref link validator + fixer
 │   ├── verify-figures.py        # Figure src validator + fixer (Hugo + markdown)
@@ -337,6 +338,7 @@ measurement table, known divergences, and the standing verdict.
 ./run.sh fix                   # Fix garden md ([1/4]~[4/4], step-by-step y/N)
 ./run.sh fix-org               # Rewrite ~/org link patterns (dry-run + y/N + --apply)
 ./run.sh fix-org --check       # Verify ~/org GitHub URLs with lychee (read-only)
+./run.sh fix-bold              # **bold** → *bold* on notes/bib/meta/botlog (dry-run + y/N)
 ```
 
 ### Garden Verify / Fix
@@ -392,6 +394,17 @@ Rewrites links in source `~/org` files (Stage 1). The SSOT transformation that l
 
 **SSOT**: a single line added to `bin/site-policy.el` is simultaneously visible to fix-org, verify-content, and verify-org-links.
 
+#### fix-bold — markdown `**bold**` → org `*bold*`
+
+Agents often paste markdown bold into org sources. This rewrites the **garden publish surface only**:
+
+| | |
+|---|---|
+| Scope | `notes/` `bib/` `meta/` `botlog/` |
+| Excluded | `journal/` (never scanned) |
+| Guard | org-element skips src/example/export/verse/comment, drawers, code/verbatim |
+| Flow | `B` / `./run.sh fix-bold` — dry-run → y/N → apply |
+
 ### Garden Deploy Workflow
 
 Standard operational flow after a full export:
@@ -401,6 +414,7 @@ Phase             Command                                  Purpose
 ─────             ───────                                  ───────
 1. Org hygiene    O ) ./run.sh fix-org                     ~/repos/gh/ file: → GitHub URL
    (optional)       CLI: ./run.sh fix-org --check          Detect broken GitHub URLs (token required)
+                  B ) ./run.sh fix-bold                  **bold** → *bold* (notes/bib/meta/botlog)
 
 2. Export         7 ) ./run.sh export <dir>                Incremental
                   8 ) ./run.sh export <dir> --force        Force rebuild
