@@ -36,9 +36,15 @@
     (github-branch . "main")
 
     ;; Internal path patterns — leak categories for Stage 3 verifier.
-    ;; Stage 1 rewrites ~/repos/gh/REPO via dedicated logic, not this list.
+    ;; Stage 1 rewrites ~/repos/gh/REPO → GitHub via dedicated logic, not this list.
+    ;; Stage 3 turns matching md link targets into plain text (desc only).
+    ;;
+    ;; `^~/` covers every tilde-home target ox-hugo emits from file: links
+    ;; (e.g. ~/sync/man/..., ~/claude-memory/..., ~/repos/...).  The old
+    ;; `^~/repos/` alone missed those and left dead garden links for crawlers.
+    ;; Absolute /home/... and file:// stay as separate arms for non-tilde forms.
     (internal-paths
-     . ("^~/repos/"
+     . ("^~/"
         "^/home/junghan/"
         "^file://"))
 

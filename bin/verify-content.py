@@ -6,7 +6,7 @@ verify-relref.py / verify-figures.py 옆에 같은 패턴.
 
 카테고리:
     HOST_ALIAS       site-policy host-aliases. 자동 정정 (host 부분만 치환).
-    INTERNAL_PATH    ~/repos/, /home/junghan/, file:// URL/링크. plain text.
+    INTERNAL_PATH    ~/, /home/junghan/, file:// URL/링크. plain text.
     PRIVATE_ENDPOINT localhost, 127.0.0.1, 사설망. 보고만.
     URL_CRED         basic auth URL. 보안 alert (보고만).
     ORPHAN           [desc] 끝에 target 없음. plain text 치환.
