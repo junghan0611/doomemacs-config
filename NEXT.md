@@ -4,50 +4,21 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.2`.
 
 ---
 
-## 🟢 Emacs 31.0.91 (pretest 2) 판올림 — 빌드까지 완료, 첫 기동만 남음 (2026-07-26)
+## NOW — 바로 손대는 자리 (2026-08-02)
 
-unstable 채널이 **31.0.90 = pretest 1**(2026-06-06 핀)에 서 있었다. upstream이 7월 24일
-**31.0.91 = pretest 2**를 내서 한 칸 올렸다.
-
-**핀 자리를 브랜치 → 태그로 바꿨다.** 이전 핀 `3801c09a`는 `emacs-31` **브랜치 중간
-커밋**이라 재현 자리가 계속 흔들렸다. 이제 `refs/tags/emacs-31.0.91^{}` = `57581b8b`.
-다음 pretest 때도 같은 자리에서 태그로만 올린다 (`flake.nix` 주석에 절차 박아둠).
-
-| ref | commit |
-|---|---|
-| `refs/tags/emacs-31.0.90` (pretest 1) | `0ee48ac4` |
-| **`refs/tags/emacs-31.0.91`** (pretest 2 — 현재 핀) | **`57581b8b`** |
-| `refs/heads/emacs-31` (브랜치 HEAD, 안 씀) | `39cb1e48` |
-
-**완료**:
-- [x] hash 재계산 — `sha256-3nvCiLiEtII1C57CLfDIbVqhiwadYViF9Nv32yDtLIQ=`
-      (fake-hash 트릭. `nix-prefetch-git`은 시스템에 없고, 같은 fetcher를 쓰는
-      fake-hash 쪽이 파라미터 드리프트가 없다 — 절차는 `flake.nix` 주석이 SSOT)
-- [x] `flake.nix` `name`/`version`/`rev`/`hash` 교체
-- [x] `nix build .#emacs-unstable` 성공 → `/nix/store/14c0qzr…-emacs-with-packages-31-31.0.91`
-- [x] `emacs --version` = **GNU Emacs 31.0.91**, `(require 'vterm)` OK (native-comp된
-      `.eln`이 `31.0.91-ef5c49a5`로 새로 붙음)
-- [x] GC root(`~/.local/state/nix/gcroots/emacs-unstable`) 갱신 — nix-gc 보호 유지
-- [x] 기능 플래그 이전과 동일: `NATIVE_COMP TREE_SITTER SQLITE3 HARFBUZZ X11 LUCID …`
-- [x] 바꿀 자리 전수 확인 — 버전 하드코딩은 `flake.nix` **하나뿐**.
-      `bin/emacs-unstable.sh`는 `nix build … --print-out-paths`로 경로를 받아오고
-      README/AGENTS는 "Emacs 31 pre-release"라고만 써서 손댈 것 없음
-
-**남은 한 걸음 — 첫 기동은 느리다 (GLG 자리)**:
-- [ ] `./run.sh unstable` 최초 실행. **straight/eln 캐시가 Emacs 버전 단위**라
-      `build-31.0.90` → `build-31.0.91`, eln `31.0.90-7d500e8c` → 새 해시로 **전 패키지
-      재빌드**가 한 번 일어난다 (현 straight 839M). 첫 기동만 오래 걸리고 이후 정상.
-      깨지면 `doom sync` 한 번.
-- [ ] 안정화 확인 뒤 낡은 `~/doomemacs-unstable/.local/straight/build-31.0.90`(839M)과
-      `cache/eln/31.0.90-*` 정리 — **롤백 여지를 남기려면 당분간 둔다.** GLG 판단.
-
-**격리 확인**: daily driver인 안정 Emacs 30.2(`/etc/profiles/per-user/junghan/bin/emacs`)는
-안 건드린다. `EMACSDIR=~/doomemacs-unstable` + `server-name=doom-unstable`로 분리돼 있고,
-판올림 시점에 doom-unstable 데몬은 떠 있지 않았다(소켓 `pi`/`server`/`user`만). 깨지면
-`flake.nix` 한 커밋 되돌리고 재빌드하면 끝 — 소스는 이미 store에 있어 재클론 없음.
+- [ ] **consult-gh 첫 사용**: `doom sync` 후 `SPC g h s`로 repo 검색 한 번.
+      프리뷰 `C-o`, 계정 전환 `SPC g h a`. 손에 안 맞으면 키/favorite만 손보고
+      embark·forge·omni는 여전히 넣지 않는다 (README § GitHub work surfaces).
+- [ ] **Emacs 31.0.91 첫 기동 (GLG)**: `./run.sh unstable`.
+      straight/eln이 버전 단위라 첫 기동만 전 패키지 재빌드(옛 `build-31.0.90`
+      ~839M). 안정화 뒤 낡은 build/eln 정리는 롤백 여지 보고 판단.
+      핀 SSOT: `flake.nix` 태그 `emacs-31.0.91` = `57581b8b`.
+- [ ] **Neomacs 재검토일 도래 (2026-08-02)**: 아래 관찰 레인. GUI 두드리기
+      한 번 — 배치 통과 ≠ 실사용. 실사용 아니면 날짜만 미루고 PR 안 냄.
 
 ---
 

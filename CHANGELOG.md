@@ -6,6 +6,40 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.8.2 — 인간 검색면만 얇게, 작업면은 나눈다
+
+### Added
+
+- **consult-gh — human GitHub search surface.** 예전 omni/forge 묶음으로 지저분해져
+  걷어냈던 패키지를 **MELPA core만** 다시 들인다. 역할은 하나: 브라우저 대신
+  Emacs 안에서 repo/code/issue를 찾고, 타깃을 에이전트에 넘긴다. 이슈·PR 본작업은
+  에이전트 `ghcli` / Magit 쪽 자리로 둔다.
+
+  | 키 | 명령 |
+  |---|---|
+  | `SPC g h s` | `consult-gh-search-repos` |
+  | `SPC g h c` | `consult-gh-search-code` |
+  | `SPC g h i` | `consult-gh-search-issues` |
+  | `SPC g h a` | `consult-gh-auth-switch` (멀티 계정) |
+  | `SPC g h h` | `consult-gh-transient` (필요할 때만) |
+
+  clone 기본 경로 `~/repos/3rd/`, 선택 액션은 브라우저가 아니라 파일 브라우즈.
+  embark / forge / pr-review / consult-omni / default view-mode 키는 **안 켬**.
+  `ox-gfm`은 hard dep이라 같이 선언. 문서: README § GitHub work surfaces,
+  설정: `lisp/project-config.el`.
+
+### Changed
+
+- **Emacs preview channel → 31.0.91 (pretest 2).** 핀을 브랜치 중간 커밋에서
+  태그 `emacs-31.0.91`(`57581b8b`)로 옮겼다. 다음 pretest도 태그 자리에서만 올린다.
+  빌드·GC root까지 완료. 첫 `./run.sh unstable` 기동(straight/eln 재빌드)만 GLG 자리.
+
+### Docs
+
+- NEXT 상단을 **NOW** 한 블록으로 압축. 완료된 31.0.91 빌드 체크리스트는 여기로 이전.
+- README에 GitHub 작업면 분담 표 (consult-gh / magit-gh / git-link / ghcli).
+- telega `telega-server-libs-prefix` 해시순 정렬 취약점 관찰 기록 (NEXT, 미해결).
+
 ## v2026.7.22 — 표면을 줄이고, 상류를 따라간다
 
 ### Changed
