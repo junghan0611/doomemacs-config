@@ -1,4 +1,4 @@
-;;; $DOOMDIR/lisp/project-config.el --- UI Configuration -*- lexical-binding: t; -*-
+;;; $DOOMDIR/lisp/project-config.el --- Project / VCS / GitHub surfaces -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Junghan Kim
 
@@ -8,14 +8,12 @@
 
 ;;; Commentary:
 
-;; tramp-rpc: 고성능 TRAMP 백엔드 (JSON-RPC → MessagePack-RPC)
+;; Projectile, Magit companions, TRAMP, and the thin human GitHub search
+;; surface (consult-gh). Agent-side GitHub work stays on ghcli.
+;;
+;; tramp-rpc: high-perf TRAMP backend (JSON-RPC → MessagePack-RPC)
 ;; https://github.com/ArthurHeymans/emacs-tramp-rpc
-;;
-;; 사용법: /rpc:user@host:/path/to/file
-;; 첫 연결 시 Rust 서버 바이너리 자동 배포 (~850KB)
-;;
-;; 성능: 기존 TRAMP 대비 2-38x 빠름
-;; - 연결 설정: 38x, file-exists: 12x, 디렉토리 목록: 27x
+;;   /rpc:user@host:/path/to/file
 
 ;;;; Projectile
 
@@ -123,6 +121,48 @@
   :after magit
   :init
   (setq magit-gh-key ";")) ; Example setting key to ";" instead of the default ","
+
+;;;; consult-gh — global GitHub search (human surface)
+
+;; Work-surface split:
+;;   magit-gh   — PRs inside the current Magit repo
+;;   git-link   — URL for the file/commit under point
+;;   ghcli      — agent issue/PR/CLI work
+;;   consult-gh — human global search (repo/code/issue), hand off to agents
+;;
+;; Keep it thin. No embark/forge/pr-review/omni, no default view-mode
+;; keybindings, no dashboard/workflow keys. Search + account switch only.
+(use-package! consult-gh
+  :after consult
+  :commands (consult-gh-search-repos
+             consult-gh-search-code
+             consult-gh-search-issues
+             consult-gh-repo-list
+             consult-gh-auth-switch
+             consult-gh-favorite-repos
+             consult-gh-transient)
+  :custom
+  (consult-gh-default-clone-directory "~/repos/3rd/")
+  (consult-gh-favorite-orgs-list
+   '("junghan0611" "minad" "protesilaos" "doomemacs" "earendil-works"))
+  (consult-gh-show-preview t)
+  (consult-gh-preview-key "C-o")
+  ;; Stay inside Emacs — browser is the thing we are avoiding.
+  (consult-gh-repo-action #'consult-gh--repo-browse-files-action)
+  (consult-gh-confirm-before-clone t)
+  :init
+  ;; Keys under Doom's magit prefix. Unnamed :prefix only (AGENTS.md).
+  (map! :leader
+        (:prefix "g"
+         (:prefix "h"
+          :desc "Search repos" "s" #'consult-gh-search-repos
+          :desc "Search code" "c" #'consult-gh-search-code
+          :desc "Search issues" "i" #'consult-gh-search-issues
+          :desc "Switch account" "a" #'consult-gh-auth-switch
+          :desc "consult-gh menu" "h" #'consult-gh-transient)))
+  :config
+  (add-to-list 'savehist-additional-variables 'consult-gh--known-orgs-list)
+  (add-to-list 'savehist-additional-variables 'consult-gh--known-repos-list))
 
 ;;;; majutsu jj-mode
 

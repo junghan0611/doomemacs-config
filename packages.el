@@ -197,6 +197,12 @@
 (package! magit-todos)
 (package! magit-gh)
 
+;; Global GitHub search for the human surface (agents use ghcli).
+;; MELPA core only — consult-gh.el + consult-gh-transient.el.
+;; No embark/forge/pr-review companions. ox-gfm is a hard dep.
+(package! consult-gh)
+(package! ox-gfm)
+
 (package! majutsu :recipe (:host github :repo "0WD0/majutsu"))
 (package! tmr) ;; TODO Time Management
 (package! msgpack)

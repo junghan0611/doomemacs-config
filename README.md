@@ -92,6 +92,19 @@ The living convention document is published in the garden and kept at a stable U
 
 - [Doom Emacs dotfile Elisp coding conventions](https://notes.junghanacs.com/notes/20240404T101052)
 
+## GitHub work surfaces — human search vs agent work
+
+GitHub is split on purpose. The human surface stays thin; agents already own the heavy issue/PR lane.
+
+| Surface | Where | Role |
+|---|---|---|
+| **consult-gh** | `SPC g h` (`project-config.el`) | Human global search — repos / code / issues. Preview in Emacs, hand the target to an agent. |
+| **magit-gh** | Magit `;` | PRs inside the **current** Magit repo. |
+| **git-link** | commands | URL for the file/commit under point. |
+| **ghcli** (agent skill) | outside Emacs | Issue/PR/notification work for agents. |
+
+`consult-gh` is MELPA **core only** (no embark/forge/pr-review companions, no omni-search stack). Clone default is `~/repos/3rd/`. Multi-account switch is `SPC g h a` (`gh auth` already holds the logins).
+
 ## Keybindings — layer, never replace
 
 The stance here is to keep what Doom binds and only override the keys that actually need to change. So bindings are pushed in **non-destructively**: a `map!` in this config walks into the keymap Doom already put at a prefix and overwrites one key, leaving the rest of the group intact. `config.el` loads after Doom's modules, so on a genuine collision ours wins — without taking the group down with it.

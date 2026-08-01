@@ -251,6 +251,7 @@
     "j"     "pi-agent"
     "j p"   "present"
     "h t"   "themes"
+    "g h"   "consult-gh"
     "-"     "voice"
     "="     "AI"
     "= g"   "gptel-buffer"
