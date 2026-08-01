@@ -132,6 +132,18 @@
 ;;
 ;; Keep it thin. No embark/forge/pr-review/omni, no default view-mode
 ;; keybindings, no dashboard/workflow keys. Search + account switch only.
+;;
+;; Transient lives in a sibling file (`consult-gh-transient.el`) with no
+;; ;;;###autoload cookie.  Binding `consult-gh-transient' via :commands makes
+;; Doom autoload it from feature `consult-gh', which loads consult-gh.elc and
+;; then fails — the symbol is never defined there.  Route the menu key through
+;; a wrapper that requires the right feature.
+(defun my/consult-gh-menu ()
+  "Open the consult-gh transient menu."
+  (interactive)
+  (require 'consult-gh-transient)
+  (call-interactively #'consult-gh-transient))
+
 (use-package! consult-gh
   :after consult
   :commands (consult-gh-search-repos
@@ -139,8 +151,7 @@
              consult-gh-search-issues
              consult-gh-repo-list
              consult-gh-auth-switch
-             consult-gh-favorite-repos
-             consult-gh-transient)
+             consult-gh-favorite-repos)
   :custom
   (consult-gh-default-clone-directory "~/repos/3rd/")
   (consult-gh-favorite-orgs-list
@@ -159,7 +170,7 @@
           :desc "Search code" "c" #'consult-gh-search-code
           :desc "Search issues" "i" #'consult-gh-search-issues
           :desc "Switch account" "a" #'consult-gh-auth-switch
-          :desc "consult-gh menu" "h" #'consult-gh-transient)))
+          :desc "consult-gh menu" "h" #'my/consult-gh-menu)))
   :config
   (add-to-list 'savehist-additional-variables 'consult-gh--known-orgs-list)
   (add-to-list 'savehist-additional-variables 'consult-gh--known-repos-list))
