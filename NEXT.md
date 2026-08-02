@@ -4,21 +4,21 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.2`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.2-hygiene.1`.
 
 ---
 
 ## NOW — 바로 손대는 자리 (2026-08-02)
 
-- [ ] **consult-gh 첫 사용**: `doom sync` 후 `SPC g h s`로 repo 검색 한 번.
-      프리뷰 `C-o`, 계정 전환 `SPC g h a`. 손에 안 맞으면 키/favorite만 손보고
-      embark·forge·omni는 여전히 넣지 않는다 (README § GitHub work surfaces).
+- [ ] **consult-gh 첫 사용**: `doom sync` 후 `SPC g h s` / `SPC g h h`(메뉴).
+      프리뷰 `C-o`, 계정 전환 `SPC g h a`. embark·forge·omni는 여전히 안 넣음.
+- [ ] **fix-bold 첫 dry-run**: `./run.sh fix-bold` → diff 검수 → y 시에만 apply.
+      스코프 notes/bib/meta/botlog. journal 손대지 않음. org는 이미 커밋 베이스라인.
+- [ ] **elfeed remember 한 번**: 요약 `z` (옛 캐시면 `x` 후 재생성) → `a` →
+      remember.org에 quote/note + `-` 리스트인지 확인.
 - [ ] **Emacs 31.0.91 첫 기동 (GLG)**: `./run.sh unstable`.
-      straight/eln이 버전 단위라 첫 기동만 전 패키지 재빌드(옛 `build-31.0.90`
-      ~839M). 안정화 뒤 낡은 build/eln 정리는 롤백 여지 보고 판단.
-      핀 SSOT: `flake.nix` 태그 `emacs-31.0.91` = `57581b8b`.
-- [ ] **Neomacs 재검토일 도래 (2026-08-02)**: 아래 관찰 레인. GUI 두드리기
-      한 번 — 배치 통과 ≠ 실사용. 실사용 아니면 날짜만 미루고 PR 안 냄.
+      첫 기동만 straight/eln 전 패키지 재빌드. 핀: `emacs-31.0.91` = `57581b8b`.
+- [ ] **Neomacs 재검토일 도래**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
 
 ---
 

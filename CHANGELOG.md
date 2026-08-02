@@ -6,24 +6,25 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.8.2-hygiene.1 — 가든·org 위생, remember 안전
+
+### Added
+
+- **`./run.sh fix-bold` (B)** — 가든 퍼블리시 면(`notes/bib/meta/botlog`)에서
+  마크다운 `**bold**` → org `*bold*`. **journal 제외.** org-element로
+  src/drawer/code 보호. dry-run → y/N → apply. 구현: `bin/fix-org-mdbold.el`.
+
 ### Fixed
 
 - **INTERNAL_PATH: `~/` 틸드 홈 전체.** Stage 3가 `~/repos/`만 봐서 ox-hugo가
   내보내는 `~/sync/...`, `~/claude-memory/...` dead md 링크를 놓쳤다. SSOT
   `site-policy.el` 패턴을 `^~/`로 넓혀 F(content fix)가 plain text로 접게 한다.
-
-### Added
-
-- **`./run.sh fix-bold` (B)** — 가든 퍼블리시 면(`notes/bib/meta/botlog`)에서
-  마크다운 `**bold**` → org `*bold*`. journal 제외. org-element로 src/drawer/code
-  보호. dry-run → y/N → apply. 구현: `bin/fix-org-mdbold.el`.
-
-### Fixed
-
 - **elfeed → remember Org 안전.** 요약의 `* item` / `**bold**` / `# heading`이
   remember.org 헤딩을 박살 내던 문제. (1) 요약·번역 프롬프트를 hyphen-list only로
   고정 (2) 삽입 전 `+elfeed--org-safe-summary` sanitize (3) 요약을 `#+begin_quote`
   `[!note]`로 감쌈 (4) `remember-text-format-function`으로 `* [stamp] title` 헤딩.
+- **consult-gh transient 메뉴.** `consult-gh-transient`는 sibling 파일이라
+  `:commands` autoload가 깨졌다. `my/consult-gh-menu` 래퍼로 `SPC g h h` 복구.
 
 ## v2026.8.2 — 인간 검색면만 얇게, 작업면은 나눈다
 
