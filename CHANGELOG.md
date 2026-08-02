@@ -6,6 +6,12 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+### Fixed
+
+- **ELFEED_LINK (Stage 3 F).** ox-hugo가 org `elfeed:` 링크를
+  `[desc](host#https://article…)` dead target으로 흘린다. export는 안 건드리고
+  verify-content가 임베디드 https URL로 치환. F 한 번에 처리.
+
 ## v2026.8.2-hygiene.1 — 가든·org 위생, remember 안전
 
 ### Added

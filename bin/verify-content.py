@@ -7,6 +7,8 @@ verify-relref.py / verify-figures.py 옆에 같은 패턴.
 카테고리:
     HOST_ALIAS       site-policy host-aliases. 자동 정정 (host 부분만 치환).
     INTERNAL_PATH    ~/, /home/junghan/, file:// URL/링크. plain text.
+    ELFEED_LINK      host#https://... (ox-hugo dump of org elfeed: links).
+                     자동 정정 → 임베디드 http(s) URL로 target 치환.
     PRIVATE_ENDPOINT localhost, 127.0.0.1, 사설망. 보고만.
     URL_CRED         basic auth URL. 보안 alert (보고만).
     ORPHAN           [desc] 끝에 target 없음. plain text 치환.
@@ -72,6 +74,27 @@ def is_relref_target(target: str) -> bool:
     return "{{< relref " in target
 
 
+# ox-hugo dumps org [[elfeed:feed#https://article-url#frag][desc]] as
+# [desc](feed#https://article-url#frag) — dead for crawlers/garden.
+# Capture the embedded public URL. Trailing #atom-everything is an elfeed
+# entry-id marker, not a real page fragment.
+RE_ELFEED_EMBEDDED = re.compile(r"#(https?://\S+)\s*$")
+RE_ELFEED_FEED_FRAG = re.compile(r"#(atom-everything|entry|feed)$")
+
+
+def extract_elfeed_embedded_url(target: str) -> str | None:
+    """If TARGET is feed#https://..., return the cleaned public URL."""
+    m = RE_ELFEED_EMBEDDED.search(target)
+    if not m:
+        return None
+    # Must look like host#https — not a normal https URL with one fragment
+    if target.startswith("http://") or target.startswith("https://"):
+        return None
+    url = m.group(1)
+    url = RE_ELFEED_FEED_FRAG.sub("", url)
+    return url
+
+
 def categorize(target: str, policy: dict) -> tuple[str, str] | tuple[None, str]:
     """Classify a URL/target. Returns (category, detail) or (None, '')."""
     # URL_CRED first — security wins
@@ -83,6 +106,11 @@ def categorize(target: str, policy: dict) -> tuple[str, str] | tuple[None, str]:
     for old_host, new_host in (policy.get("host-aliases") or {}).items():
         if old_host in target:
             return "HOST_ALIAS", new_host
+
+    # ELFEED_LINK — fixable (rewrite target to embedded https URL)
+    elfeed_url = extract_elfeed_embedded_url(target)
+    if elfeed_url:
+        return "ELFEED_LINK", elfeed_url
 
     # INTERNAL_PATH — fixable (plain text)
     for pat in policy.get("internal-paths") or []:
@@ -195,7 +223,7 @@ def scan_file(filepath: Path, content_dir: Path, policy: dict) -> list[dict]:
 # ━━━ Fixer ━━━
 
 # Categories that can be auto-fixed
-FIXABLE = {"HOST_ALIAS", "INTERNAL_PATH", "ORPHAN", "GITHUB_404"}
+FIXABLE = {"HOST_ALIAS", "INTERNAL_PATH", "ELFEED_LINK", "ORPHAN", "GITHUB_404"}
 
 
 # ━━━ lychee integration ━━━
@@ -347,6 +375,9 @@ def fix_file(filepath: Path, items: list[dict], policy: dict, apply: bool) -> di
                     new_target = new_target.replace(old_host, new_host)
                     break
             new_chunk = f"[{item['desc']}]({new_target})"
+        elif cat == "ELFEED_LINK":
+            # detail holds the extracted public https URL
+            new_chunk = f"[{item['desc']}]({item['detail']})"
         elif cat == "INTERNAL_PATH":
             # Drop the link, keep the description as plain text
             new_chunk = item["desc"]
@@ -414,6 +445,7 @@ def find_org_source(garden_relpath: str) -> str | None:
 ICONS = {
     "HOST_ALIAS": "🔵",
     "INTERNAL_PATH": "🟡",
+    "ELFEED_LINK": "📰",
     "PRIVATE_ENDPOINT": "🟠",
     "URL_CRED": "🔐",
     "ORPHAN": "🔴",
@@ -544,7 +576,7 @@ def main():
     print("═══ Content 검증 리포트 (Stage 3) ═══")
     print()
     print(f"총 검출: {len(all_results)}")
-    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "GITHUB_404", "ERROR"]:
+    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "ELFEED_LINK", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "GITHUB_404", "ERROR"]:
         n = stats.get(cat, 0)
         if n:
             icon = ICONS.get(cat, "?")
@@ -560,7 +592,7 @@ def main():
 
     # Detail per category
     print()
-    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "GITHUB_404"]:
+    for cat in ["HOST_ALIAS", "INTERNAL_PATH", "ELFEED_LINK", "PRIVATE_ENDPOINT", "URL_CRED", "ORPHAN", "GITHUB_404"]:
         items = [r for r in all_results if r["category"] == cat]
         if not items:
             continue

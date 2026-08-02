@@ -318,6 +318,7 @@ GUI 에서만 자동으로 잡히는 설정은 여기에 SSOT로 두고 명시 �
 **content 검증 카테고리** (verify-content.py, `site-policy.el` SSOT):
 - `HOST_ALIAS` — 사라진 자기 서브도메인 (예: geworfen.junghanacs.com → agent.junghanacs.com) → 자동 alias 치환
 - `INTERNAL_PATH` — `~/` (틸드 홈 전체: sync/claude-memory/repos 등), `/home/junghan/`, `file://` 누출 → plain text
+- `ELFEED_LINK` — ox-hugo가 `[[elfeed:host#https://...]]`를 `[desc](host#https://...)`로 흘린 dead link → 임베디드 `https://` URL로 target 치환 (export 미개입, F 후처리)
 - `PRIVATE_ENDPOINT` — `localhost`, `127.0.0.1`, 사설 IPv4 (보고만)
 - `URL_CRED` — `https://user:pass@host` basic auth 누출 (보고/보안 alert)
 - `GITHUB_404` — lychee가 잡은 `github.com/USER/*` 404/410 → plain text
