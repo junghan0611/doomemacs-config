@@ -88,7 +88,7 @@ nil if file missing.")
        ;;layout            ; auie,ctsrnm is the superior home row
        :completion
        (corfu +orderless)  ; complete with cap(f), cape and a flying feather!
-       vertico           ; the search engine of the future
+       (vertico +icons)     ; the search engine of the future
 
        :ui
        doom              ; what makes DOOM look the way it does

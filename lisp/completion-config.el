@@ -96,6 +96,23 @@
 ;;   (vertico-mode +1)
 ;;   (vertico-buffer-mode +1))
 
+;;;;; GUI-only completion icons
+
+;; `+icons' is a static Doom module flag, but its rendering can vary by the
+;; minibuffer's frame.  Keep the package available while avoiding Nerd Font
+;; glyphs in TTY minibuffers.
+(after! nerd-icons-completion
+  (defun my/nerd-icons-completion--only-graphic (orig cand category)
+    "Return completion icons only for graphic minibuffer frames."
+    (when (display-graphic-p
+           (window-frame
+            (or (active-minibuffer-window)
+                (selected-window))))
+      (funcall orig cand category)))
+
+  (advice-add #'nerd-icons-completion-get-icon :around
+              #'my/nerd-icons-completion--only-graphic))
+
 ;;;;; vertico-map
 
 (after! vertico
