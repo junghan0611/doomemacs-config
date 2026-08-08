@@ -457,7 +457,9 @@ alias:
 
 ;;;; quartz quote-block
 
-(quartz-callout-note "#+begin_quote" n> "[!note]" n> n> r> n> "#+end_quote")
+(callout-user "#+begin_quote" n> "[!user]" n> n> r> n> "#+end_quote")
+(callout-assistant "#+begin_quote" n> "[!assistant]" n> n> r> n> "#+end_quote")
+
 (callout-note "#+begin_quote" n> "[!note]" n> n> r> n> "#+end_quote")
 
 (callout-tldr "#+begin_quote" n> "[!tldr]" n> n> r> n> "#+end_quote")
