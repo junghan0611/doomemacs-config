@@ -257,6 +257,11 @@
 
 (package! pi-coding-agent)
 
+;;;; ai-pimacs.el
+
+;; MELPA Stable 전용이라 정규 MELPA 레시피가 없다 → GitHub 직접.
+(package! pimacs :recipe (:host github :repo "ananthakumaran/pimacs.el"))
+
 ;;;; ai-bot-config.el
 
 (package! telega)
