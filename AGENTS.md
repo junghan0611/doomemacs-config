@@ -354,6 +354,9 @@ Recurring traps only. Details live in the code comment at each site.
   `evil-collection-binding-overrides`. (2026-07-22)
 - Broken garden links never break the build. Clean up periodically with
   `./run.sh verify` → `./run.sh fix`.
-- **Always run `./run.sh fix` right after an export.** ox-hugo still leaks
-  `{#title--relref-…}` noise into anchors of link-embedded headings. Skipping it leaves
-  a brief exposure right after export — the usual cause of "looks like a new bug".
+- **Run `./run.sh fix` right after an export, for as long as the anchor regression
+  lives.** ox-hugo currently leaks `{#title--relref-…}` noise into anchors of
+  link-embedded headings, and the fix step is the safety net; skipping it leaves a
+  brief exposure right after export — the usual cause of "looks like a new bug".
+  Delete this entry once the leak stops reproducing and the `--fix-anchors` guard is
+  no longer catching anything.
