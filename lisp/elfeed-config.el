@@ -22,10 +22,16 @@
 ;;
 ;; 모델은 ai-gptel.el의 OpenAI-sub 하나로 통일 — 빠른 모델
 ;; (`my/gptel-model-fast')이 기본. 다중 백엔드 비교 벤치마크는 제거했다.
+;; 그 상수가 어느 모델을 가리키는지는 실측이 정한다 — ai-gptel.el 참조.
 
 ;;; Code:
 
 (eval-when-compile (require 'elfeed-db))
+
+;; `ai-gptel' is required earlier in config.el; declared here so byte-compiling
+;; this file alone does not warn.
+(declare-function my/gptel-error-message "ai-gptel" (info))
+(declare-function my/gptel-request-retry "ai-gptel" (prompt &rest args))
 
 ;;;; Elfeed
 
@@ -212,19 +218,21 @@ Translate the following article to natural Korean.
 (defun +elfeed--gptel-request (prompt system-msg callback)
   "PROMPT를 gptel로 비동기 전송, 결과를 CALLBACK에 전달.
 SYSTEM-MSG는 시스템 프롬프트.
-기본: OpenAI-sub + `my/gptel-model-fast' (구독 활용, 빠른 응답)."
-  (let ((gptel-backend (or +elfeed-gptel-backend
-                           gptel-openai-sub-backend
-                           gptel-backend))
-        (gptel-model (or +elfeed-gptel-model
-                         my/gptel-model-fast)))
-    (gptel-request prompt
-      :system system-msg
-      :callback (lambda (response info)
-                  (if response
-                      (funcall callback (string-trim response))
-                    (message "elfeed-gptel: 요청 실패 — %s"
-                             (plist-get info :status)))))))
+기본: OpenAI-sub + `my/gptel-model-fast' (구독 활용, 빠른 응답).
+
+혼잡(`server_is_overloaded')은 `my/gptel-request-retry' 가 backoff 로
+삼킨다 — 구독 rail 의 fast 티어가 자주 붐빈다. 배경은 `ai-gptel.el'
+§ 실패 사유와 과부하 재시도."
+  (my/gptel-request-retry prompt
+    :system system-msg
+    :callback callback
+    :backend (or +elfeed-gptel-backend gptel-openai-sub-backend gptel-backend)
+    :model (or +elfeed-gptel-model my/gptel-model-fast)
+    :on-error (lambda (info)
+                ;; `:status' 는 payload-level 실패에서도 200 이다 —
+                ;; 진짜 사유는 `:error'. SSOT 는 `my/gptel-error-message'.
+                (message "elfeed-gptel: 요청 실패 — %s"
+                         (my/gptel-error-message info)))))
 
 ;;;;; 요약 (영어 → 한국어 2단계)
 

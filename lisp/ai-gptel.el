@@ -11,8 +11,9 @@
 ;;
 ;; 백엔드는 OpenAI-sub (ChatGPT 구독 OAuth) 하나. 모델도 셋뿐이다:
 ;;   gpt-5.6-sol   무거운 작업 — 필요할 때만 수동 호출
-;;   gpt-5.6-terra 기본 — 채팅, 요약/번역 버퍼
-;;   gpt-5.6-luna  빠른 자리 — quick, magit 커밋, 인라인 번역
+;;   gpt-5.6-terra 기본 — 채팅, 요약/번역 버퍼. 빠른 자리(quick, magit 커밋,
+;;                 elfeed/인라인 번역)도 2026-08-11 실측 기준 여기다.
+;;   gpt-5.6-luna  메뉴에 남겨둔 저비용 티어. 혼잡이 풀리면 다시 재본다.
 ;; 모델이 계속 새로 나오는 자리라 백엔드/모델 목록을 넓히지 않는다.
 ;; 넣고 싶으면 이 파일 한 곳(`my/gptel-models')만 고친다.
 ;;
@@ -59,6 +60,103 @@
 ;; 이 둘은 upstream 에 그대로 살아있다 (menu 가 to-send 보다 우선).
 (setq evil-collection-gptel-want-shift-ret-menu t)
 (setq evil-collection-gptel-want-shift-ret-to-send nil)
+
+;;;; 실패 사유와 과부하 재시도 (SSOT)
+
+;; 배경 — 실측 2026-08-11 (순차 요청, 1초 간격, 같은 계정/같은 rail):
+;;
+;;   gpt-5.6-luna   성공 11 / 36   (~31%)   성공해도 5~9초
+;;   gpt-5.6-terra  성공 15 / 15   (100%)   중앙값 2초
+;;
+;; 실패는 전부 HTTP 200 + payload `server_is_overloaded' 다. 프롬프트 길이,
+;; 시스템 프롬프트, `Originator' 헤더(gptel vs codex_cli_rs A/B 10회)와는
+;; 무관했다 — **모델 티어 하나만** 갈랐다. 구독 rail 에서 제일 싼 luna 가
+;; 지금 혼잡하다.
+;;
+;; 그런데 같은 시각 Codex CLI(pi)에서는 luna 로 대화가 된다. 차이는 재시도다:
+;; CLI 는 과부하 응답을 backoff 로 삼켜서 사용자에게 안 보이고, `gptel-request'
+;; 는 한 방이라 첫 실패가 그대로 노출된다. "되던 게 안 된다" 의 정체가 이것.
+;; 그래서 같은 backoff 를 우리 쪽에 둔다. 그리고 `my/gptel-model-fast' 는
+;; 이 실측을 따라 luna → terra 로 옮겼다 (아래 defconst).
+
+;; gptel 은 payload-level 실패(rate limit, 서버 과부하, 모델 거절)를
+;; `:error' 에 담아 보내면서 `:status' 는 "HTTP/2 200" 그대로 둔다.
+;; status 만 찍으면 "요청 실패 — HTTP/2 200" 이라는 무의미한 메시지가 되고,
+;; 서버 쪽 혼잡이 우리 설정 회귀처럼 보인다. 요약/번역 자리는 모두
+;; 이 함수를 거친다.
+(defun my/gptel-error-message (info)
+  "Return a human-readable failure reason from gptel's INFO plist.
+Prefer the payload-level `:error' over `:status'; fall back to the
+status line when no error is attached."
+  (let ((err (plist-get info :error))
+        (status (or (plist-get info :status) "no status")))
+    (cond
+     ((null err) status)
+     ((stringp err) (format "%s (%s)" err status))
+     ((and (consp err) (plist-get err :message))
+      (format "%s [%s] (%s)"
+              (plist-get err :message)
+              (or (plist-get err :code) (plist-get err :type) "?")
+              status))
+     (t (format "%S (%s)" err status)))))
+
+(defconst my/gptel-retryable-error-codes
+  '("server_is_overloaded" "service_unavailable" "rate_limit_exceeded"
+    "slow_down" "server_error")
+  "Payload-level error codes worth retrying — transient capacity, not our fault.")
+
+(defun my/gptel-retryable-error-p (info)
+  "Return non-nil when INFO reports a transient, retryable gptel failure."
+  (let ((err (plist-get info :error)))
+    (and (consp err)
+         (let ((code (or (plist-get err :code) (plist-get err :type))))
+           (and (stringp code)
+                (seq-some (lambda (known) (string-search known code))
+                          my/gptel-retryable-error-codes))))))
+
+;; 정의 순서 방어 — 아래 기본값은 gptel `:config' 의 defconst 를 런타임에 읽는다.
+(defvar my/gptel-model-fast)
+(defvar my/gptel-model-default)
+
+(cl-defun my/gptel-request-retry
+    (prompt &key system callback on-error model backend
+            (retries 3) (delay 2) (fallback-model my/gptel-model-default))
+  "Send PROMPT via `gptel-request', riding out transient overload failures.
+
+CALLBACK receives the trimmed response string on success.  ON-ERROR,
+called with the final INFO plist, handles giving up; it defaults to a
+message.  Neither is called more than once.
+
+Retries use exponential backoff starting at DELAY seconds.  The last
+attempt switches to FALLBACK-MODEL, which sits on a less contended tier
+than the fast models — a summary finishing late beats one not finishing."
+  (let ((backend (or backend (bound-and-true-p gptel-openai-sub-backend)
+                     gptel-backend))
+        (model (or model my/gptel-model-fast))
+        (on-error (or on-error
+                      (lambda (info)
+                        (message "gptel: 요청 실패 — %s"
+                                 (my/gptel-error-message info))))))
+    (cl-labels
+        ((attempt (left wait current-model)
+           (let ((gptel-backend backend)
+                 (gptel-model current-model))
+             (gptel-request prompt
+               :system system
+               :callback
+               (lambda (response info)
+                 (cond
+                  ((stringp response)
+                   (funcall callback (string-trim response)))
+                  ((and (> left 0) (my/gptel-retryable-error-p info))
+                   ;; 마지막 한 번은 덜 붐비는 모델로 — 같은 티어로 또 던지면
+                   ;; 같은 이유로 또 떨어진다.
+                   (let ((next (if (= left 1) (or fallback-model current-model)
+                                 current-model)))
+                     (message "gptel: 혼잡 — %ds 후 재시도 (%s)" wait next)
+                     (run-at-time wait nil #'attempt (1- left) (* 2 wait) next)))
+                  (t (funcall on-error info))))))))
+      (attempt retries delay model))))
 
 ;;;; gptel 코어
 
@@ -118,8 +216,15 @@
   (defconst my/gptel-model-heavy 'gpt-5.6-sol
     "무거운 작업용. 필요할 때만 수동 전환.")
 
-  (defconst my/gptel-model-fast 'gpt-5.6-luna
-    "빠른 자리용 — gptel-quick, magit 커밋 메시지, 인라인 번역.")
+  (defconst my/gptel-model-fast 'gpt-5.6-terra
+    "빠른 자리용 — gptel-quick, magit 커밋 메시지, elfeed/인라인 번역.
+
+이름은 `fast' 지만 티어 이름이 아니라 **실측으로 정하는 자리**다. 2026-08-11
+현재 그 답은 `luna' 가 아니라 `terra' 다 — 번갈아 20회 측정에서 luna 2/10
+(성공해도 5~9초), terra 10/10 (중앙값 2초). 제일 싼 티어가 붐비면 `fast' 는
+가장 자주 실패하고 성공해도 더 느린 자리가 된다. 혼잡은 시점의 문제이니
+luna 가 한가해지면 다시 재보고 되돌린다 — 근거 없이 바꾸지 않는다.
+측정 방법과 배경은 위 § 실패 사유와 과부하 재시도.")
 
   (defun my/gptel--model-specs (models)
     "Return MODELS with their upstream specs attached.
@@ -834,7 +939,7 @@ SNS·Emacs Everywhere 즉시 변환은 `my/gptel-translate-region-inline' 참고
                           (insert response)
                           (display-buffer (current-buffer))
                           (message "번역 완료"))
-                      (message "번역 실패: %s" (plist-get info :status)))))))
+                      (message "번역 실패: %s" (my/gptel-error-message info)))))))
 
   (defun my/gptel-translate-region-inline (beg end &optional arg)
     "선택 영역(또는 현재 문단)을 한↔영 번역하여 결과를 그 자리에 표시.
@@ -857,7 +962,7 @@ C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
         (lambda (response info)
           (cond
            ((not response)
-            (message "번역 실패: %s" (plist-get info :status)))
+            (message "번역 실패: %s" (my/gptel-error-message info)))
            ((buffer-live-p target-buf)
             (with-current-buffer target-buf
               (save-excursion
@@ -885,7 +990,7 @@ C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
                           (erase-buffer)
                           (insert response)
                           (display-buffer (current-buffer)))
-                      (message "요약 실패: %s" (plist-get info :status)))))))
+                      (message "요약 실패: %s" (my/gptel-error-message info)))))))
 
   (defun my/gptel-explain-region (beg end)
     "선택 영역 (코드) 설명."
@@ -899,7 +1004,7 @@ C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
                           (erase-buffer)
                           (insert response)
                           (display-buffer (current-buffer)))
-                      (message "설명 실패: %s" (plist-get info :status)))))))
+                      (message "설명 실패: %s" (my/gptel-error-message info)))))))
 
   (defun my/gptel-rewrite-region (beg end)
     "선택 영역 재작성/개선."
@@ -913,7 +1018,7 @@ C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
                           (erase-buffer)
                           (insert response)
                           (display-buffer (current-buffer)))
-                      (message "재작성 실패: %s" (plist-get info :status)))))))
+                      (message "재작성 실패: %s" (my/gptel-error-message info)))))))
 
 ;;;;; embark-file용 함수
 
@@ -969,7 +1074,7 @@ C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
                                   (goto-char (point-min)))
                                 (display-buffer output-buffer)
                                 (message "번역 완료: %s" (file-name-nondirectory file)))
-                            (message "번역 실패: %s" (plist-get info :status))))))
+                            (message "번역 실패: %s" (my/gptel-error-message info))))))
         (user-error "immersive-translate.poet 파일이 없습니다: %s" prompt-file))))
 
   (defun my/gptel-summarize-file (file)
@@ -994,7 +1099,7 @@ C-u: 영역을 번역 결과로 교체 (Emacs Everywhere SNS 글 즉시 변환).
                             (goto-char (point-min)))
                           (display-buffer output-buffer)
                           (message "요약 완료: %s" (file-name-nondirectory file)))
-                      (message "요약 실패: %s" (plist-get info :status)))))))
+                      (message "요약 실패: %s" (my/gptel-error-message info)))))))
 
   ) ; end of after! gptel — embark 통합
 
