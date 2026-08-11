@@ -61,29 +61,36 @@
 (setq evil-collection-gptel-want-shift-ret-menu t)
 (setq evil-collection-gptel-want-shift-ret-to-send nil)
 
-;;;; 실패 사유와 과부하 재시도 (SSOT)
+;;;; Failure reporting and overload retry (SSOT)
 
-;; 배경 — 실측 2026-08-11 (순차 요청, 1초 간격, 같은 계정/같은 rail):
+;; Measured 2026-08-11, sequential requests 1s apart, same account, same rail.
+;; Two experiments, both on this backend:
 ;;
-;;   gpt-5.6-luna   성공 11 / 36   (~31%)   성공해도 5~9초
-;;   gpt-5.6-terra  성공 15 / 15   (100%)   중앙값 2초
+;;   run A — mixed prompts/system prompts, cumulative
+;;     gpt-5.6-luna    9 / 26 ok      gpt-5.6-terra   5 /  5 ok
+;;   run B — one fixed prompt, luna and terra strictly interleaved
+;;     gpt-5.6-luna    2 / 10 ok      gpt-5.6-terra  10 / 10 ok
 ;;
-;; 실패는 전부 HTTP 200 + payload `server_is_overloaded' 다. 프롬프트 길이,
-;; 시스템 프롬프트, `Originator' 헤더(gptel vs codex_cli_rs A/B 10회)와는
-;; 무관했다 — **모델 티어 하나만** 갈랐다. 구독 rail 에서 제일 싼 luna 가
-;; 지금 혼잡하다.
+;;   combined       luna 11 / 36 (~31%), 5-9s even when it answered
+;;                  terra 15 / 15 (100%), median 2s
 ;;
-;; 그런데 같은 시각 Codex CLI(pi)에서는 luna 로 대화가 된다. 차이는 재시도다:
-;; CLI 는 과부하 응답을 backoff 로 삼켜서 사용자에게 안 보이고, `gptel-request'
-;; 는 한 방이라 첫 실패가 그대로 노출된다. "되던 게 안 된다" 의 정체가 이것.
-;; 그래서 같은 backoff 를 우리 쪽에 둔다. 그리고 `my/gptel-model-fast' 는
-;; 이 실측을 따라 luna → terra 로 옮겼다 (아래 defconst).
+;; Every failure was HTTP 200 with a payload-level `server_is_overloaded'.
+;; Prompt length, system prompt, and the `Originator' header (gptel vs
+;; codex_cli_rs, 10 interleaved calls) were all ruled out — the only variable
+;; that mattered was the model tier.  The cheapest tier on the subscription
+;; rail is the congested one.
+;;
+;; Yet at the same moment luna answers fine in the Codex CLI (pi).  The
+;; difference is retries: the CLI swallows an overload with backoff, while
+;; `gptel-request' is one-shot, so the first failure is all the user sees.
+;; That is the whole of "it used to work".  We put the same backoff here, and
+;; `my/gptel-model-fast' follows the measurement to terra (see its defconst).
 
-;; gptel 은 payload-level 실패(rate limit, 서버 과부하, 모델 거절)를
-;; `:error' 에 담아 보내면서 `:status' 는 "HTTP/2 200" 그대로 둔다.
-;; status 만 찍으면 "요청 실패 — HTTP/2 200" 이라는 무의미한 메시지가 되고,
-;; 서버 쪽 혼잡이 우리 설정 회귀처럼 보인다. 요약/번역 자리는 모두
-;; 이 함수를 거친다.
+;; gptel reports payload-level failures (rate limit, overload, refusal) in
+;; `:error' while leaving `:status' at "HTTP/2 200".  Printing the status
+;; alone produces a message that names no cause and makes remote congestion
+;; look like a local regression.  Every summarize/translate site goes through
+;; this function.
 (defun my/gptel-error-message (info)
   "Return a human-readable failure reason from gptel's INFO plist.
 Prefer the payload-level `:error' over `:status'; fall back to the
@@ -114,7 +121,8 @@ status line when no error is attached."
                 (seq-some (lambda (known) (string-search known code))
                           my/gptel-retryable-error-codes))))))
 
-;; 정의 순서 방어 — 아래 기본값은 gptel `:config' 의 defconst 를 런타임에 읽는다.
+;; Load-order guard: the defaults below read defconsts that gptel's `:config'
+;; block defines later, at runtime.
 (defvar my/gptel-model-fast)
 (defvar my/gptel-model-default)
 
@@ -127,9 +135,12 @@ CALLBACK receives the trimmed response string on success.  ON-ERROR,
 called with the final INFO plist, handles giving up; it defaults to a
 message.  Neither is called more than once.
 
-Retries use exponential backoff starting at DELAY seconds.  The last
-attempt switches to FALLBACK-MODEL, which sits on a less contended tier
-than the fast models — a summary finishing late beats one not finishing."
+Retries use exponential backoff starting at DELAY seconds.  The final
+attempt switches to FALLBACK-MODEL so a congested tier is not simply
+retried into the same wall.  Note this only changes anything when the
+caller's MODEL differs from FALLBACK-MODEL: with `my/gptel-model-fast'
+and `my/gptel-model-default' both on terra today, the switch is inert and
+the retries alone do the work."
   (let ((backend (or backend (bound-and-true-p gptel-openai-sub-backend)
                      gptel-backend))
         (model (or model my/gptel-model-fast))
@@ -149,8 +160,6 @@ than the fast models — a summary finishing late beats one not finishing."
                   ((stringp response)
                    (funcall callback (string-trim response)))
                   ((and (> left 0) (my/gptel-retryable-error-p info))
-                   ;; 마지막 한 번은 덜 붐비는 모델로 — 같은 티어로 또 던지면
-                   ;; 같은 이유로 또 떨어진다.
                    (let ((next (if (= left 1) (or fallback-model current-model)
                                  current-model)))
                      (message "gptel: 혼잡 — %ds 후 재시도 (%s)" wait next)
@@ -217,14 +226,16 @@ than the fast models — a summary finishing late beats one not finishing."
     "무거운 작업용. 필요할 때만 수동 전환.")
 
   (defconst my/gptel-model-fast 'gpt-5.6-terra
-    "빠른 자리용 — gptel-quick, magit 커밋 메시지, elfeed/인라인 번역.
+    "The fast slot — gptel-quick, magit commit messages, elfeed/inline translate.
 
-이름은 `fast' 지만 티어 이름이 아니라 **실측으로 정하는 자리**다. 2026-08-11
-현재 그 답은 `luna' 가 아니라 `terra' 다 — 번갈아 20회 측정에서 luna 2/10
-(성공해도 5~9초), terra 10/10 (중앙값 2초). 제일 싼 티어가 붐비면 `fast' 는
-가장 자주 실패하고 성공해도 더 느린 자리가 된다. 혼잡은 시점의 문제이니
-luna 가 한가해지면 다시 재보고 되돌린다 — 근거 없이 바꾸지 않는다.
-측정 방법과 배경은 위 § 실패 사유와 과부하 재시도.")
+`fast' is a measured slot, not a tier name.  As of 2026-08-11 the answer is
+terra, not luna: interleaving one fixed prompt 20 times gave luna 2/10 (and
+5-9s even when it answered) against terra 10/10 (median 2s).  When the
+cheapest tier is congested it becomes the slot that fails most often and is
+slower when it does answer.  Congestion is a moment in time, so re-measure
+when luna frees up and move it back — but never on vibes: record the new
+numbers and date here.  Method and the full sample are in
+§ Failure reporting and overload retry above.")
 
   (defun my/gptel--model-specs (models)
     "Return MODELS with their upstream specs attached.

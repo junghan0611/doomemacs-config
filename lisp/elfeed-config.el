@@ -218,19 +218,18 @@ Translate the following article to natural Korean.
 (defun +elfeed--gptel-request (prompt system-msg callback)
   "PROMPT를 gptel로 비동기 전송, 결과를 CALLBACK에 전달.
 SYSTEM-MSG는 시스템 프롬프트.
-기본: OpenAI-sub + `my/gptel-model-fast' (구독 활용, 빠른 응답).
+기본: OpenAI-sub + `my/gptel-model-fast'.
 
-혼잡(`server_is_overloaded')은 `my/gptel-request-retry' 가 backoff 로
-삼킨다 — 구독 rail 의 fast 티어가 자주 붐빈다. 배경은 `ai-gptel.el'
-§ 실패 사유와 과부하 재시도."
+Congestion (`server_is_overloaded') is absorbed by `my/gptel-request-retry'
+with backoff — see `ai-gptel.el' § Failure reporting and overload retry."
   (my/gptel-request-retry prompt
     :system system-msg
     :callback callback
     :backend (or +elfeed-gptel-backend gptel-openai-sub-backend gptel-backend)
     :model (or +elfeed-gptel-model my/gptel-model-fast)
     :on-error (lambda (info)
-                ;; `:status' 는 payload-level 실패에서도 200 이다 —
-                ;; 진짜 사유는 `:error'. SSOT 는 `my/gptel-error-message'.
+                ;; `:status' reads 200 even on a payload-level failure — the
+                ;; real cause is in `:error'.  SSOT: `my/gptel-error-message'.
                 (message "elfeed-gptel: 요청 실패 — %s"
                          (my/gptel-error-message info)))))
 
