@@ -177,9 +177,20 @@
 (condition-case nil (require 'denote-explore) (error nil))
 
 ;; 워크플로우 공유: 인간(Doom)과 동일한 agenda 설정
+;;
+;; A headless daemon loads no Doom modules, so buffer-local org variables the
+;; GUI gets for free must be applied explicitly here.  Without this an agent
+;; writing `[[attachment:foo.png]]' or `[[download:foo.png]]' resolves it
+;; against the wrong directory — the same class of drift that put broken
+;; figures in the garden via the export daemon (see AGENTS.md § Things to
+;; Watch).  Guarded by `fboundp' so an older workflow-shared still loads.
 (let ((shared (expand-file-name "lisp/workflow-shared.el" doom-user-dir)))
   (when (file-exists-p shared)
     (load shared nil t)
+    (when (fboundp 'my/apply-org-download-image-dir)
+      (my/apply-org-download-image-dir))
+    (when (fboundp 'my/apply-org-attach-id-dir)
+      (my/apply-org-attach-id-dir))
     (message "[agent-server] ✓ workflow-shared loaded (agenda-files: %d)"
              (length org-agenda-files))))
 
