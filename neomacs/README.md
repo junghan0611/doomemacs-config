@@ -35,8 +35,12 @@ bin/neomacs.sh             # 런처
 ./bin/neomacs.sh --nw             # 터미널
 ./bin/neomacs.sh --probe          # 프로브 전체 (배치)
 ./bin/neomacs.sh --probe tls      # 하나만
-./bin/neomacs.sh --gnu --probe    # 같은 프로파일을 GNU Emacs로 — 베이스라인
+./bin/neomacs.sh --gnu            # 같은 프로파일을 GNU Emacs로 — 베이스라인
 ```
+
+`--gnu`는 즉시 exec 하므로 `--probe`와 조합되지 않는다 (`--gnu --probe`는 Emacs가
+`--probe`를 인자로 받아 무시한다). 배치 베이스라인은 아직 한 명령으로 못 뽑는다 —
+`NEXT.md` 참조.
 
 **빌드 불필요.** NixOS에서는 릴리즈 AppImage가 `libfontconfig`를 못 찾으므로
 런처가 `appimage-run`으로 감싼다. 네이티브 빌드가 있으면 `NEOMACS_BIN`으로

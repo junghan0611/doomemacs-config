@@ -1,3 +1,19 @@
+> **What belongs here**: only things that do not change often — structure, conventions,
+> contracts, and traps that keep recurring. Operational detail and tool specifics
+> (verify categories, deploy stages, model specs, tuning numbers) do not. Before adding
+> an entry, ask whether it will still be true next month.
+>
+> **Precedence when sources disagree** — code always wins:
+>
+> | Question | Authority |
+> |---|---|
+> | What the code actually does — flags, defaults, behavior | the code itself |
+> | Why a value was chosen, and its measurement | the docstring / comment at that site |
+> | How to operate the repo day to day | `README.md` |
+> | Structure, conventions, contracts, recurring traps | this file |
+>
+> If this file contradicts the code, the code is right and this file is a bug.
+
 # AGENTS.md — doomemacs-config Agent Guide
 
 You are the **담당자** (agent-in-charge) for this repository.
@@ -18,11 +34,12 @@ The agent server (`bin/agent-server.el`) exposes elisp APIs over socket `"server
 ```
 init.el                 # Doom modules + single-instance guard
 config.el               # Loader only — requires lisp/*.el
-├── lisp/ (43 files)    # One concern = one file
+├── lisp/               # One concern = one file
 ├── bin/                # Standalone scripts (no Doom dependency)
 ├── autoload/           # ;;;###autoload lazy functions
 ├── neomacs/            # Neomacs vanilla minimal profile + K-review probes (issue #8)
-├── run.sh              # Unified CLI/TUI: sync, export, agent, unstable
+├── tests/              # ERT — vanilla `emacs -Q --batch`, no Doom
+├── run.sh              # Unified CLI/TUI: sync, export, agent, verify, fix
 └── flake.nix           # Emacs 31 preview channel (Savannah emacs-31) via nix
 ```
 
@@ -36,9 +53,9 @@ Only `(require ...)` and minimal glue. All logic lives in `lisp/`.
 
 | Domain | File(s) |
 |--------|---------|
-| AI tools | `lisp/ai-*.el` (6 files) |
+| AI tools | `lisp/ai-*.el` |
 | Org-mode | `lisp/org-config.el`, `org-functions.el` |
-| Denote | `lisp/denote-*.el` (4 files) |
+| Denote | `lisp/denote-*.el` |
 | Export pipeline | `lisp/denote-export-config.el` + `bin/denote-export*.{el,py,sh}` |
 | Korean input / fonts | `lisp/korean-input-config.el` |
 | Unicode (NBSP, ZWS) | `lisp/unicode-config.el` |
@@ -62,7 +79,7 @@ Only `(require ...)` and minimal glue. All logic lives in `lisp/`.
 ```elisp
 ;;; $DOOMDIR/lisp/module-name.el --- Description -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 Junghan Kim
+;; Copyright (C) 2026 Junghan Kim
 
 ;; Author: Junghan Kim <junghanacs@gmail.com>
 ;; URL: https://github.com/junghan0611/doomemacs-config
@@ -75,20 +92,13 @@ Only `(require ...)` and minimal glue. All logic lives in `lisp/`.
 
 ;;;; Section 1
 
-;;;; Section 2
-
 (provide 'module-name)
 ;;; module-name.el ends here
 ```
 
 ### Outline structure (outli.el)
 
-Every `.el` file uses outline headings:
-
-```elisp
-;;; Level 1
-;;;; Level 2
-```
+Every `.el` file uses outline headings: `;;; Level 1`, `;;;; Level 2`.
 
 ### Function placement
 
@@ -106,9 +116,8 @@ without inventing a new idiom each time.
   `DEPRECATED` only for code that will actually be removed. Prefer `mapc` over
   `seq-do` when iterating only for side effects.
 - **Namespace**: custom public variables/functions use `my/...` (`my/termux-p`,
-  `my/org-download-image-dir`). Interactive commands may use `my/name` in Doom's
-  command style. Private helpers should still start with `my/` and include the
-  concern name; use `--` for genuinely internal helpers inside a larger module,
+  `my/org-download-image-dir`). Private helpers still start with `my/` and include
+  the concern name; use `--` for genuinely internal helpers inside a larger module,
   e.g. `my/termux--decode-arrow-key`.
 - **Vanilla-first logic**: functions with clear input→output behavior should
   run under `emacs -Q` whenever possible. Keep Doom macros (`map!`, `after!`,
@@ -122,13 +131,11 @@ without inventing a new idiom each time.
   `featurep!`, `appendq!`, `pushnew!`, etc. Prefer `(featurep :system 'macos)`,
   `(>= emacs-major-version 31)`, `setopt`/`setq`, `cl-callf`, `add-to-list`, or
   a local `my/...` predicate when grep-ability matters.
-- **Use Emacs libraries before hand-rolled loops**: prefer `seq.el` for lists,
-  `map.el` for alists, `subr-x` for string helpers, and existing Doom/Emacs
-  primitives before writing long bespoke functions.
+- **Use Emacs libraries before hand-rolled loops**: `seq.el` for lists, `map.el`
+  for alists, `subr-x` for string helpers, before writing long bespoke functions.
 - **Data shape**: for small structured state, prefer alists with `:kebab-case`
-  keyword keys. Use plists/hash-tables only when there is a clear reason.
-- **Accessors**: prefer `map-elt` and `map-nested-elt` for alists; avoid repeated
-  nested `assoc`/`cdr` boilerplate.
+  keyword keys, read via `map-elt` / `map-nested-elt`. Use plists/hash-tables only
+  when there is a clear reason.
 - **cl-lib surface**: `cl-defun` with `&key` is welcome for self-documenting
   call sites. Reach for other `cl-lib` forms only when they simplify the code.
 - **Flatten control flow**: prefer `when`, `unless`, `when-let*`, and guard
@@ -136,81 +143,91 @@ without inventing a new idiom each time.
   depend on earlier bindings.
 - **No premature API**: avoid new `defcustom` until the option has settled.
   Start with an internal `defvar`/`defconst` and promote later if needed.
-- **Comments/docstrings**: code comments should be in English and explain intent
-  or invariants, not restate the obvious. Korean operational notes are fine in
-  higher-level docs, but generated code should keep comments concise.
+- **Comments/docstrings**: English, explaining intent or invariants rather than
+  restating the obvious. **When a value was chosen by measurement, record the number
+  and the date at that spot**, so a later agent does not revert it on vibes.
 - **Consistency first**: before adding a feature, search for the closest existing
   pattern in `lisp/` and mirror it unless there is a strong reason not to.
 
-### map! prefix 규약
+### map! prefix rule
 
-**우리 원칙**: Doom이 선언한 키바인딩은 그대로 쓴다. 정말 바꿔야 할 키만 그 위에
-얹는다. 겹치면 우리 것이 이기되, **Doom 것을 죽이지 않는다**. `config.el`은 Doom 모듈
-뒤에 로드되므로, 같은 키를 다시 `define-key` 하면 그 키만 우리 것으로 덮인다 — 이게
-정상 동작이고, 나머지 Doom 키는 살아있어야 한다.
+**Stance**: keep whatever Doom binds; override only the keys that genuinely need to
+change, **without taking Doom's group down with it**.
 
-**규칙은 한 줄**: `map!`에서 prefix에 **이름을 달지 않는다**. 키는 비파괴적으로 밀어
-넣고, 라벨은 keymap을 건드리지 않는 경로로 따로 단다.
+**The rule is one line**: never give a prefix a name in `map!`.
 
 ```elisp
-;; 금지 — 둘 다 그 키에 keymap 을 "바인딩"한다
+;; No — both bind a keymap AT that key, destroying the prefix map already there
 (map! :leader (:prefix     ("f" . "files")   "y" #'foo))
 (map! :leader (:prefix-map ("j" . "pi-agent") "a" #'bar))
 
-;; 사용 — 키만 얹는다. 기존 맵이 있으면 그 안으로 들어가고, 없으면 만들어진다
+;; Yes — keys only. An existing map is walked into; a missing one is created
 (map! :leader (:prefix "f" "y" #'foo))
-(map! :leader (:prefix "j" "a" #'bar))
 ```
 
-라벨은 `lisp/keybindings-config.el`의 **`Leader prefix labels — SSOT`** 블록 한곳에서
-`which-key-add-keymap-based-replacements`로 단다. 이건 pseudo-key만 심어서 기존
-바인딩을 절대 덮지 않고, 아직 없는 prefix는 만들어 두기만 한다 — 어느 파일이 먼저
-로드되든 결과가 같다. Doom 소유 prefix(`f` `n` `h` `o` `p` `b` …)는 Doom이 이미 이름을
-달아뒀으니 넣지 않는다.
+Since Doom pulled general.el out of `map!` (upstream `de2a3364a`, 2026-07), a described
+`:prefix` is no longer a label-only no-op — it binds a fresh empty keymap at that key.
+The syntax is unchanged, so it breaks in silence. Group labels go in one place, the
+`Leader prefix labels — SSOT` block in `lisp/keybindings-config.el`, via
+`which-key-add-keymap-based-replacements`: non-destructive and load-order-independent.
+The gate is `tests/test-keybinding-lint.el` (included in `tests/run-tests.sh`).
+Background and the before/after table are in `README.md` § Keybindings.
 
-**왜 그렇게 됐나.** Doom이 `map!`에서 general.el을 걷어내면서(upstream `de2a3364a`,
-2026-07) 의미가 바뀌었다. which-key가 Emacs 30.1에 내장되자 Henrik이 퇴출 결정을 뒤집고
-core로 재통합했고, 라벨을 general의 전역 regexp 테이블에서 **네이티브 cons cell**
-(`("label" . command)`)로 옮겼다.
+**Note**: Doom binds the standard `help-map` directly at `SPC h`, so definitions under
+`(:prefix "h" ...)` mutate the global `help-map` — `C-h t` being a theme map in this
+repo is intentional.
 
-| | 이전 (general) | 지금 (네이티브) |
-|---|---|---|
-| `:desc`가 만드는 것 | `(:ignore t :which-key "desc")` | `(cons "desc" def)` |
-| prefix 선언 시 | `:ignore` → **define-key 건너뜀** (라벨만) | `(cons "desc" (make-sparse-keymap))` → **새 빈 맵을 바인딩** |
+### Upstream stance — we adapt, upstream does not
 
-즉 desc 붙은 `:prefix`는 이제 **그 자리의 기존 prefix 맵을 통째로 파괴한다**. Doom의
-`doom-leader-file-map`, 표준 `help-map`, 다른 파일이 선언한 prefix가 전부 날아간다.
-문법은 그대로라 조용히 깨진다. `:prefix-map`은 `defvar` 덕에 우리 파일끼리는 맵을
-재사용하지만, 그 키에 맵을 바인딩하는 건 똑같아서 Doom이 나중에 그 키를 가져가면 같은
-사고가 난다. 그래서 둘 다 쓰지 않는다.
-
-**게이트**: `tests/test-keybinding-lint.el`이 `lisp/`·`autoload/`를 스캔해 두 형태를
-모두 file:line으로 잡는다. `tests/run-tests.sh`에 자동 포함.
-
-**upstream 대응 원칙 — 우리가 맞춘다.** GLG 결정(2026-07-12): 메인테이너는 바쁘고,
-upstream이 어떻게 움직이든 **닷파일이 따라가는 게 우리 일**이다. 상류가 바뀌면 대응
-코드로 버틴다 — 상류를 우리 쪽으로 끌지 않는다. 이건 이 한 건의 판단이 아니라 이 리포가
-upstream을 대하는 기본 자세다. `./run.sh G` 뒤에 뭔가 깨지면, **먼저 우리 코드를 바꿀
-자리를 찾는다.** 에이전트가 먼저 이슈/PR을 제안하지 않는다.
-
-PR은 최후 수단이고, 관찰 기간을 거친 뒤 **GLG가 명시적으로 부를 때만** 간다. 이 건의
-관찰 레인과 재검토일은 `NEXT.md`에 있다.
-
-**주의**: Doom은 `SPC h`에 표준 `help-map`을 직접 바인딩한다
-(`:config default` `+evil-bindings.el:343`). 그래서 `(:prefix "h" ...)` 아래 정의는
-전역 `help-map`을 변형한다 — 이 리포에서 `C-h t`는 `help-with-tutorial`이 아니라
-테마 맵이다 (의도된 것).
+GLG's decision (2026-07-12): however upstream moves, **it is the dotfile's job to
+follow**. When upstream changes, absorb it in our code — do not try to pull upstream
+our way. If something breaks after `./run.sh G`, **look for our code to change first**.
+An agent does not propose an issue or PR on its own. A PR is the last resort, taken
+only after an observation period and only when **GLG explicitly calls for it**.
 
 ## Emacs Server Sockets
 
 | Socket | Purpose | How it starts |
 |--------|---------|---------------|
-| `"user"` | GLG's GUI Emacs | `doom run` (Doom auto-calls `server-start` for GUI) |
-| `"server"` | Agent daemon | `run.sh agent start` (separate `--init-directory`) |
-| `"doom-unstable"` | Emacs preview channel | `bin/emacs-unstable.sh` (or `run.sh unstable`) |
+| `"user"` | GLG's GUI Emacs | `doom run` |
+| `"pi"` | TTY attach target (full Doom, shared by N terminals) | `run.sh pi start` |
+| `"server"` | Agent RPC daemon | `run.sh agent start` (separate `--init-directory`) |
+| `"doom-unstable"` | Emacs preview channel | `run.sh unstable` |
 | `"neomacs"` | Neomacs vanilla profile | `bin/neomacs.sh --daemon` |
 
-The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon instances (`emacs -nw`, `doom run`) run independently.
+The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon
+instances (`emacs -nw`, `doom run`) run independently.
+
+## workflow-shared.el — the contract
+
+This file defines the rules that all three contexts — user Emacs (GUI), agent-server,
+and the **denote-export daemon** — must agree on. Daemons do not load Doom modules, so
+anything that only gets set up automatically in the GUI must live here as SSOT and be
+applied explicitly.
+
+| Setting | Why |
+|---------|-----|
+| `org-tag-re` | Tags allow only `[[:alnum:]@#%]+` — matches Denote filetags |
+| `org-agenda-files` | Dynamic: `_aprj` tagged files + `botlog/agenda/` + current journal |
+| `org-todo-keywords` | TODO/NEXT/DONE/DONT(o) — daemons must know them for agent-server to skip DONT |
+| `my/org-download-image-dir` | Resolves `[[download:foo.png]]` (`~/screenshot/`) |
+| `my/org-attach-id-dir` | Resolves `[[attachment:foo.png]]` (`~/org/.attach/`) |
+| Journal entry format | Active timestamps so entries appear in agenda |
+
+**Rule**: UI/theme/keybindings may differ. **Data read/write rules must be identical.**
+
+**SSOT applier pattern** — when a buffer-local org variable turns out to be missing in
+a daemon, it goes here:
+
+```elisp
+;; lisp/workflow-shared.el
+(defvar my/X "...")
+(defun my/apply-X () (setq-default X my/X) (setq X my/X))
+
+;; lisp/org-config.el (GUI)      → (require 'workflow-shared) + (my/apply-X)
+;; bin/denote-export.el (daemon) → (my/apply-X) right after loading workflow-shared
+;; bin/agent-server.el (daemon)  → (my/apply-X) right after loading workflow-shared
+```
 
 ## Key Workflows
 
@@ -229,196 +246,49 @@ The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-da
 ### Agent server
 
 ```bash
-./run.sh agent start    # Start (checks stale socket)
-./run.sh agent status   # Health check
-./run.sh agent restart  # Bounded stop → start (recovers a HUNG daemon)
-./run.sh agent eval     # Interactive eval
+./run.sh agent start|status|restart|eval
 ```
 
-`stop`/`restart` are hung-daemon safe: graceful `(kill-emacs)` is bounded by a
-5s `timeout`, and if the daemon is stuck in a synchronous eval and never
-answers, its PID (found by the unique `--init-directory=$AGENT_INIT_DIR` token)
-is killed — escalating to `-9` — before the stale socket is cleaned and `start`
-runs. So a wedged daemon no longer needs a manual `kill` + `rm socket`.
+`stop`/`restart` are hung-daemon safe — a wedged daemon does not need a manual `kill`
++ `rm socket`. The daemon loads no Doom modules, so anything the GUI sets up
+automatically must be applied explicitly (see § workflow-shared.el).
+
+### Garden operations — export / verify / fix / fix-org / fix-bold
+
+```bash
+./run.sh export <dir> [--force]    # incremental / full rebuild
+./run.sh verify                    # verify garden md (read-only, 4 stages)
+./run.sh fix                       # apply only auto-fixable cases, per-stage y/N
+./run.sh fix-org [--apply|--check] # rewrite ~/org links / lychee verification
+./run.sh fix-bold                  # **bold** → *bold* (never journal/)
+```
+
+The standard order is **fix-org → export → verify → fix → user triage → push**.
+Per-stage categories, SEARCH_DIRS, and lychee tuning change often — `README.md`
+§ Garden Verify / Fix plus `bin/verify-*.py` and `bin/site-policy.el` are the SSOT.
+Do not copy them here.
+
+- **A policy line goes only into `bin/site-policy.el`** — `fix-org`, `verify-content`,
+  and `verify-org-links` all pick it up at once.
+- **`journal/` is never scanned by any automatic fixer** (GLG's manual export surface).
+- **Denote links and figure paths are protected regions**: `[[denote:UUID]]`,
+  `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]`, `[[file:~/org/...]]`.
 
 ### Neomacs K-review — `bin/neomacs.sh`
 
-[Neomacs](https://github.com/eval-exec/neomacs)(Emacs 코어의 Rust 재작성) 위에서
-도는 **빌트인 전용 바닐라 프로파일**. 이슈 #8. Doom과 완전 분리 —
-별도 `--init-directory`(`neomacs/`), 별도 server name, 공유 상태 없음.
+[Neomacs](https://github.com/eval-exec/neomacs) (a Rust rewrite of the Emacs core)
+runs a **vanilla profile** here. Issue #8. Fully separated from Doom: its own
+`--init-directory`, its own server name, no shared state.
 
-```bash
-./bin/neomacs.sh --fetch        # 릴리즈 AppImage
-./bin/neomacs.sh --probe        # 프로브 전체 (배치)
-./bin/neomacs.sh --gnu --probe  # 같은 프로파일을 GNU Emacs로 — 베이스라인
-```
+**Core rule: the profile must behave identically on Neomacs and on stock GNU Emacs.**
+That is what makes a single `--gnu` run decide whether a divergence belongs to Neomacs
+or to our config, so nothing under `neomacs/` may use Doom macros or `use-package`, and
+nothing may be fetched. Builtins only, with one standing exception: a pure-Elisp Denote
+checkout already present on disk may be put on `load-path` so `denote:` links resolve
+against a real corpus. Probes run one process per file — a crash that kills the runtime
+is itself a finding.
 
-**핵심 규약: 프로파일은 Neomacs와 stock GNU Emacs 양쪽에서 동일하게 돌아야 한다.**
-갈라짐이 나왔을 때 Neomacs 탓인지 우리 설정 탓인지 `--gnu` 한 번으로 갈리기
-때문이다. 그래서 `neomacs/` 아래에는 Doom 매크로·외부 패키지·`use-package`가
-들어가면 안 된다. (실제로 첫 실측에서 `ucs-normalize` FAIL이 양쪽 동일하게 나서
-Neomacs 결함이 아니라 프로브 버그임이 즉시 드러났다.)
-
-프로브는 **파일마다 별도 프로세스**로 돈다 — 런타임을 죽이는 버그가 나머지 보고를
-막지 않게. 크래시 자체가 산출물이다.
-
-측정 결과와 upstream 이슈 대조는 `neomacs/README.md`가 SSOT.
-
-### workflow-shared.el — the contract
-
-This file defines rules that **all three context** — user Emacs (GUI), agent-server,
-**denote-export 데몬** — must agree on. 데몬은 Doom 모듈을 로드하지 않으므로,
-GUI 에서만 자동으로 잡히는 설정은 여기에 SSOT로 두고 명시 적용해야 한다.
-
-| Setting | Why |
-|---------|-----|
-| `org-tag-re` | Tags allow only `[[:alnum:]@#%]+` — matches Denote filetags |
-| `org-agenda-files` | Dynamic: `_aprj` tagged files + `botlog/agenda/` + current journal |
-| `org-todo-keywords` | TODO/NEXT/DONE/DONT(o) — agent-server가 DONT skip 하려면 데몬도 인식 필요 |
-| `my/org-download-image-dir` | `[[download:foo.png]]` 해석 (`~/screenshot/`). GUI는 Doom org-download `:config`, 데몬은 SSOT applier |
-| `my/org-attach-id-dir` | `[[attachment:foo.png]]` 해석 (`~/org/.attach/`). GUI는 Doom lang/org 모듈, 데몬은 SSOT applier |
-| Journal entry format | Active timestamps so entries appear in agenda |
-
-**Rule**: UI/theme/keybindings can differ. **Data read/write rules must be identical.**
-
-**SSOT 적용 패턴**:
-```elisp
-;; lisp/workflow-shared.el
-(defvar my/X "...")
-(defun my/apply-X () (setq-default X my/X) (setq X my/X))
-
-;; lisp/org-config.el (GUI)         → (require 'workflow-shared) + (my/apply-X)
-;; bin/denote-export.el (데몬)      → workflow-shared 로드 직후 (my/apply-X)
-;; bin/agent-server.el (데몬)        → workflow-shared 로드 직후 (my/apply-X)
-```
-
-같은 패턴으로 누락된 buffer-local 변수가 더 발견되면 같은 자리에 추가.
-
-### Garden Verify / Fix — `./run.sh verify` and `./run.sh fix`
-
-가든 export 후 콘텐츠 품질 검증 / 정정 흐름. 두 키로 통합, 4단계:
-
-| 단계 | verify ([N/4]) | fix ([N/4]) |
-|------|----------------|-------------|
-| **relref** | `verify-relref.py --summary` (link 카테고리 카운트) | `--fix --apply` (DEAD/REWRITE/MALFORMED → plain text 또는 정정) |
-| **anchors** | (verify에 포함) | `--fix-anchors --apply` (ox-hugo가 link 내장 헤딩에 흘려넣은 `{#title--relref-section-id-dot-md}` 누출 제거 → `{#title}`) |
-| **description** | `check-description.sh` (botlog 우선, 누락만 경고) | (verify-only) |
-| **figures** | `verify-figures.py` (figure shortcode + markdown `![]()` 둘 다) | `--fix --apply` (REWRITE → 소스 → static/images 복사 + src 치환) |
-| **content** | `verify-content.py --summary --lychee` (host alias / 내부 경로 / 사설 endpoint / URL credential / GITHUB_404) | `--fix --lychee --apply` (자동 정정 카테고리만 plain text 또는 alias 치환) |
-
-**figure 검증 카테고리**:
-- `ALIVE` — `/images/...` / `https://...` (정상)
-- `REWRITE` — broken 패턴이지만 SEARCH_DIRS에서 basename 매칭 → 자동 정정 가능
-- `AMBIGUOUS` — 여러 매치, sha 다름 → 수동 확인
-- `DEAD` — 알려진 broken 패턴(`/home/...`, `~/...` 등), 매치 0
-- `UNKNOWN` — 비표준 패턴(`assets/`, `img/`, 상대경로 등), 매치 0
-
-**SEARCH_DIRS** (verify-figures.py): `notes/static/images/` → `~/screenshot/` → `~/org/.attach/`. 이전 export에서 이미 옮겨진 파일이 우선 잡혀 file copy 없이 src 치환만 일어남.
-
-**content 검증 카테고리** (verify-content.py, `site-policy.el` SSOT):
-- `HOST_ALIAS` — 사라진 자기 서브도메인 (예: geworfen.junghanacs.com → agent.junghanacs.com) → 자동 alias 치환
-- `INTERNAL_PATH` — `~/` (틸드 홈 전체: sync/claude-memory/repos 등), `/home/junghan/`, `file://` 누출 → plain text
-- `ELFEED_LINK` — ox-hugo가 `[[elfeed:host#https://...]]`를 `[desc](host#https://...)`로 흘린 dead link → 임베디드 `https://` URL로 target 치환 (export 미개입, F 후처리)
-- `PRIVATE_ENDPOINT` — `localhost`, `127.0.0.1`, 사설 IPv4 (보고만)
-- `URL_CRED` — `https://user:pass@host` basic auth 누출 (보고/보안 alert)
-- `GITHUB_404` — lychee가 잡은 `github.com/USER/*` 404/410 → plain text
-- `ORPHAN` — `[desc]` 끝에 target 없음. **현재 비활성** (정교화 follow-up — code fence/inline/shortcode 제외 필요)
-
-**lychee 운영 노트**:
-- `GITHUB_TOKEN` 또는 `GITHUB_PERSONAL_ACCESS_TOKEN` 필요. 없으면 결과는 **참고용 (advisory)** — secondary abuse rate-limit으로 다수가 false positive (실측: token 없음 84 broken vs token+튜닝 1 broken).
-- `~/.env.local`을 `load_env_local` 헬퍼가 verify/fix [4/4]와 `fix-org --check` 진입 시 자동 source.
-- `.lycheecache` (.gitignored) 1d 캐시. `cache-exclude-status: "404"` 안전망 — agenda-stamp가 박는 SHA URL은 push 사이클로 404→200 변하므로 캐시 시 false positive 지속.
-- `max-concurrency: 16` (기본 128은 abuse detection 걸림).
-
-### Org Hygiene — `./run.sh fix-org` / `./run.sh fix-bold`
-
-~/org 원본 정정. 가든 export hook 옆에 두는 위생 축.
-
-#### fix-org — link 정정 (Stage 1)
-
-
-| 케이스 | 변환 |
-|--------|------|
-| `[[file:~/repos/gh/REPO]]` | `[[https://github.com/junghan0611/REPO]]` |
-| `[[file:~/repos/gh/REPO/path/file.el]]` | `[[https://github.com/junghan0611/REPO/blob/main/path/file.el]]` |
-| `[[file:~/repos/gh/REPO/file.el::N]]` | `[[https://github.com/junghan0611/REPO/blob/main/file.el#LN]]` (라인 anchor 보존) |
-| `[[https://OLD.junghanacs.com][...]]` | site-policy.el `host-aliases` 사전 치환 |
-
-**보호 영역 (절대 건드리지 않음)**:
-- `[[denote:UUID]]` — denote system invariant
-- `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]` — figure 파이프라인 영역
-- `[[file:~/org/...]]` — denote 내부 cross-ref
-- code / verbatim / src-block 내부 (org-element 기반이라 자동)
-
-**흐름**:
-- `O` / `./run.sh fix-org` — dry-run → `y/N` → apply. 로컬 부재 ⚠ 표시
-- `./run.sh fix-org --apply` — prompt 없이 직접 적용
-- `./run.sh fix-org --check` — 변환 안 함. `~/org`의 `[[https://github.com/USER/...]]` URL을 lychee로 검증, broken을 file:line으로 보고 (read-only — 사용자가 ~/org에서 직접 분류)
-
-**SSOT**: `bin/site-policy.el`. `host-aliases` 한 줄 추가하면 `fix-org` / `verify-content` / `verify-org-links` 세 도구가 동시에 인지.
-
-#### fix-bold — markdown `**bold**` → org `*bold*`
-
-에이전트가 org에 마크다운 bold를 심는 습관 교정. **가든 퍼블리시 면만.**
-
-| | |
-|---|---|
-| 스코프 | `notes/` `bib/` `meta/` `botlog/` 만 |
-| **제외** | `journal/` — GLG 수동 export, 절대 스캔 안 함 |
-| 보호 | src/example/export/verse/comment, drawer, code/verbatim/fixed-width (org-element) |
-| 흐름 | `B` / `./run.sh fix-bold` — dry-run → `y/N` → apply. `--apply`는 prompt 생략 |
-| 구현 | `bin/fix-org-mdbold.el` |
-
-export hook(`denote-export-config.el`)도 temp 버퍼에서 mid-line `**`를 고치지만 **원본은 안 건드린다.** 원본 위생은 이 명령.
-
-### Garden Deploy Workflow
-
-전체 export 후 표준 운영 흐름. ~/org 변경부터 가든 publish까지:
-
-```
-Phase           Command                                  Purpose
-─────           ───────                                  ───────
-1. Org 위생     O ) ./run.sh fix-org                     ~/repos/gh/ file: → GitHub URL
-   (선택)         CLI: ./run.sh fix-org --check          broken GitHub URL 검출 (token 필요)
-                  B ) ./run.sh fix-bold                  **bold** → *bold* (notes/bib/meta/botlog)
-
-2. Export       7 ) ./run.sh export <dir>                증분
-                8 ) ./run.sh export <dir> --force        전체 재구축
-                9 ) submenu                              폴더별 증분/전체
-
-3. 가든 검증    V ) ./run.sh verify                      [1/4] relref / [2/4] description /
-                                                          [3/4] figures / [4/4] content+lychee
-
-4. 가든 정정    F ) ./run.sh fix                         단계별 y/N. 자동 가능만 적용
-
-5. 사용자 분류  (emacs에서 ~/org 직접)                   verify 출력의 → ~/org 매핑 따라
-                                                          케이스별 결정 (private 표기 / plain
-                                                          text / rename)
-
-6. Deploy       cd ~/repos/gh/notes && git push          가든 배포
-                cd ~/sync/org && git push                ~/org 변경 같이
-```
-
-**도구 잡는 자리 vs 사용자 잡는 자리**:
-
-| 자리 | 도구 자동 ([1/4]~[4/4] fix) | 사용자 수동 |
-|------|------------------------------|-------------|
-| relref DEAD / REWRITE | ✓ | |
-| heading anchor 누출 | ✓ | |
-| figure src REWRITE | ✓ | |
-| host alias 잔재 | ✓ | |
-| 내부 경로 노출 | ✓ (plain text) | |
-| GitHub 404 (md link 형태) | ✓ (plain text) | |
-| 외부 URL 404 (GitHub 외) | | ✓ (도구 빈자리, follow-up) |
-| ~/org GitHub URL 분류 | | ✓ (`fix-org --check` → ~/org 결정) |
-| 의도된 private repo | | ✓ (org에서 표기 결정) |
-| ox-hugo silent transform | UNKNOWN 보고 | ✓ |
-
-**운영 노트**:
-- 전체 export: 3,300 org → 2,200 md, 병렬 8 worker로 분 단위. 증분이 일반적.
-- D 사례 (메타 list item silently drop) — 재export로 회복되는 경우 있음. 회귀 의심 시 export 한 번 더.
-- token 없는 verify는 advisory. 실제 ~/org 분류 작업은 token 있는 conclusive run 기준.
-- `fix-org --apply` 후 `~/sync/org` modified는 정상 (사용자 commit 자리).
+Measurements, pins, and upstream cross-checks live in `neomacs/README.md` (SSOT).
 
 ## Commit Messages
 
@@ -433,25 +303,57 @@ feat: add tty-config — term-keys, kitty-graphics, clipboard unified
 
 ## Things to Watch
 
-- `doom sync` needed after `init.el` module changes, NOT for `config.el`/`lisp/` edits
-- `per-machine.el` is git-ignored — font/theme overrides go there
-- Emacs 31 preview channel coexists with system stable via separate `EMACSDIR` (`~/doomemacs-unstable`) and `server-name` (`doom-unstable`). flake output name is still `emacs-unstable` for launcher compatibility, but it pins Savannah `emacs-31` release branch while Emacs 31 is pre-release. overlay#emacs-unstable follows latest stable release tag and may remain at 30.2 until 31.1 is tagged; overlay#emacs-git tracks master and may already be 32.0.50.
-- Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard
-- WezTerm + terminal Emacs + built-in Korean input is a custom path; if minibuffer/search prompt spacing breaks, inspect TTY width drift first — especially hardcoded Unicode ellipsis (`…`) in Consult prompt/path truncation before blaming Hangul input
-- **헤드리스 데몬은 Doom 모듈을 로드하지 않는다** (`bin/denote-export.el`, `bin/agent-server.el`). buffer-local org 변수(`org-attach-id-dir`, `org-download-image-dir` 등)가 GUI에서만 자동으로 잡히는 경우 가든에 broken figure가 누적된다. `workflow-shared.el`에 SSOT applier로 두고 양쪽에서 호출 — 회귀 시 첫 의심 지점. (사례: 2026-05-10 commit b348898 / d8b977a)
-- **키바인딩이 통째로 사라지면 `map!` prefix부터 의심한다**. `./run.sh G`로 Doom을 당긴 뒤 `SPC f s`·`SPC h d` 같은 Doom 기본키가 `undefined`가 되면, 십중팔구 desc 붙은 `:prefix`가 기존 prefix 맵을 덮은 것이다. 진단은 `emacsclient -s user`로 `(lookup-key doom-leader-map "f")`가 `doom-leader-file-map`과 `eq`인지 보면 즉시 갈린다. 규약과 배경은 § map! prefix 규약, 게이트는 `tests/test-keybinding-lint.el`. (사례: 2026-07-12, upstream `de2a3364a`)
-- **`agent-denote-add-link`가 링크를 엉뚱한 섹션에 넣으면 heading regex를 의심한다**. 표준 관련노트 heading은 **붙여쓴 `* 관련노트`** (corpus 442건)인데, `관련`뒤에 공백/EOL을 요구하던 옛 regex는 이 표준을 **못 잡고** `관련 레퍼런스`·`관련링크`·`관련메타`(자석, 985건) 같은 형제 섹션을 오매칭했다. SSOT는 `agent-server--related-notes-heading-re` (heading 전체를 앵커), 게이트는 `tests/test-agent-denote-link.el` (regex를 소스에서 직접 읽어 드리프트 방지). (사례: 2026-07-17, GPT autholog 수선 중 보고)
-- **gptel 백엔드/모델을 늘리지 않는다.** 백엔드는 OpenAI-sub(ChatGPT 구독 OAuth)
-  하나, 모델은 `my/gptel-models` 셋(`gpt-5.6-terra`/`-sol`/`-luna`)이 SSOT다. 모델은
-  닷파일이 따라갈 수 없는 속도로 나오니 **추가는 그 한 줄에서만** 한다. 모델 스펙을
-  손으로 베끼지 않는다 — `my/gptel--model-specs`가 upstream `gptel--openai-models`에서
-  끌어온다. 이전에 쌓였다 걷어낸 것: DeepSeek, OpenRouter(gemini 4종), Claude-Code
-  docker wrapper, CLIProxy. 되살리려면 GLG 판단을 먼저 받는다. (2026-07-22, `950bd05`)
-- **`evil-collection`이 gptel 키를 가져가면 죽은 옵션부터 의심한다.** upstream이
-  `evil-collection-gptel-want-ret-to-send`를 지우고 REPL 공통 `repl-submit` 추상
-  바인딩으로 옮기면서, 껐던 "RET 전송"이 조용히 되살아나 있었다 (커밋 `c9d9217` 의도
-  역행). 죽은 `setq`는 아무 신호도 주지 않는다. 지금은 `evil-collection-binding-overrides`
-  의 per-map `:enabled` 람다로 gptel에서만 끈다. 전송은 `C-c RET`(gptel 기본) /
-  `M-RET` / `S-RET`(menu). (2026-07-22)
-- 가든 broken은 빌드를 깨지 않는다. `./run.sh verify` → `./run.sh fix` 흐름으로 주기적 청소
-- **export 직후에는 항상 `./run.sh fix`를 같이**: ox-hugo가 link 내장 헤딩 anchor에 `{#title--relref-section-id-dot-md}` 노이즈를 흘리는 회귀가 살아있다. fix 단계 [2/3] `--fix-anchors`가 안전망 — 안 돌리면 export 직후 짧게 노출됨. "버그 새로 생긴 것 같다" 착각의 단골 원인.
+Recurring traps only. Details live in the code comment at each site.
+
+- `doom sync` is needed after `init.el` module changes **and after any `packages.el`
+  declaration** — not for `config.el`/`lisp/` edits. Adding a dependency without
+  syncing leaves it uninstalled.
+- `per-machine.el` is git-ignored — font/theme overrides go there.
+- The Emacs preview channel coexists with system stable via separate `EMACSDIR`
+  (`~/doomemacs-unstable`) and `server-name` (`doom-unstable`). Which upstream branch
+  or tag `flake.nix` pins moves with the release cycle — read the flake, not this
+  line.
+- Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard.
+- WezTerm + terminal Emacs + built-in Korean input is a custom path. If minibuffer or
+  search prompt spacing breaks, **inspect TTY width drift first** — especially a
+  hardcoded `…` in Consult truncation — before blaming Hangul input.
+- **Headless daemons do not load Doom modules** (`bin/denote-export.el`,
+  `bin/agent-server.el`). Buffer-local org variables that only get set up in the GUI
+  are how broken figures accumulate in the garden. The SSOT applier pattern in
+  § workflow-shared.el is the fix — first place to suspect on regression.
+  (2026-05-10, `b348898`/`d8b977a`)
+- **If keybindings vanish wholesale, suspect a `map!` prefix.** When Doom defaults like
+  `SPC f s` or `SPC h d` become `undefined`, a described `:prefix` almost certainly
+  overwrote the existing map. Checking whether `(lookup-key doom-leader-map "f")` is
+  `eq` to `doom-leader-file-map` settles it immediately. See § map! prefix rule.
+  (2026-07-12, upstream `de2a3364a`)
+- **If `agent-denote-add-link` files a link under the wrong section, suspect the heading
+  regex.** The standard heading is written as one word with no internal space; an
+  older regex that required whitespace missed it entirely and instead matched sibling
+  headings that merely start with the same prefix. Anchor the whole heading. SSOT is
+  `agent-server--related-notes-heading-re`, gated by
+  `tests/test-agent-denote-link.el`. (2026-07-17)
+- **Do not grow gptel backends or models.** One backend — OpenAI-sub (ChatGPT
+  subscription OAuth) — and `my/gptel-models` as the SSOT for the model list. **Add
+  only on that one line**, and never hand-copy a model spec (`my/gptel--model-specs`
+  pulls it from upstream). Reviving a removed backend needs GLG's decision first.
+  (2026-07-22, `950bd05`)
+- **If gptel summarize/translate "used to work and now doesn't", re-measure the model
+  tier.** Availability differs sharply by tier on the subscription rail, and a
+  congested request comes back as **HTTP 200 with a payload-level
+  `server_is_overloaded`** — so reporting `:status` alone makes remote congestion look
+  like our regression. The same model staying healthy in pi (Codex CLI) at the same
+  moment is just the CLI swallowing it with backoff retries. Diagnosis goes through
+  `my/gptel-error-message`, absorption through `my/gptel-request-retry`.
+  **`my/gptel-model-fast` is a measured slot, not a tier name** — the numbers and their
+  date are in the `lisp/ai-gptel.el` comment. (2026-08-11)
+- **If `evil-collection` takes a gptel key, suspect a dead option.** When upstream
+  deletes an option and moves the behavior to a shared REPL abstraction, something you
+  had turned off silently comes back — a dead `setq` gives no signal. It is now
+  disabled for gptel alone via a per-map `:enabled` lambda in
+  `evil-collection-binding-overrides`. (2026-07-22)
+- Broken garden links never break the build. Clean up periodically with
+  `./run.sh verify` → `./run.sh fix`.
+- **Always run `./run.sh fix` right after an export.** ox-hugo still leaks
+  `{#title--relref-…}` noise into anchors of link-embedded headings. Skipping it leaves
+  a brief exposure right after export — the usual cause of "looks like a new bug".

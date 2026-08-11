@@ -4,7 +4,10 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.2-hygiene.1`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.11`.
+
+> 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
+> 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
 ---
 
@@ -14,8 +17,8 @@
       프리뷰 `C-o`, 계정 전환 `SPC g h a`. embark·forge·omni는 여전히 안 넣음.
 - [ ] **fix-bold 첫 dry-run**: `./run.sh fix-bold` → diff 검수 → y 시에만 apply.
       스코프 notes/bib/meta/botlog. journal 손대지 않음. org는 이미 커밋 베이스라인.
-- [ ] **elfeed remember 한 번**: 요약 `z` (옛 캐시면 `x` 후 재생성) → `a` →
-      remember.org에 quote/note + `-` 리스트인지 확인.
+- [ ] **elfeed remember 한 번**: 요약 `z`는 2026-08-11에 실측으로 닫힘 (실제 엔트리
+      e2e 3회, 8초 균일). 남은 건 `a` → remember.org에 quote/note + `-` 리스트 확인.
 - [ ] **Emacs 31.0.91 첫 기동 (GLG)**: `./run.sh unstable`.
       첫 기동만 straight/eln 전 패키지 재빌드. 핀: `emacs-31.0.91` = `57581b8b`.
 - [ ] **Neomacs 재검토일 도래**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
@@ -947,6 +950,35 @@ skills 인프라 + 다른 14 default tool 은 그대로 유지.
 | `+gptel--disable-tool-confirmations` | `gptel-agent` 의 default tool 의 `:confirm t` 자리 변경 시 (영향 가능) | — |
 | `+gptel-agent--inject-user-prompt` | `gptel-agent` 의 `agents/*.md` frontmatter format 변경 시 (영향 가능) | — |
 | `gptel-agent-dirs` append + `prompts/gptel-agent.md` | upstream 이 subagent 가이드를 별도 toggle 로 분리 (예: `gptel-agent-subagents-enabled`) 시 | — |
+
+### `bin/neomacs.sh --gnu --probe` 안 된다 — 문서만 정정함 (2026-08-11)
+
+terra 교차검토에서 나옴. `--gnu`는 `RUNNER=(emacs)` 세팅 후 **즉시 exec** 하므로
+(`bin/neomacs.sh:123-128`) `--probe`가 `run_probes` 디스패치(`:137-138`)에 닿지
+못한다. Emacs가 `--probe`를 모르는 인자로 먹고 GUI가 뜬다. AGENTS.md가 말하는
+"양쪽에서 동일하게 돌아야 한다"의 **검증 수단이 실제로는 한 명령으로 안 된다.**
+
+이번 릴리즈에서는 문서만 사실에 맞췄다 (README / neomacs/README). 코드 수정은
+GNU Emacs로 프로브 전체를 돌려 검증해야 해서 릴리즈와 분리한다.
+
+- [ ] `--gnu`를 exec 대신 플래그로 바꿔 아래 dispatch로 흘리기. `resolve_runner`가
+      RUNNER를 덮지 않게 가드. 그 뒤 `--gnu --probe` 실측 1회 → 문서 원복.
+
+### 모델 티어 재측정 레인 (2026-08-11)
+
+`my/gptel-model-fast`를 luna → **terra**로 옮겼다. 근거는 교차 실측: luna 11/36
+(~31%, 성공해도 5~9초) vs terra 15/15 (100%, 중앙값 2초). 실패는 HTTP 200 +
+payload `server_is_overloaded`. 프롬프트 길이·시스템 프롬프트·`Originator` 헤더
+(gptel vs codex_cli_rs, 교차 10회)는 모두 무관으로 갈라냈다.
+
+- [ ] **재측정 (luna 혼잡 해소 확인)**: 같은 방식(번갈아 10회 이상, 순차 1초 간격)으로
+      luna 성공률을 다시 잰다. 20%대가 아니면 `my/gptel-model-fast` 원복 후보.
+      되돌릴 땐 반드시 새 수치와 날짜를 docstring에 남긴다.
+- [ ] **`my/gptel-request-retry` 적용면 확장 판단**: 지금은 elfeed만 탄다.
+      `ai-gptel.el`의 다른 요약/번역 명령은 `my/gptel-error-message`만 붙어 있어
+      혼잡 시 첫 실패가 그대로 노출된다. terra가 100%인 동안은 안 급함.
+- 참고: `gptel-quick`·`gptel-magit`은 패키지가 직접 `gptel-request`를 부르므로
+      우리 재시도를 못 탄다. 모델 상수 교체로만 이득을 봤다.
 
 ### 테스트 가능성 — 조사 완료, 착수 판정 대기 (2026-07-22)
 

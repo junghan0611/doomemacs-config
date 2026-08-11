@@ -45,9 +45,9 @@ doomemacs-config/
 ├── packages.el          # Package declarations
 ├── per-machine.el       # Machine-specific (git-ignored)
 │
-├── lisp/                # Modular config (43 files, one concern each)
-│   ├── ai-*.el              # AI/Agent integration (6)
-│   ├── denote-*.el          # Denote ecosystem (4)
+├── lisp/                # Modular config (44 files, one concern each)
+│   ├── ai-*.el              # AI/Agent integration (7)
+│   ├── denote-*.el          # Denote ecosystem (5)
 │   ├── org-*.el             # Org-mode (2)
 │   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC
 │   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
@@ -148,7 +148,8 @@ The same `org-agenda` view shows human tasks and agent activity side by side.
 
 ## Emacs Server Architecture
 
-Four isolated server sockets coexist. Daily use is **one GUI + many TTY clients attached to the `pi` daemon**:
+Four isolated Doom server sockets coexist — plus a fifth, `"neomacs"`, when the
+review-track profile is running (see § Neomacs). Daily use is **one GUI + many TTY clients attached to the `pi` daemon**:
 
 | Socket | Instance | Purpose |
 |--------|----------|---------|
@@ -241,7 +242,16 @@ were all removed rather than left to rot.
 |------|-------|------------------|
 | Default | `gpt-5.6-terra` | Chat, buffer summarize/translate |
 | Heavy | `gpt-5.6-sol` | Manual switch via `my/gptel-switch-model` |
-| Fast | `gpt-5.6-luna` | `gptel-quick`, magit commit messages, inline translate, elfeed |
+| Fast | `gpt-5.6-terra` | `gptel-quick`, magit commit messages, inline translate, elfeed |
+
+**Fast is a measured slot, not a tier name.** It pointed at `gpt-5.6-luna` — the
+cheapest tier — until measurement said otherwise. Sequential probes on 2026-08-11
+across two runs (mixed prompts, then one fixed prompt with the models strictly
+interleaved) put luna at 11/36 successes overall (~31%, and 5–9s even when it did
+answer) against terra at 15/15 (100%, median 2s). A congested cheap tier is the slot
+that fails most often *and* answers slowest, so `my/gptel-model-fast` now resolves to
+terra. When luna frees up it gets measured again — the per-run numbers and their date
+live in `ai-gptel.el` so nobody reverts this on vibes.
 
 `my/gptel-models` in [`ai-gptel.el`](lisp/ai-gptel.el) is the SSOT — adding a model is
 one line there. Passing `:models` explicitly also matters for a subtler reason:
@@ -254,11 +264,22 @@ loses context window, cost, and capabilities. `my/gptel--model-specs` pulls each
 out of upstream's own `gptel--openai-models` instead of duplicating it, so the numbers
 follow gptel and an unknown model degrades to a bare symbol rather than erroring.
 
-Three advices remain pinned to this backend, each documented at its definition with
-the condition that would make it deletable — the Codex endpoint's mandatory
-`stream=true`, a per-request `max_output_tokens` warning, and `gptel-agent`'s
-unconditional 8192 token cap. They are re-verified against upstream periodically;
+Two advices remain pinned to this backend, each documented at its definition with the
+condition that would make it deletable: the Codex endpoint's mandatory `stream=true`
+(`gptel-request` still defaults to `:stream nil`), and a `max_output_tokens` clear
+that silences the per-request warning upstream now emits for `gptel-agent`'s
+unconditional 8192 cap. They are re-verified against upstream periodically;
 `NEXT.md` § gptel monitoring carries the current measurement and its date.
+
+Transient overload is absorbed rather than surfaced. The subscription rail answers a
+congested request with **HTTP 200 and a payload-level `server_is_overloaded`**, so
+reporting `:status` alone yields a failure message naming nothing but HTTP 200, which
+makes a remote hiccup look like a local regression. `my/gptel-error-message` reads
+`:error` first; `my/gptel-request-retry` rides the failure out with exponential
+backoff. Its final attempt switches to the fallback model, which only changes anything
+when the caller's model differs from it — with fast and default both on terra today,
+the retries alone carry the load. This is what a Codex CLI does internally; without
+it, a single first failure is all the user ever sees.
 
 ### Custom gptel-agent prompts (`prompts/`)
 
@@ -305,20 +326,29 @@ Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~
 ## Neomacs — Korean (K) review track
 
 [Neomacs](https://github.com/eval-exec/neomacs) rewrites the Emacs core (~300K lines
-of C) in Rust. `neomacs/` holds a **builtin-only vanilla profile** for it, plus probes
-that turn Korean behavior into reproducible reports. Doom is not involved: separate
+of C) in Rust. `neomacs/` holds a **vanilla profile** for it, plus probes that turn
+Korean behavior into reproducible reports. Doom is not involved: separate
 `--init-directory`, separate server name, no shared state.
+
+The profile is builtin-only with one deliberate exception: if a local pure-Elisp
+Denote checkout already exists on disk it is put on `load-path`, so `denote:` links in
+a real corpus resolve instead of aborting the export probe. Nothing is fetched, no
+package manager runs, and anything needing a C module or native-comp stays out — the
+no-network rule holds.
 
 ```bash
 ./bin/neomacs.sh --fetch        # download a release AppImage (no source build)
 ./bin/neomacs.sh                # GUI
 ./bin/neomacs.sh --probe        # run all probes in batch
-./bin/neomacs.sh --gnu --probe  # same profile on stock GNU Emacs — the baseline
+./bin/neomacs.sh --gnu          # same profile on stock GNU Emacs — the baseline
 ```
 
 The profile must run identically on Neomacs and stock GNU Emacs, so `--gnu` decides
 whether a divergence belongs to Neomacs or to this config. Probes run one process per
 file, because a crash that kills the runtime is itself a finding.
+
+Note that `--gnu` currently execs Emacs immediately, so it cannot be combined with
+`--probe` to get a batch baseline in one command — that gap is tracked in `NEXT.md`.
 
 Upstream is followed but not petitioned — see `neomacs/README.md` for the current
 measurement table, known divergences, and the standing verdict.

@@ -6,13 +6,63 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.8.11 — measured model tiers, tightened docs
+
+From here on, new entries are written in English: this is a public repo and the
+changelog ships as release notes. Older sections are left as they were written.
+
 ### Fixed
 
-- **ELFEED_LINK (Stage 3 F).** ox-hugo가 org `elfeed:` 링크를
-  `[desc](host#https://article…)` dead target으로 흘린다. export는 안 건드리고
-  verify-content가 임베디드 https URL로 치환. F 한 번에 처리.
+- **gptel summarize/translate failing as "요청 실패 — HTTP/2 200".** The
+  subscription rail answers a congested request with HTTP 200 and a payload-level
+  `server_is_overloaded`, so reporting `:status` alone hid the real cause and made
+  remote congestion look like a local regression. `my/gptel-error-message` now reads
+  `:error` first, and all eight failure sites in `ai-gptel.el` and `elfeed-config.el`
+  go through it.
+- **agent-server never applied the workflow-shared org contract.** It loaded
+  `workflow-shared.el` but called neither `my/apply-org-download-image-dir` nor
+  `my/apply-org-attach-id-dir`, so a headless daemon — which loads no Doom modules —
+  resolved `[[attachment:…]]` and `[[download:…]]` against org defaults. AGENTS.md had
+  documented the applier contract as if all three contexts honored it. Found by
+  cross-review; verified after the fix that the daemon now reports the SSOT paths.
+- **ELFEED_LINK (Stage 3 F).** ox-hugo leaks org `elfeed:` links as
+  `[desc](host#https://article…)` dead targets. Export is left alone; verify-content
+  rewrites them to the embedded https URL, handled in one `F` pass.
 
-## v2026.8.2-hygiene.1 — 가든·org 위생, remember 안전
+### Changed
+
+- **`my/gptel-model-fast` moved from `gpt-5.6-luna` to `gpt-5.6-terra`.** Interleaved
+  sequential probes on 2026-08-11 measured luna at 11/36 successes (~31%, 5–9s even
+  when it answered) against terra at 15/15 (100%, median 2s) — prompt length, system
+  prompt, and the `Originator` header were all ruled out, leaving tier as the only
+  variable. A congested cheap tier is the slot that fails most and answers slowest.
+  This one constant also fixes `gptel-quick` and magit commit messages. End-to-end
+  elfeed summarize went from 19–32s with retries to a flat 8s.
+- **AGENTS.md rewritten and cut from 468 to ~330 lines, now in English.** It keeps
+  structure, coding conventions, contracts, and recurring traps; frequently-changing
+  operational detail (verify/fix categories, deploy stages, org-hygiene tables,
+  lychee tuning, neomacs measurements) now lives only in `README.md` and in code SSOT,
+  with pointers left behind. A precedence table at the top settles conflicts: the code
+  wins, and a doc that contradicts it is a bug.
+- **Documentation corrected against the code** after cross-review by a peer agent:
+  the neomacs profile is builtin-only *except* for an on-disk pure-Elisp Denote
+  checkout; `--gnu` cannot be combined with `--probe` (tracked in `NEXT.md`); the
+  socket table counts five, not four; the retry's model fallback is inert while fast
+  and default are the same model; and `packages.el` also requires `doom sync`.
+- Config no longer loads `andenken-config`.
+
+### Added
+
+- **`my/gptel-request-retry`** — exponential backoff for transient overload codes,
+  with the final attempt falling back to a less contended model. This is what a Codex
+  CLI does internally; without it a single first failure was all the user ever saw.
+- **Pimacs** — one-buffer Pi client that picks its model at start.
+- Keybinding lint now also catches a command bound where another file opens a prefix.
+- User and assistant callout templates.
+
+### Fixed (UI)
+
+- Vertico renders completion icons in GUI only.
 
 ### Added
 
