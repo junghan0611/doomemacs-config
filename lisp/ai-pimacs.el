@@ -96,6 +96,10 @@
    (list (completing-read "Pimacs model: " my/pimacs-models nil nil)
          (when current-prefix-arg
            (read-string "Session name: "))))
+  ;; `:commands' lazy-load 경로라 `pimacs-chat' 호출 전에는 패키지가 안 뜬다.
+  ;; let 이 `pimacs-flags' 를 먼저 읽으므로 require 를 앞에 둔다 — 안 그러면
+  ;; void-variable. require 가 :config 도 끌어 `--models' 가 이미 붙은 상태다.
+  (require 'pimacs)
   (let ((pimacs-flags (append pimacs-flags (list "--model" model)))
         ;; `pimacs-chat' 은 `current-prefix-arg' 를 보고 트랜지언트를 띄운다.
         ;; 여기서는 접두 인자를 이름 묻기에 이미 썼으므로 가린다.
