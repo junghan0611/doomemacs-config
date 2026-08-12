@@ -65,7 +65,7 @@ vlc 권장값: --intf dummy --play-and-exit"
   :type 'string
   :group 'edge-tts)
 
-(defcustom edge-tts-output-dir (expand-file-name "~/sync/org/transcript/")
+(defcustom edge-tts-output-dir (expand-file-name "~/org/md/transcript/")
   "TTS 오디오/텍스트 파일 저장 디렉터리."
   :type 'directory
   :group 'edge-tts)
@@ -545,8 +545,8 @@ SHOW-PROGRESS가 non-nil이면 진행 상황 버퍼를 표시."
 ;;    - C-g 로 취소 가능
 ;;
 ;; 출력 파일:
-;;   ~/sync/org/transcript/새ID--원본DenoteID__tts.txt
-;;   ~/sync/org/transcript/새ID--원본DenoteID__tts.mp3
+;;   ~/org/md/transcript/새ID--원본DenoteID__tts.txt
+;;   ~/org/md/transcript/새ID--원본DenoteID__tts.mp3
 ;;
 ;; 터미널에서 직접 실행:
 ;;   python3 ~/.config/doom/bin/edge-tts-convert.py input.txt output.mp3
