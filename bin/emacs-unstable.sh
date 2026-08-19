@@ -61,11 +61,11 @@ case "${1:-}" in
     ;;
   --nw|--tty)
     # 터미널 모드 — daemon 없이 독립 인스턴스
-    exec "${DOOM_BIN}" run -nw
+    exec "${DOOM_BIN}" emacs -nw
     ;;
   --direct)
     # --nw의 이전 이름 (호환)
-    exec "${DOOM_BIN}" run -nw
+    exec "${DOOM_BIN}" emacs -nw
     ;;
   --debug)
     # debug-init으로 직접 실행 — 에러 추적용
@@ -84,7 +84,7 @@ case "${1:-}" in
     $EMACS_BIN --version | head -1
     ;;
   *)
-    # 기본: doom run으로 실행
-    exec "${DOOM_BIN}" run
+    # 기본: doom emacs으로 실행
+    exec "${DOOM_BIN}" emacs
     ;;
 esac
