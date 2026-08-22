@@ -17,6 +17,11 @@
 ;; 모델이 계속 새로 나오는 자리라 백엔드/모델 목록을 넓히지 않는다.
 ;; 넣고 싶으면 이 파일 한 곳(`my/gptel-models')만 고친다.
 ;;
+;; 예외 하나 — GitHub Copilot (2026-08-22, GLG 명시 요청). 한 달 체험용
+;; **시한부 백엔드**이며, OpenAI-sub 가 줄 수 없는 축(Claude/Gemini)만 담는다.
+;; 기본값은 여전히 OpenAI-sub 이고, 구독이 끝나면 § GitHub Copilot 블록과
+;; `my/gptel--backend-for-model' 의 Copilot 분기를 지우면 원상복구된다.
+;;
 ;; 구조:
 ;;   1. Evil Collection 설정
 ;;   2. gptel 코어 (use-package!)
@@ -237,16 +242,17 @@ when luna frees up and move it back — but never on vibes: record the new
 numbers and date here.  Method and the full sample are in
 § Failure reporting and overload retry above.")
 
-  (defun my/gptel--model-specs (models)
+  (defun my/gptel--model-specs (models &optional specs)
     "Return MODELS with their upstream specs attached.
 `gptel--process-models' only assigns a symbol plist when the model
 arrives as a cons cell; bare symbols land with an empty plist, so the
 menu loses context window, cost and capabilities.  Pull the spec from
-`gptel--openai-models' instead of restating it here — upstream stays
-the single source of truth, and an unknown model degrades to a bare
-symbol rather than erroring."
-    (mapcar (lambda (model) (or (assq model gptel--openai-models) model))
-            models))
+SPECS (default `gptel--openai-models') instead of restating it here —
+upstream stays the single source of truth, and an unknown model degrades
+to a bare symbol rather than erroring."
+    (let ((table (or specs gptel--openai-models)))
+      (mapcar (lambda (model) (or (assq model table) model))
+              models)))
 
   (defvar gptel-openai-sub-backend nil
     "OpenAI ChatGPT Plus/Pro subscription backend via OAuth.")
@@ -254,6 +260,41 @@ symbol rather than erroring."
     (setq gptel-openai-sub-backend
           (gptel-make-openai-oauth "OpenAI-sub"
             :models (my/gptel--model-specs my/gptel-models))))
+
+;;;;;; GitHub Copilot — 시한부 블록 (2026-08-22 ~ 한 달 체험)
+
+  ;; GLG 결정 2026-08-22: Copilot 을 한 달만 구독한다. AGENTS.md "gptel 백엔드를
+  ;; 늘리지 않는다" 의 명시적 예외이며, **구독이 끝나면 이 블록을 통째로 지운다**
+  ;; (`my/gptel-copilot-models', `gptel-copilot-backend', 그리고 아래
+  ;; `my/gptel--backend-for-model' 의 Copilot 분기 — 그게 전부다).
+  ;;
+  ;; 존재 이유는 하나: OpenAI-sub 레일이 줄 수 없는 축(Claude, Gemini)을 같은
+  ;; Emacs 안에서 재보는 것. 겹치는 gpt-* 는 여기 두지 않는다 — 구독 레일이 이미
+  ;; 있고, Copilot 은 요청마다 premium request 쿼터를 먹으므로 빠른 자리
+  ;; (`my/gptel-model-fast': quick / magit / 인라인 번역)의 기본을 이쪽으로
+  ;; 옮기지 않는다. 기본 `gptel-backend'/`gptel-model' 도 그대로 OpenAI-sub 다.
+  ;;
+  ;; 로그인: M-x gptel-gh-login — device flow 라 원격/TTY Emacs 에서도 된다.
+  ;; 토큰 캐시는 `gptel-gh-github-token-file' / `gptel-gh-token-file'
+  ;; (~/.cache/copilot-chat/). 첫 호출이 알아서 로그인을 부르기도 한다.
+  ;;
+  ;; `require' 로 받는 이유: 모델 스펙 표 `gptel--gh-models' 가 gptel-gh.el 안에
+  ;; 있어서, autoload 인 `gptel-make-gh-copilot' 만으로는 인자 평가 시점에
+  ;; 아직 void 다.
+
+  (defconst my/gptel-copilot-models
+    '(gemini-3.6-flash claude-sonnet-5)
+    "Copilot 백엔드에 등록할 모델")
+
+  (defvar gptel-copilot-backend nil
+    "GitHub Copilot subscription backend (`gptel--gh').
+nil 이면 gptel-gh.el 이 없거나 로드에 실패한 것 — 구독 종료 후에는 이 변수와
+`my/gptel-copilot-models' 를 함께 지운다.")
+  (when (require 'gptel-gh nil t)
+    (setq gptel-copilot-backend
+          (gptel-make-gh-copilot "Copilot"
+            :models (my/gptel--model-specs my/gptel-copilot-models
+                                           gptel--gh-models))))
 
 ;;;;;; Codex streaming advice
 
@@ -355,16 +396,29 @@ has its own streaming wiring via fsm — leave it alone)."
   (setq gptel-backend gptel-openai-sub-backend)
   (setq gptel-model my/gptel-model-default)
 
+  (defun my/gptel--backend-for-model (model)
+    "Return the backend that registers MODEL.
+Copilot models route to `gptel-copilot-backend'; everything else stays on
+OpenAI-sub.  Delete the Copilot branch together with that backend."
+    (if (and gptel-copilot-backend (memq model my/gptel-copilot-models))
+        gptel-copilot-backend
+      gptel-openai-sub-backend))
+
   (defun my/gptel-switch-model (model)
-    "Switch `gptel-model' to MODEL on the OpenAI-sub backend.
-Interactively prompt among `my/gptel-models'."
+    "Switch `gptel-model' to MODEL, moving `gptel-backend' along with it.
+Interactively prompt among `my/gptel-models' plus, while the Copilot
+subscription lasts, `my/gptel-copilot-models'."
     (interactive
      (list (intern (completing-read
-                    "gptel model: " (mapcar #'symbol-name my/gptel-models)
+                    "gptel model: "
+                    (mapcar #'symbol-name
+                            (append my/gptel-models
+                                    (and gptel-copilot-backend
+                                         my/gptel-copilot-models)))
                     nil t nil nil (symbol-name my/gptel-model-default)))))
-    (setq gptel-backend gptel-openai-sub-backend)
+    (setq gptel-backend (my/gptel--backend-for-model model))
     (setq gptel-model model)
-    (message "gptel model: %s" model))
+    (message "gptel: %s / %s" (gptel-backend-name gptel-backend) model))
 
 ;;;;; gptel-quick — 빠른 조회
 
@@ -737,7 +791,8 @@ ACTION-NAME은 표시용 (예: \"요약\", \"번역\").
 TEMPERATURE는 선택적 온도 설정 (nil이면 전역값 사용)."
     (let* ((formatted (+gptel--format-content-for-llm content))
            (buf (get-buffer-create +gptel-buffer-name))
-           (target-backend (or +gptel-buffer-backend gptel-openai-sub-backend))
+           (target-backend (or +gptel-buffer-backend
+                               (my/gptel--backend-for-model +gptel-buffer-model)))
            (target-model +gptel-buffer-model))
       (with-current-buffer buf
         (unless (derived-mode-p 'org-mode)
