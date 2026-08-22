@@ -7,97 +7,39 @@
 
 ;;; Commentary:
 
-;; Casual: 각 모드별 Transient UI를 <f12>로 통일 접근.
-;; 지원 모드에서 <f12> 누르면 해당 모드의 casual 메뉴가 열림.
-;; M-<f12>는 casual-editkit (범용 편집, 모드 무관).
-;; https://github.com/kickingvegas/casual
+;; Casual: 모드별 Transient 메뉴.  https://github.com/kickingvegas/casual
 ;;
-;; 각 바인딩은 해당 모드가 로드된 후 설정됨 (after!).
-;; casual 서브 패키지는 autoload되어 있어 별도 require 불필요.
+;; 2026-08-22: 모드별 <f12> 26줄을 upstream `casual-init' 한 줄로 갈아치웠다.
+;; upstream 이 이미 같은 일을 하고 있었고, 우리 목록은 새 모듈이 나올 때마다
+;; 뒤처지기만 했다.
 ;;
-;; 바닐라 Emacs 참고 (Emacs 29.1+ keymap-set 사용):
-;;   (keymap-set dired-mode-map "<f12>" #'casual-dired-tmenu)
-;;   (keymap-set calc-mode-map "<f12>" #'casual-calc-tmenu)
-;; Doom에서는 map! + after! 패턴을 사용.
+;; <f1> 은 전역이다.  `casual-editkit-init' 이 primary 를 `keymap-global-set' 으로
+;; 박으므로 (casual-editkit.el:43) Emacs 기본 <f1> 도움말 접두는 사라진다 —
+;; 도움말은 C-h / SPC h 로 그대로.  모드 메뉴가 있는 곳은 그 메뉴가, 없는 곳은
+;; `casual-editkit-main-tmenu' 가 뜬다.
+;;
+;; M-<f1> 은 upstream 이 secondary 로 돌려놓은 모드에만 있다 — bibtex, elisp,
+;; css, csv, html.  나머지 모드에서는 비어 있다.
+;;
+;; 비용: `casual-init' 은 `casual-<mode>-init' 을 전부 부르고 그 autoload 들이
+;; calc, bibtex, eww, man, esh-mode, ediff, re-builder, cus-edit 를 끌고 들어온다.
+;; 측정 2026-08-22 batch — 콜드 3.6s / 주요 모듈 선로딩 warm 2.6s, features +239.
+;; 이 Doom 은 `use-package-always-defer' 가 nil 이라 `:defer' 를 안 쓰면 그 값을
+;; 시작 때 그대로 낸다.  그래서 `:defer 5' — 시작 5초 뒤 idle 에 읽는다.
+;; <f1> 은 그 뒤부터 산다.
 
 ;;; Code:
 
-;;;; <f12> — 모드별 casual-*-tmenu 바인딩
+;;;; casual
 
-(after! dired
-  (map! :map dired-mode-map "<f12>" #'casual-dired-tmenu))
-
-(after! calc
-  (map! :map calc-mode-map "<f12>" #'casual-calc-tmenu)
-  (map! :map calc-alg-map "<f12>" #'casual-calc-tmenu))
-
-(after! ibuffer
-  (map! :map ibuffer-mode-map "<f12>" #'casual-ibuffer-tmenu))
-
-(after! info
-  (map! :map Info-mode-map "<f12>" #'casual-info-tmenu))
-
-(after! bookmark
-  (map! :map bookmark-bmenu-mode-map "<f12>" #'casual-bookmarks-tmenu))
-
-(after! re-builder
-  (map! :map reb-mode-map "<f12>" #'casual-re-builder-tmenu))
-
-(after! org-agenda
-  (map! :map org-agenda-mode-map "<f12>" #'casual-agenda-tmenu))
-
-(after! org
-  (map! :map org-mode-map "<f12>" #'casual-org-tmenu))
-
-(after! eww
-  (map! :map eww-mode-map "<f12>" #'casual-eww-tmenu))
-
-(after! compile
-  (map! :map compilation-mode-map "<f12>" #'casual-compile-tmenu))
-
-(after! man
-  (map! :map Man-mode-map "<f12>" #'casual-man-tmenu))
-
-(after! esh-mode
-  (map! :map eshell-mode-map "<f12>" #'casual-eshell-tmenu))
-
-;; ediff/image: keymap이 모드 활성화 시에만 생성 → hook으로 바인딩
-(add-hook! 'ediff-keymap-setup-hook
-  (define-key ediff-mode-map (kbd "<f12>") #'casual-ediff-tmenu))
-
-(add-hook! 'image-mode-hook
-  (define-key image-mode-map (kbd "<f12>") #'casual-image-tmenu))
-
-(after! calendar
-  (map! :map calendar-mode-map "<f12>" #'casual-calendar-tmenu))
-
-(after! help-mode
-  (map! :map help-mode-map "<f12>" #'casual-help-tmenu))
-
-(after! css-mode
-  (map! :map css-mode-map "<f12>" #'casual-css-tmenu))
-
-(after! csv-mode
-  (map! :map csv-mode-map "<f12>" #'casual-csv-tmenu))
-
-(after! sgml-mode
-  (map! :map html-mode-map "<f12>" #'casual-html-tmenu))
-
-(after! make-mode
-  (map! :map makefile-mode-map "<f12>" #'casual-make-tmenu))
-
-(after! elisp-mode
-  (map! :map emacs-lisp-mode-map "<f12>" #'casual-elisp-tmenu))
-
-(after! bibtex
-  (map! :map bibtex-mode-map "<f12>" #'casual-bibtex-tmenu))
-
-(after! isearch
-  (map! :map isearch-mode-map "<f12>" #'casual-isearch-tmenu))
-
-;;;; M-<f12> — casual-editkit (범용 편집, 모드 무관)
-
-(map! "M-<f12>" #'casual-editkit-main-tmenu)
+(use-package! casual
+  :defer 5
+  :init
+  ;; upstream 기본값은 C-o / M-m — 둘 다 Doom 에서 이미 임자가 있어 f1 축으로.
+  (setq casual-keybinding-primary "<f1>")
+  (setq casual-keybinding-secondary "M-<f1>")
+  :config
+  (casual-init))
 
 ;;;; Context Menu & Anju
 

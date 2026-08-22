@@ -212,7 +212,7 @@
   (require 'term-config))
 (require 'keybindings-config)
 (require 'keybindings-denote-config)
-;; (require 'casual-config)               ; casual transient UI (<f12>)
+(require 'casual-config)               ; casual transient UI (<f1> / M-<f1>)
 (require 'termux-config)
 (require 'tty-config)                 ; 터미널(TTY) 통합: term-keys, kitty-graphics, clipboard
 ;; (require 'eaf-config)                ; EAF (조건부 로딩)

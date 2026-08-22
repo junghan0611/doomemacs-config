@@ -215,8 +215,7 @@
 
 ;;;; Transient Menu
 
-;; (package! casual)
-;; (package! anju)
+(package! casual)
 (package! password-store-menu)
 
 ;;;; tmux-config.el
