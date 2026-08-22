@@ -284,7 +284,7 @@
 ;;;; tab-bar-config.el
 
 (package! celestial-mode-line)
-;; (package! keycast)
+(package! keycast)
 
 ;;;; search-config.el
 
