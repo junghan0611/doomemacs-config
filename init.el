@@ -189,6 +189,8 @@ nil if file missing.")
        (sh +lsp)                ; she sells {ba,z,fi}sh shells on the C xor
        (python +tree-sitter)
        (lua +tree-sitter)
+       lean
+       ledger
        (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
        (json +tree-sitter)  ; At least it ain't XML
        (janet +tree-sitter)  ; Fun fact: Janet is me!
