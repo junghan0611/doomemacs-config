@@ -1,13 +1,40 @@
-;;; $DOOMDIR/lisp/korean-input-config.el --- Korean Input NFD to NFC Normalization -*- lexical-binding: t; -*-
+;;; $DOOMDIR/lisp/korean-input-config.el --- Korean input & writing hygiene -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
-;; 한글 입력 시스템 전체 설정
-;; - Input method: korean-hangul (Emacs 내장 입력기)
-;; - 터미널 한영키: term-keys + wezterm 조합으로 RightAlt/S-SPC 전달
-;; - Evil 모드 연동 (Normal→입력기 OFF, Insert→복원)
-;; - NFD→NFC: 수동 변환만 지원 (M-x korean/nfc-normalize-buffer)
-;; - 폰트/이모지: Noto Emoji + Noto Sans Symbols 1/2 + Noto Sans Math fallback
+;; 한글을 Emacs에서 쓰고 고치는 SSOT.
+;; upstream :input chinese/japanese 의 pangu-spacing·IME 묶음에 대응하는
+;; 개인 레이어. 모듈 신설이 아니라 "손이 가는 명령"을 한 파일에 모은다.
+;;
+;; ── 에이전트 카탈로그 (잔소리 대신 여기 함수) ─────────────────
+;; Interactive (org/md localleader):
+;;   my/clear-nbsp-and-ascii-punctuations  SPC m ;  잡음 유니코드 제거
+;;   my/insert-nbsp-simple-all             SPC m :  라틴↔한글 경계 NBSP
+;;   my/fix-markdown-bold-to-org                  **bold** → *bold*
+;;   korean/nfc-normalize-buffer                   NFD 자모 → NFC 음절
+;;   korean/fix-raw-bytes-in-buffer               터미널 깨진 UTF-8 재조립
+;;   korean/convert-jamo-to-syllable               nfc-normalize 의 본체
+;;
+;; 자동/훅 (평소 손 안 댐):
+;;   Evil insert/normal ↔ korean-hangul 토글
+;;   char-width-table / fontset (TTY·GUI 폭 합의)
+;;
+;; Export 파이프라인 (이 파일 밖 — 데몬이 읽어야 해서):
+;;   my/org-fix-cjk-emphasis   lisp/denote-export-config.el
+;;     export 임시 버퍼에만 CJK 옆 NBSP 삽입. 원본 org에 NBSP 심지 말 것.
+;;   bin/fix-org-mdbold.el     가든 일괄 **bold** → *bold*
+;;
+;; NBSP 두 얼굴 (헷갈리면 여기):
+;;   - 인터랙티브 clear  : 실수로 들어온 U+00A0/ZWS/특수공백 제거
+;;   - 인터랙티브 insert : 라틴-한글 경계를 눈에 안 띄게 벌림 (pangu 수동판)
+;;   - export insert     : org emphasis 파서가 CJK를 인식하게 임시 삽입
+;;   원본 org 파일에 수동 NBSP를 쌓지 않는다 (export 주석 검증 기준).
+;;
+;; 입력 경로:
+;; - Input method: korean-hangul (Emacs 내장)
+;; - 터미널 한영키: term-keys + wezterm RightAlt/S-SPC
+;; - Evil: Normal→입력기 OFF, Insert→복원
+;; - NFD→NFC: 수동 (M-x korean/nfc-normalize-buffer). 자동 모드 본체는 꺼둠.
 ;;
 ;; 터미널 한영키 흐름:
 ;;   Right Alt → xkb(us) Alt_R → fcitx5 통과 → wezterm RightAlt
@@ -299,7 +326,7 @@ kime 등 시스템 IME로 깨진 한글을 수동 복원할 때 사용."
 
 (defun korean/convert-jamo-to-syllable ()
   "현재 버퍼에서 조합형 자모를 완성형 음절로 변환합니다.
-NFD(분해형) → NFC(완성형) 변환."
+NFD(분해형) → NFC(완성형) 변환. 공개 이름은 `korean/nfc-normalize-buffer'."
   (interactive)
   (save-excursion
     (goto-char (point-min))
@@ -465,6 +492,81 @@ _LEN: 삭제된 문자 수 (사용 안 함)"
 (when (eq system-type 'android)
   (setq overriding-text-conversion-style nil)
   (setq-default text-conversion-style nil))
+
+;;;; Writing hygiene — pangu 수동판 / 에이전트 잔소리 줄이기
+
+;; upstream :input chinese|japanese 는 pangu-spacing 을 상시 켠다.
+;; 여기선 org emphasis·export 와 싸우지 않도록 *명령형* 으로만 둔다.
+;; 키: org/md localleader `;' `:'  (lisp/keybindings-config.el)
+
+(defun my/--replace-in-buffer (old new)
+  "Replace OLD with NEW in the current buffer. Return match count."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((case-fold-search nil)
+          (matches 0))
+      (while (re-search-forward old nil t)
+        (replace-match new)
+        (cl-incf matches))
+      matches)))
+
+(defun my/clear-nbsp-and-ascii-punctuations ()
+  "잡음 유니코드 정리: NBSP/ZWS/특수공백 제거, 스마트 따옴표 → ASCII.
+export 가 심는 임시 NBSP 와 무관 — 원본 버퍼 위생용."
+  (interactive)
+  (let ((chars
+         '(("[\u00a0\u200b]" . "") ;; NBSP, zero-width space
+           ("[\u2000-\u200A\u202F\u205F\u3000]" . " ") ;; 특수 공백류 → space
+           ("[\{\$]" . "")
+           ("[\$\}]" . "")
+           ("[‘’]" . "'")
+           ("[“”]" . "\"")))
+        (matches 0))
+    (dolist (pair chars)
+      (cl-incf matches (my/--replace-in-buffer (car pair) (cdr pair))))
+    (message "Replaced %d match%s." matches (if (> matches 1) "es" ""))))
+
+(defun my/insert-nbsp-simple-all ()
+  "라틴/org-markup 과 한글이 붙은 경계에 NBSP(U+00A0) 삽입.
+pangu-spacing 상시 모드 대신 쓰는 수동 한 방.
+프론트매터 보수적으로 스킵: 10행부터. 조사(이/가/은…) 패턴은 꺼둔 상태."
+  (interactive)
+  (let ((nbsp (string ?\u00A0))
+        (count 0))
+    (save-excursion
+      (goto-line 10)
+      ;; 라틴·org markup(*+=_) 바로 뒤 한글
+      (while (re-search-forward "\\([A-Za-z*+=_]\\)\\([가-힣]\\)" nil t)
+        (unless (save-excursion
+                  (goto-char (match-beginning 1))
+                  (looking-back "\\s-" 1))
+          (goto-char (match-beginning 2))
+          (insert nbsp)
+          (cl-incf count)
+          (goto-char (match-end 2)))))
+    (message "NBSP inserted: %d" count)))
+
+(defun my/fix-markdown-bold-to-org ()
+  "현재 버퍼 **bold** → org *bold*.
+AI 가 org 에 마크다운 습관으로 쓴 경우. 헤딩은 같은 줄 닫힘 없을 때 스킵.
+가든 일괄은 `./run.sh fix-bold' / bin/fix-org-mdbold.el."
+  (interactive)
+  (save-excursion
+    (let ((changes 0))
+      ;; 줄 중간: 앞에 비-* 문자
+      (goto-char (point-min))
+      (while (re-search-forward "\\([^*]\\)\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
+        (replace-match "\\1*\\2*")
+        (cl-incf changes))
+      ;; 줄 시작: 같은 줄에 닫는 ** 있는 경우만
+      (goto-char (point-min))
+      (while (re-search-forward "^\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
+        (replace-match "*\\1*")
+        (cl-incf changes))
+      (message "**bold** → *bold*: %d개 변환" changes))))
+
+;; 문서·메시지에 쓰이던 공개 이름. 본체는 convert-jamo-to-syllable.
+(defalias 'korean/nfc-normalize-buffer #'korean/convert-jamo-to-syllable)
 
 (provide 'korean-input-config)
 

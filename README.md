@@ -49,7 +49,7 @@ doomemacs-config/
 │   ├── ai-*.el              # AI/Agent integration (7)
 │   ├── denote-*.el          # Denote ecosystem (5)
 │   ├── org-*.el             # Org-mode (2)
-│   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC
+│   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC, writing hygiene
 │   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
 │   ├── term-config.el          # In-Emacs terminal — :term ghostel module + overrides
 │   ├── workflow-shared.el       # Human ↔ Agent shared contract

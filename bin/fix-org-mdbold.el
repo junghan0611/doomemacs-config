@@ -8,7 +8,7 @@
 ;;; Commentary:
 
 ;; Fix AI markdown habit in org sources: **bold** → *bold*.
-;; Companion to interactive `my/fix-markdown-bold-to-org' (functions.el)
+;; Companion to interactive `my/fix-markdown-bold-to-org' (lisp/korean-input-config.el)
 ;; and the export-temp hook in denote-export-config.el — this one rewrites
 ;; ~/org originals so the corpus stays clean between exports.
 ;;

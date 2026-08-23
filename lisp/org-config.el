@@ -574,6 +574,11 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
       (org-link-preview 1 beg end)
       t)))
 
+;;; TODO 2026-08-22 org-element 캐시 비활성화 고려중
+
+(setq org-element-use-cache nil)
+(setq org-element-cache-persistent nil)
+
 ;;; provide
 
 (provide 'org-config)

@@ -436,7 +436,8 @@ elfeed:URL#ID 링크를 자동 삽입. 요약이 있으면 Org-safe quote 블록
         "T" #'org-web-tools-convert-links-to-page-entries)
 
   (map! :map elfeed-show-mode-map
-        :n "z" #'+elfeed-show-summarize           ; 요약 (영어→한국어)
+        :n "q" #'kill-buffer-and-window            ; evil-collection 기본은 kill-current-buffer → 창 잔류
+        :n "z" #'+elfeed-show-summarize            ; 요약 (영어→한국어)
         :n "Z" #'+elfeed-show-translate            ; 전문 번역
         :n "a" #'+elfeed-remember                  ; remember 메모
         :localleader

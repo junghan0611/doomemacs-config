@@ -57,7 +57,7 @@ Only `(require ...)` and minimal glue. All logic lives in `lisp/`.
 | Org-mode | `lisp/org-config.el`, `org-functions.el` |
 | Denote | `lisp/denote-*.el` |
 | Export pipeline | `lisp/denote-export-config.el` + `bin/denote-export*.{el,py,sh}` |
-| Korean input / fonts | `lisp/korean-input-config.el` |
+| Korean input / writing hygiene | `lisp/korean-input-config.el` |
 | Unicode (NBSP, ZWS) | `lisp/unicode-config.el` |
 | TTY (term-keys, kitty-graphics, clipboard) | `lisp/tty-config.el` |
 | Evil | `lisp/evil-config.el` |
