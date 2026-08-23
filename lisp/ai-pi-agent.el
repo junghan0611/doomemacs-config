@@ -331,7 +331,7 @@ NO-WORKSPACE-SWITCH가 non-nil이면 workspace 전환 생략."
 
 (map! :leader
       (:prefix "j"
-       :desc "Pi start"           "j" #'my/pi-start
+       :desc "Pi start"           "M-j" #'my/pi-start
        :desc "Pi find session"    "f" #'my/pi-find
        :desc "Pi session manager" "l" #'my/pi-manager-toggle
        :desc "Pi quit session"    "q" #'my/pi-quit))
