@@ -10,6 +10,13 @@
 (setq-default epa-file-encrypt-to '("B5ADD9F47612A9DB"))
 (setq auth-source-cache-expiry nil)
 
+;; Magit Forge — accounts whose issues/PRs count as "mine" (inbox filter).
+;; Shape is alist of (ACCOUNT . PLIST), NOT a flat list of names inside one cell.
+;; Auth tokens stay in ~/.authinfo.gpg as USER^forge (see forge autholog 2탄).
+(setq forge-owned-accounts
+      '(("junghan0611")
+        ("jhkim2goqual")))
+
 (when (display-graphic-p) ; terminal
   (setq doom-font (font-spec :family "GLG Nerd Font Mono" :size 15.1)))
 

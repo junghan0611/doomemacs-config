@@ -125,13 +125,19 @@
 ;;;; consult-gh — global GitHub search (human surface)
 
 ;; Work-surface split:
-;;   magit-gh   — PRs inside the current Magit repo
-;;   git-link   — URL for the file/commit under point
-;;   ghcli      — agent issue/PR/CLI work
-;;   consult-gh — human global search (repo/code/issue), hand off to agents
+;;   magit-gh         — PRs inside the current Magit repo
+;;   git-link         — URL for the file/commit under point
+;;   ghcli            — agent issue/PR/CLI work
+;;   consult-gh       — human global search (repo/code/issue)
+;;   Magit Forge      — local SQLite inbox (forge-pull / global list)
 ;;
-;; Keep it thin. No embark/forge/pr-review/omni, no default view-mode
-;; keybindings, no dashboard/workflow keys. Search + account switch only.
+;; Deliberately NOT wired to consult-gh-forge: that mode inserts every
+;; selected search hit's repo into the forge DB (consult-gh-forge.el:101)
+;; and overrides ghub--token/username/host globally.  Global search and the
+;; local inbox are different axes; keep them apart. (2026-08-23)
+;;
+;; Keep it thin. No embark/forge/pr-review/omni/dashboard keys.
+;; Search + account switch only.
 ;;
 ;; Transient lives in a sibling file (`consult-gh-transient.el`) with no
 ;; ;;;###autoload cookie.  Binding `consult-gh-transient' via :commands makes
@@ -154,8 +160,7 @@
              consult-gh-favorite-repos)
   :custom
   (consult-gh-default-clone-directory "~/repos/3rd/")
-  (consult-gh-favorite-orgs-list
-   '("junghan0611" "minad" "protesilaos" "doomemacs" "earendil-works"))
+  (consult-gh-favorite-orgs-list '("junghan0611" "jhkim2goqual"))
   (consult-gh-show-preview t)
   (consult-gh-preview-key "C-o")
   ;; Stay inside Emacs — browser is the thing we are avoiding.
@@ -165,15 +170,96 @@
   ;; Keys under Doom's magit prefix. Unnamed :prefix only (AGENTS.md).
   (map! :leader
         (:prefix "g"
-         (:prefix "h"
-          :desc "Search repos" "s" #'consult-gh-search-repos
-          :desc "Search code" "c" #'consult-gh-search-code
-          :desc "Search issues" "i" #'consult-gh-search-issues
-          :desc "Switch account" "a" #'consult-gh-auth-switch
-          :desc "consult-gh menu" "h" #'my/consult-gh-menu)))
+                 (:prefix "h"
+                  :desc "Search repos" "s" #'consult-gh-search-repos
+                  :desc "Search code" "c" #'consult-gh-search-code
+                  :desc "Search issues" "i" #'consult-gh-search-issues
+                  :desc "Switch account" "a" #'consult-gh-auth-switch
+                  :desc "consult-gh menu" "h" #'my/consult-gh-menu)))
   :config
   (add-to-list 'savehist-additional-variables 'consult-gh--known-orgs-list)
   (add-to-list 'savehist-additional-variables 'consult-gh--known-repos-list))
+
+;;;; forge — inbox seeding
+
+;; Doom ships forge via `(magit +forge)'; everything below is seeding only.
+;; No advice, no overrides — `forge-add-repository' does the insert and pull
+;; itself when handed a repository object (forge-commands.el:1341-1359).
+;;
+;; Forge's inbox is only as good as its seed list, and a hardcoded list goes
+;; stale.  Ask `gh' which of my repos currently carry an open issue instead:
+;; 19 repos / 65 open issues at the time of writing. (2026-08-23)
+;;
+;; Archiving a repo on GitHub is how it leaves the inbox.  Forge has no notion
+;; of archived, so both halves are needed: `--archived=false' keeps new ones
+;; out, and the prune pass drops rows for repos archived after they were
+;; tracked.  Deleting is safe — the DB is a cache, and un-archiving plus a
+;; re-seed brings everything back.
+
+(defvar my/forge-seed-owner "junghan0611"
+  "GitHub owner whose issue-bearing repos `my/forge-seed-repositories' tracks.")
+
+(defun my/forge--repo-object (name)
+  "Return the tracked forge repository for NAME (\"owner/name\"), or nil."
+  (forge-get-repository (format "https://github.com/%s" name) nil :tracked?))
+
+(defun my/forge-seed-repo-names (owner)
+  "Return unarchived OWNER repos that currently have at least one open issue."
+  (seq-uniq
+   (process-lines "gh" "search" "issues"
+                  "--owner" owner "--state" "open" "--archived=false"
+                  "--limit" "200" "--json" "repository"
+                  "--jq" ".[].repository.nameWithOwner")))
+
+(defun my/forge-archived-repo-names (owner)
+  "Return OWNER repos that are archived on GitHub."
+  (process-lines "gh" "repo" "list" owner "--archived" "--limit" "500"
+                 "--json" "nameWithOwner" "--jq" ".[].nameWithOwner"))
+
+(defun my/forge-prune-archived-repositories (&optional owner)
+  "Drop tracked OWNER repos that have been archived on GitHub.
+Asks before deleting.  Returns the number of repos removed."
+  (interactive)
+  (let* ((owner (or owner my/forge-seed-owner))
+         (doomed (seq-filter #'my/forge--repo-object
+                             (my/forge-archived-repo-names owner))))
+    (cond
+     ((null doomed)
+      (when (called-interactively-p 'any)
+        (message "forge: no archived repository is tracked"))
+      0)
+     ((not (yes-or-no-p (format "Remove %d archived repo(s) from the forge db (%s)? "
+                                (length doomed) (string-join doomed ", "))))
+      (message "forge: prune aborted")
+      0)
+     (t
+      (mapc (lambda (name) (forge-remove-repository (my/forge--repo-object name)))
+            doomed)
+      (message "forge: removed %d archived repository(-ies)" (length doomed))
+      (length doomed)))))
+
+(defun my/forge-seed-repositories (&optional owner)
+  "Make the forge inbox match OWNER's unarchived repos that have open issues.
+Prunes archived repos first, then tracks any that are missing.  Pulling runs
+asynchronously, so the issue counts keep climbing after this returns."
+  (interactive)
+  (let ((owner (or owner my/forge-seed-owner))
+        (added 0))
+    (my/forge-prune-archived-repositories owner)
+    (dolist (name (my/forge-seed-repo-names owner))
+      (unless (my/forge--repo-object name)
+        (when-let* ((repo (forge-get-repository
+                           (format "https://github.com/%s" name) nil :valid?)))
+          (forge-add-repository repo)
+          (cl-incf added))))
+    (message "forge: %d repository(-ies) queued for tracking" added)))
+
+;; The inbox needs one key.  Unnamed :prefix only (AGENTS.md); seeding is a
+;; rare M-x, so it gets no binding.
+(map! :leader
+      (:prefix "g"
+       :desc "Forge inbox (issues)" "i" #'forge-list-global-issues
+       :desc "Forge inbox (topics)" "I" #'forge-list-global-topics))
 
 ;;;; majutsu jj-mode
 

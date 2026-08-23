@@ -152,7 +152,7 @@ nil if file missing.")
        llm                 ; when I said you needed friends, I didn't mean...
        (lsp +eglot)        ; +peek
 
-       magit ; +forge a git porcelain for Emacs
+       (magit +forge)      ; a git porcelain for Emacs
 
        make              ; run make tasks from Emacs
        (pass +auth)              ; password manager for nerds
