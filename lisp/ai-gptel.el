@@ -338,24 +338,6 @@ has its own streaming wiring via fsm — leave it alone)."
 
   (advice-add 'gptel-request :around #'+gptel--codex-stream-advice)
 
-;;;;;; Codex max_output_tokens advice
-
-  ;; gptel-agent.el L690이 chat buffer 생성 시 무조건 8192 박음.
-  ;; upstream `gptel--request-data' (gptel-openai-oauth.el L68) 이 이제 그 키를
-  ;; **떼주긴 한다** — 대신 `display-warning' 을 매 요청 때린다. 기능은 upstream
-  ;; 이 막았고 이 advice 에 남은 일은 그 경고 소음 차단뿐.
-  ;; gptel--request-data 호출 직전 dynamic let으로 nil 강제 → 키 자체가 안 생김.
-  ;; 다른 backend는 영향 없음. upstream gptel-agent.el L690 패치 후보 자리.
-  (defun +gptel--codex-clear-max-tokens-advice (orig-fun &rest args)
-    "Force `gptel-max-tokens' nil for Codex (OAuth) backend — silence warning."
-    (let ((gptel-max-tokens
-           (if (eq (type-of gptel-backend) 'gptel-openai-oauth)
-               nil
-             gptel-max-tokens)))
-      (apply orig-fun args)))
-
-  (advice-add 'gptel--request-data :around #'+gptel--codex-clear-max-tokens-advice)
-
 ;;;;; Tools (PoC — tool round-trip 검증용)
 
   ;; 큰 그림: ~/.claude/skills/ 화이트리스트 → gptel-make-tool 자동 등록.
