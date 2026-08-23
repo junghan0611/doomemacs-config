@@ -61,9 +61,6 @@
       ;; "s-{" #'evil-window-up
       ;; "s-}" #'evil-window-down
 
-      "s-[" (if (< emacs-major-version 31) #'centaur-tabs-backward #'tab-previous)
-      "s-]" (if (< emacs-major-version 31) #'centaur-tabs-forward #'tab-next)
-
       ;; Winner
       "C-c <left>" #'winner-undo
       "C-c <right>" #'winner-redo
@@ -207,6 +204,22 @@
        :desc "5th workspace" "5" #'+workspace/switch-to-4
        :desc "6th workspace" "6" #'+workspace/switch-to-5
        :desc "7th workspace" "7" #'+workspace/switch-to-6))
+
+(map!
+ "M-]" #'+workspace:switch-next
+ "M-[" #'+workspace:switch-previous)
+
+;; casual-dired-setup (dired-mode-hook) rebinds M-[/M-] to marked-file
+;; motion whenever Casual extras are on. Vanilla dired + evil-collection
+;; already keep that on M-{/M-}, so reclaim brackets for workspaces after
+;; casual runs (depth 90 > default 0).
+(defun my/dired-workspace-keys-h ()
+  "Restore workspace M-[/M-] on `dired-mode-map' after casual-dired-setup."
+  (keymap-set dired-mode-map "M-]" #'+workspace:switch-next)
+  (keymap-set dired-mode-map "M-[" #'+workspace:switch-previous))
+
+(after! casual-dired
+  (add-hook 'dired-mode-hook #'my/dired-workspace-keys-h 90))
 
 ;;;;; Help (h)
 
@@ -738,6 +751,15 @@
     (map! :map corfu-map
           "C-SPC" #'toggle-input-method
           "C-@"   #'toggle-input-method)))
+
+;;;; TODO tab-bar keybindings
+
+(after! tab-bar
+  (map!
+   ;; "M-[" #'tab-previous
+   ;; "M-]" #'tab-next
+   :nm "gb" 'tab-next
+   :nm "gB" 'tab-previous))
 
 ;;; provide
 

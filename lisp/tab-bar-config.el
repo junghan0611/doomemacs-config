@@ -12,24 +12,24 @@
 
 ;;; Code:
 
-;;;; centaur-tabs face (ef-themes/doric-themes 호환)
+;;;; DONT centaur-tabs face (ef-themes/doric-themes 호환)
 
 ;; modus-themes는 centaur-tabs face를 자체 지원.
 ;; ef-themes/doric-themes는 tab-line face만 정의하고 centaur-tabs face가 없음.
 ;; → 빌트인 tab-line face를 상속하여 테마 전환 시 자동 추종.
 ;; Emacs 31+: centaur-tabs 비활성화 (powerline 31 비호환)
-(when (< emacs-major-version 31)
-  (after! centaur-tabs
-    (setq centaur-tabs-height 18)
-    (custom-set-faces!
-      '(centaur-tabs-default :inherit tab-line)
-      '(centaur-tabs-selected :inherit tab-line-tab-current)
-      '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
-      '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
-      '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
-      '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
-      '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
-      '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified))))
+;; (when (< emacs-major-version 31)
+;;   (after! centaur-tabs
+;;     (setq centaur-tabs-height 18)
+;;     (custom-set-faces!
+;;       '(centaur-tabs-default :inherit tab-line)
+;;       '(centaur-tabs-selected :inherit tab-line-tab-current)
+;;       '(centaur-tabs-unselected :inherit tab-line-tab-inactive)
+;;       '(centaur-tabs-selected-modified :inherit (italic tab-line-tab-current))
+;;       '(centaur-tabs-unselected-modified :inherit (italic tab-line-tab-inactive))
+;;       '(centaur-tabs-active-bar-face :inherit tab-line-tab-current :height 0.1)
+;;       '(centaur-tabs-modified-marker-selected :inherit tab-line-tab-current :foreground unspecified)
+;;       '(centaur-tabs-modified-marker-unselected :inherit tab-line-tab-inactive :foreground unspecified))))
 
 ;;;; celestial-mode-line — GUI only
 
@@ -51,22 +51,11 @@
 
 (progn
   (require 'tab-bar)
-
-  ;; 2025-01-26
   (setq tab-bar-close-button-show nil)
   (setq tab-bar-new-button-show nil)
+  (setq tab-bar-format '(tab-bar-format-tabs tab-bar-separator tab-bar-format-add-tab tab-bar-format-align-right tab-bar-format-global))
 
-  (setq tab-bar-format
-        '(
-          ;; ;; tab-bar-format-history
-          ;; tab-bar-format-tabs
-          ;; tab-bar-separator
-          ;; tab-bar-format-add-tab
-          tab-bar-format-align-right
-          tab-bar-format-global
-          ))
-
-;;;;###autoload
+;;;###autoload
   (defun my/load-global-mode-string ()
     (interactive)
     ;; TTY: tab-bar/global-mode-string/display-time 모두 skip — 모드라인 공간 절약
@@ -78,8 +67,7 @@
       (tab-bar-mode +1)))
 
   (add-hook 'doom-after-init-hook #'my/load-global-mode-string 80)
-  (add-hook 'doom-after-reload-hook #'my/load-global-mode-string)
-  )
+  (add-hook 'doom-after-reload-hook #'my/load-global-mode-string))
 
 ;;;; DONT keycast tab-bar
 
@@ -129,23 +117,6 @@
 ;;              ))
 ;;     (add-to-list 'keycast-substitute-alist `(,event nil)))
 ;;   )
-
-;;;; DONT tab-bar keybindings
-
-;; (with-eval-after-load 'tab-bar
-;;   ;; gb / gB
-;;   (define-key evil-motion-state-map "gb" 'tab-next)
-;;   (define-key evil-motion-state-map "gB" 'tab-previous)
-;;   (define-key evil-normal-state-map "gb" 'tab-next)
-;;   (define-key evil-normal-state-map "gB" 'tab-previous)
-
-;;   (define-key evil-motion-state-map "gh" 'menu-bar-open)
-;;   (define-key evil-normal-state-map "gh" 'menu-bar-open)
-
-;;   ;; Ctrl + Number
-;;   (global-set-key (kbd "s-\\") 'tab-bar-switch-to-tab)
-;;   (global-set-key (kbd "s-{") 'tab-bar-switch-to-prev-tab)
-;;   (global-set-key (kbd "s-}") 'tab-bar-switch-to-next-tab))
 
 ;;; provide
 

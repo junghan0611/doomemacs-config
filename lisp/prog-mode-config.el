@@ -9,18 +9,6 @@
 ;;; Commentary:
 
 ;;; Code:
-;;;; Emacs Lisp Mode
-
-(add-hook! emacs-lisp-mode-hook
-  (defun emacs-lisp--mode-setup-h ()
-   ;; Emacs' built-in elisp files use a hybrid tab->space indentation scheme
-   ;; with a tab width of 8. Any smaller and the indentation will be
-   ;; unreadable. Since Emacs' lisp indenter doesn't respect this variable it's
-   ;; safe to ignore this setting otherwise.
-   ;; (setq-local tab-width 8)
-   (setq-local comment-column 0)
-   (define-key emacs-lisp-mode-map (kbd "M-[") 'backward-sexp)
-   (define-key emacs-lisp-mode-map (kbd "M-]") 'forward-sexp)))
 
 ;;;; aggressive-indent
 
