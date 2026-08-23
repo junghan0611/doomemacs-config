@@ -4,24 +4,34 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.11`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.23`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
+### 이번 컷에서 닫힌 것 (NEXT 체크박스 밖, 2026-08-23)
+
+- 한글 writing hygiene → `lisp/korean-input-config.el` SSOT + 에이전트 카탈로그
+- elfeed-show `q` → `kill-buffer-and-window`
+- Pi start 키 `SPC j j` → `SPC j M-j` (더블탭 걸림)
+- gptel Copilot 백엔드, lean/ledger 모듈, casual-init, bib 경로, TTS 경로 등
+  → 상세는 CHANGELOG `v2026.8.23`
+
 ---
 
-## NOW — 바로 손대는 자리 (2026-08-02)
+## NOW — 바로 손대는 자리 (2026-08-23)
 
 - [ ] **consult-gh 첫 사용**: `doom sync` 후 `SPC g h s` / `SPC g h h`(메뉴).
       프리뷰 `C-o`, 계정 전환 `SPC g h a`. embark·forge·omni는 여전히 안 넣음.
 - [ ] **fix-bold 첫 dry-run**: `./run.sh fix-bold` → diff 검수 → y 시에만 apply.
       스코프 notes/bib/meta/botlog. journal 손대지 않음. org는 이미 커밋 베이스라인.
-- [ ] **elfeed remember 한 번**: 요약 `z`는 2026-08-11에 실측으로 닫힘 (실제 엔트리
-      e2e 3회, 8초 균일). 남은 건 `a` → remember.org에 quote/note + `-` 리스트 확인.
+- [ ] **elfeed remember 한 번**: 요약 `z`는 2026-08-11에 실측으로 닫힘. show `q`는
+      2026-08-23에 창까지 닫히게 고침. 남은 건 `a` → remember.org quote/note 확인.
+- [ ] **org-element cache off 관찰**: `org-config.el` trial. 며칠 쓰며 파싱/강조/export
+      이상 없으면 유지, 느려지면 되돌릴 후보로 남김.
 - [ ] **Emacs 31.0.91 첫 기동 (GLG)**: `./run.sh unstable`.
       첫 기동만 straight/eln 전 패키지 재빌드. 핀: `emacs-31.0.91` = `57581b8b`.
-- [ ] **Neomacs 재검토일 도래**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
+- [ ] **Neomacs 재검토**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
 
 ---
 

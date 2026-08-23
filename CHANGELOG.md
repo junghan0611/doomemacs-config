@@ -6,6 +6,46 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.8.23 — Korean writing hygiene SSOT, gptel Copilot, smaller UX fixes
+
+### Added
+
+- **GitHub Copilot backend on gptel** for the trial subscription rail
+  (`lisp/ai-gptel.el`).
+- **`:lang lean` and `:lang ledger`** enabled in `init.el`.
+- **`korean/nfc-normalize-buffer`** alias (was documented, missing as a command).
+
+### Changed
+
+- **Korean writing hygiene SSOT** in `lisp/korean-input-config.el`.
+  Interactive cleanup that used to live in `functions.el`
+  (`my/clear-nbsp-and-ascii-punctuations`, `my/insert-nbsp-simple-all`,
+  `my/fix-markdown-bold-to-org`) now sits with input/NFC under one agent-facing
+  catalog. Export-time CJK emphasis and batch `fix-bold` stay on the export
+  path (daemon-readable). Docs point here: `AGENTS.md`, `README.md`,
+  `bin/fix-org-mdbold.el`.
+- **casual**: drop the per-mode `<f12>` table; use `casual-init` instead.
+- **agent-shell**: remove unused `meta-agent-shell` / `agent-shell-attention`
+  wiring.
+- **keycast** re-enabled in `packages.el`.
+- **org-element cache** turned off for a trial (`org-element-use-cache` /
+  `org-element-cache-persistent` nil) after intermittent org cache pain.
+- AGENTS note: run `./run.sh fix` right after export while the ox-hugo anchor
+  leak still needs the safety net.
+
+### Fixed
+
+- **elfeed-show `q`** → `kill-buffer-and-window`. evil-collection bound
+  `kill-current-buffer`, which left an empty window after reading an entry.
+- **Pi start key** moved off the sticky `SPC j j` chord to `SPC j M-j` so it
+  stops stealing the double-tap.
+- **Bibliography paths** follow `.bib` files under `resources/bib/`
+  (`+user-info.el`).
+- **TTS / transcript** output directory paths updated (`ai-tts-edge.el`,
+  `denote-functions.el`).
+- **emacs-unstable launcher** uses Doom's emacs command for launches.
+- **pimacs** requires its package before reading `pimacs-flags`.
+
 ## v2026.8.11 — measured model tiers, tightened docs
 
 From here on, new entries are written in English: this is a public repo and the
