@@ -6,6 +6,36 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.8.23-forge.1 — Magit Forge as the local issue inbox
+
+### Added
+
+- **Magit Forge inbox** (`init.el`, `+user-info.el`, `lisp/project-config.el`).
+  `(magit +forge)` is on and the local SQLite db is seeded, so GitHub issues
+  are readable with the network down — bodies, comments, labels and assignees
+  all land locally. Measured on adoption: 19 repos, 65 open issues, 295 issue
+  comments, 2.3 MB db, ~12 s for a full pull of every tracked repo.
+  - `my/forge-seed-repositories` asks `gh` which owned repos currently carry an
+    open issue, so the seed list cannot go stale in config.
+  - Archived repos are kept out on the way in (`--archived=false`) and pruned
+    on the way out by `my/forge-prune-archived-repositories`, since forge has
+    no notion of archived.
+  - `SPC g i` / `SPC g I` open the inbox. Refresh is stock: `forge-pull`
+    resolves the repository at point, so `SPC g ' f f` on an inbox line pulls
+    that repo and `f t` pulls the single topic.
+- **Workspace and tab navigation keys** (`lisp/keybindings-config.el`).
+  `M-[` / `M-]` switch workspaces, reclaimed on `dired-mode-map` after
+  `casual-dired-setup` rebinds them; `gb` / `gB` move between tabs.
+
+### Changed
+
+- **consult-gh scoped to discovery.** `consult-gh-favorite-orgs-list` now
+  holds only the two accounts in use. It is deliberately *not* wired to
+  `consult-gh-forge`: that mode inserts every selected search hit's repo into
+  the forge db and overrides `ghub--token`/`--username`/`--host` globally.
+  Global search and the local inbox are different axes.
+- **tab-bar config** trimmed; dead centaur-tabs face handling removed.
+
 ## v2026.8.23 — Korean writing hygiene SSOT, gptel Copilot, smaller UX fixes
 
 ### Added

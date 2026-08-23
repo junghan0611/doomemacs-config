@@ -4,12 +4,20 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.23`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.23-forge.1`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
-### 이번 컷에서 닫힌 것 (NEXT 체크박스 밖, 2026-08-23)
+### 이번 컷에서 닫힌 것 (v2026.8.23-forge.1, 2026-08-23)
+
+- Magit Forge 인박스 — `(magit +forge)` on, 로컬 DB 시딩(19 repo / 65 이슈 / 댓글
+  295 / 2.3 MB), archive 필터+prune, `SPC g i`. 갱신은 stock `SPC g ' f f`
+- consult-gh는 발견 전용으로 확정. consult-gh-forge 배선은 **의도적으로 안 붙임**
+  (검색 히트마다 남의 repo가 DB에 삽입 + ghub 인증 전역 override)
+- workspace `M-[`/`M-]`, tab `gb`/`gB`
+
+### 이전 컷에서 닫힌 것 (NEXT 체크박스 밖, 2026-08-23)
 
 - 한글 writing hygiene → `lisp/korean-input-config.el` SSOT + 에이전트 카탈로그
 - elfeed-show `q` → `kill-buffer-and-window`
@@ -21,8 +29,13 @@
 
 ## NOW — 바로 손대는 자리 (2026-08-23)
 
-- [ ] **consult-gh 첫 사용**: `doom sync` 후 `SPC g h s` / `SPC g h h`(메뉴).
-      프리뷰 `C-o`, 계정 전환 `SPC g h a`. embark·forge·omni는 여전히 안 넣음.
+- [ ] **forge 인박스 며칠 써보기**: `SPC g i`. 갱신은 커서 둔 줄에서 `SPC g ' f f`
+      (그 repo 전체) / `f t` (토픽 하나) / `r` (DB에서 다시 그리기, 네트워크 0).
+      전체 18개 pull은 12초. **pull-all 함수는 일부러 안 만듦** — `f f`가 손에
+      붙는지 먼저 보고, 안 붙으면 그때 3줄 넣는다.
+- [ ] **repo 정리는 별도 레인**: junghan0611/agent-config#19 (비아카이브 390개 /
+      21 GB, 포크 삭제 vs 아카이브 결정 대기). 여기서 아카이브하면 forge 인박스는
+      `my/forge-seed-repositories` 재실행으로 자동으로 따라온다.
 - [ ] **fix-bold 첫 dry-run**: `./run.sh fix-bold` → diff 검수 → y 시에만 apply.
       스코프 notes/bib/meta/botlog. journal 손대지 않음. org는 이미 커밋 베이스라인.
 - [ ] **elfeed remember 한 번**: 요약 `z`는 2026-08-11에 실측으로 닫힘. show `q`는
