@@ -28,7 +28,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 
 | | |
 |---|---|
-| **Emacs** | 30.2 (system stable) + preview channel (Savannah `emacs-31`, Emacs 31 pre-release) + Neomacs (Rust core, review track) |
+| **Emacs** | 30.2 (system stable) + Emacs 31 channel (Nixpkgs `emacs31-gtk3`) + Neomacs (Rust core, review track) |
 | **Framework** | Doom Emacs (hlissner style) |
 | **Notes** | 3,500+ Denote org-mode files in `~/org/` |
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,200+ published |
@@ -59,7 +59,7 @@ doomemacs-config/
 │   ├── agent-server.el          # Agent RPC server (socket "server")
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
-│   ├── emacs-unstable.sh        # Emacs 31 preview channel launcher
+│   ├── emacs-unstable.sh        # Emacs 31 channel launcher
 │   ├── neomacs.sh               # Neomacs vanilla profile launcher + probe runner
 │   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
 │   ├── fix-org-mdbold.el        # **bold** → *bold* on garden dirs only (not journal)
@@ -82,7 +82,7 @@ doomemacs-config/
 │   └── TESTING-GUIDELINES.org    # Tier A/B/C partition — what is worth testing
 │
 ├── run.sh               # Unified CLI/TUI management
-└── flake.nix            # Emacs 31 preview Nix build (Savannah emacs-31)
+└── flake.nix            # Emacs 31 Nix build (nixos-unstable emacs31-gtk3)
 ```
 
 ## Elisp Conventions
@@ -156,7 +156,7 @@ review-track profile is running (see § Neomacs). Daily use is **one GUI + many 
 | `"user"` | Emacs 30.2 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
 | `"pi"` | Emacs 30.2 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
 | `"server"` | Emacs 30.2 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
-| `"doom-unstable"` | Emacs preview channel | Emacs 31 preview frontend (`./run.sh unstable run`) |
+| `"doom-unstable"` | Emacs 31 channel | Emacs 31 frontend (`./run.sh unstable run`) |
 
 Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
 
@@ -310,9 +310,9 @@ Full Korean support across GUI and terminal:
 
 The terminal setup ensures `emacs -nw` over SSH has clipboard, Korean input, and full functionality — identical to GUI except for images.
 
-## Emacs Preview Channel
+## Emacs 31 Channel
 
-A second Emacs install built via [emacs-overlay](https://github.com/nix-community/emacs-overlay). The launcher/output name remains `emacs-unstable` for compatibility, but the flake pins Savannah's `emacs-31` release branch because overlay `emacs-unstable` follows the latest stable release tag and currently stays at `30.2`, while overlay `emacs-git` tracks master and may already be `32.0.50`. This gives an Emacs 31 pre-release channel before 31.1 is officially tagged.
+A second Emacs install built from Nixpkgs `nixos-unstable`. The launcher/output name remains `emacs-unstable` for compatibility; it selects the released `emacs31-gtk3` package explicitly, matching this i3/X11 environment and its GTK input-method integration.
 
 ```bash
 ./run.sh unstable run        # GUI
@@ -321,7 +321,7 @@ A second Emacs install built via [emacs-overlay](https://github.com/nix-communit
 ./run.sh unstable debug      # --debug-init
 ```
 
-Built via `flake.nix` using nix-community/emacs-overlay. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system stable Emacs.
+Built via `flake.nix` using Nixpkgs. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system stable Emacs.
 
 ## Neomacs — Korean (K) review track
 
@@ -363,7 +363,7 @@ measurement table, known divergences, and the standing verdict.
 ./run.sh pi tty                # Attach a new TTY client to the pi daemon
 ./run.sh export all            # Export all folders (incremental)
 ./run.sh export all --force    # Force re-export
-./run.sh unstable tty          # Emacs preview channel — terminal mode
+./run.sh unstable tty          # Emacs 31 channel — terminal mode
 ./run.sh verify                # Verify garden md ([1/4]~[4/4], read-only)
 ./run.sh fix                   # Fix garden md ([1/4]~[4/4], step-by-step y/N)
 ./run.sh fix-org               # Rewrite ~/org link patterns (dry-run + y/N + --apply)
@@ -481,11 +481,11 @@ ln -s ~/repos/gh/doomemacs-config ~/.doom.d
 alias ecs='emacsclient -s user -t'             # Attach TTY client to GUI Emacs (user daemon)
 alias ep='~/.doom.d/run.sh pi tty'             # Attach TTY client to pi daemon (full Doom)
 alias es='~/.doom.d/run.sh agent restart'      # Restart agent RPC daemon (socket "server")
-alias eup='~/.doom.d/run.sh unstable run'      # Emacs preview channel GUI
+alias eup='~/.doom.d/run.sh unstable run'      # Emacs 31 channel GUI
 
 # Standalone (fallback)
 alias et='emacs -nw'                                # System stable Emacs terminal, no daemon
-alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs preview channel terminal, no daemon
+alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs 31 channel terminal, no daemon
 ```
 
 **Typical session**: launch `doom run` once for the GUI, run `./run.sh pi start`, then open WezTerm tabs and type `ep` in each. All tabs share the same pi daemon — config edits, packages, native-comp eln cache, even open buffers are shared. Agent RPC runs in a separate `server` daemon so it never blocks the editor.
@@ -494,7 +494,7 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs preview channel term
 
 | Platform | Emacs | Terminal | Status |
 |----------|-------|----------|--------|
-| NixOS 25.11 | 30.2 + preview channel (`emacs-31`) | Ghostty / WezTerm | Primary |
+| NixOS 25.11 | 30.2 + Emacs 31 channel (`emacs31-gtk3`) | Ghostty / WezTerm | Primary |
 | Termux (Android) | 30.x (nox) | Termux | Tested |
 
 ## Links

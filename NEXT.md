@@ -27,7 +27,16 @@
 
 ---
 
-## NOW — 바로 손대는 자리 (2026-08-23)
+# RAIL — 현재 좌표
+
+- [x] **1. Emacs 31 pre-release를 별도 Doom 채널로 담금질**
+- [x] **2. Nixpkgs Emacs 31.1 `emacs31-gtk3` 채널 전환·실기동 확인**
+- [ ] **3. 31.1 작업면 관찰과 Doom upstream 방향 판독** ← CURRENT: 불편이 없으므로 기본값 승격 없이 천천히 관찰
+- [ ] **4. NixOS 기본 Emacs 31 전환과 daemon 계약 검수** ← PAUSED: agent-server·사용자·pi 소켓을 함께 설계할 때만 시작
+
+현재 좌표: 2 완료 → 3 일상 사용으로 관찰 → 4는 명시적인 이관 설계 때만 착수
+
+## NOW — 바로 손대는 자리 (2026-08-29)
 
 - [ ] **forge 인박스 며칠 써보기**: `SPC g i`. 갱신은 커서 둔 줄에서 `SPC g ' f f`
       (그 repo 전체) / `f t` (토픽 하나) / `r` (DB에서 다시 그리기, 네트워크 0).
@@ -42,8 +51,12 @@
       2026-08-23에 창까지 닫히게 고침. 남은 건 `a` → remember.org quote/note 확인.
 - [ ] **org-element cache off 관찰**: `org-config.el` trial. 며칠 쓰며 파싱/강조/export
       이상 없으면 유지, 느려지면 되돌릴 후보로 남김.
-- [ ] **Emacs 31.0.91 첫 기동 (GLG)**: `./run.sh unstable`.
-      첫 기동만 straight/eln 전 패키지 재빌드. 핀: `emacs-31.0.91` = `57581b8b`.
+- [ ] **Emacs 31.1 느린 이관 설계**: 지금은 별도 `doom-unstable` 채널만 쓴다.
+      NixOS 기본 Emacs를 31로 올리는 일은 agent-server·`user`·`pi` daemon의 Org 읽기/쓰기
+      계약을 함께 검수하는 공사다. 먼저 Doom upstream의 completion 빌트인화·tree-sitter
+      기본 승격·TTY child-frame 방향을 관찰하고, 실제 불편 또는 명시적 이관 결정을 받은 뒤
+      `nixos-config` 레인에서 소켓별 기동·export·agent RPC·TTY 한글/클립보드 회귀표를 만든다.
+      지금은 설정을 앞당기지 않는다.
 - [ ] **Neomacs 재검토**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
 
 ---
@@ -92,11 +105,11 @@ Emacs 31 판올림 뒤 순서):
 2. `./bin/neomacs.sh --probe` + `--gnu --probe` — 대조표 갱신
 3. **⚠ `--gnu` 베이스라인 라벨이 틀렸을 수 있다 (2026-07-26 확인)**. `bin/neomacs.sh:126`
    의 `--gnu`는 **PATH의 맨몸 `emacs`** 를 부르는데, 지금 PATH는
-   `/etc/profiles/per-user/junghan/bin/emacs` = **30.2**다. flake preview는 31.0.90.
+   `/etc/profiles/per-user/junghan/bin/emacs` = **30.2**다. flake channel은 31.1.
    그런데 `neomacs/README.md:48,52` + `probe/probe-org-korean.el:135` +
    `probe/probe-tls.el:84` + `CHANGELOG.md:51`은 전부 **"GNU Emacs 31.0.50"** 이라
    적혀 있다 — **어느 쪽과도 안 맞는다.** 다음 회차에 베이스라인을 어느 Emacs로
-   고정할지부터 정하고(30.2 stable / 31.0.91 preview 중 택1, 아니면 둘 다 재고), 네
+   고정할지부터 정하고(30.2 stable / 31.1 channel 중 택1, 아니면 둘 다 재고), 네
    자리 표기를 실측값으로 일괄 정정한다. 베이스라인이 흔들리면 "Neomacs 탓이냐 우리
    설정 탓이냐"를 가르는 `--gnu` 대조 자체가 무의미해진다.
 4. **GUI 기동 후 GLG가 메뉴·커서 직접 확인** — 이게 판정 기준

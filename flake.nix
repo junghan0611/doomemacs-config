@@ -1,41 +1,18 @@
 {
-  description = "Doom Emacs config — Emacs 31 preview channel";
+  description = "Doom Emacs config — Emacs 31 channel";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    emacs-overlay.url = "github:nix-community/emacs-overlay";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-  outputs = { self, nixpkgs, emacs-overlay }:
+  outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ emacs-overlay.overlays.default ];
-      };
+      pkgs = import nixpkgs { inherit system; };
 
-      # Emacs 31 preview channel — emacs-overlay의 `emacs-unstable` attribute는
-      # latest stable release tag를 따라가므로 현재 30.2에 머문다. `emacs-git`은
-      # upstream master snapshot이라 이미 32.0.50일 수 있으므로, 31 pre-release를
-      # 원하면 Savannah `emacs-31` release branch를 명시적으로 고정한다.
-      # Output name `emacs-unstable`은 기존 launcher/alias 호환을 위해 유지.
-      #
-      # 핀은 브랜치 HEAD가 아니라 **pretest tag 커밋**에 박는다. HEAD는 태그 이후
-      # 커밋이 계속 쌓여 재현 자리가 흔들린다. 다음 pretest로 올릴 때:
-      #   git ls-remote https://git.savannah.gnu.org/git/emacs.git 'refs/tags/emacs-31.0.*'
-      # 에서 `^{}` 붙은 (peeled) 커밋을 rev 로 쓰고, hash 는 더미로 바꿔 `nix build`
-      # 실패 메시지의 `got:` 값을 옮긴다.
-      emacs-31 = pkgs.emacs-git.overrideAttrs (_old: {
-        pname = "emacs-31";
-        name = "emacs-31-31.0.91";
-        version = "31.0.91";
-        src = pkgs.fetchgit {
-          url = "https://git.savannah.gnu.org/git/emacs.git";
-          # refs/tags/emacs-31.0.91^{} — pretest 2 (2026-07-24)
-          rev = "57581b8bc2f73229d1f03dd5655aabb4a6de6183";
-          hash = "sha256-3nvCiLiEtII1C57CLfDIbVqhiwadYViF9Nv32yDtLIQ=";
-        };
-      });
+      # Nixpkgs ships the released Emacs 31.  This machine runs i3/X11 and uses
+      # GTK input-method integration, so choose GTK3 explicitly rather than
+      # relying on the generic `emacs31` alias.
+      # Output name `emacs-unstable` remains for launcher/alias compatibility.
+      emacs-31 = pkgs.emacs31-gtk3;
 
       emacs-preview-with-packages = (pkgs.emacsPackagesFor emacs-31).emacsWithPackages (epkgs: [
         epkgs.vterm

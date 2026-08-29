@@ -34,7 +34,7 @@ PI_DAEMON="pi"
 PI_SOCKET="/run/user/$(id -u)/emacs/$PI_DAEMON"
 PI_CLIENT="emacsclient -s $PI_DAEMON"
 
-# Emacs 31 preview channel (flake output #emacs-unstable, pinned to Savannah emacs-31)
+# Emacs 31 channel (flake output #emacs-unstable, from nixos-unstable)
 UNSTABLE_SCRIPT="$BIN_DIR/emacs-unstable.sh"
 
 # Hugo content dir
@@ -120,7 +120,7 @@ show_menu() {
   echo "    B) fix-bold   (**bold** → *bold*, notes/bib/meta/botlog only — journal 제외)"
   echo "       CLI: ./run.sh fix-bold [--apply]"
   echo ""
-  echo "  ${YELLOW}Emacs unstable${NC} (preview channel: emacs-31)"
+  echo "  ${YELLOW}Emacs unstable${NC} (Emacs 31 channel from nixos-unstable)"
   echo "    i) unstable run      (doom run, GUI)"
   echo "    t) unstable tty      (doom run -nw, 터미널)"
   echo "    d) unstable debug    (--debug-init)"

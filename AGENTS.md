@@ -40,7 +40,7 @@ config.el               # Loader only — requires lisp/*.el
 ├── neomacs/            # Neomacs vanilla minimal profile + K-review probes (issue #8)
 ├── tests/              # ERT — vanilla `emacs -Q --batch`, no Doom
 ├── run.sh              # Unified CLI/TUI: sync, export, agent, verify, fix
-└── flake.nix           # Emacs 31 preview channel (Savannah emacs-31) via nix
+└── flake.nix           # Emacs 31 channel (nixos-unstable emacs31-gtk3) via nix
 ```
 
 ## Code Organization Rules
@@ -192,7 +192,7 @@ only after an observation period and only when **GLG explicitly calls for it**.
 | `"user"` | GLG's GUI Emacs | `doom run` |
 | `"pi"` | TTY attach target (full Doom, shared by N terminals) | `run.sh pi start` |
 | `"server"` | Agent RPC daemon | `run.sh agent start` (separate `--init-directory`) |
-| `"doom-unstable"` | Emacs preview channel | `run.sh unstable` |
+| `"doom-unstable"` | Emacs 31 channel | `run.sh unstable` |
 | `"neomacs"` | Neomacs vanilla profile | `bin/neomacs.sh --daemon` |
 
 The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon
@@ -309,7 +309,7 @@ Recurring traps only. Details live in the code comment at each site.
   declaration** — not for `config.el`/`lisp/` edits. Adding a dependency without
   syncing leaves it uninstalled.
 - `per-machine.el` is git-ignored — font/theme overrides go there.
-- The Emacs preview channel coexists with system stable via separate `EMACSDIR`
+- The Emacs 31 channel coexists with system stable via separate `EMACSDIR`
   (`~/doomemacs-unstable`) and `server-name` (`doom-unstable`). Which upstream branch
   or tag `flake.nix` pins moves with the release cycle — read the flake, not this
   line.

@@ -8,7 +8,7 @@
 ;; 소켓 이름 규칙:
 ;;   "user"          — 힣의 GUI daemon (emacsclient --alternate-editor= 트리거)
 ;;   "server"        — agent daemon (에이전트가 -s server로 접속)
-;;   "doom-unstable" — emacs-overlay unstable channel 테스트 인스턴스
+;;   "doom-unstable" — nixos-unstable Emacs 31 channel 테스트 인스턴스
 ;; EMACS_SERVER_NAME 환경변수로 오버라이드 가능
 (unless noninteractive
   (require 'server)
