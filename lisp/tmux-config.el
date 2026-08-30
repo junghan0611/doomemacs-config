@@ -151,6 +151,43 @@ follows — so this works no matter which buffer or terminal is attached."
   (my/tmux--run "previous-window" "-t" (concat "=" (my/tmux--session))))
 
 ;;;###autoload
+(defun my/tmux-window-new (&optional name)
+  "Create a window in this buffer's tmux session, keeping the current path.
+The Emacs-side counterpart of `M-c c'.  With a prefix argument, ask for a
+window NAME."
+  (interactive (list (when current-prefix-arg (read-string "Window name: "))))
+  (let* ((session (my/tmux--session))
+         ;; `-c "#{pane_current_path}"' would expand against the *calling*
+         ;; client, not the target session — measured 2026-08-30, it picked up
+         ;; the caller's shell path.  Resolve the target's path first.
+         (target (concat "=" session ":"))
+         (path (string-trim
+                (or (my/tmux--run "display-message" "-p" "-t" target
+                                  "#{pane_current_path}")
+                    "")))
+         (args (append (list "new-window" "-t" (concat "=" session))
+                       (unless (string-empty-p path) (list "-c" path))
+                       (when name (list "-n" name))
+                       (list "-P" "-F" "#{window_index}:#{window_name}"))))
+    (message "tmux %s → new window %s"
+             session (string-trim (or (apply #'my/tmux--run args) "?")))))
+
+;;;###autoload
+(defun my/tmux-window-kill ()
+  "Kill the current window of this buffer's tmux session, after confirming.
+Anything running in that window dies with it, so this always asks."
+  (interactive)
+  (let* ((session (my/tmux--session))
+         (target (concat "=" session ":"))
+         (what (string-trim
+                (or (my/tmux--run "display-message" "-p" "-t" target
+                                  "#{window_index}:#{window_name} (#{pane_current_command})")
+                    "?"))))
+    (when (yes-or-no-p (format "Kill tmux window %s:%s? " session what))
+      (my/tmux--run "kill-window" "-t" target)
+      (message "Killed tmux %s:%s" session what))))
+
+;;;###autoload
 (defun my/tmux-list-sessions ()
   "Show the live tmux sessions, the way `tml' lists them."
   (interactive)
@@ -368,7 +405,9 @@ Also kills its ghostel buffer, so no buffer is left attached to nothing."
   (define-key ghostel-mode-map (kbd "C-c t p") #'my/tmux-window-previous)
   (define-key ghostel-mode-map (kbd "C-c t s") #'my/tmux-attach)
   (define-key ghostel-mode-map (kbd "C-c t l") #'my/tmux-list-sessions)
-  (define-key ghostel-mode-map (kbd "C-c t h") #'my/tmux-herd))
+  (define-key ghostel-mode-map (kbd "C-c t h") #'my/tmux-herd)
+  (define-key ghostel-mode-map (kbd "C-c t c") #'my/tmux-window-new)
+  (define-key ghostel-mode-map (kbd "C-c t k") #'my/tmux-window-kill))
 
 ;; Outside a terminal buffer the leader works normally.  Keys only — naming a
 ;; prefix here would bind a fresh keymap over Doom's (see AGENTS.md § map!).
@@ -380,7 +419,9 @@ Also kills its ghostel buffer, so no buffer is left attached to nothing."
         :desc "Next window"        "n" #'my/tmux-window-next
         :desc "Previous window"    "p" #'my/tmux-window-previous
         :desc "List sessions"      "l" #'my/tmux-list-sessions
-        :desc "Herd (status board)" "h" #'my/tmux-herd)))
+        :desc "Herd (status board)" "h" #'my/tmux-herd
+        :desc "New window"         "c" #'my/tmux-window-new
+        :desc "Kill window"        "k" #'my/tmux-window-kill)))
 
 (provide 'tmux-config)
 ;;; tmux-config.el ends here

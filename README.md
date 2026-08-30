@@ -314,7 +314,12 @@ In ghostel's semi-char mode `SPC` is sent to the PTY, so `doom-leader` never fir
 | `C-c t h` | Herd — the status board below |
 | `C-c t w` | Pick a window of this buffer's session |
 | `C-c t n` / `C-c t p` | Next / previous window |
+| `C-c t c` / `C-c t k` | New window (keeps the session's path) / kill the current one |
 | `C-c t s` | Attach a session (one ghostel buffer per session) |
+
+The tmux prefix itself needs one more binding. GLG remaps `M-c` to `C-c` at the input layer — `C-c` is a pinky-hostile chord and `M-c` is the hand that reaches for it, which is also why tmux carries `M-c` as `prefix2`. Inside Emacs that means the `M-c` *event* never exists to be forwarded. So `C-c C-c` sends it explicitly: under the remap those keys are a doubled `M-c`, and physical `M-c M-c c` opens a window. That displaces `ghostel-send-C-c`, which moves to `C-c C-k` — interrupting the foreground program has to stay reachable. (tmux's primary `C-b` already reaches the PTY on its own through `evil-ghostel`; this is about the hand, not capability.)
+
+`C-c t c` exists for the same reason. Creating the window from Emacs has one trap worth naming: `new-window -c "#{pane_current_path}"` expands against the *calling* client, not the target session, so it silently inherits the caller's directory. The path is resolved against the target first.
 
 Session switching is buffer switching. `tmux switch-client` would need the client pty, and ghostel's pty is native (`ghostel-use-native-pty`) so Emacs cannot see it — but `select-window` needs no client target, so window navigation works regardless.
 

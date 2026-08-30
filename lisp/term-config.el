@@ -86,6 +86,31 @@
   (advice-add 'ghostel--rebuild-semi-char-keymap :after
               #'my/ghostel-bind-meta-bracket)
 
+  ;; M-c — the tmux prefix2, which cannot arrive here as itself.  GLG remaps
+  ;; M-c to C-c at the input layer (C-c is a pinky-hostile chord, and M-c is
+  ;; the hand that reaches for it), so inside Emacs the M-c *event* never
+  ;; exists — ghostel encodes it fine, there is simply nothing to encode.
+  ;; Sending it explicitly is the only way through.  Bound at `C-c C-c' so the
+  ;; keys under GLG's remap are a doubled M-c, then the tmux command key:
+  ;; physical `M-c M-c c' opens a window.
+  ;;
+  ;; That displaces `ghostel-send-C-c' (SIGINT), which moves to `C-c C-k' —
+  ;; interrupting the foreground program has to stay reachable.
+  ;;
+  ;; Note `C-b', tmux's primary prefix, already reaches the PTY on its own via
+  ;; `evil-ghostel--passthrough-ctrl-b' (measured 2026-08-30: raw C-b followed
+  ;; by `c' created a window).  This binding is about the hand, not capability.
+  (defun my/ghostel-send-M-c ()
+    "Send `M-c' to the terminal — the tmux prefix2.
+Goes through ghostel's key encoder rather than a raw ESC byte, so it stays
+correct when the foreground program has the kitty keyboard protocol active."
+    (interactive)
+    (ghostel--on-user-input)
+    (when-let* ((spec (ghostel--event-key-spec ?\M-c nil)))
+      (ghostel--send-encoded (car spec) (cdr spec))))
+  (define-key ghostel-mode-map (kbd "C-c C-c") #'my/ghostel-send-M-c)
+  (define-key ghostel-mode-map (kbd "C-c C-k") #'ghostel-send-C-c)
+
   ;; OSC 9;4 progress protocol — claude code, codex, pi CLI all emit this.
   ;; spinner.el ships with magit; fall back to text when unavailable.
   (when (locate-library "spinner")
