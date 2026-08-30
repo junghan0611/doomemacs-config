@@ -220,7 +220,6 @@
 
 ;;;; tmux-config.el
 
-(package! emamux)  ; tmux manipulation from Emacs
 
 ;;;; zellij-config.el
 

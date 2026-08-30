@@ -158,7 +158,7 @@ nil if file missing.")
        (pass +auth)              ; password manager for nerds
        (:unless my/termux-p (pdf)) ; pdf enhancements
        ;;terraform         ; infrastructure as code
-       tmux              ; an API for interacting with tmux
+       ;; tmux              ; an API for interacting with tmux
        tree-sitter ;; syntax and parsing, sitting in a tree...
        upload            ; map local to remote projects via ssh/ftp
 

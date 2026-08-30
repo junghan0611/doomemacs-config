@@ -206,8 +206,8 @@
        :desc "7th workspace" "7" #'+workspace/switch-to-6))
 
 (map!
- "M-]" #'+workspace:switch-next
- "M-[" #'+workspace:switch-previous)
+ "s-]" #'+workspace:switch-next
+ "s-[" #'+workspace:switch-previous)
 
 ;; casual-dired-setup (dired-mode-hook) rebinds M-[/M-] to marked-file
 ;; motion whenever Casual extras are on. Vanilla dired + evil-collection
@@ -270,8 +270,7 @@
     "= g"   "gptel-buffer"
     "n z"   "zotero"
     "o m"   "meta-agent"
-    "\\ t"   "tmux-agents"
-    "\\ t m" "emamux"))
+    "\\ t"   "tmux"))
 
 ;;;; Key Functions
 

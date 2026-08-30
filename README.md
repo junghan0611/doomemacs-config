@@ -52,6 +52,7 @@ doomemacs-config/
 │   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC, writing hygiene
 │   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
 │   ├── term-config.el          # In-Emacs terminal — :term ghostel module + overrides
+│   ├── tmux-config.el          # tmux control surface — herd status board, attach
 │   ├── workflow-shared.el       # Human ↔ Agent shared contract
 │   └── ...                      # 25+ more modules
 │
@@ -226,7 +227,7 @@ everything flows through agent presets.
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
 | Whisper STT | `ai-stt-whisper.el` | Speech-to-text via Groq whisper-large-v3 |
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
-| tmux | `tmux-config.el` | Terminal multiplexer orchestration |
+| tmux | `tmux-config.el` | The agent herd — session status board + attach, see § tmux inside Emacs |
 
 ### One backend, three models
 
@@ -297,6 +298,47 @@ which (a) bloats every system message with ~100 lines of routing rules and
 [gptel-agent #107](https://github.com/karthink/gptel-agent/issues/107). Removing
 the delegation guidance keeps a single foreground agent loop — closer to how I
 actually use Emacs day to day.
+
+## tmux inside Emacs — the agent herd
+
+Agents run in tmux, and tmux runs in [ghostel](https://github.com/dakra/ghostel). The nesting is deliberate: a crashed Emacs does not take the agents down, and the same session can be picked up from a bare terminal on any machine. That makes tmux the thing Emacs has to *hold*, not replace — which is why almost nothing about tmux is configured here.
+
+**The shell is SSOT.** `tm` opens a session named after the directory, `tml` picks one with fzf (both in [nixos-config](https://github.com/junghan0611/nixos-config) `users/junghan/modules/shell.nix`), and `~/.config/tmux/tmux.conf` owns the in-terminal keys — `M-[`/`M-]` for windows, `M-\` for panes, `M-c s` for the fzf session popup. This config adds only what the terminal cannot reach from inside.
+
+### Why the keys are `C-c t`, not the leader
+
+In ghostel's semi-char mode `SPC` is sent to the PTY, so `doom-leader` never fires inside a terminal buffer. What comes back to Emacs is exactly `ghostel-keymap-exceptions` — `C-c`, `C-x`, `M-x`, and a few more. So `C-c` is the only prefix available in the buffer where tmux actually lives. Outside a terminal buffer the same commands sit on `SPC \ t`.
+
+| Key | Action |
+|-----|--------|
+| `C-c t h` | Herd — the status board below |
+| `C-c t w` | Pick a window of this buffer's session |
+| `C-c t n` / `C-c t p` | Next / previous window |
+| `C-c t s` | Attach a session (one ghostel buffer per session) |
+
+Session switching is buffer switching. `tmux switch-client` would need the client pty, and ghostel's pty is native (`ghostel-use-native-pty`) so Emacs cannot see it — but `select-window` needs no client target, so window navigation works regardless.
+
+`M-[` needed a fix at two layers to reach tmux at all, which is why it presented as "`M-]` works, `M-[` does not":
+
+1. **ghostel** deliberately skips `?\[` and `?O` when binding `M-<printable>`, since `ESC [` / `ESC O` are the CSI/SS3 prefixes TTY input decoding uses for arrow keys. Measured on Emacs 31 — `input-decode-map` wins by longest match, so binding it does not shadow CSI, and arrow keys still decode before and after an `M-[` press. Re-added in `term-config.el`; `M-O` is left alone.
+2. **This config** had `M-[`/`M-]` on workspace switching globally. `M-]` was shadowed by ghostel's map and reached the PTY; `M-[` had nothing to shadow it, so it fell through and switched an Emacs workspace instead. Moved to `s-[`/`s-]`.
+
+### The herd — is anything still running?
+
+```
+run   1s      doomemacs-config       1/2     ~/repos/gh/doomemacs-config
+run   1s      prime-agent            3/3     ~/repos/3rd/pi/prime-agent
+idle  16h     memex-kb               2/2     ~/repos/gh/memex-kb
+free  5d      jeohmunga              0/1     ~/repos/gh/jeohmunga
+```
+
+One question, narrowly: is that session still doing something, or is it three agents sitting idle and worth killing? It is a resource decision. `Agents` is *live agents / total windows*, so `2/2` means both windows hold an agent and `0/1` is an empty shell. `RET` opens the session, `w` breaks it into windows, `D` kills it, `gr` refreshes.
+
+Classification uses one signal: **`window_activity`**, tmux's timestamp of the last pane output. Writing directly to `pane_tty` shows what resets it — a printed line, a spinner redrawing in place, and even invisible bytes (`\033[?25l\033[?25h`, an OSC 2 title change). It counts bytes arriving, not visible change. `session_activity` is the wrong one: it also counts client interaction, and reported 2s for a session whose windows had been silent for 16 hours.
+
+The obvious worry is an app that repaints on a timer looking busy forever. Sampling the whole board twice, 30s apart, all 18 silent panes came back at exactly +30s — nothing here repaints while parked — while every working agent sat pinned at 0s, because these CLIs animate a spinner while they think. So a long silent tool call is the only realistic false `idle`, which is what the generous 60s threshold is for.
+
+Pane titles are shown but never used to classify. Agent CLIs do broadcast state there (`✳ …` from Claude Code, `● …: done` from pi), but the vocabulary is per-CLI and changes without notice — which is exactly how the previous version of this file rotted into a dead parser. Idle time is CLI-neutral. "Waiting for approval" is deliberately not modeled: agents run yolo here.
 
 ## Korean Input & TTY
 

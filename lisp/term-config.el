@@ -52,6 +52,40 @@
                  ("+default/find-file-under-here" +default/find-file-under-here)))
     (add-to-list 'ghostel-eval-cmds cmd))
 
+  ;; M-[ — tmux window navigation.  ghostel is where tmux runs (agents live in
+  ;; tmux so a crashed Emacs does not take them down), and `tmux.conf' binds
+  ;; `M-[' previous-window / `M-]' next-window.  `M-]', `M-\' (select-pane) and
+  ;; `M-<arrow>' (resize-pane) all reach the PTY; `M-[' was the only hole.
+  ;;
+  ;; It presented as "M-] works, M-[ does not" because the leak had two layers:
+  ;; this config also bound `M-['/`M-]' to workspace switching globally.  `M-]'
+  ;; was shadowed by ghostel's map and reached the PTY; `M-[' had nothing to
+  ;; shadow it and switched an Emacs workspace instead.  Those moved to `s-['/
+  ;; `s-]' in `keybindings-config.el'; this binding closes the terminal side.
+  ;;
+  ;; Upstream skips exactly ?\[ and ?O in the `M-<printable>' loop
+  ;; (`ghostel--define-terminal-keys'), because `ESC ['/`ESC O' are the CSI/SS3
+  ;; prefixes Emacs' TTY input decoding uses for arrow/function keys.  Measured
+  ;; 2026-08-30: on Emacs 31 (`emacs -Q -nw', TERM=xterm-256color) arrow keys
+  ;; still decoded to `<up>' with `M-[' bound, before and after an `M-[' press —
+  ;; `input-decode-map' wins by longest match, so the binding does not shadow
+  ;; CSI.  term-keys encodes neither `M-[' nor `M-]', so both take that same raw
+  ;; path.  End to end through a ghostel-hosted `tmux attach': windows walked
+  ;; 3 -> 2 -> 1 on `M-[' and back to 3 on `M-]' x2.  tmux's own side was
+  ;; already measured safe (see the `M-[' comment in `~/.config/tmux/tmux.conf').
+  ;;
+  ;; `M-O' is left alone: SS3, and nothing here binds it.
+  ;; Re-applied after a rebuild because `ghostel--rebuild-semi-char-keymap'
+  ;; replaces the semi-char map wholesale whenever `ghostel-keymap-exceptions'
+  ;; is set.
+  (defun my/ghostel-bind-meta-bracket ()
+    "Send `M-[' to the terminal in semi-char and char modes."
+    (dolist (map (list ghostel-semi-char-mode-map ghostel-char-mode-map))
+      (define-key map (kbd "M-[") #'ghostel--send-event)))
+  (my/ghostel-bind-meta-bracket)
+  (advice-add 'ghostel--rebuild-semi-char-keymap :after
+              #'my/ghostel-bind-meta-bracket)
+
   ;; OSC 9;4 progress protocol — claude code, codex, pi CLI all emit this.
   ;; spinner.el ships with magit; fall back to text when unavailable.
   (when (locate-library "spinner")
