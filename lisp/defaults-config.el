@@ -15,6 +15,7 @@
 
 (require 'cl-lib)
 (require 'autorevert)
+(require 'browse-url)
 (require 'xref)
 
 ;;;; Completion / font / symlinks
@@ -58,6 +59,13 @@
 
 ;; Disable .# lock files — Emacs ↔ Emacs 규약. 외부 에이전트에 무용.
 (setq create-lockfiles nil)
+
+;;;; External browser
+
+;; Emacs URL entry points must always use Firefox, independent of the desktop
+;; default browser (e.g. xdg-open).  EWW remains available when invoked directly.
+(setq browse-url-browser-function #'browse-url-firefox
+      browse-url-firefox-program "firefox")
 
 ;;;; xref search program
 
