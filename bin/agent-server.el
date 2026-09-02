@@ -191,8 +191,21 @@
       (my/apply-org-download-image-dir))
     (when (fboundp 'my/apply-org-attach-id-dir)
       (my/apply-org-attach-id-dir))
-    (message "[agent-server] ✓ workflow-shared loaded (agenda-files: %d)"
-             (length org-agenda-files))))
+    (message "[agent-server] ✓ workflow-shared loaded")
+    ;; Do NOT count `org-agenda-files' here.  In a headless daemon
+    ;; `my/org-agenda-files-rebuild' is deferred to `emacs-startup-hook'
+    ;; (denote's cache is not ready at load time), so a count taken at this
+    ;; point reports the pre-rebuild value and never the real one — measured
+    ;; 2026-09-02: 0 on the agent daemon, 1 under Doom (only botlog/agenda/,
+    ;; `_aprj' still empty), while the settled value was 19 in both.  A boot
+    ;; line that looks like a health number but is always wrong is worse than
+    ;; no line, so report it after the rebuild has run.  Depth 90 keeps this
+    ;; behind workflow-shared's own startup hook.
+    (add-hook 'emacs-startup-hook
+              (lambda ()
+                (message "[agent-server] ✓ agenda-files: %d (+journals on first agenda call)"
+                         (length org-agenda-files)))
+              90)))
 
 (message "[agent-server] ✓ Packages loaded (org %s, denote %s)"
          (org-version)
