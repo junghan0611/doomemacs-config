@@ -192,7 +192,7 @@ only after an observation period and only when **GLG explicitly calls for it**.
 | `"user"` | GLG's GUI Emacs | `doom run` |
 | `"pi"` | TTY attach target (full Doom, shared by N terminals) | `run.sh pi start` |
 | `"server"` | Agent RPC daemon | `run.sh agent start` (separate `--init-directory`) |
-| `"doom-unstable"` | Emacs 31 channel | `run.sh unstable` |
+| `"doom-unstable"` | Second Doom profile on the same Emacs 31 | `run.sh unstable` |
 | `"neomacs"` | Neomacs vanilla profile | `bin/neomacs.sh --daemon` |
 
 The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon
@@ -309,10 +309,30 @@ Recurring traps only. Details live in the code comment at each site.
   declaration** — not for `config.el`/`lisp/` edits. Adding a dependency without
   syncing leaves it uninstalled.
 - `per-machine.el` is git-ignored — font/theme overrides go there.
-- The Emacs 31 channel coexists with system stable via separate `EMACSDIR`
-  (`~/doomemacs-unstable`) and `server-name` (`doom-unstable`). Which upstream branch
-  or tag `flake.nix` pins moves with the release cycle — read the flake, not this
-  line.
+- **The system Emacs is 31.1** (default since 2026-09-02; `nixos-config` unstable
+  overlay). `"user"`, `"pi"` and `"server"` all run it. The `doom-unstable` channel is
+  no longer "the new version" — it is a second Doom profile on the same Emacs, kept
+  apart by `EMACSDIR` (`~/doomemacs-unstable`) and `server-name`. Which package set
+  `flake.nix` pins moves with the release cycle — read the flake, not this line.
+- **straight builds are per Emacs version** (`build-30.2/`, `build-31.1/`) and the eln
+  cache is too. A version bump means a full rebuild and a regenerated profile init, so
+  measure against a freshly started daemon, never one that predates the bump.
+- **If a package's own autoloads register something and it never takes effect, suspect
+  Doom's autoload inlining.** Doom concatenates every package's `*-autoloads.el` into
+  one giant defun inside a `no-byte-compile` profile init. Loading that source eagerly
+  macro-expands the defun body, so an `eval-and-compile` block runs *at load time* —
+  before the `defconst` sitting next to it in the same body has executed — and any
+  `(when (boundp '...) ...)` guard around the registration is silently false. It is
+  never retried, because the form is replaced by a constant. Loading the real
+  autoloads file (`(load (locate-library "<pkg>-autoloads"))`) replays the forms in
+  order. Measured on `tramp-rpc` 2026-09-02 on Emacs 30.2 and 31.1 alike, so this is
+  not version-bound; see `lisp/project-config.el`.
+- **A declaration removed from `packages.el` can still be installed as a transitive
+  dependency.** straight reads `Package-Requires`, so dropping `(package! tramp)` did
+  not stop `tramp-rpc` from pulling ELPA tramp back in. Use `(package! NAME :built-in t)`
+  — Doom turns it into `(straight-override-recipe '(NAME . (:type built-in)))` and the
+  dependency resolves to Emacs's own copy. Verify by grepping the generated
+  `init.<version>.el` for the build path, not by reading `packages.el`.
 - Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard.
 - WezTerm + terminal Emacs + built-in Korean input is a custom path. If minibuffer or
   search prompt spacing breaks, **inspect TTY width drift first** — especially a

@@ -28,7 +28,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 
 | | |
 |---|---|
-| **Emacs** | 30.2 (system stable) + Emacs 31 channel (Nixpkgs `emacs31-gtk3`) + Neomacs (Rust core, review track) |
+| **Emacs** | 31.1 (system default, Nixpkgs `emacs31-gtk3`) + Neomacs (Rust core, review track) |
 | **Framework** | Doom Emacs (hlissner style) |
 | **Notes** | 3,500+ Denote org-mode files in `~/org/` |
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,200+ published |
@@ -154,9 +154,9 @@ review-track profile is running (see § Neomacs). Daily use is **one GUI + many 
 
 | Socket | Instance | Purpose |
 |--------|----------|---------|
-| `"user"` | Emacs 30.2 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
-| `"pi"` | Emacs 30.2 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
-| `"server"` | Emacs 30.2 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
+| `"user"` | Emacs 31.1 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
+| `"pi"` | Emacs 31.1 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
+| `"server"` | Emacs 31.1 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
 | `"doom-unstable"` | Emacs 31 channel | Emacs 31 frontend (`./run.sh unstable run`) |
 
 Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
@@ -359,6 +359,11 @@ The terminal setup ensures `emacs -nw` over SSH has clipboard, Korean input, and
 
 ## Emacs 31 Channel
 
+**The system default is Emacs 31.1 as of 2026-09-02** — every device moved via the
+`nixos-config` unstable overlay, so `"user"`, `"pi"` and `"server"` all run 31.1. This
+channel is no longer where 31 gets tried out; it stays as a second, fully separate Doom
+profile for testing a config change without touching the daily one.
+
 A second Emacs install built from Nixpkgs `nixos-unstable`. The launcher/output name remains `emacs-unstable` for compatibility; it selects the released `emacs31-gtk3` package explicitly, matching this i3/X11 environment and its GTK input-method integration.
 
 ```bash
@@ -368,7 +373,7 @@ A second Emacs install built from Nixpkgs `nixos-unstable`. The launcher/output 
 ./run.sh unstable debug      # --debug-init
 ```
 
-Built via `flake.nix` using Nixpkgs. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system stable Emacs.
+Built via `flake.nix` using Nixpkgs. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system Emacs — same version now, separate profile and package tree.
 
 ## Neomacs — Korean (K) review track
 
@@ -541,7 +546,7 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs 31 channel terminal,
 
 | Platform | Emacs | Terminal | Status |
 |----------|-------|----------|--------|
-| NixOS 25.11 | 30.2 + Emacs 31 channel (`emacs31-gtk3`) | Ghostty / WezTerm | Primary |
+| NixOS 25.11 | 31.1 (`emacs31-gtk3`, system default since 2026-09-02) | Ghostty / WezTerm | Primary |
 | Termux (Android) | 30.x (nox) | Termux | Tested |
 
 ## Links
