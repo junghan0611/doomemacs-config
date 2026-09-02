@@ -106,7 +106,8 @@
         "-o ControlMaster=auto -o ControlPath=~/.ssh/sockets/%%r@%%h-%%p -o ControlPersist=600"))
 
 ;;;; tramp-rpc
-;; upstream recursive load 이슈는 해결됨. tramp 2.8.1.4+ 전제.
+;; upstream recursive load 이슈는 해결됨. tramp 2.8.1.4+ 전제 —
+;; 이맥스 31.1 내장 tramp 가 2.8.2.31.1 이라 ELPA tramp 없이 충족된다.
 ;; Doom :emacs tramp 모듈이 기본 성능 설정을 담당하고,
 ;; 여기서는 ssh ControlMaster/ControlPath 정책만 유지.
 ;; straight git checkout 환경에서는 기본값(auto)이 소스 빌드를 선호하므로,
@@ -114,6 +115,26 @@
 ;; 로컬 Rust 빌드 없이 바로 배포되게 한다.
 (after! tramp-rpc
   (setq tramp-rpc-deploy-git-build-policy 'release))
+
+;; tramp-rpc registers its "rpc" method from `tramp-rpc-autoloads.el', in an
+;; `eval-and-compile' block guarded by `(when (boundp 'tramp-rpc-method) ...)'.
+;; That guard only holds when the neighbouring `defconst tramp-rpc-method' is a
+;; *preceding top-level form*.  Doom inlines every package's autoloads into one
+;; giant defun in a `no-byte-compile: t' profile init, so loading that source
+;; file eagerly macro-expands the defun body: the `eval-and-compile' runs at
+;; load time, before the defconst in the same body has ever executed, `boundp'
+;; is nil, and the registration is silently dropped for the whole session.
+;; Result: `/rpc:host:/path' still matches `tramp-file-name-regexp', so TRAMP
+;; claims it and then signals "Method `rpc' is not known" — which surfaces as a
+;; vertico/nerd-icons backtrace the moment a bookmark list contains an rpc path.
+;; Measured 2026-09-02 on Emacs 30.2 and 31.1 daemons alike ("rpc" absent from
+;; `tramp-methods', `tramp-rpc-file-name-p' unbound) — this is not a 31.1
+;; regression.  Loading the autoloads file itself replays the two forms in the
+;; right order and registers the method.
+(after! tramp
+  (unless (assoc "rpc" tramp-methods)
+    (when-let* ((file (locate-library "tramp-rpc-autoloads")))
+      (load file 'noerror 'nomessage))))
 
 ;;;; magit-gh
 

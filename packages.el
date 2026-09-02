@@ -207,11 +207,21 @@
 (package! tmr) ;; TODO Time Management
 (package! msgpack)
 
-(unpin! tramp)
-(package! tramp)
+(package! tramp :built-in t)
 (package! tramp-rpc :recipe (:host github :repo "ArthurHeymans/emacs-tramp-rpc" :files ("lisp/*.el")))
 ;; tramp-rpc recursive load 이슈는 upstream에서 해결됨.
-;; 전제 조건은 외부 tramp 2.8.1.4+ 사용. (2026-05-16)
+;; tramp 자체는 이맥스 내장을 쓴다 — ELPA tramp 를 얹던 `(unpin! tramp)' +
+;; `(package! tramp)' 는 제거했다(2026-09-02). tramp-rpc 가 요구하는 2.8.1.4+ 를
+;; 맞추려던 장치인데, 측정해 보니 그 목적을 이룬 적이 없다:
+;;   - 30.2 시절 실제로 로드된 tramp 는 내장 2.7.3.30.2 였고(ELPA 2.8.2.2 아님),
+;;   - 31.1 내장은 2.8.2.31.1 로 이미 ELPA 판(2.8.2.2)보다 새롭다.
+;; 남은 건 한 세션에 두 판이 섞이는 위험뿐이었다 — load-history 에 nix store 의
+;; tramp.elc/tramp-compat.elc 와 straight 의 tramp-gvfs.elc/tramp-compat.elc 가
+;; 함께 올라와 있었다. Doom 이 잡아둔 :emacs tramp + 이맥스 31 내장으로 간다.
+;; `:built-in t' 가 필요한 이유: tramp-rpc 의 Package-Requires 가 (tramp "2.8.1.4")
+;; 라서 선언을 지우기만 하면 straight 가 의존성으로 ELPA tramp 를 다시 끌어온다.
+;; Doom 은 `:built-in' 을 `(straight-override-recipe '(tramp . (:type built-in)))'
+;; 로 바꾸므로 의존성 해석이 내장 tramp 에서 멈춘다.
 
 ;;;; Transient Menu
 
