@@ -4,12 +4,22 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.8.23-forge.1`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.9.2`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
-### 이번 컷에서 닫힌 것 (v2026.8.23-forge.1, 2026-08-23)
+### 이번 컷에서 닫힌 것 (v2026.9.2, 2026-09-02)
+
+- **Emacs 31.1이 기본이 됐다**. `nixos-config` unstable 오버레이로 전 기기 이관,
+  `user`/`pi`/`server` 세 소켓 모두 31.1. RAIL 3·4 닫힘
+- ELPA tramp 제거 → 이맥스 내장 tramp(2.8.2.31.1). `(package! tramp :built-in t)`
+  가 아니면 tramp-rpc의 `Package-Requires`가 의존성으로 다시 끌어온다
+- tramp-rpc `rpc` 메서드 등록 복구 — Doom autoload 인라인이 죽이고 있었다.
+  30.2에서도 똑같이 죽어 있었으니 31.1 회귀가 **아니다**
+- agent-server 부팅 로그의 agenda-files 개수를 rebuild 뒤로 옮김
+
+### 지난 컷에서 닫힌 것 (v2026.8.23-forge.1, 2026-08-23)
 
 - Magit Forge 인박스 — `(magit +forge)` on, 로컬 DB 시딩(19 repo / 65 이슈 / 댓글
   295 / 2.3 MB), archive 필터+prune, `SPC g i`. 갱신은 stock `SPC g ' f f`
@@ -31,12 +41,15 @@
 
 - [x] **1. Emacs 31 pre-release를 별도 Doom 채널로 담금질**
 - [x] **2. Nixpkgs Emacs 31.1 `emacs31-gtk3` 채널 전환·실기동 확인**
-- [ ] **3. 31.1 작업면 관찰과 Doom upstream 방향 판독** ← CURRENT: 불편이 없으므로 기본값 승격 없이 천천히 관찰
-- [ ] **4. NixOS 기본 Emacs 31 전환과 daemon 계약 검수** ← PAUSED: agent-server·사용자·pi 소켓을 함께 설계할 때만 시작
+- [x] **3. 31.1 작업면 관찰과 Doom upstream 방향 판독**
+- [x] **4. NixOS 기본 Emacs 31 전환과 daemon 계약 검수** (2026-09-02) — 전 기기 31.1,
+      `user`/`pi`/`server` 세 소켓 기동·어젠다·denote·attach 경로 실측 확인
+- [ ] **5. 31.1 상주 관찰** ← CURRENT: 되돌릴 판단 근거가 쌓이는지만 본다.
+      되돌림은 `nixos-config` 레인이고 여기가 아니다
 
-현재 좌표: 2 완료 → 3 일상 사용으로 관찰 → 4는 명시적인 이관 설계 때만 착수
+현재 좌표: 4 완료(기본 승격) → 5 상주 관찰
 
-## NOW — 바로 손대는 자리 (2026-08-29)
+## NOW — 바로 손대는 자리 (2026-09-02)
 
 - [ ] **forge 인박스 며칠 써보기**: `SPC g i`. 갱신은 커서 둔 줄에서 `SPC g ' f f`
       (그 repo 전체) / `f t` (토픽 하나) / `r` (DB에서 다시 그리기, 네트워크 0).
@@ -51,12 +64,13 @@
       2026-08-23에 창까지 닫히게 고침. 남은 건 `a` → remember.org quote/note 확인.
 - [ ] **org-element cache off 관찰**: `org-config.el` trial. 며칠 쓰며 파싱/강조/export
       이상 없으면 유지, 느려지면 되돌릴 후보로 남김.
-- [ ] **Emacs 31.1 느린 이관 설계**: 지금은 별도 `doom-unstable` 채널만 쓴다.
-      NixOS 기본 Emacs를 31로 올리는 일은 agent-server·`user`·`pi` daemon의 Org 읽기/쓰기
-      계약을 함께 검수하는 공사다. 먼저 Doom upstream의 completion 빌트인화·tree-sitter
-      기본 승격·TTY child-frame 방향을 관찰하고, 실제 불편 또는 명시적 이관 결정을 받은 뒤
-      `nixos-config` 레인에서 소켓별 기동·export·agent RPC·TTY 한글/클립보드 회귀표를 만든다.
-      지금은 설정을 앞당기지 않는다.
+- [ ] **31.1 상주 관찰**: 이관은 끝났다. 남은 건 쓰면서 걸리는 것 줍기 —
+      export(`./run.sh export` → `verify` → `fix`), TTY 한글/클립보드, native-comp
+      경고. 이상이 나오면 30.2로 되돌리는 게 아니라 그 자리를 고친다
+      (AGENTS.md § Upstream stance).
+- [ ] **`doom purge` 한 번**: `straight/{repos,build-30.2}` 에 30.2 잔재 + 이제
+      안 쓰는 ELPA tramp 가 남아 있다. 30.2 빌드까지 같이 지우므로 되돌리기 비싸다 —
+      31.1이 며칠 무사한 걸 본 뒤에 돌린다.
 - [ ] **Neomacs 재검토**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
 
 ---
@@ -104,12 +118,13 @@ Emacs 31 판올림 뒤 순서):
 1. `./bin/neomacs.sh --fetch v0.0.14` + `bin/neomacs.sh:34` `NEOMACS_VERSION` 0.0.14로
 2. `./bin/neomacs.sh --probe` + `--gnu --probe` — 대조표 갱신
 3. **⚠ `--gnu` 베이스라인 라벨이 틀렸을 수 있다 (2026-07-26 확인)**. `bin/neomacs.sh:126`
-   의 `--gnu`는 **PATH의 맨몸 `emacs`** 를 부르는데, 지금 PATH는
-   `/etc/profiles/per-user/junghan/bin/emacs` = **30.2**다. flake channel은 31.1.
+   의 `--gnu`는 **PATH의 맨몸 `emacs`** 를 부르는데, 2026-09-02부터 PATH는
+   `/etc/profiles/per-user/junghan/bin/emacs` = **31.1**이다 (실측). 기본 승격으로
+   PATH와 flake channel이 같은 31.1로 모였으니, 라벨 정정은 이제 한 값으로 끝난다.
    그런데 `neomacs/README.md:48,52` + `probe/probe-org-korean.el:135` +
    `probe/probe-tls.el:84` + `CHANGELOG.md:51`은 전부 **"GNU Emacs 31.0.50"** 이라
    적혀 있다 — **어느 쪽과도 안 맞는다.** 다음 회차에 베이스라인을 어느 Emacs로
-   고정할지부터 정하고(30.2 stable / 31.1 channel 중 택1, 아니면 둘 다 재고), 네
+   고정할지부터 정하고(이제 사실상 31.1 하나다), 네
    자리 표기를 실측값으로 일괄 정정한다. 베이스라인이 흔들리면 "Neomacs 탓이냐 우리
    설정 탓이냐"를 가르는 `--gnu` 대조 자체가 무의미해진다.
 4. **GUI 기동 후 GLG가 메뉴·커서 직접 확인** — 이게 판정 기준

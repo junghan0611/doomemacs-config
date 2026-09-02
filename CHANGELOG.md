@@ -6,6 +6,57 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.9.2 — Emacs 31.1 becomes the default
+
+### Changed
+
+- **Emacs 31.1 is now the system default**, not a side channel. Every device moved
+  over through the `nixos-config` unstable overlay, so the three daemons this repo
+  drives — `"user"` (GUI), `"pi"` (TTY attach target) and `"server"` (agent RPC) —
+  all run 31.1. A version bump rebuilds the whole straight tree
+  (`.local/straight/build-31.1/`), the eln cache, and the generated profile init, so
+  a daemon that predates the bump is not evidence of anything.
+  - `doom-unstable` keeps its separate `EMACSDIR` and socket, but it is no longer
+    "the new version" — it is a second Doom profile on the same Emacs.
+  - Verified after the move: agenda day/week/todo, denote search, citar, and the
+    `org-attach-id-dir` / `org-download-image-dir` appliers that headless daemons
+    need. `README.md` and `AGENTS.md` version rows updated to match.
+- **TRAMP comes from Emacs, not ELPA.** `(unpin! tramp)` + `(package! tramp)` existed
+  to satisfy `tramp-rpc`'s `(tramp "2.8.1.4")` requirement, but measurement showed it
+  never did: what actually loaded was the built-in copy — 2.7.3.30.2 under Emacs 30.2,
+  and 2.8.2.31.1 under 31.1, which is already newer than the ELPA 2.8.2.2 straight was
+  installing. All the pin bought was two TRAMP versions in one session
+  (`load-history` held the store's `tramp.elc`/`tramp-compat.elc` alongside straight's
+  `tramp-gvfs.elc`/`tramp-compat.elc`). Now `(package! tramp :built-in t)`.
+  - Deleting the declaration alone is not enough: straight reads `Package-Requires`
+    and pulls ELPA tramp straight back in as a `tramp-rpc` dependency. `:built-in t`
+    becomes `(straight-override-recipe '(tramp . (:type built-in)))`, which stops the
+    dependency at Emacs's own copy. Confirmed by the generated `init.31.1.el` losing
+    every `build-31.1/tramp` load-path entry.
+
+### Fixed
+
+- **`tramp-rpc` never registered its `rpc` method**, so any bookmark or path under
+  `/rpc:host:/…` raised `Method 'rpc' is not known` — surfacing as a vertico
+  backtrace from `nerd-icons-completion` the moment `consult-bookmark` listed one.
+  The registration lives in `tramp-rpc-autoloads.el` inside
+  `(eval-and-compile (require 'tramp) (when (boundp 'tramp-rpc-method) …))`, which
+  only holds when the neighbouring `defconst` is a preceding *top-level* form. Doom
+  inlines every package's autoloads into one defun in a `no-byte-compile` profile
+  init; loading that source eagerly macro-expands the body, the `eval-and-compile`
+  runs before the `defconst` in the same body ever executes, the guard is false, and
+  the form is then replaced by a constant so it is never retried. `lisp/project-config.el`
+  now loads the autoloads file itself once TRAMP is up.
+  - Measured on both Emacs 30.2 and 31.1 daemons (`"rpc"` absent from `tramp-methods`,
+    `tramp-rpc-file-name-p` unbound): this was never a 31.1 regression, it had been
+    broken since the package was enabled (`fd1fbaf`, 2026-05-16, first shipped in `v2026.6.9`).
+- **agent-server's boot log reported an agenda-file count that could not be right.**
+  In a headless daemon `my/org-agenda-files-rebuild` is deferred to
+  `emacs-startup-hook` (denote's cache is not ready earlier), but the count was taken
+  right after loading `workflow-shared` — reporting 0 on the agent daemon and 1 under
+  Doom while the settled value was 19. The count now runs behind the rebuild and says
+  so: `agenda-files: 16 (+journals on first agenda call)`.
+
 ## v2026.8.23-forge.1 — Magit Forge as the local issue inbox
 
 ### Added
