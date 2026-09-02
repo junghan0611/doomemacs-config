@@ -172,7 +172,7 @@ nil if file missing.")
        ;; plantuml            ; diagrams for confusing people more
        ;; graphviz
        latex             ; writing papers in Emacs has never been so fun
-       markdown          ; writing docs for people to ignore
+       (markdown +tree-sitter)       ; writing docs for people to ignore
        (org                          ; organize your plain life in plain text
         ;; +hugo +contacts +pomodoro +passwords: Doom에서 제거됨 (2026-03-17)
         ;; ox-hugo → packages.el에서 직접 관리
@@ -186,9 +186,9 @@ nil if file missing.")
         ;; +noter                      ; enhanced PDF notetaking
         ;; +pomodoro                 ; be fruitful with the tomato technique
         )                     ; wander around notes
-       (sh +lsp)                ; she sells {ba,z,fi}sh shells on the C xor
+       sh                     ; she sells {ba,z,fi}sh shells on the C xor
        (python +tree-sitter)
-       (lua +tree-sitter)
+       ;; (lua +tree-sitter)
        lean
        ledger
        (nix +tree-sitter)               ; I hereby declare "nix geht mehr!"
@@ -201,7 +201,7 @@ nil if file missing.")
        (cc +tree-sitter)
        (kotlin +tree-sitter)
        (go +tree-sitter)
-       (clojure +lsp) ; java with a lisp
+       (clojure +tree-sitter) ; java with a lisp
        (scheme +mit) ; +racket ; a fully conniving family of lisps
        ess
 
