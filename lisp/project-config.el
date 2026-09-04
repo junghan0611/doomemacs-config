@@ -275,6 +275,51 @@ asynchronously, so the issue counts keep climbing after this returns."
           (cl-incf added))))
     (message "forge: %d repository(-ies) queued for tracking" added)))
 
+;;;; forge — staleness and refresh
+
+;; The inbox DB is the shared face: GLG reads it through Magit, and cross-repo
+;; agents read the same rows read-only.  A second scraper would give the two
+;; sides different boards, so the rhythm lives here and nowhere else.
+;;
+;; `forge-pull' is repo-scoped (forge-commands.el:142) — it needs to be called
+;; from inside a tracked worktree.  Refreshing the whole inbox therefore means
+;; walking the tracked repos, which is what `my/forge-pull-all' does.  Pulls are
+;; async, so it returns as soon as they are queued.
+;;
+;; Rate limit is not the constraint: `gh api rate_limit' reported core 5000/hr
+;; and graphql 5000/hr with 0 used, against 20 tracked repos. (2026-09-04)
+
+(defun my/forge-database-age ()
+  "Return seconds since the forge database file was last written."
+  (- (float-time)
+     (float-time (file-attribute-modification-time
+                  (file-attributes forge-database-file)))))
+
+(defun my/forge-stale-p (&optional max-age)
+  "Non-nil when the forge database is older than MAX-AGE seconds (default 6h)."
+  (> (my/forge-database-age) (or max-age (* 6 60 60))))
+
+(defun my/forge-pull-all (&optional force)
+  "Pull every tracked forge repository.
+Does nothing unless the database is stale (`my/forge-stale-p') or FORCE is
+non-nil, so a caller may poll this without hammering the API.  Pulls are
+asynchronous; the returned count is what was queued, not what has landed."
+  (interactive "P")
+  (if (and (not force) (not (my/forge-stale-p)))
+      (progn (message "forge: db is %.1fh old, skipping"
+                      (/ (my/forge-database-age) 3600.0))
+             0)
+    (let ((repos (forge-sql [:select [githost owner name] :from repository]))
+          (queued 0))
+      (pcase-dolist (`(,host ,owner ,name) repos)
+        (when-let* ((repo (forge-get-repository
+                           (format "https://%s/%s/%s" host owner name)
+                           nil :tracked?)))
+          (forge--pull repo)
+          (cl-incf queued)))
+      (message "forge: queued %d repository pull(s)" queued)
+      queued)))
+
 ;; The inbox needs one key.  Unnamed :prefix only (AGENTS.md); seeding is a
 ;; rare M-x, so it gets no binding.
 (map! :leader
