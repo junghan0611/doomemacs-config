@@ -1027,101 +1027,110 @@ Returns OK/ERROR string.  Creates the heading if CREATE-IF-MISSING."
                 (kill-buffer buf))))
         (error (format "ERROR: %s — %s" id (error-message-string err)))))))
 
+(defconst agent-server--heading-tags-re
+  "\\`[A-Z][A-Z0-9]*\\(?::[A-Z][A-Z0-9]*\\)*\\'"
+  "Regexp matching the optional TAGS argument of `agent-denote-add-heading'.
+Anchored to the whole string: one or more ALL-CAPS words joined by `:',
+e.g. \"LLMLOG\" or \"LLMLOG:ARCHIVE\".
+
+Matching is case-SENSITIVE — `agent-server--parse-add-heading-args' binds
+`case-fold-search' to nil around it.  Without that binding the default
+`case-fold-search' of t makes `[A-Z]' match lowercase too, so a one-word
+body like \"body\" was read as a tag and the content silently became the
+empty string.  Measured on the live \"server\" daemon 2026-09-04.")
+
+(defun agent-server--parse-add-heading-args (args)
+  "Parse the &rest ARGS of `agent-denote-add-heading'.
+Return an alist with keys `:tags', `:content' and `:after-heading'.
+
+ARGS is one of, where TAGS matches `agent-server--heading-tags-re':
+
+  (CONTENT)
+  (CONTENT AFTER-HEADING)
+  (TAGS CONTENT)
+  (TAGS CONTENT AFTER-HEADING)
+
+An integer in the AFTER-HEADING slot is ignored (it used to be a heading
+index); it is kept only so old call sites do not error."
+  (let ((tags nil)
+        (content "")
+        (rest args))
+    (when (and (stringp (car rest))
+               (let ((case-fold-search nil))
+                 (string-match-p agent-server--heading-tags-re (car rest))))
+      (setq tags (pop rest)))
+    (cond
+     ((stringp (car rest)) (setq content (pop rest)))
+     ((car rest)           (setq content (format "%s" (pop rest)))))
+    (list (cons :tags tags)
+          (cons :content content)
+          ;; Anything non-string here (notably the legacy integer index) is
+          ;; dropped, which appends at end of file.
+          (cons :after-heading (and (stringp (car rest)) (car rest))))))
+
 (defun agent-denote-add-heading (id heading &rest args)
   "Add a level-1 heading to denote file ID.
 
-HEADING is the heading text (without the leading '* ').
+HEADING is the heading text (without the leading `* ').
 
-Flexible argument handling — all these forms work:
-  (agent-denote-add-heading ID HEADING \"content\")
-  (agent-denote-add-heading ID HEADING \"content\" \"after-heading\")
-  (agent-denote-add-heading ID HEADING \"TAGS\" \"content\")
-  (agent-denote-add-heading ID HEADING \"TAGS\" \"content\" AFTER-IDX)
+All four argument forms work:
 
-Auto-detection: if 3rd arg matches org tag pattern (uppercase letters,
-colons, e.g. \"LLMLOG\" or \"LLMLOG:ARCHIVE\"), it's treated as TAGS.
-Otherwise it's CONTENT.
+  (agent-denote-add-heading ID HEADING CONTENT)
+  (agent-denote-add-heading ID HEADING CONTENT AFTER-HEADING)
+  (agent-denote-add-heading ID HEADING TAGS CONTENT)
+  (agent-denote-add-heading ID HEADING TAGS CONTENT AFTER-HEADING)
 
-TAGS are appended to the heading as org tags: * heading :TAG1:TAG2:
-CONTENT is the body text under the heading.
-AFTER-IDX (integer) is ignored for backward compat (used to be after-heading index).
-AFTER-HEADING (string) inserts after that existing heading's subtree.
+TAGS is optional and detected by shape: an ALL-CAPS string, optionally
+colon-separated (`agent-server--heading-tags-re').  Detection is
+case-sensitive, so a lowercase one-word CONTENT stays content.  TAGS are
+appended as org tags: `* heading :TAG1:TAG2:'.
+
+AFTER-HEADING is a level-1 heading title; the new heading is inserted
+after that heading's whole subtree.  It combines freely with TAGS — a
+tagged report heading can still be placed before a trailing archive
+section.  Omit it to append at end of file.  A legacy integer in that
+slot is ignored.
 
 Returns OK/ERROR string."
-  ;; Parse flexible args
-  (let* ((tags nil)
-         (content "")
-         (after-heading nil)
-         ;; Detect pattern: is first arg a tag-like string?
-         (first-arg (car args))
-         (rest-args (cdr args)))
-    ;; Auto-detect tags vs content
-    (cond
-     ;; No args → heading only
-     ((null first-arg)
-      (setq content ""))
-     ;; First arg looks like org tags (all uppercase, no spaces, no newlines)
-     ((and (stringp first-arg)
-           (string-match-p "\\`[A-Z][A-Z0-9:]*\\'" first-arg))
-      (setq tags first-arg)
-      ;; Next arg is content
-      (when (car rest-args)
-        (if (stringp (car rest-args))
-            (setq content (car rest-args))
-          ;; integer → skip (backward compat)
-          )
-        (setq rest-args (cdr rest-args)))
-      ;; Next could be after-heading (string) or index (integer, skip)
-      (when (car rest-args)
-        (cond
-         ((stringp (car rest-args)) (setq after-heading (car rest-args)))
-         ((integerp (car rest-args)) nil)))) ;; skip numeric
-     ;; First arg is content (normal case)
-     ((stringp first-arg)
-      (setq content first-arg)
-      ;; Next is after-heading
-      (when (car rest-args)
-        (if (stringp (car rest-args))
-            (setq after-heading (car rest-args)))))
-     ;; Anything else
-     (t (setq content (format "%s" first-arg))))
-
-    ;; Build heading text with optional tags
-    (let* ((heading-text (if tags
-                             (format "%s :%s:" heading
-                                     (mapconcat #'identity
-                                                (split-string tags ":" t)
-                                                ":"))
-                           heading))
-           (file (denote-get-path-by-id id)))
-      (if (not file)
-          (format "ERROR: No denote file for ID %s" id)
-        (agent-server--denote-append-allowed-p file)
-        (condition-case err
-            (let ((buf (agent-server--find-file-fresh file)))
-              (unwind-protect
-                  (with-current-buffer buf
-                    (unless (derived-mode-p 'org-mode) (org-mode))
-                    (save-excursion
-                      (if after-heading
-                          ;; Find the target heading and go to end of its subtree
-                          (progn
-                            (goto-char (point-min))
-                            (let ((re (format "^\\* %s\\(?:[ \t]\\|$\\)" (regexp-quote after-heading))))
-                              (if (not (re-search-forward re nil t))
-                                  (error "Heading not found: %s" after-heading)
-                                (org-end-of-subtree t)
-                                (unless (bolp) (insert "\n")))))
-                        ;; No after-heading — go to end of file
-                        (goto-char (point-max))
-                        (unless (bolp) (insert "\n")))
-                      (insert (format "\n* %s\n\n%s\n" heading-text content))
-                      (save-buffer)
-                      (format "OK: Added heading '%s' to %s"
-                              heading-text (file-name-nondirectory file))))
-                (when (buffer-live-p buf)
-                  (kill-buffer buf))))
-          (error (format "ERROR: %s — %s" id (error-message-string err))))))))
+  (let* ((parsed (agent-server--parse-add-heading-args args))
+         (tags (alist-get :tags parsed))
+         (content (alist-get :content parsed))
+         (after-heading (alist-get :after-heading parsed))
+         (heading-text (if tags
+                           (format "%s :%s:" heading
+                                   (mapconcat #'identity
+                                              (split-string tags ":" t)
+                                              ":"))
+                         heading))
+         (file (denote-get-path-by-id id)))
+    (if (not file)
+        (format "ERROR: No denote file for ID %s" id)
+      (agent-server--denote-append-allowed-p file)
+      (condition-case err
+          (let ((buf (agent-server--find-file-fresh file)))
+            (unwind-protect
+                (with-current-buffer buf
+                  (unless (derived-mode-p 'org-mode) (org-mode))
+                  (save-excursion
+                    (if after-heading
+                        ;; Find the target heading and go to end of its subtree
+                        (let ((re (format "^\\* %s\\(?:[ \t]\\|$\\)"
+                                          (regexp-quote after-heading))))
+                          (goto-char (point-min))
+                          (if (not (re-search-forward re nil t))
+                              (error "Heading not found: %s" after-heading)
+                            (org-end-of-subtree t)
+                            (unless (bolp) (insert "\n"))))
+                      ;; No after-heading — go to end of file
+                      (goto-char (point-max))
+                      (unless (bolp) (insert "\n")))
+                    (insert (format "\n* %s\n\n%s\n" heading-text content))
+                    (save-buffer)
+                    (format "OK: Added heading '%s' to %s"
+                            heading-text (file-name-nondirectory file))))
+              (when (buffer-live-p buf)
+                (kill-buffer buf))))
+        (error (format "ERROR: %s — %s" id (error-message-string err)))))))
 
 (defconst agent-server-front-matter-spec
   '((:title . ("TITLE" . "#+title:      %s"))
