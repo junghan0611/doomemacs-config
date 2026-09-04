@@ -19,6 +19,32 @@
 You are the **담당자** (agent-in-charge) for this repository.
 This is not a toy dotfile. Read this before touching anything.
 
+## Who I Am
+
+**The public standing report is a Denote note, not this file.**
+
+| | |
+|---|---|
+| Denote ID | `20260227T120800` |
+| org (SSOT) | `~/org/botlog/20260227T120800--§doomemacs-config-*.org` |
+| exported | `~/repos/gh/notes/content/botlog/20260227T120800.md` |
+| public | <https://notes.junghanacs.com/botlog/20260227t120800> |
+
+The split of duty: **this file is the standing baseline inside the repo** — structure,
+conventions, contracts, and the traps that keep recurring. **The Denote note is where
+the agent-in-charge reports outward** — what this house owns, what it refuses, where
+the boundaries run, and the current judgment. When a report is written there, add a
+`히스토리` line naming the date, the actor and what changed; never silently rewrite the
+standing report.
+
+Neighbours on the same axis:
+
+| ID | What |
+|----|------|
+| `20260227T141200` | `⊨agent-server` — fence / playground / trust, the three layers of the agent RPC surface. A case doc thick enough to keep its own house; the steward note links it rather than absorbing it. |
+| `20260408T120252` | 에이전트 기억층 — the cross-repo axis where each steward answers from their own seat. **This repo's seat is still empty** (2026-09-04). |
+| `20260319T110800` | `§andenken` — the steward downstream of this repo's garden export; the tag pool is the contract between us. |
+
 ## What This Repo Is
 
 A 20K-line Doom Emacs configuration that serves as the **frontend for a human-agent collaborative ecosystem**. Emacs here is not just a text editor — it is the harness where:
@@ -273,6 +299,17 @@ Do not copy them here.
 - **`journal/` is never scanned by any automatic fixer** (GLG's manual export surface).
 - **Denote links and figure paths are protected regions**: `[[denote:UUID]]`,
   `[[file:~/screenshot/...]]`, `[[file:~/org/.attach/...]]`, `[[file:~/org/...]]`.
+- **A tag reaches the garden only if a meta note defines it.** The pool is the union
+  of `#+filetags:` in `meta/*.org` headers, and the filter drops everything else at
+  export time — org sources are never rewritten. The gate is provenance, **not
+  language**: nothing in the code prefers English, so a Korean filetag in a meta note
+  would publish. To add a tag, write its meta note; to retire one, remove the filetag.
+  Control lives in the notes; SSOT is § Section 1.7 of `lisp/denote-export-config.el`.
+  Two things bypass the filter — `@`-prefixed categories (a separate namespace) and
+  `#+hugo_tags:` (short-circuits the hook entirely).
+- **This tag pool is a contract with `andenken`**, whose md search track consumes the
+  exported garden. Widening or narrowing it changes retrieval quality in another repo,
+  so treat a pool change as cross-repo, not local.
 
 ### Neomacs K-review — `bin/neomacs.sh`
 
@@ -353,11 +390,16 @@ Recurring traps only. Details live in the code comment at each site.
   headings that merely start with the same prefix. Anchor the whole heading. SSOT is
   `agent-server--related-notes-heading-re`, gated by
   `tests/test-agent-denote-link.el`. (2026-07-17)
-- **Do not grow gptel backends or models.** One backend — OpenAI-sub (ChatGPT
-  subscription OAuth) — and `my/gptel-models` as the SSOT for the model list. **Add
-  only on that one line**, and never hand-copy a model spec (`my/gptel--model-specs`
-  pulls it from upstream). Reviving a removed backend needs GLG's decision first.
-  (2026-07-22, `950bd05`)
+- **Do not grow gptel backends or models.** The default is one backend — OpenAI-sub
+  (ChatGPT subscription OAuth) — with `my/gptel-models` as the SSOT for the model
+  list. **Add only on that one line**, and never hand-copy a model spec
+  (`my/gptel--model-specs` pulls it from upstream). Adding or reviving a backend needs
+  GLG's decision first. **An approved exception is dated and written to be deleted** —
+  it names its expiry and the exact forms to remove at its own definition site, so a
+  later agent can retire it without re-deriving the decision. The live one is the
+  Copilot block in `lisp/ai-gptel.el` — Claude/Gemini axis only, subscribed 2026-08-22,
+  **running to mid-September 2026 and not being renewed** (GLG, 2026-09-04). One
+  exception never licenses the next. (2026-07-22, `950bd05`)
 - **If gptel summarize/translate "used to work and now doesn't", re-measure the model
   tier.** Availability differs sharply by tier on the subscription rail, and a
   congested request comes back as **HTTP 200 with a payload-level

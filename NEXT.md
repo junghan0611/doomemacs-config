@@ -51,6 +51,36 @@
 
 ## NOW — 바로 손대는 자리 (2026-09-02)
 
+- [x] **(2026-09-04) 담당자 문서를 열었다** — Denote `20260227T120800`. org 담당자가
+      비워 준 방(옛 「인도 카스트/AI」 원문은 리서치 노트 `20241030T155448`로 이관)을
+      재사용했다. 제목·태그·초록·관련메타·관련노트·첫 현재 보고까지 agent-server API로
+      작성. README 맨 위 인용블록 + Further reading, AGENTS.md `## Who I Am` 표 배선 완료.
+- [ ] **(2026-09-04) 담당자 문서 export는 GLG가 돌린다** — 공개 URL
+      <https://notes.junghanacs.com/botlog/20260227t120800> 은 200을 주지만 아직
+      **옛 방의 내용**을 서빙한다. 내보내기는 GLG 담당(2026-09-04 지시). 태그 10개는
+      전부 meta 풀 통과 확인해 뒀으니(2026-09-04 실측) export 시 잘려 나가지 않는다.
+- [ ] **(2026-09-04) 공동 축 노트에 자리 잡기** — Denote `20260408T120252`
+      「에이전트 기억층 — 누가 기억의 주인인가」의 「리포 담당자 한마디」 아래에
+      §andenken·§agent-config·§dictcli·§nixos-config·§aionsclubs 다섯이 있고
+      §doomemacs-config는 비어 있다(2026-09-04 실측). 담당자 문서가 생긴 뒤에 쓴다.
+- [ ] **(2026-09-04) Copilot 블록 철거 예약 — 이번 달 중순, 연장 없음** (GLG,
+      2026-09-04). 구독이 끝나면 `lisp/ai-gptel.el`에서 `my/gptel-copilot-models` /
+      `gptel-copilot-backend` / `my/gptel--backend-for-model`의 Copilot 분기 **셋만**
+      지우면 원상복구된다(§ GitHub Copilot 블록 주석이 그 목록의 SSOT). 같이 되돌릴
+      문서 두 곳: README § One backend 의 예외 문단, AGENTS.md § Things to Watch 의
+      gptel 항목. **주석의 "한 달 체험"은 손대지 않았다** — 코드 파일이고, 어차피
+      블록째 사라진다.
+- [ ] **(2026-09-04) 코드 실측 수치 하나가 뒤에 남아 있다** — `denote-export-config.el`
+      `my/org-hugo--tag-pool-minimum` docstring의 "Measured pool size is 1,212 tags
+      across 538 meta notes". 오늘 재보니 **538편 / 1,294 태그**다(`~/org/meta` 헤더
+      15줄 스캔). 임계값 500은 그대로 유효하고 동작에 영향 없다. 코드 파일이라
+      문서 레인에서 건드리지 않았다 — 고칠 때 **날짜를 같이 박는다**.
+- [ ] **(2026-09-04) 같은 파일 § Section 1.7 주석의 섹션 태그 목록도 뒤에 남았다** —
+      "`journal`, `notes`, `llmlog` and `monthly` have none and drop out on their own"
+      인데 오늘 풀 실측으로는 `journal`과 `monthly`가 **풀 안에 있다**(그 사이 meta
+      노트가 생겼다. 같은 파일 `my/denote-meta-tag-pool` docstring이 `monthly`·`weekly`
+      건을 이미 적어 두고 있다). 동작에는 영향 없다 — 필터는 목록이 아니라 풀을
+      본다. README는 2026-09-04 실측으로 고쳐 뒀고, 주석은 코드 파일이라 남겨 뒀다.
 - [ ] **forge 인박스 며칠 써보기**: `SPC g i`. 갱신은 커서 둔 줄에서 `SPC g ' f f`
       (그 repo 전체) / `f t` (토픽 하나) / `r` (DB에서 다시 그리기, 네트워크 0).
       전체 18개 pull은 12초. **pull-all 함수는 일부러 안 만듦** — `f f`가 손에

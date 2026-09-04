@@ -4,6 +4,12 @@
 > This is the frontend of a human-agent ecosystem where both sides share one org-agenda timeline,
 > publish to the same digital garden, and evolve the system together — in plain text.
 
+> **The agent-in-charge reports here**:
+> [§doomemacs-config — 인간과 에이전트가 같은 org를 여는 하네스](https://notes.junghanacs.com/botlog/20260227t120800)
+> (Denote `20260227T120800`). What this house owns, what it refuses, where the
+> boundaries run, and the current judgment. `AGENTS.md` is the standing baseline inside
+> the repo; that note is the report going out.
+
 ## How to Read This
 
 If you glance at `config.el` and think "just another messy dotfile" — look closer.
@@ -34,7 +40,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,200+ published |
 | **Platforms** | NixOS (laptop, NUC, Oracle ARM), Termux (Galaxy Fold4) |
 | **Lines** | ~20K across config + lisp + bin + scripts |
-| **AI** | gptel on one backend — ChatGPT subscription OAuth, three models |
+| **AI** | gptel on one backend — ChatGPT subscription OAuth, three models (+ one dated Copilot exception) |
 
 ## Structure
 
@@ -199,7 +205,7 @@ Parallel multi-daemon pipeline exporting 2,000+ org notes to Hugo markdown:
    d1   d2   dN               # N Emacs daemons (default 4-8)
    └────┼────┘                 # ox-hugo + link conversion + security filters
         │
-  ~/sync/markdown/.../content/
+  ~/repos/gh/notes/content/
 ```
 
 ```bash
@@ -211,6 +217,43 @@ Parallel multi-daemon pipeline exporting 2,000+ org notes to Hugo markdown:
 Full export (~2,000 files, 8 daemons) takes ~33 min — runs unattended.
 Incremental export (daily use) finishes in seconds, processing only changed files.
 
+Incremental means **mtime against the last export stamp**
+(`filter_changed_files` in `denote-export-parallel.py`), and the dblock pass saves a
+file only when its output actually changed, so an unchanged note keeps its old mtime.
+The consequence downstream: a `--force` run rewrites every file it touches even when
+the content is identical, so the whole batch lands with a fresh mtime and no git diff.
+Anything that watches this tree for change — `andenken`'s md track does — must not
+read mtime as "content changed" on its own.
+
+### Tags are a controlled vocabulary
+
+A tag is not a label, it is a magnet: `/tags/emacs` links to `meta/†-이맥스`, so a tag
+no meta note defines is a dead URL. Org sources may accumulate stray tags freely; the
+garden must not. The export filter (§ Section 1.7 of
+[`denote-export-config.el`](lisp/denote-export-config.el)) drops every tag that is not
+in the pool, and **never modifies the org file**.
+
+The pool is the union of `#+filetags:` declared in `meta/*.org` headers — no allowlist,
+no special case. Measured 2026-09-04: **1,294 tags across 538 meta notes**, all ASCII.
+To publish a tag, write its meta note; to retire one, remove the filetag. The gate is
+provenance, not language — nothing in the filter prefers English, so a Korean filetag
+in a meta note would publish; today's all-English pool is a curation outcome, not a
+rule. Two paths bypass the filter: `@`-prefixed categories, which are a separate
+namespace, and `#+hugo_tags:`, which short-circuits the hook entirely.
+
+Section tags need no exception, which is the test that the design holds — they are
+decided by the same rule as everything else. Measured against the pool on 2026-09-04:
+`bib`, `meta`, `botlog`, `autholog`, `journal` and `monthly` have meta notes and
+survive; `notes` and `llmlog` do not and drop out on their own, recoverable from the
+folder name anyway. That membership moves whenever a meta note is written or retagged,
+so read the pool, not this line.
+
+A pool below `my/org-hugo--tag-pool-minimum` (500) aborts the export rather than
+silently stripping every tag in the garden, which is what a headless daemon with the
+wrong `denote-directory` would otherwise do. The cache re-fingerprints `meta/` on its
+own instead of waiting to be invalidated, because both holders outlive an edit — a GUI
+session, and an export daemon the parallel orchestrator reuses across runs.
+
 ## AI/Agent Modules
 
 The **main workflow** is `gptel-agent` (karthink) — a Markdown/Org agent definition
@@ -221,7 +264,7 @@ everything flows through agent presets.
 | Module | File | Purpose |
 |--------|------|---------|
 | **gptel-agent** | `ai-gptel.el` (`use-package! gptel-agent`) | **Primary chat/agent surface** — agent presets, skills, in-buffer tool execution |
-| GPTel core | `ai-gptel.el` | Single backend — OpenAI-sub (ChatGPT subscription OAuth), three models (`gpt-5.6-terra`/`-sol`/`-luna`) + Codex stream advice |
+| GPTel core | `ai-gptel.el` | Default backend — OpenAI-sub (ChatGPT subscription OAuth), three models (`gpt-5.6-terra`/`-sol`/`-luna`) + Codex stream advice, plus one dated Copilot exception |
 | Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
@@ -229,7 +272,7 @@ everything flows through agent presets.
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | The agent herd — session status board + attach, see § tmux inside Emacs |
 
-### One backend, three models
+### One backend, three models — and one dated exception
 
 Models ship faster than a dotfile can absorb them. Every new release used to arrive
 as another backend, another hand-copied spec block, another `my/gptel-switch-to-*`
@@ -238,6 +281,20 @@ down to a single backend: **OpenAI-sub**, the ChatGPT subscription over OAuth
 (`gptel-make-openai-oauth`, Codex Responses endpoint). DeepSeek, OpenRouter with its
 hand-maintained Gemini specs, a Dockerized Claude wrapper, and a local Claude proxy
 were all removed rather than left to rot.
+
+That rule has exactly one live exception, and it carries an expiry rather than a
+precedent. GLG subscribed to **GitHub Copilot** on 2026-08-22; it runs to **mid-September
+2026 and will not be renewed** (GLG, 2026-09-04). While it lasts,
+`gptel-copilot-backend` registers the one axis OpenAI-sub cannot serve —
+`gemini-3.6-flash` and `claude-sonnet-5`. Overlapping `gpt-*` models are deliberately
+absent: the subscription rail already has them, and every Copilot request spends a
+premium-request quota, which is why the default backend, the default model, and the
+fast slot all stay on OpenAI-sub. The block is written to be deleted, not maintained:
+`my/gptel-copilot-models`, `gptel-copilot-backend`, and the Copilot branch of
+`my/gptel--backend-for-model` are the whole surface, and removing them restores the
+single-backend state — that removal is scheduled, not hypothetical. A second exception
+is not implied by the first; it needs GLG's decision, the same as reviving a removed
+backend does.
 
 | Role | Model | Where it is used |
 |------|-------|------------------|
@@ -559,6 +616,12 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs 31 channel terminal,
 - [andenken](https://github.com/junghan0611/andenken) — Note hierarchy → semantic memory
 - [nixos-config](https://github.com/junghan0611/nixos-config) — Reproducible system
 - [GLG-Mono](https://github.com/junghan0611/GLG-Mono) — Custom programming font
+
+### Further reading
+
+- [§doomemacs-config — the agent-in-charge's standing report](https://notes.junghanacs.com/botlog/20260227t120800) — Denote `20260227T120800`
+- [§doomemacs-config: ⊨agent-server](https://notes.junghanacs.com/botlog/20260227t141200) — fence, playground, trust: the three layers behind `bin/agent-server.el`
+- [에이전트 기억층 — 누가 기억의 주인인가](https://notes.junghanacs.com/botlog/20260408t120252) — the cross-repo axis where each steward answers from their own seat
 
 ## Acknowledgments
 
