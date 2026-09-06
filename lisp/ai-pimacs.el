@@ -23,7 +23,7 @@
 ;; 알아둘 것:
 ;; - `/login' 은 RPC 에 노출되지 않아 pimacs 에서 안 된다 (pi issue #885).
 ;;   인증은 터미널에서 `pi' 를 한 번 띄워 끝내 둔다.
-;; - pimacs 는 pi 0.82.0+ 를 요구하고 기동 시 버전을 검사한다.
+;; - pimacs 는 pi 0.84.4+ 를 요구하고 기동 시 버전을 검사한다.
 ;; - pilish 와 달리 `auto-mode-alist' / `treesit-major-mode-remap-alist'
 ;;   를 건드리지 않는다. md-ts-mode 가 markdown-mode 를 가로채던 사고
 ;;   (ai-pi-agent.el 의 WORKAROUND) 는 여기서 재발하지 않는다.
@@ -54,12 +54,14 @@
   ;; 렌더가 이상하면 이 줄만 지우면 markdown-mode 기반 기본 렌더러로 돌아간다.
   (pimacs-markdown-renderer #'pimacs--render-markdown)
   :config
-  ;; 단계 3 에서 열 자리. entwurf 를 붙일 때 pi 로 넘길 플래그를 여기에 둔다.
-  ;; ai-pi-agent.el 의 `pilish-extra-args' 와 같은 역할.
-  ;;   (setq pimacs-flags '("--entwurf-control" "--emacs-agent-socket" "pimacs"))
-  ;; 주의: entwurf 의 mux 레일은 TMUX/TMUX_PANE 상속을 요구한다. Emacs 가
+  ;; `pimacs-flags' 는 Pi 인자에서 `--mode rpc' 앞에 그대로 놓인다.
+  ;; `--entwurf-control' 로 이 세션을 addressable citizen으로 열고, agent
+  ;; Emacs 작업은 별도 RPC daemon인 "server" socket으로 보낸다.
+  ;; 주의: entwurf의 mux 레일은 TMUX/TMUX_PANE 상속을 요구한다. Emacs가
   ;; tmux 밖에서 떴으면 형제를 *새로 여는* 부름(fresh/launch)은 거부된다.
   ;; 확장 로드와 이미 살아 있는 형제와의 대화는 영향받지 않는다.
+  (setq pimacs-flags
+        '("--entwurf-control" "--emacs-agent-socket" "server"))
 
   (add-hook 'pimacs-chat-mode-hook #'doom-mark-buffer-as-real-h)
   ;; 스트리밍 렌더 비용이 큰 버퍼라 line numbers 를 끈다 (pilish 와 동일).
