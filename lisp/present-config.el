@@ -22,7 +22,7 @@
 ;;
 ;; 기존 자산:
 ;;   - org-tree-slide: Doom +present 모듈 (init.el)
-;;   - pi-coding-agent: ai-pi-agent.el (SPC j)
+;;   - pilish: ai-pi-agent.el (SPC j)
 ;;   - whisper STT: ai-stt-whisper.el (M-a)
 ;;   - edge-tts: ai-tts-edge.el (SPC -)
 ;;
@@ -106,19 +106,19 @@
 
 (defun my/present-send-slide ()
   "현재 슬라이드 내용을 pi 에이전트에 전송.
-pi-coding-agent 입력 버퍼에 삽입 후 전송."
+pilish 입력 버퍼에 삽입 후 전송."
   (interactive)
   (let ((text (my/present--current-slide-text)))
     (if-let ((input-buf
               (cl-some (lambda (buf)
                          (with-current-buffer buf
-                           (when (derived-mode-p 'pi-coding-agent-input-mode)
+                           (when (derived-mode-p 'pilish-input-mode)
                              buf)))
                        (buffer-list))))
         (with-current-buffer input-buf
           (erase-buffer)
           (insert (format "현재 발표 슬라이드 내용입니다. 핵심 포인트를 정리하고, 예상 질문과 답변을 준비해주세요:\n\n%s" text))
-          (pi-coding-agent-send)
+          (pilish-send)
           (message "📤 슬라이드 → 에이전트 전송"))
       ;; pi 세션 없으면 킬링에라도 복사
       (kill-new text)
@@ -130,13 +130,13 @@ pi-coding-agent 입력 버퍼에 삽입 후 전송."
   (if-let ((input-buf
             (cl-some (lambda (buf)
                        (with-current-buffer buf
-                         (when (derived-mode-p 'pi-coding-agent-input-mode)
+                         (when (derived-mode-p 'pilish-input-mode)
                            buf)))
                      (buffer-list))))
       (with-current-buffer input-buf
         (erase-buffer)
         (insert (format "발표 Q&A 질문입니다. 간결하게 답변해주세요:\n\n%s" question))
-        (pi-coding-agent-send)
+        (pilish-send)
         (message "📤 질문 → 에이전트 전송"))
     (message "⚠ pi 세션이 없습니다")))
 

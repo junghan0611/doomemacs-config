@@ -17,7 +17,7 @@
 ;; - 멀티 프로바이더 (Claude, GPT, Gemini, 자체호스팅)
 ;;
 ;; 패키지:
-;; - packages.el에서 upstream pi-coding-agent 설치 (MELPA)
+;; - packages.el에서 upstream pilish 설치 (MELPA)
 ;; - pi-mono lockSync retry 수정이 머지되면 fork → upstream 전환 예정
 ;;
 ;; 키바인딩 (SPC j):
@@ -28,14 +28,14 @@
 
 ;;; Code:
 
-;;;; pi-coding-agent 기본 설정
+;;;; pilish 기본 설정
 
-(use-package! pi-coding-agent
+(use-package! pilish
   :init
-  (defalias 'pi 'pi-coding-agent)
+  (defalias 'pi 'pilish)
   ;; WORKAROUND: md-ts-mode autoload가 전역 markdown-mode를 오버라이딩
   ;; → Doom의 markdown-mode-map/evil-markdown-mode 키바인딩 소실
-  ;; https://github.com/dnouri/pi-coding-agent/issues/155
+  ;; https://github.com/dnouri/pilish/issues/155
   (after! md-ts-mode
     (setq auto-mode-alist
           (assoc-delete-all "\\.md\\'" auto-mode-alist))
@@ -44,21 +44,21 @@
             (assoc-delete-all 'markdown-mode treesit-major-mode-remap-alist))))
   :init
   ;; defvar 이전에 setq — :custom은 defer 상태에서 패키지 로드 전까지 적용 안 됨
-  (setq pi-coding-agent-extra-args '("--entwurf-control" "--emacs-agent-socket" "pi"))
+  (setq pilish-extra-args '("--entwurf-control" "--emacs-agent-socket" "pi"))
   :custom
-  (pi-coding-agent-input-window-height 10)
-  (pi-coding-agent-tool-preview-lines 10)
-  (pi-coding-agent-bash-preview-lines 5)
-  (pi-coding-agent-context-warning-threshold 70)
-  (pi-coding-agent-context-error-threshold 90)
-  (pi-coding-agent-visit-file-other-window t)
+  (pilish-input-window-height 10)
+  (pilish-tool-preview-lines 10)
+  (pilish-bash-preview-lines 5)
+  (pilish-context-warning-threshold 70)
+  (pilish-context-error-threshold 90)
+  (pilish-visit-file-other-window t)
   :config
-  (add-hook 'pi-coding-agent-chat-mode-hook #'doom-mark-buffer-as-real-h)
-  (add-hook 'pi-coding-agent-input-mode-hook #'doom-mark-buffer-as-real-h)
+  (add-hook 'pilish-chat-mode-hook #'doom-mark-buffer-as-real-h)
+  (add-hook 'pilish-input-mode-hook #'doom-mark-buffer-as-real-h)
   ;; 스트리밍/렌더링 비용이 큰 Pi 버퍼에서는 line numbers를 끈다.
-  (add-hook 'pi-coding-agent-chat-mode-hook
+  (add-hook 'pilish-chat-mode-hook
             (lambda () (display-line-numbers-mode -1)))
-  (add-hook 'pi-coding-agent-input-mode-hook
+  (add-hook 'pilish-input-mode-hook
             (lambda () (display-line-numbers-mode -1))))
 
 ;;;; 유틸리티
@@ -77,7 +77,7 @@
    (lambda (buf)
      (and (buffer-live-p buf)
           (with-current-buffer buf
-            (derived-mode-p 'pi-coding-agent-chat-mode))))
+            (derived-mode-p 'pilish-chat-mode))))
    (buffer-list)))
 
 (defun my/pi--restore-layout (chat-buf)
@@ -86,10 +86,10 @@
   (switch-to-buffer chat-buf)
   (with-current-buffer chat-buf
     (goto-char (point-max)))
-  (when-let ((input-buf (and (boundp 'pi-coding-agent--input-buffer)
-                             (buffer-local-value 'pi-coding-agent--input-buffer chat-buf))))
+  (when-let ((input-buf (and (boundp 'pilish--input-buffer)
+                             (buffer-local-value 'pilish--input-buffer chat-buf))))
     (when (buffer-live-p input-buf)
-      (let ((input-win (split-window nil (- pi-coding-agent-input-window-height) 'below)))
+      (let ((input-win (split-window nil (- pilish-input-window-height) 'below)))
         (set-window-buffer input-win input-buf)
         (select-window input-win)))))
 
@@ -125,10 +125,10 @@ NO-WORKSPACE-SWITCH가 non-nil이면 workspace 전환 생략."
 
 (defun my/pi-start ()
   "현재 프로젝트에서 Pi 세션 시작 또는 기존 세션 표시.
-pi-coding-agent의 기본 동작을 그대로 사용하며,
+pilish의 기본 동작을 그대로 사용하며,
 workspace 내에서 세션이 자연스럽게 관리됨."
   (interactive)
-  (pi-coding-agent))
+  (pilish))
 
 (defun my/pi-find ()
   "completing-read로 Pi 세션 선택 후 해당 workspace로 전환.
@@ -142,8 +142,8 @@ vertico/ivy 등 completing-read 프레임워크와 호환."
                         (with-current-buffer buf
                           (let* ((project (file-name-nondirectory
                                            (directory-file-name default-directory)))
-                                 (status (symbol-name (or pi-coding-agent--status 'unknown)))
-                                 (proc pi-coding-agent--process)
+                                 (status (symbol-name (or pilish--status 'unknown)))
+                                 (proc pilish--process)
                                  (alive (if (and proc (process-live-p proc)) "live" "dead")))
                             (cons (format "%-25s [%s] %s" project status alive) buf))))
                       chat-bufs))
@@ -155,8 +155,8 @@ vertico/ivy 등 completing-read 프레임워크와 호환."
 (defun my/pi-quit ()
   "현재 Pi 세션 종료."
   (interactive)
-  (when (derived-mode-p 'pi-coding-agent-chat-mode 'pi-coding-agent-input-mode)
-    (pi-coding-agent-quit)))
+  (when (derived-mode-p 'pilish-chat-mode 'pilish-input-mode)
+    (pilish-quit)))
 
 ;;;; Pi 세션 매니저
 
@@ -187,22 +187,22 @@ vertico/ivy 등 completing-read 프레임워크와 호환."
       (with-current-buffer buf
         (let* ((dir (or default-directory "?"))
                (project (file-name-nondirectory (directory-file-name dir)))
-               (status (symbol-name (or pi-coding-agent--status 'unknown)))
-               (state pi-coding-agent--state)
+               (status (symbol-name (or pilish--status 'unknown)))
+               (state pilish--state)
                (model-obj (plist-get state :model))
                (model-name (cond
                             ((stringp model-obj) model-obj)
                             ((plist-get model-obj :name))
                             (t "—")))
                (model-short (if (string-empty-p model-name) "—"
-                              (pi-coding-agent--shorten-model-name model-name)))
+                              (pilish--shorten-model-name model-name)))
                ;; context usage: upstream이 --last-usage 제거 → --state :stats :contextUsage로 이동
                (stats (plist-get state :stats))
                (ctx (and stats (plist-get stats :contextUsage)))
                (context-pct (if (and ctx (plist-get ctx :percent))
                                 (format "%.0f%%" (plist-get ctx :percent))
                               "—"))
-               (proc pi-coding-agent--process)
+               (proc pilish--process)
                (alive (if (and proc (process-live-p proc)) "live" "dead")))
           (push (list buf (vector project model-short
                                  (propertize status 'face (my/pi--status-face status))
@@ -296,8 +296,8 @@ NO-WORKSPACE-SWITCH가 non-nil이면 workspace 전환 생략."
     (when (and (buffer-live-p chat-buf)
                (yes-or-no-p (format "Kill Pi session in %s?" (buffer-name chat-buf))))
       (with-current-buffer chat-buf
-        (when-let ((input (and (boundp 'pi-coding-agent--input-buffer)
-                               pi-coding-agent--input-buffer)))
+        (when-let ((input (and (boundp 'pilish--input-buffer)
+                               pilish--input-buffer)))
           (when (buffer-live-p input) (kill-buffer input)))
         (kill-buffer chat-buf))
       (my/pi-manager-refresh))))
@@ -338,7 +338,7 @@ NO-WORKSPACE-SWITCH가 non-nil이면 workspace 전환 생략."
 
 ;;;; 스크롤 동작 메모
 ;;
-;; pi-coding-agent--with-scroll-preservation 매크로 (upstream ui.el):
+;; pilish--with-scroll-preservation 매크로 (upstream ui.el):
 ;; - chat 버퍼 point가 끝(point-max)이면 → 새 출력 따라 자동 스크롤
 ;; - 사용자가 위로 스크롤했으면 → 그 위치 유지 (안 움직임)
 ;;

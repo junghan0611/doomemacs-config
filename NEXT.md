@@ -788,7 +788,7 @@ ghostel은 우리 담당. fork branch `fix/korean-ime-commit` 운용 중.
 
 ### 증상 (해결됨)
 
-wezterm → emacs (-nw 또는 GUI) → ghostel buffer → pi-coding-agent 환경에서
+wezterm → emacs (-nw 또는 GUI) → ghostel buffer → pilish 환경에서
 에이전트 응답 중 / 직후 한글 입력 시 SPC 누르면 음절 사라짐, 또는
 39바이트 카오스 음절 PTY 송신 (실측 사례: `"자갈ㅓㅏㅓㅏㅏㅏㅓㅏㅓㅏㅓ"`).
 

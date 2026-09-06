@@ -8,10 +8,10 @@
 ;;; Commentary:
 
 ;; pimacs.el (https://github.com/ananthakumaran/pimacs.el) — Pi 프론트엔드.
-;; ai-pi-agent.el 의 pi-coding-agent 와 같은 `pi --mode rpc' 백엔드를 쓰되,
+;; ai-pi-agent.el 의 pilish 와 같은 `pi --mode rpc' 백엔드를 쓰되,
 ;; UI 모델이 다르다. 둘은 공존한다 — 어느 손맛이 맞는지 재는 중이다.
 ;;
-;;   pi-coding-agent   2 버퍼 (chat + 별도 입력 버퍼).  evil 전용 모듈 있음.
+;;   pilish   2 버퍼 (chat + 별도 입력 버퍼).  evil 전용 모듈 있음.
 ;;   pimacs            1 버퍼 (읽기전용 chat + 하단 프롬프트 위젯).
 ;;                     magit 식 섹션 접기.  evil 지원 없음.
 ;;
@@ -24,7 +24,7 @@
 ;; - `/login' 은 RPC 에 노출되지 않아 pimacs 에서 안 된다 (pi issue #885).
 ;;   인증은 터미널에서 `pi' 를 한 번 띄워 끝내 둔다.
 ;; - pimacs 는 pi 0.82.0+ 를 요구하고 기동 시 버전을 검사한다.
-;; - pi-coding-agent 와 달리 `auto-mode-alist' / `treesit-major-mode-remap-alist'
+;; - pilish 와 달리 `auto-mode-alist' / `treesit-major-mode-remap-alist'
 ;;   를 건드리지 않는다. md-ts-mode 가 markdown-mode 를 가로채던 사고
 ;;   (ai-pi-agent.el 의 WORKAROUND) 는 여기서 재발하지 않는다.
 
@@ -55,14 +55,14 @@
   (pimacs-markdown-renderer #'pimacs--render-markdown)
   :config
   ;; 단계 3 에서 열 자리. entwurf 를 붙일 때 pi 로 넘길 플래그를 여기에 둔다.
-  ;; ai-pi-agent.el 의 `pi-coding-agent-extra-args' 와 같은 역할.
+  ;; ai-pi-agent.el 의 `pilish-extra-args' 와 같은 역할.
   ;;   (setq pimacs-flags '("--entwurf-control" "--emacs-agent-socket" "pimacs"))
   ;; 주의: entwurf 의 mux 레일은 TMUX/TMUX_PANE 상속을 요구한다. Emacs 가
   ;; tmux 밖에서 떴으면 형제를 *새로 여는* 부름(fresh/launch)은 거부된다.
   ;; 확장 로드와 이미 살아 있는 형제와의 대화는 영향받지 않는다.
 
   (add-hook 'pimacs-chat-mode-hook #'doom-mark-buffer-as-real-h)
-  ;; 스트리밍 렌더 비용이 큰 버퍼라 line numbers 를 끈다 (pi-coding-agent 와 동일).
+  ;; 스트리밍 렌더 비용이 큰 버퍼라 line numbers 를 끈다 (pilish 와 동일).
   (add-hook 'pimacs-chat-mode-hook (lambda () (display-line-numbers-mode -1)))
 
   ;; `--models' 는 pi 의 순환 목록이다. 이걸 넘겨 둬야 세션 안에서
@@ -109,7 +109,7 @@
 ;;;; 키바인딩
 ;;
 ;; SPC j 는 이미 붐빈다. 점유 현황 (2026-08-11):
-;;   j f l q  ai-pi-agent.el      pi-coding-agent
+;;   j f l q  ai-pi-agent.el      pilish
 ;;   p        present-config.el   *prefix* — 발표 (j p p/q/s/a)
 ;;   t T M-t  ai-bot-config.el    telega
 ;;   z a      term-config.el      zmx

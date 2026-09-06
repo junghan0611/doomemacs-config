@@ -263,7 +263,8 @@
 ;; (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 ;; (package! meta-agent-shell :recipe (:host github :repo "ElleNajt/meta-agent-shell"))
 
-(package! pi-coding-agent)
+;; MELPA recipe mirror가 Pilish 3.0 rename을 아직 반영하지 않았다 → upstream 직접.
+(package! pilish :recipe (:host github :repo "dnouri/pilish"))
 
 ;;;; ai-pimacs.el
 

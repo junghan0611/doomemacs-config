@@ -169,13 +169,13 @@ Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the
 
 ## pi-shell-acp Integration
 
-This config is the editor surface that [pi-shell-acp](https://github.com/junghan0611/pi-shell-acp) targets. pi-shell-acp is my ACP bridge between [pi](https://github.com/dnouri/pi-coding-agent) (the harness) and Claude/Codex/Gemini backends — it spawns coding agents that read org files, eval elisp, stamp agenda entries, and write to the shared Denote corpus, all through `emacsclient` against the `server` socket.
+This config is the editor surface that [pi-shell-acp](https://github.com/junghan0611/pi-shell-acp) targets. pi-shell-acp is my ACP bridge between [pi](https://github.com/dnouri/pilish) (the harness) and Claude/Codex/Gemini backends — it spawns coding agents that read org files, eval elisp, stamp agenda entries, and write to the shared Denote corpus, all through `emacsclient` against the `server` socket.
 
 The bridge accepts `--emacs-agent-socket` and forwards it to ACP children as `PI_EMACS_AGENT_SOCKET`:
 
 ```elisp
-;; pi-coding-agent buffer config
-(setq pi-coding-agent-extra-args
+;; pilish buffer config
+(setq pilish-extra-args
       '("--entwurf-control" "--emacs-agent-socket" "server"))
 ```
 

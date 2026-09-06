@@ -237,7 +237,7 @@ The ghostel counterpart of `+vterm/here'."
        :desc "Ghostel here"         "T" #'my/ghostel-here))
 
 
-;;; Pi CLI in ghostel — replacing pi-coding-agent package on -nw
+;;; Pi CLI in ghostel — replacing pilish package on -nw
 
 (defcustom my/pi-ghostel-args
   '("--entwurf-control" "--emacs-agent-socket" "pi")
@@ -254,7 +254,7 @@ Transiently hooked by `my/pi-ghostel-start' onto `ghostel-pre-spawn-hook'."
   "Open a ghostel buffer at project root and start `pi' inside.
 With prefix arg NEW-BUFFER, force a fresh ghostel buffer.
 
-Replaces the `pi-coding-agent' Emacs package on TTY (-nw) instances:
+Replaces the `pilish' Emacs package on TTY (-nw) instances:
 ghostel handles the terminal mirroring, OSC 9;4 progress, OSC 8 hyperlinks,
 OSC 133 prompt markers, and Korean IME (via our fork).  Pi just runs as
 its own CLI."
