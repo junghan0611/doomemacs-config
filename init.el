@@ -172,7 +172,7 @@ nil if file missing.")
        ;; plantuml            ; diagrams for confusing people more
        ;; graphviz
        latex             ; writing papers in Emacs has never been so fun
-       (markdown +tree-sitter)       ; writing docs for people to ignore
+       markdown       ; writing docs for people to ignore
        (org                          ; organize your plain life in plain text
         ;; +hugo +contacts +pomodoro +passwords: Doom에서 제거됨 (2026-03-17)
         ;; ox-hugo → packages.el에서 직접 관리
