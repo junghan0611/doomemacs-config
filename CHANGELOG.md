@@ -6,6 +6,45 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.9.11 — Botschaft reader and agent surface upkeep
+
+### Added
+
+- **Botschaft as an installed Doom package.** The GitHub recipe carries both
+  `lisp/botschaft.el` and its `bin/cwaq` query shim into the straight build, while
+  `lisp/botschaft-config.el` discovers that installed layout and the adapter under
+  the XDG data directory. The three commands — `botschaft-projects`,
+  `botschaft-search`, and `botschaft-open` — read the canonical ChatGPT web history
+  without a checkout on `load-path`, a local conversation store, or a write path.
+- **Forge whole-inbox refresh with a staleness gate.** `my/forge-pull-all` walks the
+  tracked repositories because stock `forge-pull` is repository-scoped, and skips
+  polling while the shared database is younger than six hours unless forced.
+- **Pimacs Entwurf control.** New sessions start addressable and send Emacs agent
+  work to the dedicated `server` socket.
+- **Repository steward report.** README and AGENTS now point to the public
+  `§doomemacs-config` report and document the split between the outward report and
+  the standing in-repository baseline. The garden tag-pool contract and the dated
+  Copilot exception were corrected against the live code.
+
+### Changed
+
+- **The Emacs Pi frontend follows the Pilish rename.** Package declarations,
+  commands, variables, modes, documentation, and adjacent launch references moved
+  from `pi-coding-agent` to `pilish` and its upstream GitHub recipe.
+- **Language modules reflect actual editor use.** Clojure uses tree-sitter, shell
+  and Clojure no longer request LSP, and the unused Lua module is disabled. Markdown
+  returned to the classic mode after its tree-sitter integration proved unsuitable.
+- **Edge TTS output moved to `~/org/transcript/`**, the current transcript home.
+
+### Fixed
+
+- **`agent-denote-add-heading` no longer mistakes a lowercase one-word body for
+  tags.** Tag detection is explicitly case-sensitive, all supported argument shapes
+  are parsed in a vanilla-testable helper, and tags can still combine with placement
+  after an existing heading.
+- **Generated Denote link and last-modified blocks exclude transcript notes**, so
+  generated meta, daily, and weekly views do not absorb the transcript corpus.
+
 ## v2026.9.2 — Emacs 31.1 becomes the default
 
 ### Changed

@@ -4,36 +4,23 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.9.2`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.9.11`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
-### 이번 컷에서 닫힌 것 (v2026.9.2, 2026-09-02)
+### 이번 컷에서 닫힌 것 (v2026.9.11, 2026-09-11)
 
-- **Emacs 31.1이 기본이 됐다**. `nixos-config` unstable 오버레이로 전 기기 이관,
-  `user`/`pi`/`server` 세 소켓 모두 31.1. RAIL 3·4 닫힘
-- ELPA tramp 제거 → 이맥스 내장 tramp(2.8.2.31.1). `(package! tramp :built-in t)`
-  가 아니면 tramp-rpc의 `Package-Requires`가 의존성으로 다시 끌어온다
-- tramp-rpc `rpc` 메서드 등록 복구 — Doom autoload 인라인이 죽이고 있었다.
-  30.2에서도 똑같이 죽어 있었으니 31.1 회귀가 **아니다**
-- agent-server 부팅 로그의 agenda-files 개수를 rebuild 뒤로 옮김
-
-### 지난 컷에서 닫힌 것 (v2026.8.23-forge.1, 2026-08-23)
-
-- Magit Forge 인박스 — `(magit +forge)` on, 로컬 DB 시딩(19 repo / 65 이슈 / 댓글
-  295 / 2.3 MB), archive 필터+prune, `SPC g i`. 갱신은 stock `SPC g ' f f`
-- consult-gh는 발견 전용으로 확정. consult-gh-forge 배선은 **의도적으로 안 붙임**
-  (검색 히트마다 남의 repo가 DB에 삽입 + ghub 인증 전역 override)
-- workspace `M-[`/`M-]`, tab `gb`/`gB`
-
-### 이전 컷에서 닫힌 것 (NEXT 체크박스 밖, 2026-08-23)
-
-- 한글 writing hygiene → `lisp/korean-input-config.el` SSOT + 에이전트 카탈로그
-- elfeed-show `q` → `kill-buffer-and-window`
-- Pi start 키 `SPC j j` → `SPC j M-j` (더블탭 걸림)
-- gptel Copilot 백엔드, lean/ledger 모듈, casual-init, bib 경로, TTS 경로 등
-  → 상세는 CHANGELOG `v2026.8.23`
+- **Botschaft 읽기 패키지 설치** — GitHub recipe가 Elisp와 `bin/cwaq`를 straight
+  build에 함께 담고, checkout 없는 load-path에서 projects/search/read 및 read-only
+  conversation buffer를 실측했다. 로컬 conversation store와 write 경로는 없다
+- Pi Emacs frontend를 upstream 이름인 Pilish로 이관하고 Pimacs에 Entwurf control 결선
+- agent-server의 소문자 한 단어 본문→태그 오판 수정 + 회귀 테스트
+- transcript를 Denote 생성 dblock에서 제외하고 Edge TTS 출력 경로도
+  `~/org/transcript/`로 모음
+- Forge 전체 인박스 pull + 6시간 staleness gate, 담당자 공개 문서와 계약 배선
+- 언어 모듈 정리 — Clojure tree-sitter, shell/Clojure LSP 제거, Lua off; Markdown
+  tree-sitter는 실사용 판정 뒤 classic mode로 복귀
 
 ---
 
@@ -51,10 +38,6 @@
 
 ## NOW — 바로 손대는 자리 (2026-09-02)
 
-- [x] **(2026-09-04) 담당자 문서를 열었다** — Denote `20260227T120800`. org 담당자가
-      비워 준 방(옛 「인도 카스트/AI」 원문은 리서치 노트 `20241030T155448`로 이관)을
-      재사용했다. 제목·태그·초록·관련메타·관련노트·첫 현재 보고까지 agent-server API로
-      작성. README 맨 위 인용블록 + Further reading, AGENTS.md `## Who I Am` 표 배선 완료.
 - [ ] **(2026-09-04) 담당자 문서 export는 GLG가 돌린다** — 공개 URL
       <https://notes.junghanacs.com/botlog/20260227t120800> 은 200을 주지만 아직
       **옛 방의 내용**을 서빙한다. 내보내기는 GLG 담당(2026-09-04 지시). 태그 10개는
