@@ -186,6 +186,7 @@
 (require 'ai-pi-agent)               ; Pi coding agent 설정
 (require 'ai-pimacs)                 ; Pimacs — 원버퍼 Pi 클라이언트 (평가 중)
 (require 'ai-bot-config)             ; Telegram 봇 통합
+(require 'botschaft-config)          ; ChatGPT web conversation reader
 
 (require 'ai-stt-whisper)
 (require 'ai-tts-edge)

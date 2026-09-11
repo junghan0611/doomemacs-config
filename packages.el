@@ -284,6 +284,14 @@
 
 (package! semext :recipe (:host github :repo "ahyatt/semext"))
 
+;;;; botschaft-config.el
+
+;; Keep the query shim beside the installed Elisp.  A plain `lisp/*.el'
+;; recipe would make command discovery work while silently dropping the shim.
+(package! botschaft
+  :recipe (:host github :repo "junghan0611/botschaft"
+           :files ("lisp/botschaft.el" ("bin" "bin/cwaq"))))
+
 ;;;; elfeed-config.el
 
 (unpin! elfeed)
