@@ -222,6 +222,7 @@
 
 (defun my/forge--repo-object (name)
   "Return the tracked forge repository for NAME (\"owner/name\"), or nil."
+  (require 'forge)
   (forge-get-repository (format "https://github.com/%s" name) nil :tracked?))
 
 (defun my/forge-seed-repo-names (owner)
@@ -305,6 +306,9 @@ Does nothing unless the database is stale (`my/forge-stale-p') or FORCE is
 non-nil, so a caller may poll this without hammering the API.  Pulls are
 asynchronous; the returned count is what was queued, not what has landed."
   (interactive "P")
+  ;; Doom registers Forge's command autoloads without loading `forge.el'.
+  ;; This path uses its database and repository APIs directly.
+  (require 'forge)
   (if (and (not force) (not (my/forge-stale-p)))
       (progn (message "forge: db is %.1fh old, skipping"
                       (/ (my/forge-database-age) 3600.0))

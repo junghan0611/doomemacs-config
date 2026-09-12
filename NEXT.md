@@ -66,8 +66,10 @@
       본다. README는 2026-09-04 실측으로 고쳐 뒀고, 주석은 코드 파일이라 남겨 뒀다.
 - [ ] **forge 인박스 며칠 써보기**: `SPC g i`. 갱신은 커서 둔 줄에서 `SPC g ' f f`
       (그 repo 전체) / `f t` (토픽 하나) / `r` (DB에서 다시 그리기, 네트워크 0).
-      전체 18개 pull은 12초. **pull-all 함수는 일부러 안 만듦** — `f f`가 손에
-      붙는지 먼저 보고, 안 붙으면 그때 3줄 넣는다.
+      전체 갱신은 `M-x my/forge-pull-all` (6시간 staleness gate, `C-u`는 강제)이다.
+      2026-09-12 lazy autoload 상태에서 `forge-sql`이 없던 결함은
+      `lisp/project-config.el`의 entry-point `require 'forge`로 고쳤고, user daemon에서
+      21개 pull queue·DB 갱신까지 확인했다.
 - [ ] **repo 정리는 별도 레인**: junghan0611/agent-config#19 (비아카이브 390개 /
       21 GB, 포크 삭제 vs 아카이브 결정 대기). 여기서 아카이브하면 forge 인박스는
       `my/forge-seed-repositories` 재실행으로 자동으로 따라온다.
