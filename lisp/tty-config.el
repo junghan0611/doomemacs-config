@@ -45,6 +45,11 @@
 
 ;;;; TTY 설정 진입점 — 타이밍 정렬
 
+;; `gui-set-selection'의 TTY backend (OSC 52 generic method)는 이 라이브러리가
+;; 등록한다. Emacs에 내장되어 있지만 daemon이 TTY frame 없이 먼저 뜨면 자동
+;; 로드에 의존할 수 없으므로 명시적으로 로드한다.
+(require 'term/xterm)
+
 ;; `display-graphic-p` 는 파일 로드 시점에 신뢰 불가.
 ;;   - daemon 로드 시점: frame 자체가 없음 → 항상 t 반환
 ;;   - non-daemon 로드 시점: Doom 이 이후 hook 단계에서 TTY 설정을 켬
@@ -54,8 +59,10 @@
 ;; Doom 이 뒤에 다시 켜 덮어쓴다. 모든 TTY 설정은 hook 으로 미루고,
 ;; Doom 의 같은 hook 보다 뒤에 돌도록 :append 로 붙인다.
 ;;
-;; frame-local 설정(OSC 52, display-table, cursor shape)은 tty-setup-hook 에서
-;; 수행해 daemon + GUI/TTY 혼합 환경을 정상 처리.
+;; frame-local 설정(OSC 52, display-table, cursor shape)은 TTY frame 생성 뒤에
+;; 수행한다. daemon의 초기 terminal에는 `tty-setup-hook'이 config 로드보다 먼저
+;; 끝날 수 있으므로, 이후 `emacsclient -t'로 붙는 frame은
+;; `after-make-frame-functions'에서도 반드시 적용한다.
 
 (defun +tty-wezterm-p ()
   "현재 TTY가 WezTerm 경로면 t.
@@ -86,30 +93,59 @@ BMP→SMP remap 은 여기서 하지 않는다. 흔한 케이스는 telega 쪽 d
   ;; consult/minibuffer 경로의 `…' 폭 드리프트만 최소 수정으로 회피.
   (setq truncate-string-ellipsis "..."))
 
-(defun +tty-setup ()
-  "TTY frame 전용 세팅. tty-setup-hook / doom-first-buffer-hook 에서 호출."
-  (when (not (display-graphic-p))
-    ;; OSC 52 selection (frame-local) — Emacs 29+ 내장 xterm.el 경로
-    (set-terminal-parameter nil 'xterm--set-selection t)
-    ;; Emacs → 터미널 윈도우 타이틀 OSC 0/2 송출 비활성.
-    ;; tmux/WezTerm 이 이미 타이틀 관리하므로 중복. profile 에서 6% 점유.
-    (setq-default xterm-set-window-title nil)
-    ;; 모바일 SSH/tmux에서 터치 스크롤이 Emacs 버퍼 스크롤로 들어오려면
-    ;; xterm mouse tracking이 필요하다. 이전에는 에이전트 프론트엔드
-    ;; 키보드-only 경량화 목적으로 껐지만, org 읽기 UX 손상이 더 크다.
-    (xterm-mouse-mode 1)
-    ;; show-paren-mode 비활성 — org 읽기/쓰기 위주, paren highlight 비용 절감
-    (show-paren-mode -1)
-    (+tty-safe-ellipsis-setup)
-    (unless standard-display-table
-      (setq standard-display-table (make-display-table)))
-    ;; vertical-border: ASCII '|' → U+2502 '│' (GUI 감성의 얇은 경계)
-    (set-display-table-slot standard-display-table
-                            'vertical-border (make-glyph-code ?│))
-    (+tty-wezterm-strip-vs16)))
+;; Declared here so the binding in `+tty-osc52-copy' remains dynamic even when
+;; this file is compiled before Doom's TTY hook loads xclip.
+(defvar xclip-mode)
+
+(defun +tty-osc52-copy (text)
+  "Copy TEXT through OSC 52 for a TTY frame.
+
+Doom's TTY hook enables xclip as a read-side fallback.  Its generic method
+otherwise deliberately disables xterm.el's OSC 52 method, even when xclip
+cannot reach a display on a remote host.  Bind xclip off only for this output
+operation; `interprogram-paste-function' remains available for its read path."
+  (if (display-graphic-p)
+      (gui-select-text text)
+    (let ((xclip-mode nil))
+      (gui-select-text text))))
+
+(defun +tty-setup (&optional frame)
+  "Apply TTY settings to FRAME, or the selected frame.
+
+This is called both while a terminal initializes and after an
+`emacsclient -t' frame is made, because a daemon's initial terminal can finish
+initializing before Doom loads this file."
+  (let ((frame (or frame (selected-frame))))
+    (unless (display-graphic-p frame)
+      (with-selected-frame frame
+        ;; OSC 52 selection (frame-local) — Emacs 29+ built-in xterm.el path.
+        (set-terminal-parameter nil 'xterm--set-selection t)
+        ;; xclip-mode is kept for clipboard reads but overrides this native
+        ;; backend on writes, so use the OSC-specific write entry point.
+        (setq interprogram-cut-function #'+tty-osc52-copy)
+        ;; Emacs → 터미널 윈도우 타이틀 OSC 0/2 송출 비활성.
+        ;; tmux/WezTerm 이 이미 타이틀 관리하므로 중복. profile 에서 6% 점유.
+        (setq-default xterm-set-window-title nil)
+        ;; 모바일 SSH/tmux에서 터치 스크롤이 Emacs 버퍼 스크롤로 들어오려면
+        ;; xterm mouse tracking이 필요하다. 이전에는 에이전트 프론트엔드
+        ;; 키보드-only 경량화 목적으로 껐지만, org 읽기 UX 손상이 더 크다.
+        (xterm-mouse-mode 1)
+        ;; show-paren-mode 비활성 — org 읽기/쓰기 위주, paren highlight 비용 절감
+        (show-paren-mode -1)
+        (+tty-safe-ellipsis-setup)
+        (unless standard-display-table
+          (setq standard-display-table (make-display-table)))
+        ;; vertical-border: ASCII '|' → U+2502 '│' (GUI 감성의 얇은 경계)
+        (set-display-table-slot standard-display-table
+                                'vertical-border (make-glyph-code ?│))
+        (+tty-wezterm-strip-vs16)))))
 
 (add-hook 'tty-setup-hook #'+tty-setup 'append)
+(add-hook 'after-make-frame-functions #'+tty-setup)
 (add-hook 'doom-first-buffer-hook #'+tty-setup 'append)
+;; Covers a TTY frame which already existed when this file was loaded.
+(dolist (frame (frame-list))
+  (+tty-setup frame))
 
 ;;;; consult prompt ellipsis — TTY에서 ASCII로 고정
 
