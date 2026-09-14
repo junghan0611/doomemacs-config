@@ -61,8 +61,8 @@
 ;;
 ;; frame-local 설정(OSC 52, display-table, cursor shape)은 TTY frame 생성 뒤에
 ;; 수행한다. daemon의 초기 terminal에는 `tty-setup-hook'이 config 로드보다 먼저
-;; 끝날 수 있으므로, 이후 `emacsclient -t'로 붙는 frame은
-;; `after-make-frame-functions'에서도 반드시 적용한다.
+;; 끝날 수 있다. `emacsclient -t' frame은 일반 frame hook이 아니라 server
+;; hook 경로로도 생성되므로 두 hook에서 모두 적용한다.
 
 (defun +tty-wezterm-p ()
   "현재 TTY가 WezTerm 경로면 t.
@@ -142,6 +142,9 @@ initializing before Doom loads this file."
 
 (add-hook 'tty-setup-hook #'+tty-setup 'append)
 (add-hook 'after-make-frame-functions #'+tty-setup)
+;; `emacsclient -t' can attach while the daemon is still initializing; this is
+;; its reliable post-frame lifecycle hook.
+(add-hook 'server-after-make-frame-hook #'+tty-setup 'append)
 (add-hook 'doom-first-buffer-hook #'+tty-setup 'append)
 ;; Covers a TTY frame which already existed when this file was loaded.
 (dolist (frame (frame-list))
