@@ -38,6 +38,40 @@
 
 ## NOW — 바로 손대는 자리 (2026-09-02)
 
+- [ ] **(2026-09-14) 원격 클립보드 OSC 52 — 되돌렸다. 측정 없이 다시 건드리지 말 것**
+      목표: Oracle tmux 안 터미널 Emacs에서 `y` 한 번이 ThinkPad 시스템 클립보드에
+      닿는 것. `4f5b47a`·`54f1e3f` 두 커밋을 **전부 삭제**하고 `lisp/tty-config.el`을
+      `dd30f96`과 바이트 동일하게 복원했다(2026-09-14 실측: `git diff dd30f96 --` 0줄).
+      GLG 판단 — 어설픈 수정보다 안 된다고 말하는 게 낫다, 터미널은 예민하다.
+      - **왜 실패했나**: 두 커밋은 "xclip-mode가 켜져 있고 그것이 write를 가로챈다"를
+        전제했다. org:1.1 standalone Emacs 실측은 `(featurep 'xclip)`=t,
+        **`xclip-mode`=nil**, `(terminal-parameter nil 'xterm--set-selection)`=**nil**.
+        xclip 바이너리가 없어 모드가 켜지지 못했고(`xclip.el:235-239` signal →
+        Doom이 `with-demoted-errors`로 삼킴, `doom+/modules/os/tty/config.el:36-37`),
+        따라서 `(let ((xclip-mode nil)) ...)`는 이미 nil인 걸 nil로 묶는 **순수 no-op**.
+      - **진짜 가로채는 지점**: `xclip.el:304-314`의 `:extra "xclip-override"` 메서드는
+        `&context`에 `xclip-mode`를 **안 본다**. `param == t && (featurep 'term/xterm)`
+        이면 무조건 발동해 `setf`로 param을 **영구 nil**로 만든 뒤 재귀 → 어떤 백엔드도
+        안 잡혀 select.el default no-op으로 조용히 삼킨다. 즉
+        `(set-terminal-parameter nil 'xterm--set-selection t)`는 OSC 52를 켜는 줄이
+        아니라 **override에게 먹이를 주는 줄**이었다. baseline에서도
+        `terminal-init-xterm`이 param=t로 두고 **첫 kill 한 번**에 영구 무음이 된다.
+      - **두 커밋은 어떤 측정으로도 실행된 적이 없다**: org:1.1은 `4f5b47a`(16:03)보다
+        먼저 뜬 프로세스라 위 `(t nil nil)`은 **baseline을 기술한 값**이다. 되돌려서
+        나빠진 것은 없다.
+      - **결백이 확인된 구간**: tmux(`tmux.conf:45-46` `set-clipboard on` +
+        `allow-passthrough on`, `default-terminal tmux-256color`이라 DCS 래핑 없는 raw
+        OSC 52 — `term/xterm.el:1191-1208`), SSH, Ghostty. tmux copy-mode가 ThinkPad
+        클립보드에 닿는 것으로 확인됨.
+      - **아직 측정 안 된 유일한 관문**: Emacs가 **pane pty에** raw OSC 52를 쓰면
+        클립보드까지 가는가. copy-mode 성공은 *tmux가 자기 client tty로 내는* 경로라
+        이걸 대신 증명하지 못한다. 재시도는 이 한 줄부터 — 파일 수정 0, 재시작 0:
+        `(send-string-to-terminal (concat "\e]52;c;" (base64-encode-string "OSC52-PROBE-A" t) "\a"))`
+        붙으면 그때 `tty-config.el`을 논할 자격이 생긴다(generic dispatch를 우회해
+        직접 송출 + `set-terminal-parameter` 줄 삭제). 안 붙으면 Emacs는 손댈 데가
+        아니고, 정직한 답이 "지금 구조로는 안 된다"일 수 있다.
+      - **현재 GLG의 선택**: tmux copy-mode 우회로 쓴다(리포 변경 0, 이미 작동).
+
 - [ ] **(2026-09-04) 담당자 문서 export는 GLG가 돌린다** — 공개 URL
       <https://notes.junghanacs.com/botlog/20260227t120800> 은 200을 주지만 아직
       **옛 방의 내용**을 서빙한다. 내보내기는 GLG 담당(2026-09-04 지시). 태그 10개는
