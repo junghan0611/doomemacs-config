@@ -80,13 +80,6 @@
       「에이전트 기억층 — 누가 기억의 주인인가」의 「리포 담당자 한마디」 아래에
       §andenken·§agent-config·§dictcli·§nixos-config·§aionsclubs 다섯이 있고
       §doomemacs-config는 비어 있다(2026-09-04 실측). 담당자 문서가 생긴 뒤에 쓴다.
-- [ ] **(2026-09-04) Copilot 블록 철거 예약 — 이번 달 중순, 연장 없음** (GLG,
-      2026-09-04). 구독이 끝나면 `lisp/ai-gptel.el`에서 `my/gptel-copilot-models` /
-      `gptel-copilot-backend` / `my/gptel--backend-for-model`의 Copilot 분기 **셋만**
-      지우면 원상복구된다(§ GitHub Copilot 블록 주석이 그 목록의 SSOT). 같이 되돌릴
-      문서 두 곳: README § One backend 의 예외 문단, AGENTS.md § Things to Watch 의
-      gptel 항목. **주석의 "한 달 체험"은 손대지 않았다** — 코드 파일이고, 어차피
-      블록째 사라진다.
 - [ ] **(2026-09-04) 코드 실측 수치 하나가 뒤에 남아 있다** — `denote-export-config.el`
       `my/org-hugo--tag-pool-minimum` docstring의 "Measured pool size is 1,212 tags
       across 538 meta notes". 오늘 재보니 **538편 / 1,294 태그**다(`~/org/meta` 헤더
@@ -1066,19 +1059,18 @@ GNU Emacs로 프로브 전체를 돌려 검증해야 해서 릴리즈와 분리�
 
 ### 모델 티어 재측정 레인 (2026-08-11)
 
-`my/gptel-model-fast`를 luna → **terra**로 옮겼다. 근거는 교차 실측: luna 11/36
-(~31%, 성공해도 5~9초) vs terra 15/15 (100%, 중앙값 2초). 실패는 HTTP 200 +
-payload `server_is_overloaded`. 프롬프트 길이·시스템 프롬프트·`Originator` 헤더
-(gptel vs codex_cli_rs, 교차 10회)는 모두 무관으로 갈라냈다.
+2026-08-11의 luna 11/36 vs terra 15/15 실측은 **5.6 티어**의 기록이다.
+2026-09-25 GLG 결정으로 기본 `gpt-6-sol`, fast `gpt-6-luna`로 교체했다.
+6 티어에 이전 수치를 적용하지 않는다.
 
-- [ ] **재측정 (luna 혼잡 해소 확인)**: 같은 방식(번갈아 10회 이상, 순차 1초 간격)으로
-      luna 성공률을 다시 잰다. 20%대가 아니면 `my/gptel-model-fast` 원복 후보.
-      되돌릴 땐 반드시 새 수치와 날짜를 docstring에 남긴다.
+- [ ] **새 티어 관측 (필요할 때)**: `gpt-6-luna`에서 혼잡이 재현되면 같은 방식
+      (번갈아 10회 이상, 순차 1초 간격)으로 sol과 비교하고 수치/날짜를
+      `lisp/ai-gptel.el`에 남긴다. 먼저 모델을 임의로 되돌리지 않는다.
 - [ ] **`my/gptel-request-retry` 적용면 확장 판단**: 지금은 elfeed만 탄다.
       `ai-gptel.el`의 다른 요약/번역 명령은 `my/gptel-error-message`만 붙어 있어
-      혼잡 시 첫 실패가 그대로 노출된다. terra가 100%인 동안은 안 급함.
+      혼잡 시 첫 실패가 그대로 노출된다.
 - 참고: `gptel-quick`·`gptel-magit`은 패키지가 직접 `gptel-request`를 부르므로
-      우리 재시도를 못 탄다. 모델 상수 교체로만 이득을 봤다.
+      우리 재시도를 못 탄다.
 
 ### 테스트 가능성 — 조사 완료, 착수 판정 대기 (2026-07-22)
 

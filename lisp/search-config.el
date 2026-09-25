@@ -62,7 +62,7 @@
 ;; - 검색 결과를 임시 버퍼로 collect → gptel 분석
 (use-package! consult-ripfd
   :after consult
-  :bind ("s-F" . consult-ripfd))
+  :bind ("M-s F" . consult-ripfd))
 
 ;;; provide
 

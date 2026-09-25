@@ -10,17 +10,16 @@ ob-gptel은 Org Babel 소스 블록으로 LLM을 호출한다.
 =C-c C-c= 하면 결과가 =#+RESULTS:= 에 바로 삽입.
 
 백엔드는 =OpenAI-sub= (ChatGPT 구독 OAuth) 하나뿐이라 =:backend= 는 대부분 생략한다.
-모델만 셋:
+모델은 둘:
 
-| 모델          | 성격                       | 용도                            |
-|---------------+----------------------------+---------------------------------|
-| gpt-5.6-terra | 기본                       | 채팅, 요약/번역 (생략 시 이것)  |
-| gpt-5.6-sol   | 무거움, 비쌈               | 설계·리뷰 등 필요할 때만        |
-| gpt-5.6-luna  | 가장 빠르고 쌈             | 짧은 변환, 커밋 메시지, 인라인  |
+| 모델       | 성격 | 용도                           |
+|------------+------+--------------------------------|
+| gpt-6-sol  | 기본 | 채팅, 요약/번역 (생략 시 이것) |
+| gpt-6-luna | 빠름 | 짧은 변환, 커밋 메시지, 인라인 |
 
 SSOT는 =lisp/ai-gptel.el= 의 =my/gptel-models=.
 
-* 기본 호출 — 현재 기본 모델(terra) 사용
+* 기본 호출 — 현재 기본 모델(sol) 사용
 
 #+begin_src gptel
 이맥스에서 가장 유용한 기능 3가지를 간단히 설명해주세요.
@@ -28,15 +27,15 @@ SSOT는 =lisp/ai-gptel.el= 의 =my/gptel-models=.
 
 * 모델 지정
 
-** sol — 무거운 사고
+** sol — 기본 모델 명시
 
-#+begin_src gptel :model gpt-5.6-sol
+#+begin_src gptel :model gpt-6-sol
 Emacs Lisp에서 hash table과 alist의 성능 차이를 간단히 설명해주세요.
 #+end_src
 
 ** luna — 빠른 변환
 
-#+begin_src gptel :model gpt-5.6-luna
+#+begin_src gptel :model gpt-6-luna
 Explain the difference between CRDT and OT in 3 sentences.
 #+end_src
 
@@ -44,7 +43,7 @@ Explain the difference between CRDT and OT in 3 sentences.
 
 ** 번역 전용
 
-#+begin_src gptel :model gpt-5.6-luna :system "You are a professional translator. Translate the following text naturally to Korean. Maintain the original meaning and tone. Use natural Korean expressions. Keep technical terms in English where appropriate. Do NOT add any preamble or explanation."
+#+begin_src gptel :model gpt-6-luna :system "You are a professional translator. Translate the following text naturally to Korean. Maintain the original meaning and tone. Use natural Korean expressions. Keep technical terms in English where appropriate. Do NOT add any preamble or explanation."
 Anthropic this week revised its legal terms to clarify its policy forbidding the use of third-party harnesses with Claude subscriptions. Claude Code is a harness or wrapper that integrates with the user's terminal and routes prompts to the available Claude model.
 #+end_src
 
@@ -56,7 +55,7 @@ Anthropic this week revised its legal terms to clarify its policy forbidding the
 
 ** 코딩 어시스턴트
 
-#+begin_src gptel :model gpt-5.6-sol :system "You are an expert Emacs Lisp programmer. Write clean, idiomatic code. Explain briefly."
+#+begin_src gptel :model gpt-6-sol :system "You are an expert Emacs Lisp programmer. Write clean, idiomatic code. Explain briefly."
 defun으로 현재 버퍼의 org 헤딩 목록을 추출하는 함수를 작성해주세요.
 #+end_src
 
@@ -64,7 +63,7 @@ defun으로 현재 버퍼의 org 헤딩 목록을 추출하는 함수를 작성�
 
 같은 session 이름을 주면 이전 블록의 결과를 컨텍스트로 전달:
 
-#+begin_src gptel :model gpt-5.6-sol :session design
+#+begin_src gptel :model gpt-6-sol :session design
 Emacs에서 에이전트 이벤트를 받아서 modeline에 표시하는 구조를 설계해주세요.
 간단한 elisp 스켈레톤을 보여주세요.
 #+end_src
@@ -86,17 +85,17 @@ Emacs에서 에이전트 이벤트를 받아서 modeline에 표시하는 구조�
 
 * 코드 생성 — :wrap src
 
-#+begin_src gptel :model gpt-5.6-sol :wrap src emacs-lisp
+#+begin_src gptel :model gpt-6-sol :wrap src emacs-lisp
 Emacs Lisp 함수: 문자열 리스트에서 가장 긴 문자열을 반환.
 코드만 출력, 설명 없이.
 #+end_src
 
-#+begin_src gptel :model gpt-5.6-luna :wrap src sh
+#+begin_src gptel :model gpt-6-luna :wrap src sh
 GNU find 명령어: /tmp에서 2일 이상 된 .log 파일을 모두 삭제.
 명령어만 출력, 설명 없이.
 #+end_src
 
-#+begin_src gptel :model gpt-5.6-sol :wrap src nix
+#+begin_src gptel :model gpt-6-sol :wrap src nix
 NixOS flake.nix: Python 3.12 + numpy + pandas 개발 환경.
 코드만 출력.
 #+end_src
@@ -129,13 +128,13 @@ API 요청 구조만 확인 (실제 전송 안 함):
 
 ** RSS 기사 번역 (elfeed에서 복사 후)
 
-#+begin_src gptel :model gpt-5.6-luna :system "You are a professional translator. Translate to natural Korean. Keep technical terms in English. No preamble." :temperature 0.1
+#+begin_src gptel :model gpt-6-luna :system "You are a professional translator. Translate to natural Korean. Keep technical terms in English. No preamble." :temperature 0.1
 [elfeed에서 복사한 기사 텍스트를 여기에]
 #+end_src
 
 ** 코드 리뷰
 
-#+begin_src gptel :model gpt-5.6-sol :system "You are a senior code reviewer. Be concise. Focus on bugs, performance, and readability."
+#+begin_src gptel :model gpt-6-sol :system "You are a senior code reviewer. Be concise. Focus on bugs, performance, and readability."
 다음 코드를 리뷰해주세요:
 
 (defun my-func (items)
@@ -148,13 +147,13 @@ API 요청 구조만 확인 (실제 전송 안 함):
 
 ** 커밋 메시지 생성
 
-#+begin_src gptel :model gpt-5.6-luna :system "Generate a conventional commit message (feat/fix/refactor/docs) from the following diff. First line max 72 chars. Body with bullet points." :wrap src text
+#+begin_src gptel :model gpt-6-luna :system "Generate a conventional commit message (feat/fix/refactor/docs) from the following diff. First line max 72 chars. Body with bullet points." :wrap src text
 [git diff 출력을 여기에]
 #+end_src
 
 ** Literate DevOps — 명령어 생성 + 실행
 
-#+begin_src gptel :model gpt-5.6-luna :wrap src sh
+#+begin_src gptel :model gpt-6-luna :wrap src sh
 systemd user service 파일을 만드는 명령어.
 서비스 이름: foo, 실행 파일: ~/bin/foo
 Restart=always, After=network.target

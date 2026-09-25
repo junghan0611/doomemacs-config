@@ -40,7 +40,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,200+ published |
 | **Platforms** | NixOS (laptop, NUC, Oracle ARM), Termux (Galaxy Fold4) |
 | **Lines** | ~20K across config + lisp + bin + scripts |
-| **AI** | gptel on one backend — ChatGPT subscription OAuth, three models (+ one dated Copilot exception) |
+| **AI** | gptel on one backend — ChatGPT subscription OAuth, two models |
 
 ## Structure
 
@@ -264,7 +264,7 @@ everything flows through agent presets.
 | Module | File | Purpose |
 |--------|------|---------|
 | **gptel-agent** | `ai-gptel.el` (`use-package! gptel-agent`) | **Primary chat/agent surface** — agent presets, skills, in-buffer tool execution |
-| GPTel core | `ai-gptel.el` | Default backend — OpenAI-sub (ChatGPT subscription OAuth), three models (`gpt-5.6-terra`/`-sol`/`-luna`) + Codex stream advice, plus one dated Copilot exception |
+| GPTel core | `ai-gptel.el` | OpenAI-sub (ChatGPT subscription OAuth), two models (`gpt-6-sol`/`gpt-6-luna`) + Codex stream advice |
 | Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
@@ -272,7 +272,7 @@ everything flows through agent presets.
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | The agent herd — session status board + attach, see § tmux inside Emacs |
 
-### One backend, three models — and one dated exception
+### One backend, two models
 
 Models ship faster than a dotfile can absorb them. Every new release used to arrive
 as another backend, another hand-copied spec block, another `my/gptel-switch-to-*`
@@ -282,45 +282,26 @@ down to a single backend: **OpenAI-sub**, the ChatGPT subscription over OAuth
 hand-maintained Gemini specs, a Dockerized Claude wrapper, and a local Claude proxy
 were all removed rather than left to rot.
 
-That rule has exactly one live exception, and it carries an expiry rather than a
-precedent. GLG subscribed to **GitHub Copilot** on 2026-08-22; it runs to **mid-September
-2026 and will not be renewed** (GLG, 2026-09-04). While it lasts,
-`gptel-copilot-backend` registers the one axis OpenAI-sub cannot serve —
-`gemini-3.6-flash` and `claude-sonnet-5`. Overlapping `gpt-*` models are deliberately
-absent: the subscription rail already has them, and every Copilot request spends a
-premium-request quota, which is why the default backend, the default model, and the
-fast slot all stay on OpenAI-sub. The block is written to be deleted, not maintained:
-`my/gptel-copilot-models`, `gptel-copilot-backend`, and the Copilot branch of
-`my/gptel--backend-for-model` are the whole surface, and removing them restores the
-single-backend state — that removal is scheduled, not hypothetical. A second exception
-is not implied by the first; it needs GLG's decision, the same as reviving a removed
-backend does.
+The dated Copilot trial ended; GLG removed that backend on 2026-09-25.
 
 | Role | Model | Where it is used |
 |------|-------|------------------|
-| Default | `gpt-5.6-terra` | Chat, buffer summarize/translate |
-| Heavy | `gpt-5.6-sol` | Manual switch via `my/gptel-switch-model` |
-| Fast | `gpt-5.6-terra` | `gptel-quick`, magit commit messages, inline translate, elfeed |
+| Default | `gpt-6-sol` | Chat, buffer summarize/translate |
+| Fast | `gpt-6-luna` | `gptel-quick`, magit commit messages, inline translate, elfeed |
 
-**Fast is a measured slot, not a tier name.** It pointed at `gpt-5.6-luna` — the
-cheapest tier — until measurement said otherwise. Sequential probes on 2026-08-11
-across two runs (mixed prompts, then one fixed prompt with the models strictly
-interleaved) put luna at 11/36 successes overall (~31%, and 5–9s even when it did
-answer) against terra at 15/15 (100%, median 2s). A congested cheap tier is the slot
-that fails most often *and* answers slowest, so `my/gptel-model-fast` now resolves to
-terra. When luna frees up it gets measured again — the per-run numbers and their date
-live in `ai-gptel.el` so nobody reverts this on vibes.
+The 2026-08-11 congestion measurement concerned the 5.6 tier, not these
+6-series models. The fast slot is now luna by GLG's 2026-09-25 decision;
+`my/gptel-request-retry` can fall back from luna to sol on transient failures.
 
 `my/gptel-models` in [`ai-gptel.el`](lisp/ai-gptel.el) is the SSOT — adding a model is
 one line there. Passing `:models` explicitly also matters for a subtler reason:
-without it the backend advertises upstream's full default list (nine entries, back to
-`gpt-5.2`), so the menu fills with models that are never used.
+without it the backend advertises upstream's full default list, so the menu fills
+with models that are never used.
 
-Specs are not restated here. `gptel--process-models` only attaches a symbol plist when
-a model arrives as a cons cell — a bare symbol lands with an empty one, and the menu
-loses context window, cost, and capabilities. `my/gptel--model-specs` pulls each spec
-out of upstream's own `gptel--openai-models` instead of duplicating it, so the numbers
-follow gptel and an unknown model degrades to a bare symbol rather than erroring.
+Specs are not restated here. Upstream `gptel-openai.el` loads before the OAuth
+backend (via `gptel-openai-responses.el`) and attaches context, cost, and
+capability metadata to the model symbols. Passing those symbols as `:models`
+keeps upstream as the source of truth.
 
 Two advices remain pinned to this backend, each documented at its definition with the
 condition that would make it deletable: the Codex endpoint's mandatory `stream=true`

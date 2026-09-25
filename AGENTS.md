@@ -393,12 +393,11 @@ Recurring traps only. Details live in the code comment at each site.
 - **Do not grow gptel backends or models.** The default is one backend — OpenAI-sub
   (ChatGPT subscription OAuth) — with `my/gptel-models` as the SSOT for the model
   list. **Add only on that one line**, and never hand-copy a model spec
-  (`my/gptel--model-specs` pulls it from upstream). Adding or reviving a backend needs
+  (upstream `gptel-openai.el` attaches specs to model symbols). Adding or reviving a backend needs
   GLG's decision first. **An approved exception is dated and written to be deleted** —
   it names its expiry and the exact forms to remove at its own definition site, so a
   later agent can retire it without re-deriving the decision. The live one is the
-  Copilot block in `lisp/ai-gptel.el` — Claude/Gemini axis only, subscribed 2026-08-22,
-  **running to mid-September 2026 and not being renewed** (GLG, 2026-09-04). One
+  Copilot trial (2026-08-22) was removed on 2026-09-25 at GLG's request. One
   exception never licenses the next. (2026-07-22, `950bd05`)
 - **If gptel summarize/translate "used to work and now doesn't", re-measure the model
   tier.** Availability differs sharply by tier on the subscription rail, and a
@@ -407,8 +406,9 @@ Recurring traps only. Details live in the code comment at each site.
   like our regression. The same model staying healthy in pi (Codex CLI) at the same
   moment is just the CLI swallowing it with backoff retries. Diagnosis goes through
   `my/gptel-error-message`, absorption through `my/gptel-request-retry`.
-  **`my/gptel-model-fast` is a measured slot, not a tier name** — the numbers and their
-  date are in the `lisp/ai-gptel.el` comment. (2026-08-11)
+  The 2026-08-11 measurement in `lisp/ai-gptel.el` applies to 5.6 only;
+  GLG selected `gpt-6-luna` for the fast slot on 2026-09-25. Re-measure if
+  the new tier shows congestion.
 - **If `evil-collection` takes a gptel key, suspect a dead option.** When upstream
   deletes an option and moves the behavior to a shared REPL abstraction, something you
   had turned off silently comes back — a dead `setq` gives no signal. It is now
