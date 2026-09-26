@@ -12,6 +12,8 @@
 
 ;;; Code:
 
+(require 'subr-x)
+
 ;;;; DONT centaur-tabs face (ef-themes/doric-themes 호환)
 
 ;; modus-themes는 centaur-tabs face를 자체 지원.
@@ -48,6 +50,20 @@
     (celestial-mode-line-start-timer)))
 
 ;;;; custom tab-bar global-mode-string
+
+(defun my/tab-bar-fix-doom-foreground (theme)
+  "Keep tab-bar global text visible for doom-themes THEME.
+The doom-themes base gives tab-bar the same foreground and background
+through tab-line; the tab titles override it, but the clock does not."
+  (when (string-prefix-p "doom-" (symbol-name theme))
+    (custom-theme-set-faces
+     theme
+     `(tab-bar ((t (:inherit tab-line
+                    :foreground ,(face-attribute 'default :foreground))))))))
+
+(add-hook 'enable-theme-functions #'my/tab-bar-fix-doom-foreground)
+(dolist (theme custom-enabled-themes)
+  (my/tab-bar-fix-doom-foreground theme))
 
 (progn
   (require 'tab-bar)
