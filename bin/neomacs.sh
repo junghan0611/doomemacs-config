@@ -19,10 +19,16 @@
 #   ./bin/neomacs.sh --kill          # stop daemon
 #   ./bin/neomacs.sh --version
 #   ./bin/neomacs.sh --fetch [TAG]   # download a release AppImage
-#   ./bin/neomacs.sh --gnu ...       # same profile on stock GNU Emacs
+#   ./bin/neomacs.sh --gnu ...       # same profile on stock GNU Emacs (interactive)
 #
-# Comparing a probe run under --gnu against the default run is how a
-# finding gets attributed to Neomacs rather than to this config.
+#   NEOMACS_BIN=emacs ./bin/neomacs.sh --probe   # GNU batch baseline
+#
+# Comparing a probe run against the same probes on stock GNU Emacs is how a
+# finding gets attributed to Neomacs rather than to this config.  --gnu execs
+# immediately, so it cannot carry --probe; resolve_runner honors NEOMACS_BIN
+# first, and that is the batch baseline door (measured 2026-09-26: env came
+# back 20 OK / 0 FAIL / 2 SKIP on GNU Emacs 31.1, matching the recorded GNU
+# column exactly).
 
 set -euo pipefail
 
@@ -31,7 +37,7 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 PROFILE_DIR="${REPO_DIR}/neomacs"
 PROBE_DIR="${PROFILE_DIR}/probe"
 
-NEOMACS_VERSION="${NEOMACS_VERSION:-0.0.13}"
+NEOMACS_VERSION="${NEOMACS_VERSION:-0.0.19}"
 APPIMAGE_DIR="${NEOMACS_APPIMAGE_DIR:-$HOME/.local/bin}"
 APPIMAGE="${APPIMAGE_DIR}/neomacs-${NEOMACS_VERSION}-x86_64-unknown-linux-gnu.AppImage"
 
@@ -88,6 +94,7 @@ run_probes() {
     probes=("${PROBE_DIR}"/probe-env.el \
             "${PROBE_DIR}"/probe-org-korean.el \
             "${PROBE_DIR}"/probe-org-export.el \
+            "${PROBE_DIR}"/probe-real-org.el \
             "${PROBE_DIR}"/probe-tls.el)
   fi
 

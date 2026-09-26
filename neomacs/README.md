@@ -35,12 +35,16 @@ bin/neomacs.sh             # 런처
 ./bin/neomacs.sh --nw             # 터미널
 ./bin/neomacs.sh --probe          # 프로브 전체 (배치)
 ./bin/neomacs.sh --probe tls      # 하나만
-./bin/neomacs.sh --gnu            # 같은 프로파일을 GNU Emacs로 — 베이스라인
+./bin/neomacs.sh --gnu            # 같은 프로파일을 GNU Emacs로 (대화형)
+
+NEOMACS_BIN=emacs ./bin/neomacs.sh --probe   # GNU 배치 베이스라인
 ```
 
 `--gnu`는 즉시 exec 하므로 `--probe`와 조합되지 않는다 (`--gnu --probe`는 Emacs가
-`--probe`를 인자로 받아 무시한다). 배치 베이스라인은 아직 한 명령으로 못 뽑는다 —
-`NEXT.md` 참조.
+`--probe`를 인자로 받아 무시한다). **하지만 배치 베이스라인은 한 명령으로 뽑힌다** —
+`resolve_runner`가 `NEOMACS_BIN`을 가장 먼저 보므로 위의 `NEOMACS_BIN=emacs` 한 줄이
+그 문이다 (2026-09-26 실측: GNU 31.1에서 5파일 전체 통과, 아래 대조표의 GNU 칸이
+그렇게 뽑힌 값이다).
 
 **빌드 불필요.** NixOS에서는 릴리즈 AppImage가 `libfontconfig`를 못 찾으므로
 런처가 `appimage-run`으로 감싼다. 네이티브 빌드가 있으면 `NEOMACS_BIN`으로
@@ -49,9 +53,71 @@ bin/neomacs.sh             # 런처
 프로브는 **파일마다 별도 프로세스**로 돈다. 런타임을 죽이는 버그가 나머지
 프로브의 보고를 막지 않게 하기 위해서다 — 크래시 자체가 산출물이므로.
 
-## 측정 결과 (2026-07-19, Neomacs 0.0.13 vs GNU Emacs 31.0.50)
+## 측정 결과 (2026-09-26, Neomacs 0.0.19 vs GNU Emacs 31.1)
 
-같은 프로파일을 두 런타임에서 돌린 대조. **61 OK / 4 FAIL.**
+같은 프로파일을 두 런타임에서 돌린 대조. **64 OK / 1 FAIL.**
+(0.0.13 → 0.0.19 = upstream 4,259 커밋, `git rev-list --count v0.0.13..v0.0.19`)
+
+| 프로브 | Neomacs 0.0.19 | GNU Emacs 31.1 | 0.0.13 대비 |
+|--------|----------------|----------------|-------------|
+| env | 19 OK / 0 FAIL / 3 SKIP | 20 OK / 0 FAIL / 2 SKIP | 동일 |
+| org-korean | 15 OK / **1 FAIL** | 16 OK / 0 FAIL | 동일 — 갈라짐 2 살아있음 |
+| org-export | 12 OK / 0 FAIL | 12 OK / 0 FAIL | 동일 |
+| real-org (실제 노트) | 9 OK / 0 FAIL | 9 OK / 0 FAIL | 동일 |
+| **tls** | **9 OK / 0 FAIL** | 9 OK / 0 FAIL | **6 OK/3 FAIL → 전부 OK** |
+
+재현: `./bin/neomacs.sh --probe` ↔ `NEOMACS_BIN=emacs ./bin/neomacs.sh --probe`.
+런타임 확인: `Neomacs 0.0.19 / git b715d50bd / rustc 1.96.1` (`--version`),
+`GNU Emacs 31.1` (`/nix/store/…-emacs-gtk3-31.1`, 프로브 로그의 라이브러리 경로).
+
+### 갈라짐 1 (`:nowait` TLS → ELPA) — **닫혔다**
+
+0.0.13에서 3 FAIL이던 자리가 전부 OK다. 프로브가 그대로 찍은 값:
+
+```
+[OK] TLS connect, :nowait t                 status=open tls=yes
+[OK] url-retrieve-synchronously https       189256 bytes retrieved
+[OK] package-refresh-contents against GNU ELPA 508 packages -- #121 RESOLVED
+```
+
+**실제 설치도 된다.** 임시 `package-user-dir`로 확인 (2026-09-26):
+`package-install 'rainbow-mode` → `rainbow-mode-1.0.7/rainbow-mode.elc` +
+`rainbow-mode-1.0.7.signed` — GPG 서명 검증과 바이트 컴파일까지 통과했다.
+즉 **"ELPA에서 패키지 설치"는 더 이상 차단 요인이 아니다.**
+
+### 갈라짐 2 (org 표 안의 링크가 열 폭을 부풀림) — **살아있다**
+
+```
+Neomacs 0.0.19  [FAIL] 76 chars -- link sized by raw bracket form, table inflated
+GNU 31.1        [OK]   51 chars -- link width collapsed (GNU behavior)
+```
+
+0.0.13과 **같은 76자**다. upstream 미보고. 실사용 주의점은 그대로 — 링크 있는 표를
+건드리면 파일이 부풀어 다시 써진다.
+
+### 남은 차이 2건 (설계/부수)
+
+- **native-comp 부재** — Neomacs 설계상 예정된 부재 (SKIP).
+- **`gnutls-available-p` 기능 목록이 짧다** — Neomacs는 `(ciphers macs digests
+  gnutls3 gnutls)`, GNU 31.1은 ALPN·SNI·Session Ticket 등을 포함한 긴 목록. TLS
+  연결·ELPA는 위처럼 통과하므로 지금은 차단 요인이 아니지만, ALPN/SNI에 의존하는
+  코드는 갈라질 수 있는 자리로 적어둔다.
+
+### GUI는 여기서 판정되지 않는다
+
+이번에도 배치는 통과했다. **2026-07-19 회차가 남긴 교훈 그대로 — 배치 통과는 실사용을
+보증하지 못한다.** upstream v0.0.18..v0.0.19에는 우리 갈라짐 3(메뉴·커서)과 같은
+자리를 만지는 커밋이 있다 (`3671f66b2 fix(display): rebuild the GL window surface on
+resize`, `879ac28bf fix(menu-bar): share resolved heading geometry for painting and
+input`, `fd171c0db fix(menu): preserve measured Unicode text geometry across
+redraws`, `5aa0462e2 test(gui): cover native submenu compositor survival`).
+**로그 대조는 판정이 아니다.** GUI 판정은 GLG가 화면을 두드리는 자리로 남는다.
+
+## 이전 회차 (2026-07-19, Neomacs 0.0.13 vs GNU Emacs 31.0.50)
+
+**61 OK / 4 FAIL.** 아래 내용은 그 회차의 기록이며, 위 0.0.19 회차가 현재값이다.
+(GNU 라벨 `31.0.50`은 그 시점 PATH의 Emacs 버전 문자열이므로 그대로 둔다 — 31.1은
+2026-08 이후 값이고, 과거 측정 라벨을 지금 값으로 덮으면 측정 기록이 아니게 된다.)
 
 | 프로브 | Neomacs 0.0.13 | GNU Emacs 31.0.50 |
 |--------|----------------|-------------------|
@@ -132,7 +198,27 @@ Rust 쪽 비동기 TLS connect 하나다.
 
 `probe-tls.el`이 이 케이스를 그대로 들고 있으므로, 재현은 `--probe tls` 한 번이다.
 
-## 실사용 판단 (2026-07-19) — **아직 아니다**
+## 실사용 판단 (2026-09-26, 0.0.19) — **배치는 열렸다, GUI는 미판정**
+
+배치 축에서 차단 요인은 **한 건도 남지 않았다** (64 OK / 1 FAIL, 유일한 FAIL이
+갈라짐 2). 그러나 **실사용 판정은 여전히 GUI에서만 난다** — 지난 회차의 교훈이
+그것이었고, 그 자리는 이번에도 측정되지 않았다.
+
+| 하는 일 | 0.0.13 (07-19) | 0.0.19 (09-26) |
+|---------|----------------|----------------|
+| org 노트 읽기 / 순회 / 검색 (배치) | 됨 | 됨 |
+| 한글 폭·정규화·조합 (배치) | 됨 | 됨 |
+| ox-html / ox-md 내보내기 (배치) | 됨 | 됨 |
+| **ELPA에서 패키지 설치** | ✗ 막힘 | **✓ 됨 — 서명 검증·바이트컴파일까지** |
+| **링크 있는 표를 정렬** | ⚠ 부풀어 오름 | ⚠ **그대로** (76자) |
+| **GUI 메뉴 / 커서 렌더링** | ✗ 흔들림 (GLG 관측) | **? 미판정 — GLG가 두드려야 함** |
+| 로컬 소스 패키지 (`load-path`) | 됨 | 됨 |
+
+ELPA가 열렸다는 것은 **"로컬 소스로 우회"가 더 이상 유일한 길이 아니라는 뜻**이다.
+다만 프로파일은 여전히 빌트인 전용이다 (`early-init.el`에서 package.el off) — 그
+규약을 풀지 말지는 GUI 판정 다음 문제다.
+
+## 이전 판단 (2026-07-19, 0.0.13) — **아직 아니다**
 
 **GLG 판정: 실사용 수준 아님. 메뉴가 흔들린다.** 일단 해보는 것 정도.
 재검토는 2주 뒤(2026-08-02). PR/이슈 제출은 하지 않는다 — 기록만 남긴다.
@@ -157,7 +243,11 @@ GUI 쪽 관측: 첫 기동에서 wgpu가 `cursor_glyph_mismatch`를 대량 로�
 `cursor=(8.0,703.0)` vs `cell=(8.0,686.0)`, face=25 font=19.0).
 메뉴 흔들림과 같은 렌더러 계열로 보이나 확정하지 않았다.
 
-### 패키지는 ELPA 대신 로컬 소스로
+### 패키지는 ELPA 대신 로컬 소스로 (0.0.13 시절의 우회)
+
+**0.0.19에서 ELPA는 열렸다** (위 갈라짐 1 참조). 아래는 막혀 있던 시절의 우회이며,
+`my/neomacs-local-package-dirs`는 지금도 그대로 쓰인다 — 빌트인 전용 규약을 깨지
+않고 denote를 붙이는 길이라서다.
 
 #121로 ELPA가 막혀 있어도, 디스크에 이미 있는 순수 elisp 체크아웃을 `load-path`에
 얹는 건 막히지 않는다. `init.el`의 `my/neomacs-local-package-dirs`가 그 자리다 —
@@ -168,8 +258,9 @@ C 모듈이나 native-comp가 필요한 패키지는 넣지 않는다.
 
 ## 한계 / 알아둘 것
 
-- **treesit 문법 미설치.** 다운로드에 TLS가 필요해 이 프로파일이 스스로 받지
-  못한다. 문법을 시스템에서 넣어주면 하이라이트가 붙는다.
+- **treesit 문법 미설치.** 0.0.13에서는 TLS가 막혀 스스로 받지 못하는 게 이유였다.
+  **0.0.19에서 그 이유는 사라졌다** (ELPA·HTTPS 통과) — 아직 안 받았을 뿐이다.
+  문법을 넣으면 하이라이트가 붙는다. 다음 회차 후보.
 - **`hangul.el` require 실패는 Neomacs 결함이 아니다** — GNU Emacs도 동일하게
   SKIP이다 (해당 기능은 `korea-util`/`quail` 경유로 제공된다). 빌트인
   `korean-hangul` 입력기는 양쪽 다 정상 등록·활성화된다.

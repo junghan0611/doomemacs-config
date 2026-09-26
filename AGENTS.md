@@ -370,6 +370,18 @@ Recurring traps only. Details live in the code comment at each site.
   — Doom turns it into `(straight-override-recipe '(NAME . (:type built-in)))` and the
   dependency resolves to Emacs's own copy. Verify by grepping the generated
   `init.<version>.el` for the build path, not by reading `packages.el`.
+- **`~/.emacs` silently shadows every `init.el`, Doom's included.** Emacs looks for
+  `~/.emacs.el` and `~/.emacs` *before* `user-emacs-directory/init.el`, so a single
+  Custom write to the default `custom-file` can take the whole config offline at the
+  next full restart — a running daemon keeps working, which is what hides it. Measured
+  2026-09-26 with a throwaway `HOME`: with both present, `user-init-file` resolved to
+  `~/.emacs` and the config's own `init.el` never loaded. `early-init.el` still loads
+  (it is only ever looked up in `user-emacs-directory`), so the config looks half-alive
+  rather than dead. This happened for real: answering a safe-local-variable prompt in a
+  bare profile created `~/.emacs`, after which `neomacs/init.el` stopped loading and the
+  GUI was measured against a config that was not running. **Any profile this repo ships
+  must pin its own `custom-file`**, and a GUI measurement should print `user-init-file`
+  before trusting anything else it observes.
 - Korean input edge cases: NFD→NFC, Evil state auto-switch, TTY clipboard.
 - WezTerm + terminal Emacs + built-in Korean input is a custom path. If minibuffer or
   search prompt spacing breaks, **inspect TTY width drift first** — especially a

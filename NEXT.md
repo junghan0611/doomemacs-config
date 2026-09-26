@@ -113,22 +113,58 @@
 - [ ] **`doom purge` 한 번**: `straight/{repos,build-30.2}` 에 30.2 잔재 + 이제
       안 쓰는 ELPA tramp 가 남아 있다. 30.2 빌드까지 같이 지우므로 되돌리기 비싸다 —
       31.1이 며칠 무사한 걸 본 뒤에 돌린다.
-- [ ] **Neomacs 재검토**: 아래 관찰 레인. GUI 한 번 — 아니면 날짜만 미룸.
+- [ ] **Neomacs GUI 판정 (GLG)**: 0.0.19 배치는 끝났다 (아래 관찰 레인). 남은 건
+      화면 한 번 — 메뉴·리사이즈·커서. `./bin/neomacs.sh`
 
 ---
 
-## 🟡 관찰 레인 — Neomacs, 아직 실사용 아님. 재검토 2026-08-02 (2026-07-19)
+## 🟡 관찰 레인 — Neomacs 0.0.19. **배치 열렸다, GUI만 남았다** (2026-09-26)
 
-**GLG 판정: 실사용 수준 아님. 메뉴가 흔들린다. 일단 해보는 것 정도.**
-**PR/이슈 제출 안 한다 — 기록만 남기고 2주 뒤 한 번 더 두드린다.**
+**지금 필요한 한 수: GLG가 `./bin/neomacs.sh`로 GUI를 한 번 두드리는 것.**
+메뉴·창 리사이즈·커서. 그게 실사용 판정 자리이고, 배치로는 닿지 않는다.
 
-배치 프로브는 61 OK / 4 FAIL, 실제 837 노트 코퍼스는 0 FAIL로 통과했다. 그런데
-화면에서는 아니었다. **배치 통과가 실사용을 보증하지 못한다는 것 자체가 이번 회차의
-결과다.** GUI 렌더링은 `--probe`가 닿지 않는다 — 다음 회차에도 사람이 두드리는 게
-판정 기준이다.
+측정 SSOT는 `neomacs/README.md` (0.0.19 회차가 맨 위, 0.0.13 회차는 아래 히스토리).
 
-빌드는 필요 없다 (`appimage-run` + 릴리즈 AppImage). 프로파일·프로브·런처는
-`neomacs/` + `bin/neomacs.sh`, 측정 SSOT는 `neomacs/README.md`.
+### 2026-09-26 회차에서 끝난 것
+
+- 핀 `bin/neomacs.sh:34` → **0.0.19**, AppImage 받음 (111M).
+  런타임 확인: `Neomacs 0.0.19 / git b715d50bd / rustc 1.96.1`
+- `--probe` 배치에 **`probe-real-org.el` 추가** — 지금까지 배열에 빠져 있어서 지난
+  회차의 real-org 9 OK는 손으로 따로 돌린 값이었다 (`bin/neomacs.sh:91`)
+- **GNU 배치 베이스라인은 한 명령으로 뽑힌다**: `NEOMACS_BIN=emacs ./bin/neomacs.sh --probe`.
+  `--gnu --probe`를 고칠 필요가 없었다 — `resolve_runner`가 `NEOMACS_BIN`을 먼저 보는
+  문이 이미 열려 있었다. 08-11에 "문서만 정정"으로 닫아둔 항목의 실제 답이다.
+- 대조 실측: **Neomacs 0.0.19 = 64 OK / 1 FAIL**, GNU 31.1 = 전체 통과
+
+### 갈라짐 현황
+
+1. **`:nowait` TLS → ELPA — 닫혔다.** `[OK] TLS connect, :nowait t status=open tls=yes`,
+   `package-refresh-contents` 508 packages, `#121 RESOLVED`. **실제 설치까지 확인** —
+   `package-install 'rainbow-mode` → `.elc` + `.signed` (GPG 검증·바이트컴파일 통과).
+2. **org 표 안 링크가 열 폭을 부풀림 — 살아있다.** 76자 vs GNU 51자, 0.0.13과 동일.
+   upstream 미보고. 링크 있는 표를 건드리면 파일이 부풀어 다시 써진다.
+3. **GUI 메뉴·커서 — 미판정.** upstream v18..v19에 같은 자리 커밋 있음
+   (`3671f66b2` GL surface on resize, `879ac28bf` menu-bar geometry,
+   `fd171c0db` menu Unicode geometry, `5aa0462e2` submenu compositor).
+   **로그 대조는 판정이 아니다.**
+
+부수 차이: native-comp 부재(설계), `gnutls-available-p` 목록이 짧음(ALPN·SNI 없음 —
+지금은 차단 요인 아니지만 의존 코드는 갈라질 수 있는 자리).
+
+### 하지 않은 것 / 다음 회차 후보
+
+- **31.0.50 라벨 일괄 정정은 하지 않았다** (기존 항목 3의 제안). 그 값은 07-19 시점
+  PATH Emacs의 버전 문자열이고, 31.1은 2026-08 이후 값이다. 과거 측정 라벨을 현재값으로
+  덮으면 측정 기록이 아니게 된다. 대신 **새 회차를 31.1로 라벨해서 나란히** 뒀다.
+  `probe-org-korean.el:135` / `probe-tls.el:84` / `CHANGELOG.md:321`의 07-19 라벨도
+  그대로 둔다.
+- treesit 문법 설치 — 막혔던 이유(TLS)가 사라졌다. 넣으면 하이라이트 붙음.
+- 성능 비교 (8데몬 35분 export 벤치) — 미착수.
+- Doom 부팅 — upstream이 CI에 Doom 설치·GUI boot parity를 넣었다(v0.0.19 노트).
+  우리 판정 순서에서는 맨 마지막.
+- **upstream PR·이슈 제출 안 한다** — 재현 케이스는 프로브에 박혀 있다.
+
+### 히스토리 — 0.0.13 회차와 그 뒤 (2026-07-19 ~ 08-11)
 
 ### 갱신 (2026-07-26) — v0.0.14 나왔다. 커서 수정이 우리 관측과 정면으로 맞는다
 
@@ -1054,8 +1090,12 @@ terra 교차검토에서 나옴. `--gnu`는 `RUNNER=(emacs)` 세팅 후 **즉시
 이번 릴리즈에서는 문서만 사실에 맞췄다 (README / neomacs/README). 코드 수정은
 GNU Emacs로 프로브 전체를 돌려 검증해야 해서 릴리즈와 분리한다.
 
-- [ ] `--gnu`를 exec 대신 플래그로 바꿔 아래 dispatch로 흘리기. `resolve_runner`가
-      RUNNER를 덮지 않게 가드. 그 뒤 `--gnu --probe` 실측 1회 → 문서 원복.
+- [x] **답이 나왔다 (2026-09-26): 코드를 고칠 필요가 없었다.**
+      `NEOMACS_BIN=emacs ./bin/neomacs.sh --probe` — `resolve_runner`가 `NEOMACS_BIN`을
+      가장 먼저 보므로(`bin/neomacs.sh:51-52`) 배치 베이스라인 문은 이미 열려 있었다.
+      GNU 31.1에서 5파일 전체 통과 실측. `--gnu`는 대화형 전용으로 두고, 문서에
+      배치 경로를 적었다 (`bin/neomacs.sh:15-31`, `neomacs/README.md` § 사용).
+      **없는 게 아니라 다른 문으로 있었다** — 뺄셈이 먹힌 자리.
 
 ### 모델 티어 재측정 레인 (2026-08-11)
 
