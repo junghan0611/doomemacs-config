@@ -16,7 +16,6 @@
 ;; - Visual effects (pulse-line)
 ;; - Which-key
 
-
 ;;; Code:
 
 ;;;; Dashboard - Terminal Optimized
@@ -164,27 +163,27 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 
 ;;;; modus-themes
 
-(use-package! doric-themes
-  :commands (doric-themes-load-random))
-
-(use-package! ef-themes
-  :init
-  (ef-themes-take-over-modus-themes-mode 1))
+;; (use-package! doric-themes
+;;   :commands (doric-themes-load-random))
+;; (use-package! ef-themes)
 
 (use-package! modus-themes
   :init
   (setq modus-themes-to-toggle '(modus-operandi modus-vivendi-tinted))
   :config
+  (setq modus-themes-bold-constructs t)
   (setq modus-themes-italic-constructs nil))
+
 
 ;;;###autoload
 (defun my/themes-toggle ()
   (interactive)
-  ;; (ef-themes-load-random-dark)
   ;; (modus-themes-select 'modus-vivendi-tinted)
   ;; (modus-themes-load-theme 'ef-maris-dark)
+  ;; (load-theme 'doom-dracula t)
   (modus-themes-load-theme 'modus-vivendi-tinted)
   ;; 터미널에서 테마 로드 후 배경 투명화 (확실한 적용)
+
   (unless (display-graphic-p)
     (run-with-timer 0.05 nil #'my/terminal-transparent-background)))
 

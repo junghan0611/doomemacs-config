@@ -232,13 +232,12 @@
                (:prefix "t"
                 :desc "Modus toggle"         "m" #'modus-themes-toggle
                 :desc "Modus select"         "M" #'modus-themes-select
-                :desc "Random EF Dark"          "d" #'modus-themes-load-random-dark
-                :desc "Random EF Light"         "l" #'modus-themes-load-random-light
-                :desc "Doric random"         "r" #'doric-themes-load-random
-                :desc "Doric select"         "R" #'doric-themes-select)))
-
-;;;;; TODO Toggle (T)
-
+                :desc "consult-theme"         "t" #'consult-theme
+                ;; :desc "Random EF Dark"          "d" #'modus-themes-load-random-dark
+                ;; :desc "Random EF Light"         "l" #'modus-themes-load-random-light
+                ;; :desc "Doric random"         "r" #'doric-themes-load-random
+                ;; :desc "Doric select"         "R" #'doric-themes-select
+                )))
 
 ;;;;; 'p' project
 
@@ -246,7 +245,7 @@
 (after! projectile
   (map! :leader
         (:prefix "p"
-         "t" nil)))  ; disable project todos key binding
+                 "t" nil)))  ; disable project todos key binding
 
 ;;;;; Leader prefix labels — SSOT
 

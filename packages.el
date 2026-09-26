@@ -130,8 +130,8 @@
 (unpin! doom-themes)
 (package! doom-themes :recipe (:host github :repo "junghan0611/doom-themes" :branch "ko"))
 (package! modus-themes)
-(package! doric-themes)
-(package! ef-themes)
+;; (package! doric-themes)
+;; (package! ef-themes)
 (package! spacious-padding)
 (package! winpulse :recipe (:host github :repo "xenodium/winpulse"))
 
