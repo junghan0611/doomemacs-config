@@ -169,7 +169,7 @@ _THEME 인자는 `enable-theme-functions' 호환용."
 
 (use-package! modus-themes
   :init
-  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi-tinted))
+  (setq modus-themes-to-toggle '(modus-operandi-tinted modus-vivendi-tinted))
   :config
   (setq modus-themes-bold-constructs t)
   (setq modus-themes-italic-constructs nil))

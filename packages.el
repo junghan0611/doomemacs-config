@@ -78,7 +78,7 @@
 
 (package! elfeed-goodies :disable t)
 (package! solaire-mode :disable t)
-(package! mixed-pitch :disable t)
+;; (package! mixed-pitch :disable t)
 ;; (package! ace-window :disable t)
 
 ;; (package! corfu-popupinfo :disable t)
