@@ -4,23 +4,26 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.9.11`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.9.27`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
-### 이번 컷에서 닫힌 것 (v2026.9.11, 2026-09-11)
+### 이번 컷에서 닫힌 것 (v2026.9.27, 2026-09-27)
 
-- **Botschaft 읽기 패키지 설치** — GitHub recipe가 Elisp와 `bin/cwaq`를 straight
-  build에 함께 담고, checkout 없는 load-path에서 projects/search/read 및 read-only
-  conversation buffer를 실측했다. 로컬 conversation store와 write 경로는 없다
-- Pi Emacs frontend를 upstream 이름인 Pilish로 이관하고 Pimacs에 Entwurf control 결선
-- agent-server의 소문자 한 단어 본문→태그 오판 수정 + 회귀 테스트
-- transcript를 Denote 생성 dblock에서 제외하고 Edge TTS 출력 경로도
-  `~/org/transcript/`로 모음
-- Forge 전체 인박스 pull + 6시간 staleness gate, 담당자 공개 문서와 계약 배선
-- 언어 모듈 정리 — Clojure tree-sitter, shell/Clojure LSP 제거, Lua off; Markdown
-  tree-sitter는 실사용 판정 뒤 classic mode로 복귀
+- 가든 NBSP 파이프라인 복구 — 원본 NBSP 정리(조사 앞 삭제, 그 외 공백) + 강조 NBSP 보존,
+  hook 순서 계약과 테스트. 전체 re-export로 가든 한글⍽한글 2,236 → 0
+- 강조 fix 오탐 제거(346 → 1), `**bold**` NBSP, literal block 건너뜀
+- org-glossary 용어 인식 복구, `g SPC` projectile remap 제거, llmlog journal 앵커
+- `M-f6`/`f6` 작업 위치 저장/복귀
+- ox-epub(포크)은 별도 리포 — `bd16e66`, `83b6c14`
+
+### 남은 관찰 (이번 컷에서 발견, 미착수)
+
+- journal 날짜 앵커 불일치 212건(`#2026-02-28-sat` vs `{#2026-02-28-saturday}`, `#h-날짜`)
+  — 과거 journal은 재export하지 않으므로 방치. 신규는 `h-날짜`로 일치(`c50bdcf`)
+- `run.sh verify` [4/4]는 `_ask_lychee` 입력 대기로 비대화형에서 무출력
+- export 데몬 재사용(`start_daemons`)은 ready 플래그만 본다 — 이전 실행이 남긴 데몬은 옛 코드
 
 ---
 

@@ -6,6 +6,32 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.9.27 — Garden NBSP pipeline, emphasis fix, Neomacs 0.0.19
+
+### Added
+
+- **`M-f6` / `f6` save and return to one working place** (`my/bookmark-save-place`, `my/bookmark-jump-saved`), a fixed `SAVED` bookmark overwritten on each save.
+- **`tests/test-export-nbsp.el`** locks the export NBSP contract: particle rules, hashtag boundaries, emphasis padding, literal blocks, hook order, and no NBSP literal in the source (110 tests in total).
+
+### Changed
+
+- **gptel moved to the 6-series models** and the expired Copilot trial backend was removed; the ripfd binding moved to `M-s F`.
+- **Theme setup was simplified**: tinted light theme, mixed-pitch, line numbers, an Org initial buffer and a `consult-theme` binding; Doric and EF themes are off.
+- **The Neomacs K-review was repinned to 0.0.19**: 64 OK / 1 FAIL against GNU Emacs 31.1 on the same profile, and the ELPA gate closed upstream (#121), so `package-install` works. AGENTS.md records the trap that `~/.emacs` shadows every `init.el` while `early-init.el` still loads.
+
+### Fixed
+
+- **Source NBSP no longer leaks into the garden.** A lint pass in `a3168bc` (2026-03-14) had turned the NBSP literals into plain spaces and the removal filter stayed off, so `M-m` inserted a space and 2,236 hangul-NBSP-hangul pairs reached the garden md. `my/org-export-normalize-source-nbsp` now drops an NBSP before a particle and turns every other one into a space (word spacing in pasted text, and after a `#hashtag`, whose particle stays apart). It runs after org-glossary (GUI only; the garden daemon does not load it) and before the emphasis fix, whose NBSP must survive. After a full re-export the garden holds 0 such pairs.
+- **The CJK emphasis fix pads only real emphasis.** It paired any two markers on a line, so `된다/안 된다` or `힣맨=아빠펭귄` rendered with stray spaces (346 NBSP in the garden). A pair now needs an opener at line start or after whitespace or `-({'"`, the NBSP goes only after the closer, `**bold**` is rewritten before the pass so `**강조**는` is bold too, and src/example/export blocks are left alone as judged by the org parser. 1 case remains, an ambiguous `+` in source text.
+- **org-glossary detects and fontifies terms again**; `org-glossary-automatic nil`, mislabelled as disabling auto-export, had turned off term detection.
+- **`g SPC` jumps to a tag again.** Projectile 3.0 removed `projectile-find-tag`, but Doom still remapped `evil-jump-to-tag` to it; the dead remaps are dropped.
+- **llmlog backlinks reach the journal day** by linking to its `h-YYYY-MM-DD` CUSTOM_ID instead of the retired `#2026-09-26-sat` form.
+- **Forge loads its database API before a global refresh**, and **Doom themes keep the tab-bar global text visible**.
+
+### Reverted
+
+- **The OSC 52 clipboard changes** (`4f5b47a`, `54f1e3f`) were dropped as unmeasured; `lisp/tty-config.el` is byte-identical to `dd30f96`, and NEXT.md keeps the receipts and the measurement that gates any retry.
+
 ## v2026.9.11 — Botschaft reader and agent surface upkeep
 
 ### Added
