@@ -429,14 +429,18 @@ has its own streaming wiring via fsm — leave it alone)."
         (insert (format "\n* 히스토리\n- %s Created!" (format-time-string "[%Y-%m-%d %a %H:%M]")))
         (insert (format "\n* 관련메타\n- \n#+print_bibliography:\n\n"))
 
-        ;; heading-1 add backlink to today
-        (insert (format "* 로그 :LLMLOG:\n** [[denote:%s::#%s][%s]]\n"
-                        (format-time-string "%Y%m%dT000000"
-                                            (org-journal--convert-time-to-file-type-time
-                                             (time-subtract (current-time)
-                                                            (* 3600 org-extend-today-until))))
-                        (downcase (format-time-string "%Y-%m-%d-%a"))
-                        (format-time-string "|%Y-%m-%d %a %H:%M|")))
+        ;; heading-1 add backlink to today's journal heading.  The anchor is
+        ;; the CUSTOM_ID org-journal gives each day, h-YYYY-MM-DD (see
+        ;; org-config.el); the old "#2026-09-26-sat" form matched no anchor
+        ;; and dropped readers at the top of the week (2026-09-27).
+        (let ((today (time-subtract (current-time)
+                                    (* 3600 org-extend-today-until))))
+          (insert (format "* 로그 :LLMLOG:\n** [[denote:%s::#%s][%s]]\n"
+                          (format-time-string
+                           "%Y%m%dT000000"
+                           (org-journal--convert-time-to-file-type-time today))
+                          (format-time-string "h-%Y-%m-%d" today)
+                          (format-time-string "|%Y-%m-%d %a %H:%M|"))))
         (insert "\n"))))
 
 ;;;;;; 버퍼 초기화 (히스토리 청소)
