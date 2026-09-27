@@ -20,15 +20,21 @@
 ;;   char-width-table / fontset (TTY·GUI 폭 합의)
 ;;
 ;; Export 파이프라인 (이 파일 밖 — 데몬이 읽어야 해서):
+;;   my/org-export-normalize-source-nbsp  lisp/denote-export-config.el
+;;     원본 NBSP 정리: 조사 앞이면 삭제, 그 외는 일반 공백.
 ;;   my/org-fix-cjk-emphasis   lisp/denote-export-config.el
-;;     export 임시 버퍼에만 CJK 옆 NBSP 삽입. 원본 org에 NBSP 심지 말 것.
+;;     그 다음 export 임시 버퍼에만 CJK 옆 NBSP 삽입 (md 까지 살아남음).
 ;;   bin/fix-org-mdbold.el     가든 일괄 **bold** → *bold*
 ;;
-;; NBSP 두 얼굴 (헷갈리면 여기):
+;; NBSP 얼굴들 (헷갈리면 여기):
 ;;   - 인터랙티브 clear  : 실수로 들어온 U+00A0/ZWS/특수공백 제거
+;;                         (쓰기 보조 NBSP 까지 지운다 — 용어 fontify 도 풀림)
 ;;   - 인터랙티브 insert : 라틴-한글 경계를 눈에 안 띄게 벌림 (pangu 수동판)
+;;   - M-m (my/insert-white-space) : 용어⍽조사 분리. org-glossary/ten 이
+;;                         조사 붙은 용어를 못 잡아서 원본에 일부러 넣는다.
+;;   - export normalize  : 위 원본 NBSP 는 조사 앞이면 삭제, 그 외(단어 사이·
+;;                         태그 뒤)는 일반 공백. md 에 NBSP 로는 남지 않는다.
 ;;   - export insert     : org emphasis 파서가 CJK를 인식하게 임시 삽입
-;;   원본 org 파일에 수동 NBSP를 쌓지 않는다 (export 주석 검증 기준).
 ;;
 ;; 입력 경로:
 ;; - Input method: korean-hangul (Emacs 내장)

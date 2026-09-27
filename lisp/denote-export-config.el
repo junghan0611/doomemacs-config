@@ -125,24 +125,82 @@
     (setq org-cite-export-processors '((latex biblatex) (t csl))))
   )
 
-;; Zero-width space handling
-;; charset: unicode (Unicode (ISO10646)) code point in charset: 0xA0
+;; Source NBSP — a writing aid, never published
+;;
+;; GLG types NBSP (U+00A0) between a term and its particle ("조판<NBSP>은") so
+;; org-glossary / ten can fontify the term: they do not match a term with a
+;; particle glued on ("조판은").  The NBSP must be gone from exported md.
+;;
+;; Written as ?\u00A0, never as a literal: a literal NBSP is invisible in a
+;; diff, and an ASCII-fying lint pass (a3168bc, 2026-03-14) silently turned
+;; both this command and the old removal filter into plain spaces.  Measured
+;; 2026-09-27: ~/org held 4964 hangul-NBSP-hangul pairs, and 2236 of them had
+;; leaked into the garden md since that commit.
+(defconst my/org-export-tag-before-nbsp-re
+  "\\(?:^\\|[[:space:](\"']\\)[#@][가-힣A-Za-z][가-힣A-Za-z0-9_.-]*"
+  "A #hashtag or @mention ending right before point.
+Same token and pre-character set as the hashtag regexp of
+`my/org-hugo-wrap-hashtags-and-mentions'.  It takes any @name, wider than
+the configured `my/org-hugo-mention-names': an extra space after an
+unwrapped @token is harmless, a swallowed particle is not.")
+
+(defconst my/org-export-particle-re
+  (concat "\\`"
+          (regexp-opt '("은" "는" "이" "가" "을" "를" "에" "에서" "에게" "께" "한테"
+                        "의" "와" "과" "도" "로" "으로" "만" "까지" "부터" "보다"
+                        "처럼" "마다" "조차" "마저" "이나" "이란" "란" "이라" "라"
+                        "이며" "며" "이고" "랑" "이랑" "하고" "로서" "으로서"
+                        "로써" "으로써" "께서"))
+          "+\\'")
+  "A Hangul run made only of particles (\"을\", \"에서는\", \"으로부터\" ...).
+\"나\" is left out: after an NBSP \"나는\" / \"나의\" is far more often the
+pronoun.  Measured 2026-09-27 on notes/bib/meta/botlog: of 2562
+hangul-NBSP-hangul pairs, 2268 were followed by such a run; the other
+294 were word spacing (\"하는\", \"개발도구\", \"싹싹<NBSP>빌면\").")
+
 (defun my/insert-white-space ()
-  "Insert zero-width space character."
+  "Insert a no-break space (U+00A0)."
   (interactive)
-  (insert " "))
+  (insert ?\u00A0))
 
-;; NBSP removal disabled — my/org-fix-cjk-emphasis inserts NBSP that must
-;; survive into markdown output for remark/Quartz to recognize emphasis.
-;; No manually-inserted NBSP exists in org files (verified 0 occurrences).
-;; (defun +org-export-remove-white-space (text _backend _info)
-;;   "Remove zero width spaces from TEXT."
-;;   (unless (org-export-derived-backend-p 'org)
-;;     (replace-regexp-in-string " " "" text)))
-;; (add-to-list 'org-export-filter-final-output-functions
-;;              #'+org-export-remove-white-space t)
+(defun my/org-export-normalize-source-nbsp (_backend)
+  "Drop source NBSP before a particle, turn every other one into a space.
+Before a particle (`my/org-export-particle-re') the NBSP only split it off
+for glossary matching (\"조판<NBSP>은\" -> \"조판은\").  Anywhere else it
+stood for a space — between Hangul words, since pasted text often carries
+NBSP as its only spacing (\"그래도<NBSP>싹싹<NBSP>빌면\"), and around other
+text (\"]]<NBSP>=(20m)=\", \"│<NBSP><NBSP>└──\") — and removing it would
+glue words.
 
-;; Keybinding for zero-width space (only in interactive mode)
+An NBSP right after a #hashtag or @mention becomes a plain space even
+before Hangul: a tag keeps its particle apart (\"#포춘쿠키 를\", GLG
+2026-09-27), and without the space the greedy hashtag regexp of
+`my/org-hugo-wrap-hashtags-and-mentions' would swallow the particle.
+
+The whole buffer is normalized, links and src blocks included: measured
+2026-09-27, NBSP in link paths only follows `::*' into files outside the
+garden, and NBSP in src/example blocks is particle spacing in comments.
+Runs on the export copy before `my/org-fix-cjk-emphasis' adds the NBSP
+that must survive, and after org-glossary when it is loaded.  That is the
+GUI only (epub and other one-off exports): the headless garden export
+daemon deliberately does not load org-glossary — the garden is not a
+glossary export target (GLG 2026-09-27)."
+  (save-excursion
+    (goto-char (point-min))
+    (while (search-forward (string ?\u00A0) nil t)
+      ;; Both probes move the match data `replace-match' relies on.
+      (let* ((next-run (save-match-data
+                         (and (looking-at "[가-힣]+") (match-string 0))))
+             (after-tag (save-match-data
+                          (save-excursion
+                            (goto-char (match-beginning 0))
+                            (looking-back my/org-export-tag-before-nbsp-re
+                                          (line-beginning-position)))))
+             (particle (and next-run (not after-tag)
+                            (string-match-p my/org-export-particle-re next-run))))
+        (replace-match (if particle "" " ") t t)))))
+
+;; Keybinding for NBSP (only in interactive mode)
 (when (fboundp 'evil-define-key)
   (with-eval-after-load 'evil
     (evil-define-key '(insert normal) text-mode-map
@@ -157,9 +215,9 @@
 ;; that does NOT respect org-emphasis-regexp-components changes for export.
 ;; Font-lock uses org-emph-re (works), but org-element parser ignores it.
 ;;
-;; Solution: Insert spaces between emphasis markers and CJK characters
-;; in org-export-before-processing-hook. This modifies a temporary copy
-;; of the buffer, NOT the original file.
+;; Solution: Insert NBSP between emphasis markers and CJK characters
+;; in `org-export-before-parsing-functions' (hooked at the end of this
+;; section). This modifies a temporary copy of the buffer, NOT the original file.
 
 ;; 1. Font-lock fix (interactive editing - visual only)
 (setq org-emphasis-regexp-components
@@ -174,8 +232,10 @@
 ;; 2. Export fix - insert NBSP around emphasis pairs adjacent to CJK
 ;;    NBSP (U+00A0) is used because:
 ;;    - org parser treats it as space → emphasis markers recognized
-;;    - +org-export-remove-white-space removes NBSP from final output
+;;    - it survives into markdown so remark/Quartz also see the emphasis
 ;;    - visually invisible in rendered HTML
+;;    Source NBSP is normalized first (`my/org-export-normalize-source-nbsp'),
+;;    so after that every NBSP in the output came from here.
 (defun my/org-fix-cjk-emphasis (_backend)
   "Insert NBSP around org emphasis pairs adjacent to CJK for export.
 Matches emphasis pairs (*bold*, =code=, ~verb~, /italic/, +strike+)
@@ -228,7 +288,14 @@ Runs on a temporary export copy - original file is NOT modified."
       (when (> dbl-changes 0)
         (message "[Export] **bold** → *bold*: %d fixes" dbl-changes)))))
 
-(add-hook 'org-export-before-processing-hook #'my/org-fix-cjk-emphasis)
+;; Order matters, all on the export copy (`org-export-before-parsing-functions'
+;; runs after `-before-processing-'):
+;;   [GUI only] org-glossary (0) matches "조판<NBSP>은"
+;;   → normalize source NBSP (90) → insert emphasis NBSP (95).
+;; The garden daemon has no org-glossary on purpose; see the normalize docstring.
+(add-hook 'org-export-before-parsing-functions
+          #'my/org-export-normalize-source-nbsp 90)
+(add-hook 'org-export-before-parsing-functions #'my/org-fix-cjk-emphasis 95)
 
 (message "[Export] CJK emphasis fix applied (font-lock + export hook)")
 
