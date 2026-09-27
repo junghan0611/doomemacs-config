@@ -102,6 +102,23 @@
 
 ;;;; F1-12: Function Keys
 
+;;;;; Saved place - f6
+
+;; 작업하던 자리를 잠깐 저장하고 돌아온다. 창을 자주 여닫을 때 쓰는 책갈피 한 칸.
+;; M-f6 저장, f6 복귀. 이름을 고정("SAVED")해서 덮어쓰며 쓴다.
+(defun my/bookmark-save-place ()
+  "Save point as the bookmark \"SAVED\", replacing the previous one."
+  (interactive)
+  (bookmark-set "SAVED"))
+
+(defun my/bookmark-jump-saved ()
+  "Jump to the bookmark \"SAVED\"."
+  (interactive)
+  (bookmark-jump "SAVED"))
+
+(map! "<M-f6>" #'my/bookmark-save-place
+      "<f6>"   #'my/bookmark-jump-saved)
+
 ;;;;; dirvish-side - f8
 
 ;; treemacs/neotree 제거 후 사이드바는 dirvish-side 로 대체.
