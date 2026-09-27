@@ -28,6 +28,18 @@
 
 (define-key key-translation-map (kbd "M-c") (kbd "C-c"))
 
+;;;; Drop Doom's dead projectile tag remaps
+
+;; Projectile 3.0 removed `projectile-find-tag' (upstream e8c266d, 2026-06-29),
+;; but Doom's compat/+projectile.el still remaps `evil-jump-to-tag' and
+;; `find-tag' to it, so `g SPC' on ten terms signalled "commandp,
+;; projectile-find-tag" (2026-09-27). `evil-jump-to-tag' already goes through
+;; `xref-find-definitions', which ten's etags backend serves.
+;; Delete this block once Doom drops those two remaps.
+(unless (fboundp 'projectile-find-tag)
+  (global-set-key [remap evil-jump-to-tag] nil)
+  (global-set-key [remap find-tag] nil))
+
 ;;;; Global Keys
 
 (map! "C-M-;" #'pp-eval-expression
