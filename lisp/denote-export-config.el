@@ -229,20 +229,53 @@ glossary export target (GLG 2026-09-27)."
 (org-set-emph-re 'org-emphasis-regexp-components
                  org-emphasis-regexp-components)
 
-;; 2. Export fix - insert NBSP around emphasis pairs adjacent to CJK
+;; 2. Export fix - insert NBSP after emphasis pairs followed by CJK
 ;;    NBSP (U+00A0) is used because:
 ;;    - org parser treats it as space → emphasis markers recognized
 ;;    - it survives into markdown so remark/Quartz also see the emphasis
 ;;    - visually invisible in rendered HTML
 ;;    Source NBSP is normalized first (`my/org-export-normalize-source-nbsp'),
 ;;    so after that every NBSP in the output came from here.
+(defun my/org-export--in-literal-block-p (pos)
+  "Non-nil when POS lies inside a src, example or export block.
+Their text is printed verbatim, so no markup fix may touch it.  Asks the
+org parser rather than scanning for #+begin_ lines: 21 notes in ~/org
+have unbalanced or nested block lines (2026-09-27), and a line scan would
+treat the rest of such a file as one block."
+  (save-excursion
+    (goto-char pos)
+    (memq (org-element-type (org-element-at-point))
+          '(src-block example-block export-block))))
+
 (defun my/org-fix-cjk-emphasis (_backend)
-  "Insert NBSP around org emphasis pairs adjacent to CJK for export.
-Matches emphasis pairs (*bold*, =code=, ~verb~, /italic/, +strike+)
-and adds NBSP before/after the pair if Korean text is adjacent.
-Emphasis content must start and end with non-whitespace (org rule).
+  "Insert NBSP after org emphasis pairs that are followed by Hangul.
+Matches emphasis pairs (*bold*, =code=, ~verb~, /italic/, +strike+) whose
+content starts and ends with non-whitespace (org rule), and adds an NBSP
+after the closing marker when Korean follows (\"*강조*은\").
+
+A pair counts only when its opening marker already sits where org can open
+emphasis: at line start or after whitespace or one of -({'\".  Without
+that check, markers used as text were paired and padded, and the site showed
+\"된다 /안 된다\", \"힣맨 =아빠펭귄\".  Measured 2026-09-27: 346 such NBSP in
+the garden md; a cross-review found 0 real \"는*강조*\" in ~/org
+\(notes/bib/meta/botlog), so no NBSP is ever put before an opening marker.
+
+**bold** is rewritten to *bold* first, so \"**강조**는\" gets its NBSP too.
+Pairs inside src/example/export blocks are left alone: the NBSP would
+land in text that is printed verbatim (found 2026-09-27 in an example
+block quoting a note).
 Runs on a temporary export copy - original file is NOT modified."
   (save-excursion
+    ;; Fix markdown-style **bold** → org-style *bold* (inline only, not headings)
+    ;; AI agents often write **bold** in org files out of markdown habit.
+    (goto-char (point-min))
+    (let ((dbl-changes 0))
+      (while (re-search-forward "\\([^*]\\)\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
+        (replace-match "\\1*\\2*")
+        (cl-incf dbl-changes))
+      (when (> dbl-changes 0)
+        (message "[Export] **bold** → *bold*: %d fixes" dbl-changes)))
+
     (goto-char (point-min))
     ;; Skip front matter (find first blank line)
     (when (re-search-forward "^$" nil t) (forward-line 1))
@@ -263,30 +296,22 @@ Runs on a temporary export copy - original file is NOT modified."
                   nil t)
             (let ((mb (match-beginning 0))
                   (me (match-end 0)))
-              ;; After closing marker: insert NBSP if CJK follows
-              (when (and (< me (point-max))
-                         (let ((c (char-after me)))
-                           (and c (>= c #xAC00) (<= c #xD7A3))))
-                (save-excursion (goto-char me) (insert nbsp))
-                (cl-incf changes))
-              ;; Before opening marker: insert NBSP if CJK precedes
-              (when (and (> mb (point-min))
-                         (let ((c (char-before mb)))
-                           (and c (>= c #xAC00) (<= c #xD7A3))))
-                (save-excursion (goto-char mb) (insert nbsp))
-                (cl-incf changes))))))
+              (if (or (not (or (= mb (save-excursion
+                                         (goto-char mb) (line-beginning-position)))
+                               (memq (char-before mb)
+                                     '(?\s ?\t ?\u00A0 ?- ?\( ?{ ?' ?\"))))
+                      (save-match-data (my/org-export--in-literal-block-p mb)))
+                  ;; Not an opening marker: retry from the next character,
+                  ;; where a real pair may start ("된다/안 된다 /기울임/는").
+                  (goto-char (1+ mb))
+                ;; After closing marker: insert NBSP if CJK follows
+                (when (and (< me (point-max))
+                           (let ((c (char-after me)))
+                             (and c (>= c #xAC00) (<= c #xD7A3))))
+                  (save-excursion (goto-char me) (insert nbsp))
+                  (cl-incf changes)))))))
       (when (> changes 0)
-        (message "[Export] CJK emphasis: %d NBSP insertions" changes)))
-
-    ;; Fix markdown-style **bold** → org-style *bold* (inline only, not headings)
-    ;; AI agents often write **bold** in org files out of markdown habit.
-    (goto-char (point-min))
-    (let ((dbl-changes 0))
-      (while (re-search-forward "\\([^*]\\)\\*\\*\\([^*\n]+\\)\\*\\*" nil t)
-        (replace-match "\\1*\\2*")
-        (cl-incf dbl-changes))
-      (when (> dbl-changes 0)
-        (message "[Export] **bold** → *bold*: %d fixes" dbl-changes)))))
+        (message "[Export] CJK emphasis: %d NBSP insertions" changes)))))
 
 ;; Order matters, all on the export copy (`org-export-before-parsing-functions'
 ;; runs after `-before-processing-'):

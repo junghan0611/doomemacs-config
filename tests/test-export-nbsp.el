@@ -26,6 +26,7 @@
 
 (require 'test-helper)
 (require 'cl-lib)
+(require 'org)
 
 (defconst test-nbsp/source-file
   (expand-file-name
@@ -54,6 +55,7 @@
 (test-nbsp/eval-form "^(defvar my/org-hugo-mention-class\\_>")
 (test-nbsp/eval-form "^(defvar my/org-hugo-mention-names\\_>")
 (test-nbsp/eval-form "^(defun my/org-hugo-wrap-hashtags-and-mentions\\_>")
+(test-nbsp/eval-form "^(defun my/org-export--in-literal-block-p\\_>")
 (test-nbsp/eval-form "^(defun my/org-fix-cjk-emphasis\\_>")
 
 (defun test-nbsp/n (s)
@@ -65,6 +67,7 @@
 A leading blank line stands in for the front matter the emphasis fix skips."
   (with-temp-buffer
     (insert "#+title: t\n\n" text)
+    (org-mode)
     (dolist (fn fns) (funcall fn 'hugo))
     (goto-char (point-min))
     (forward-line 2)
@@ -106,6 +109,46 @@ Found by cross-review 2026-09-27 in a real note: \"싹싹<NBSP>빌면\"."
                                    (test-nbsp/n "먼저 #포춘쿠키_를 던진다."))
                     'hugo nil)
                    "먼저 <span class=\"org-hashtag\">#포춘쿠키</span> 를 던진다."))))
+
+;;;; Emphasis NBSP: only after a real opening marker
+
+(ert-deftest test-nbsp--emphasis-closing-side-only ()
+  "NBSP goes after a closing marker followed by Hangul, never before an opener."
+  (should (equal (test-nbsp/run '(my/org-fix-cjk-emphasis) "*강조*는 는*강조* /기울임/을")
+                 (test-nbsp/n "*강조*_는 는*강조* /기울임/_을"))))
+
+(ert-deftest test-nbsp--emphasis-markers-used-as-text ()
+  "Regression 2026-09-27: markers inside words were paired and padded
+\(346 NBSP in the garden, \"된다 /안 된다\" on the site)."
+  (should (equal (test-nbsp/run '(my/org-fix-cjk-emphasis)
+                                "된다/안 된다/는 힣맨=아빠펭귄, 아들=아기펭귄 data/로 전송/수신")
+                 "된다/안 된다/는 힣맨=아빠펭귄, 아들=아기펭귄 data/로 전송/수신")))
+
+(ert-deftest test-nbsp--emphasis-retries-after-a-false-opener ()
+  "A marker used as text must not hide a real pair later on the line."
+  (should (equal (test-nbsp/run '(my/org-fix-cjk-emphasis) "된다/안 된다 /기울임/는")
+                 (test-nbsp/n "된다/안 된다 /기울임/_는"))))
+
+(ert-deftest test-nbsp--markdown-bold-gets-its-nbsp ()
+  "**강조**는 is rewritten to *강조* before the NBSP pass, so it is bold too."
+  (should (equal (test-nbsp/run '(my/org-fix-cjk-emphasis) "앞 **강조**는 끝")
+                 (test-nbsp/n "앞 *강조*_는 끝"))))
+
+(ert-deftest test-nbsp--emphasis-skips-literal-blocks ()
+  "Text in example/src blocks is verbatim; only the prose outside is padded."
+  (should (equal (test-nbsp/run '(my/org-fix-cjk-emphasis)
+                                (concat "#+begin_example\n그때 =entwurf_v2=가 쓴다\n#+end_example\n"
+                                        "#+BEGIN_SRC org\n*강조*는\n#+END_SRC\n"
+                                        "밖의 =entwurf_v2=가 쓴다\n"))
+                 (concat "#+begin_example\n그때 =entwurf_v2=가 쓴다\n#+end_example\n"
+                         "#+BEGIN_SRC org\n*강조*는\n#+END_SRC\n"
+                         "밖의 =entwurf_v2=" test-nbsp/nbsp "가 쓴다\n"))))
+
+(ert-deftest test-nbsp--emphasis-after-unclosed-begin-line ()
+  "A #+begin_src with no #+end_src is no block to org; prose after it is fixed."
+  (should (equal (test-nbsp/run '(my/org-fix-cjk-emphasis)
+                                "#+begin_src sh\n말만 있다\n\n*강조*는\n")
+                 (concat "#+begin_src sh\n말만 있다\n\n*강조*" test-nbsp/nbsp "는\n"))))
 
 ;;;; Order: normalize, then emphasis
 
