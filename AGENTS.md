@@ -311,7 +311,11 @@ Do not copy them here.
   exported garden. Widening or narrowing it changes retrieval quality in another repo,
   so treat a pool change as cross-repo, not local.
 
-### Neomacs K-review — `bin/neomacs.sh`
+### Neomacs bare comparison profile — `bin/neomacs.sh`
+
+Neomacs validation is owned by `neomacs-config` (GLG decision, 2026-09-27).
+This repo maintains only the builtin-only GNU/Neomacs comparison profile and
+its reproducible probes; current divergences and workarounds live there.
 
 [Neomacs](https://github.com/eval-exec/neomacs) (a Rust rewrite of the Emacs core)
 runs a **vanilla profile** here. Issue #8. Fully separated from Doom: its own
@@ -325,7 +329,8 @@ checkout already present on disk may be put on `load-path` so `denote:` links re
 against a real corpus. Probes run one process per file — a crash that kills the runtime
 is itself a finding.
 
-Measurements, pins, and upstream cross-checks live in `neomacs/README.md` (SSOT).
+This profile's historical measurements and probe commands live in
+`neomacs/README.md`; current validation and workarounds belong to `neomacs-config`.
 
 ## Commit Messages
 

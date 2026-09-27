@@ -10,6 +10,9 @@
 Doom과 완전히 분리된다 — 별도 `--init-directory`, 별도 server name(`neomacs`),
 공유 상태 없음. 프로파일은 **stock GNU Emacs에서도 그대로 돈다**. 그게 설계
 목적이다: 갈라짐이 나오면 Neomacs 탓인지 이 설정 탓인지 즉시 갈라야 한다.
+이곳은 빌트인 전용 맨몸 비교축이다. Neomacs 검수의 주인과 현재 측정·우회책은
+[`neomacs-config`](https://github.com/junghan0611/neomacs-config)에 있으며, 아래는
+이 프로파일에서 당시 관측한 기록이지 전체 검수의 최신 SSOT가 아니다.
 
 ## 구성
 
@@ -45,6 +48,11 @@ NEOMACS_BIN=emacs ./bin/neomacs.sh --probe   # GNU 배치 베이스라인
 `resolve_runner`가 `NEOMACS_BIN`을 가장 먼저 보므로 위의 `NEOMACS_BIN=emacs` 한 줄이
 그 문이다 (2026-09-26 실측: GNU 31.1에서 5파일 전체 통과, 아래 대조표의 GNU 칸이
 그렇게 뽑힌 값이다).
+
+`--daemon` / `--kill`은 Neomacs 0.0.19에서 명시적으로 실패한다.
+`--help`에는 daemon 옵션이 있지만 `--daemon=NAME`은 기동 시 거부되고 일반 GUI로
+계속 진행된다는 2026-09-27 neomacs-config 담당자의 측정에 따른 보호 조치다.
+GNU 데몬이 필요하면 `./bin/neomacs.sh --gnu --daemon=neomacs`를 사용한다.
 
 **빌드 불필요.** NixOS에서는 릴리즈 AppImage가 `libfontconfig`를 못 찾으므로
 런처가 `appimage-run`으로 감싼다. 네이티브 빌드가 있으면 `NEOMACS_BIN`으로

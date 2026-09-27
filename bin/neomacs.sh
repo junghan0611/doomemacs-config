@@ -15,8 +15,8 @@
 #   ./bin/neomacs.sh --nw            # terminal
 #   ./bin/neomacs.sh --probe         # run every K-review probe (batch)
 #   ./bin/neomacs.sh --probe env     # run one probe
-#   ./bin/neomacs.sh --daemon        # start daemon
-#   ./bin/neomacs.sh --kill          # stop daemon
+#   ./bin/neomacs.sh --daemon        # fails closed until Neomacs supports it
+#   ./bin/neomacs.sh --kill          # fails closed until Neomacs supports it
 #   ./bin/neomacs.sh --version
 #   ./bin/neomacs.sh --fetch [TAG]   # download a release AppImage
 #   ./bin/neomacs.sh --gnu ...       # same profile on stock GNU Emacs (interactive)
@@ -147,15 +147,11 @@ case "${1:-}" in
   --nw|--tty)
     exec "${RUNNER[@]}" --init-directory "${PROFILE_DIR}" -nw
     ;;
-  --daemon)
-    exec "${RUNNER[@]}" --init-directory "${PROFILE_DIR}" \
-         --daemon="${SERVER_NAME}"
-    ;;
-  --kill)
-    "${RUNNER[@]}" --batch --eval \
-      "(progn (require 'server) (server-eval-at \"${SERVER_NAME}\" '(kill-emacs)))" \
-      2>/dev/null || true
-    echo "[neomacs] daemon ${SERVER_NAME} stopped (if it was running)"
+  --daemon|--kill)
+    # 0.0.19 advertises --daemon in --help but rejects --daemon=NAME at
+    # startup and continues as a GUI session (reported 2026-09-27).
+    # Do not claim a daemon was started or stopped until verified upstream.
+    die "$1 unsupported by Neomacs ${NEOMACS_VERSION}; use the GUI/TTY or --gnu --daemon=${SERVER_NAME} for GNU Emacs"
     ;;
   --debug)
     exec "${RUNNER[@]}" --init-directory "${PROFILE_DIR}" --debug-init

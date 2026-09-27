@@ -34,10 +34,9 @@
 
 ;;;; Profile identity
 
-(defconst my/neomacs-p (not (null (string-match-p "neomacs" (emacs-version))))
+(defconst my/neomacs-p (fboundp 'neomacs-core-backend)
   "Non-nil when running under Neomacs rather than GNU Emacs.
-Derived from `emacs-version' because Neomacs reports GNU-compatible
-`emacs-major-version', which cannot distinguish the two.")
+Neomacs reports GNU-compatible version strings, so use its own builtin.")
 
 (defconst my/neomacs-profile-dir
   (file-name-directory (or load-file-name buffer-file-name))
