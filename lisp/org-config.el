@@ -524,9 +524,7 @@ org-agenda-sticky=t 환경에서 날짜가 캐시되는 문제 해결."
 
   (define-key org-mode-map (kbd "C-}") 'org-glossary-insert-term-reference)
   (define-key org-mode-map (kbd "C-{") 'org-glossary-create-definition)
-  (define-key org-mode-map (kbd "C-\"") 'org-glossary-create-definition)
-  (setq org-glossary-automatic nil) ;; disable auto-export
-  )
+  (define-key org-mode-map (kbd "C-\"") 'org-glossary-create-definition))
 
 ;; sample from tecosaur/org-glossary
 ;; (defun +org-glossary--latex-cdef (backend info term-entry form &optional ref-index plural-p capitalized-p extra-parameters)

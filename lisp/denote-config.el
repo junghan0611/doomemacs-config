@@ -218,23 +218,6 @@ If no files are marked, update the file at point."
 
 (use-package! denote-search)
 
-;;;; Ten with etags
-
-;; (defun my/goto-etags ()
-;;   (interactive)
-;;   (let ((xref-backend-functions '(etags--xref-backend t)))
-;;     (call-interactively 'xref-find-definitions)))
-
-;; (use-package! ten
-;;   :defer 2
-;;   ;; :hook ((org-mode Info-mode) . ten-font-lock-mode) ;; text-mode
-;;   :init
-;;   (setq ten-exclude-regexps '("/\\."))
-;;   :config
-;;   (require 'consult-ten)
-;;   (add-to-list 'consult-buffer-sources 'consult-ten-glossary 'append) ; g
-;;   )
-
 ;;;; denote-merge
 
 (use-package! denote-merge
