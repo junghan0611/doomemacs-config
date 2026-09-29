@@ -8,12 +8,8 @@
 
 ;;; Commentary:
 
-;; Agent Shell (ACP - Agent Client Protocol) 설정
-;; - agent-shell 0.48.1: Claude Code, Pi, Qwen 등 AI 에이전트 인터페이스
-;; - agent-shell-manager: 버퍼 관리
-;; - agent-shell-sidebar: 사이드바 UI
-;;
-;; 2026-03-18 업그레이드: viewport 모드, session resume, Pi ACP, usage tracking
+;; ACP client for Claude Code and Pi, with buffer manager and sidebar.
+;; Claude ACP adapter is versioned by entwurf, not installed globally.
 
 ;;; Code:
 
@@ -27,8 +23,15 @@
   (require 'acp)
   (require 'agent-shell)
 
-  ;; Ensure claude-agent-acp / pi-acp in exec-path for Termux
-  ;; NOTE 2026-03-18: claude-code-acp → claude-agent-acp 리네임 완료
+  ;; The pnpm .bin shim resolves the exact adapter pinned in entwurf/package.json.
+  ;; Use agent-shell's per-agent command instead of changing Emacs's global PATH.
+  ;; Keep the path even when the dependency is absent: startup will report the
+  ;; missing adapter rather than silently running a different global version.
+  (unless my/termux-p
+    (setq agent-shell-anthropic-claude-acp-command
+          (list (expand-file-name "~/repos/gh/entwurf/node_modules/.bin/claude-agent-acp"))))
+
+  ;; Termux uses its own installed ACP adapter.
   (when my/termux-p
     (add-to-list 'exec-path "/data/data/com.termux/files/usr/bin"))
 
@@ -44,13 +47,8 @@
 
   ;; 'prompt: 시작 시 이전 세션 재개 or 새 세션 선택
   ;; 'new: 항상 새 세션 (bootstrapped, 모델/모드 변경 가능)
-  ;; 'new-deferred: 기존 동작 (첫 프롬프트까지 초기화 지연)
   ;; 'latest: 항상 최근 세션 재개
   (setq agent-shell-session-strategy 'prompt)
-
-  ;; session/resume 선호 (lightweight, 메시지 재생 없음)
-  ;; session/load는 아직 edge case 있으므로 resume 기본
-  (setq agent-shell-prefer-session-resume t)
 
 ;;;; Viewport Interaction — 제작자 추천 모드
 
@@ -113,9 +111,7 @@
 ;;;; Pi ACP — pi 스킬 + 시맨틱 메모리 연동
 
   ;; pi-acp: pi --mode rpc를 ACP JSON-RPC로 브릿지
-  ;; pi 스킬 24개(denotecli, bibcli, gitcli 등) → ACP 세션에서 그대로 사용
-  ;; pi 익스텐션 tool(session_search, knowledge_search) → pi가 로드하므로 동작 예상
-  ;; pi 익스텐션 slash command → 미지원 (pi-acp 제한)
+  ;; Pi ACP configuration is provided by agent-shell-pi.
   (require 'agent-shell-pi)
 
 ;;;; Korean Input Fix — comint 버퍼 한글 입력 보장

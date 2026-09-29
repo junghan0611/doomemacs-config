@@ -12,7 +12,7 @@
 ;; Doom의 :term 모듈에서 관리하는 영역:
 ;; - eshell
 ;; - vterm
-;; - ghostel (실험적)
+;; - ghostel (daily terminal and agent-tool surface)
 ;;
 ;; tty-config.el 이 "Emacs 자체가 TTY에서 돌아갈 때"의 환경을 다룬다면,
 ;; 이 파일은 Emacs 안에서 구동되는 터미널 버퍼/에뮬레이터를 다룬다.
@@ -123,6 +123,24 @@ correct when the foreground program has the kitty keyboard protocol active."
 ;; lets hangul compose in the read-only terminal buffer (PR #510) is now upstream.
 (use-package! ghostel-ime
   :hook (ghostel-mode . ghostel-ime-mode))
+
+;;; Consult — terminal picker, buffer sources, wrapped-line search, shell history
+
+;; The extension ships in the ghostel monorepo but is a separate package.
+;; Activate its global integration eagerly; pickers still create terminals only
+;; on demand.  C-x m replaces the default compose-mail binding intentionally.
+(use-package! consult-ghostel
+  :demand t
+  :init
+  (map! "C-x m" #'consult-ghostel
+        :map project-prefix-map "m" #'consult-ghostel-project)
+  :config
+  (consult-ghostel-mode 1))
+
+;; Bind history in the parent map so it survives ghostel's semi-char keymap
+;; rebuilds.  The semi-char map inherits C-c from ghostel-mode-map.
+(after! ghostel
+  (define-key ghostel-mode-map (kbd "C-c h") #'consult-ghostel-history))
 
 ;; evil-ghostel: the module enables the mode under `:editor evil' + `+everywhere'.
 ;; We only route insert-state ESC to the PTY — Claude Code, codex, pi each expose
@@ -281,8 +299,8 @@ its own CLI."
          (with-current-buffer buf
            (ghostel-send-string cmd)))))))
 
-;; Leader binding parked while ghostel is experimental.
-;; Invoke via `M-x my/pi-ghostel-start' when you want to test it.
+;; Pi CLI launcher remains unbound: zmx launchers below own the daily entry.
+;; Invoke via `M-x my/pi-ghostel-start' for a direct Pi terminal.
 ;; (map! :leader
 ;;       :desc "Pi (ghostel)" "j SPC" #'my/pi-ghostel-start)
 

@@ -96,6 +96,10 @@
 ;; and want the latest, so we version-manage ghostel ourselves: unpin and follow
 ;; dakra/main.  ghostel-ime/eshell/comint/compile all ship inside the package.
 (unpin! ghostel evil-ghostel)
+;; Independent extension in the ghostel monorepo; share its checkout/version.
+(package! consult-ghostel
+  :recipe (:host github :repo "dakra/ghostel" :local-repo "ghostel"
+           :files ("extensions/consult-ghostel/consult-ghostel.el")))
 ;; Persistent terminal sessions backed by zmx — Emacs is the client, zmx owns
 ;; the session lifecycle.  `:defaults' excludes the bundled -tests.el.
 (package! term-sessions
@@ -258,7 +262,7 @@
 (package! shell-maker)
 (package! acp :recipe (:host github :repo "xenodium/acp.el"))
 (package! agent-shell :recipe (:host github :repo "xenodium/agent-shell"))
-(package! agent-shell-manager :recipe (:host github :repo "ElleNajt/agent-shell-manager"))
+(package! agent-shell-manager :recipe (:host github :repo "jethrokuan/agent-shell-manager"))
 (package! agent-shell-sidebar :recipe (:host github :repo "cmacrae/agent-shell-sidebar"))
 ;; (package! agent-shell-attention.el :recipe (:host github :repo "ultronozm/agent-shell-attention.el"))
 ;; (package! meta-agent-shell :recipe (:host github :repo "ElleNajt/meta-agent-shell"))
