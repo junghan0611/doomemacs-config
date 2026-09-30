@@ -16,9 +16,14 @@ while (<>) {
         if ($ud ge $from && $ud le $to) {
             /^\@\w+\{([^,]+)/ or next;
             my $key = $1;
-            /title\s*=\s*[\{"]([^}"]+)/ or next;
-            my $title = $1;
-            $title =~ s/[\{\}]//g;
+            my $title;
+            if (/title\s*=\s*\{(.*?)\}\s*,?\s*\n/) {
+                $title = $1;
+            } elsif (/title\s*=\s*"(.*?)"\s*,?\s*\n/) {
+                $title = $1;
+            } else {
+                next;
+            }
             print "$key\t$title\n";
         }
     }
