@@ -30,10 +30,11 @@
 ;; change `org-directory'. It must be set before org loads!
 ;; (setq org-directory "~/org/")
 
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-;; (setq display-line-numbers-type t)
-;; (remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode)
+;; Line numbers only on the GUI-class devices.  Doom hooks
+;; `display-line-numbers-mode' into text/prog/conf modes by default; an unknown
+;; device (`my/current-device' nil) or oracle/termux drops that hook.
+(unless (member my/current-device '("nuc" "laptop" "thinkpad"))
+  (remove-hook! (text-mode prog-mode conf-mode) #'display-line-numbers-mode))
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
