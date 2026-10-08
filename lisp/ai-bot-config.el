@@ -306,6 +306,50 @@ telega가 실행 중이 아니면 먼저 시작한다."
       :n "M-p" #'telega-button-backward
       )
 
+;;;; Evil 키바인딩 — telega chat 버퍼 localleader
+;;
+;; telega 는 메시지 위 단일 키(r 답장, i 수정, ! 반응 …)와 C-c 맵만 준다.
+;; 대화방 단위 동작은 localleader(, / C-,) 에 모으고, 글자는 slack 쪽과
+;; 맞춘다 (t 스레드, r 반응, e 수정, d 삭제, q 답장, f 첨부, l 링크, u 안 읽음).
+;; 토픽: 봇 DM 도 토픽을 가진다 (is-forum — glg-gpt-bot 등, 2026-10-08).
+;; 토픽 생성/닫기/고정은 telega 에 TDLib 래퍼만 있고 명령이 없다.
+
+(map! :after telega
+      :map telega-chat-mode-map
+      :localleader
+      ;; 스레드·토픽
+      :desc "Thread/topic of msg"  "t" #'telega-msg-open-thread-or-topic
+      :desc "Topic filter"         "T" #'telega-chatbuf-filter-by-topic
+      :desc "Topic info of msg"    "i" #'telega-msg-show-topic-info
+      :desc "Thread root message"  "g" #'telega-chatbuf-goto-thread-message
+      :desc "Cancel filter/topic"  "c" #'telega-chatbuf-filter-cancel
+      ;; 메시지
+      :desc "Reaction add"         "r" #'telega-msg-add-reaction
+      :desc "Edit message"         "e" #'telega-msg-edit
+      :desc "Delete message"       "d" #'telega-msg-delete-dwim
+      :desc "Reply"                "q" #'telega-msg-reply
+      :desc "Forward"              "F" #'telega-msg-forward-dwim
+      :desc "Copy message link"    "l" #'telega-msg-copy-link
+      :desc "Copy message text"    "y" #'telega-msg-copy-text
+      ;; 대화방
+      :desc "Attach"               "f" #'telega-chatbuf-attach
+      :desc "Next unread"          "u" #'telega-chatbuf-next-unread
+      :desc "Next mention"         "@" #'telega-chatbuf-next-unread-mention
+      :desc "Pinned message"       "p" #'telega-chatbuf-goto-pinned-message
+      :desc "Goto date"            "D" #'telega-chatbuf-goto-date
+      :desc "Search"               "s" #'telega-chatbuf-inplace-search-query
+      :desc "Filter"               "/" #'telega-chatbuf-filter
+      :desc "Describe chat"        "?" #'telega-describe-chat)
+
+;; 메시지 위에서는 text-property 키맵(telega-msg-button-map)이 evil 보다 앞선다.
+;; 그 맵이 음성메시지 10초 되감기/빨리감기를 `,'/`<' 와 `.'/`>' 두 쌍에 묶어서
+;; 메시지 위의 `,' 가 localleader 대신 되감기가 됐다 (2026-10-08 확인).
+;; 중복인 `,' `.' 만 풀고 `<' `>' 는 남긴다.
+(map! :after telega
+      :map telega-msg-button-map
+      "," nil
+      "." nil)
+
 ;;;; Slack — emacs-slack (개인 워크스페이스)
 ;;
 ;; ChatGPT 앱이 만든 Slack 에이전트(junghanacs-glgdot)와 대화하는 두 번째 봇 매체.
