@@ -1,4 +1,4 @@
-;;; $DOOMDIR/lisp/ai-bot-config.el --- AI Bot Communication (Telegram) -*- lexical-binding: t; -*-
+;;; $DOOMDIR/lisp/ai-bot-config.el --- AI Bot Communication (Telegram, Slack) -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Junghan Kim
 
@@ -7,22 +7,47 @@
 
 ;;; Commentary:
 
-;; Telegram 봇과의 대화를 위한 telega.el 최소 설정.
+;; Telegram(telega.el)·Slack(emacs-slack) 봇과의 대화를 위한 최소 설정.
 ;; 사람과의 채팅이 아닌, AI 에이전트(봇)와의 소통 매체.
 ;;
 ;; 봇:
-;;   @junghan_openclaw_bot (아이온스클럽B) - 개발 리포 전체 인지
-;;   @glg_junghanacs_bot (힣봋) - 디지털 분신
+;;   Telegram @junghan_openclaw_bot (아이온스클럽B) - 개발 리포 전체 인지
+;;   Telegram @glg_junghanacs_bot (힣봋) - 디지털 분신
+;;   Slack    junghanacs-glgdot - ChatGPT 앱 에이전트 (개인 워크스페이스)
 ;;
 ;; 키바인딩 (SPC j):
 ;;   t — telega 시작
 ;;   T — 봇 선택 후 바로 채팅
+;;   s — Slack 연결 + 대화방 선택
+;;   S — Slack 봇 선택 후 바로 DM
 
 ;;; Code:
 
 ;; Pure TDLib richMessage → markdown serializer (vanilla, ERT-gated).  The
 ;; messageRichMessage insert/advice glue below feeds its :blocks here.
 (require 'telega-rich-md)
+
+;;;; 공통 — chat 버퍼 표시 치환
+
+;; 메시지 본문 속 smart punctuation/bullet을 ASCII로 표시 치환.
+;; Why: "• " " ' ' — – …" 같은 문자가 CJK 폰트에서 2-cell로 잡혀
+;; 메시지 정렬이 깨진다. 원문은 손대지 않고 display-table로 보여주기만 바꾼다.
+;; telega 와 slack 이 함께 쓴다.
+(defun my/chat-display-table-setup ()
+  "Chat 버퍼에서 cell drift 유발 문자를 ASCII로 치환 표시."
+  (unless buffer-display-table
+    (setq buffer-display-table (make-display-table)))
+  (dolist (pair '((?\u2022 . "+")    ; • bullet
+                  (?\u201C . "\"")   ; " left double quote
+                  (?\u201D . "\"")   ; " right double quote
+                  (?\u2018 . "'")    ; ' left single quote
+                  (?\u2019 . "'")    ; ' right single quote
+                  (?\u2014 . "--")   ; — em dash
+                  (?\u2013 . "-")    ; – en dash
+                  (?\u2026 . "...")  ; … horizontal ellipsis
+                  (?\u00B7 . ".")))  ; · middle dot
+    (aset buffer-display-table (car pair)
+          (vconcat (mapcar (lambda (c) (make-glyph-code c)) (cdr pair))))))
 
 ;;;; telega 기본 설정
 
@@ -83,26 +108,9 @@
   (add-hook 'telega-root-mode-hook #'doom-mark-buffer-as-real-h)
   (add-hook 'telega-chat-mode-hook #'doom-mark-buffer-as-real-h)
 
-  ;; 메시지 본문 속 smart punctuation/bullet을 ASCII로 표시 치환.
-  ;; Why: "• " " ' ' — – …" 같은 문자가 CJK 폰트에서 2-cell로 잡혀
-  ;; 메시지 정렬이 깨진다. 원문은 손대지 않고 display-table로 보여주기만 바꾼다.
-  (defun my/telega-chat-display-table-setup ()
-    "Telega chat 버퍼에서 cell drift 유발 문자를 ASCII로 치환 표시."
-    (unless buffer-display-table
-      (setq buffer-display-table (make-display-table)))
-    (dolist (pair '((?\u2022 . "+")    ; • bullet
-                    (?\u201C . "\"")   ; " left double quote
-                    (?\u201D . "\"")   ; " right double quote
-                    (?\u2018 . "'")    ; ' left single quote
-                    (?\u2019 . "'")    ; ' right single quote
-                    (?\u2014 . "--")   ; — em dash
-                    (?\u2013 . "-")    ; – en dash
-                    (?\u2026 . "...")  ; … horizontal ellipsis
-                    (?\u00B7 . ".")))  ; · middle dot
-      (aset buffer-display-table (car pair)
-            (vconcat (mapcar (lambda (c) (make-glyph-code c)) (cdr pair))))))
-  (add-hook 'telega-chat-mode-hook #'my/telega-chat-display-table-setup)
-  (add-hook 'telega-root-mode-hook #'my/telega-chat-display-table-setup)
+  ;; smart punctuation → ASCII 표시 치환 (§ 공통)
+  (add-hook 'telega-chat-mode-hook #'my/chat-display-table-setup)
+  (add-hook 'telega-root-mode-hook #'my/chat-display-table-setup)
 
   ;; Unicode Cell Drift 회피 — telega 심볼을 ASCII 로 대체.
   ;;
@@ -298,13 +306,137 @@ telega가 실행 중이 아니면 먼저 시작한다."
       :n "M-p" #'telega-button-backward
       )
 
+;;;; Slack — emacs-slack (개인 워크스페이스)
+;;
+;; ChatGPT 앱이 만든 Slack 에이전트(junghanacs-glgdot)와 대화하는 두 번째 봇 매체.
+;; 인증은 Chrome 세션의 xoxc 토큰 + d 쿠키, 저장소는 ~/.authinfo.gpg:
+;;   machine junghanacs.slack.com login junghanacs password xoxc-...
+;;   machine junghanacs.slack.com login junghanacs^cookie password "xoxd-...; d-s=...; lc=..."
+;; 브라우저에서 로그아웃하면 토큰이 죽는다 — 그때 이 두 줄을 갱신한다.
+;; 팀 등록은 첫 호출 때 한다: `slack-register-team' 이 즉시 API 를 부르므로
+;; Emacs 시작 시점에 네트워크를 타지 않게 한다.
+
+(defvar my/slack-team-host "junghanacs.slack.com"
+  "auth-source host of the personal Slack workspace.")
+
+(defvar my/slack-team-user "junghanacs"
+  "auth-source login of the token entry; the cookie entry uses LOGIN^cookie.")
+
+(defvar my/slack-bots
+  '(("glgdot (ChatGPT agent)" . "U0C7G5DFD8D")
+    ("ChatGPT" . "U0C8FPBRLJC"))
+  "자주 사용하는 Slack 봇 목록. (표시이름 . user-id) — 표시이름은 바뀌어도 user-id 는 고정.")
+
+(use-package! slack
+  :commands (slack-start slack-select-rooms slack-select-unread-rooms slack-im-select)
+  :config
+  (setq slack-prefer-current-team t
+        slack-buffer-emojify nil)
+
+  ;; Doom workspace(persp-mode) + consult-buffer에서 보이도록 real buffer 등록
+  (add-hook 'slack-message-buffer-mode-hook #'doom-mark-buffer-as-real-h)
+  (add-hook 'slack-thread-message-buffer-mode-hook #'doom-mark-buffer-as-real-h)
+
+  ;; smart punctuation → ASCII 표시 치환 (§ 공통)
+  (add-hook 'slack-message-buffer-mode-hook #'my/chat-display-table-setup)
+  (add-hook 'slack-thread-message-buffer-mode-hook #'my/chat-display-table-setup)
+
+  ;; 알림 → D-Bus → dunst, telega 와 같은 길
+  (when (featurep 'dbusbind)
+    (alert-add-rule :category 'slack :style 'notifications)))
+
+(defun my/slack-team ()
+  "Return the personal Slack team, registering it on first use."
+  (require 'slack)
+  (let ((token (auth-source-pick-first-password
+                :host my/slack-team-host :user my/slack-team-user)))
+    (unless token
+      (user-error "Slack: %s 토큰이 auth-source 에 없음" my/slack-team-host))
+    (or (slack-team-find-by-token token)
+        (progn
+          (slack-register-team
+           :name "junghanacs"
+           :token token
+           :cookie (auth-source-pick-first-password
+                    :host my/slack-team-host
+                    :user (concat my/slack-team-user "^cookie"))
+           :default t
+           ;; 에이전트는 DM 에서도 스레드로 답한다 — 채널 버퍼에 답글을 펼쳐 보인다
+           :visible-threads t
+           :full-and-display-names t
+           :mark-as-read-immediately t)
+          (slack-team-find-by-token token)))))
+
+(defun my/slack-connect ()
+  "Connect the personal Slack team and wait until its websocket is up."
+  (let ((team (my/slack-team)))
+    (unless (slack-team-connectedp team)
+      (slack-team-connect team)
+      (with-timeout (20 (user-error "Slack: 연결 시간 초과 — *slack-log* 확인"))
+        (while (not (slack-team-connectedp team))
+          (sit-for 0.5))))
+    team))
+
+(defun my/slack-start ()
+  "개인 Slack 에 연결하고 대화방을 고른다."
+  (interactive)
+  (my/slack-connect)
+  (slack-select-rooms))
+
+(defun my/slack-chat-bot ()
+  "봇 선택 후 바로 DM 버퍼 열기.
+Slack 이 연결되어 있지 않으면 먼저 연결한다."
+  (interactive)
+  (let* ((team (my/slack-connect))
+         (selected (completing-read "Slack bot: " (mapcar #'car my/slack-bots) nil t))
+         (user-id (cdr (assoc selected my/slack-bots))))
+    ;; Mirrors `slack-im-open', minus its user picker.
+    (slack-conversations-open
+     team
+     :user-ids (list user-id)
+     :on-success
+     (lambda (data)
+       (let ((room-id (plist-get (plist-get data :channel) :id)))
+         (if-let* ((room (slack-room-find room-id team)))
+             (slack-room-display room team)
+           (slack-conversations-info
+            room-id team
+            (lambda () (slack-room-display (slack-room-find room-id team) team)))))))))
+
+;;;; Evil 키바인딩 — slack 메시지/스레드 버퍼
+;;
+;; evil-collection·Doom 모듈 어느 쪽도 slack(lui) 을 다루지 않고, 패키지 자체는
+;; RET/TAB/C-c C-f 정도만 묶는다 (2026-10-08 확인). t/r/e/q 같은 단일 키는 evil
+;; 모션이라 입력줄 편집과 부딪히므로 동작은 전부 localleader(SPC m) 에 둔다.
+;; 스레드 모드는 slack-message-buffer-mode 가 아니라 slack-buffer-mode 에서
+;; 파생되므로 두 맵을 모두 지정한다.
+
+(map! :after slack
+      :map (slack-message-buffer-mode-map slack-thread-message-buffer-mode-map)
+      ;; M-j/M-k: 메시지 단위 이동 — telega 와 같은 손
+      :n "M-j" #'slack-buffer-goto-next-message
+      :n "M-k" #'slack-buffer-goto-prev-message
+      :localleader
+      :desc "Thread show/create"   "t" #'slack-thread-show-or-create
+      :desc "Reaction add"         "r" #'slack-message-add-reaction
+      :desc "Reaction remove"      "R" #'slack-message-remove-reaction
+      :desc "Edit message"         "e" #'slack-message-edit
+      :desc "Delete message"       "d" #'slack-message-delete
+      :desc "Quote and reply"      "q" #'slack-quote-and-reply
+      :desc "Write in buffer"      "w" #'slack-message-write-another-buffer
+      :desc "Attach file"          "f" #'slack-file-attach
+      :desc "Copy message link"    "l" #'slack-message-copy-link
+      :desc "Unread rooms"         "u" #'slack-select-unread-rooms)
+
 ;;;; 키바인딩 (SPC j 확장)
 
 (map! :leader
       (:prefix "j"
        :desc "telega fix auth" "M-t" #'my/telega-fix-auth
        :desc "Telega start"    "t" #'telega
-       :desc "Telega chat bot" "T" #'my/telega-chat-bot))
+       :desc "Telega chat bot" "T" #'my/telega-chat-bot
+       :desc "Slack rooms"     "s" #'my/slack-start
+       :desc "Slack chat bot"  "S" #'my/slack-chat-bot))
 
 (provide 'ai-bot-config)
 ;;; ai-bot-config.el ends here

@@ -279,6 +279,7 @@
 
 (package! telega)
 (package! ement)
+(package! slack) ;; MELPA recipe → emacs-slack/emacs-slack (maintained fork)
 
 ;;;; ai-stt-whisper.el
 

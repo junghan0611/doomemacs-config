@@ -114,6 +114,7 @@
 ;;   j f l q  ai-pi-agent.el      pilish
 ;;   p        present-config.el   *prefix* — 발표 (j p p/q/s/a)
 ;;   t T M-t  ai-bot-config.el    telega
+;;   s S      ai-bot-config.el    slack (2026-10-08)
 ;;   z a      term-config.el      zmx
 ;; `p' 는 명령이 아니라 prefix 라서 그 자리에 명령을 박으면 present-config 의
 ;; `j p p' 바인딩이 "non-prefix key" 로 죽는다. m/M/d 로 간다.
