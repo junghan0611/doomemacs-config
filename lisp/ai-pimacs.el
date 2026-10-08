@@ -33,9 +33,8 @@
 ;;;; 모델 SSOT
 
 (defvar my/pimacs-models
-  '("xai/grok-4.5"
-    "openai-codex/gpt-5.6-terra"
-    "openai-codex/gpt-5.6-sol"
+  '("xai/grok-4.7"
+    "openai-codex/gpt-6.1-sol"
     ;; "openai-codex/gpt-5.6-luna"
     ;; "kimi-coding/k3"
     )
