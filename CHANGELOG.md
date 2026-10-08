@@ -6,6 +6,26 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.10.8 — Slack bot DM in Emacs, consult-ghostel
+
+### Added
+
+- **emacs-slack for the personal workspace** (`lisp/ai-bot-config.el`), a second bot channel next to telega. The team registers lazily from `~/.authinfo.gpg` (an `xoxc` token plus the browser session's `d` cookie), so Emacs startup makes no network call. `SPC j s` connects and picks a room, `SPC j S` opens a bot DM directly, and thread replies are shown inline because the agent answers in threads even in a DM.
+- **Slack message and thread buffers get localleader actions** (`,` in normal state, `C-,` while typing): thread, reaction add/remove, edit, delete, quote-reply, compose in a buffer, attach, copy link and unread rooms, plus `M-j`/`M-k` message navigation. Neither evil-collection nor Doom covers slack or lui, and the package itself binds little beyond `RET` and `TAB`.
+- **consult-ghostel**: `C-x m` terminal picker, `m` in `project-prefix-map` for the project's terminals, and `C-c h` shell history in ghostel buffers. The extension shares the ghostel monorepo checkout.
+
+### Changed
+
+- **The smart-punctuation display table is shared** as `my/chat-display-table-setup`, so Slack buffers get the same ASCII substitution as telega.
+- **Line numbers are on only on nuc, laptop and thinkpad**; on oracle, termux or an unknown device Doom's `display-line-numbers-mode` hook is dropped.
+- **agent-shell runs the Claude ACP adapter pinned by entwurf** (`node_modules/.bin/claude-agent-acp`) instead of a global install, drops local Pi ACP settings now provided by agent-shell-pi, and `agent-shell-manager` follows the `jethrokuan` fork.
+- **Neomacs validation moved to `neomacs-config`**; this repo keeps only the builtin-only GNU/Neomacs comparison profile and its probes.
+
+### Fixed
+
+- **Neomacs is detected by `neomacs-core-backend`**, because its version strings are GNU-compatible. `bin/neomacs.sh --daemon`/`--kill` now fail closed, since 0.0.19 rejects `--daemon=NAME` and continues as a GUI session.
+- **`bin/bib-urldate.pl` reads titles that open with a literal quote mark** instead of skipping those entries.
+
 ## v2026.9.27 — Garden NBSP pipeline, emphasis fix, Neomacs 0.0.19
 
 ### Added

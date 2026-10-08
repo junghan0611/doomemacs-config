@@ -4,21 +4,20 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.9.27`.
+최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.10.8`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
 
-### 이번 컷에서 닫힌 것 (v2026.9.27, 2026-09-27)
+### 이번 컷에서 닫힌 것 (v2026.10.8, 2026-10-08)
 
-- 가든 NBSP 파이프라인 복구 — 원본 NBSP 정리(조사 앞 삭제, 그 외 공백) + 강조 NBSP 보존,
-  hook 순서 계약과 테스트. 전체 re-export로 가든 한글⍽한글 2,236 → 0
-- 강조 fix 오탐 제거(346 → 1), `**bold**` NBSP, literal block 건너뜀
-- org-glossary 용어 인식 복구, `g SPC` projectile remap 제거, llmlog journal 앵커
-- `M-f6`/`f6` 작업 위치 저장/복귀
-- ox-epub(포크)은 별도 리포 — `bd16e66`, `83b6c14`
+- emacs-slack 개인 워크스페이스 — glgdot(ChatGPT 앱 에이전트) DM, `SPC j s`/`S`,
+  localleader(`,`/`C-,`) 동작, 토큰·쿠키는 `~/.authinfo.gpg`. 브라우저 로그아웃 시 갱신
+- chat 버퍼 표시 치환 공유(`my/chat-display-table-setup`, telega + slack)
+- consult-ghostel, agent-shell ACP 어댑터 entwurf 고정, 줄번호 기기 한정
+- Neomacs 검수 `neomacs-config`로 이관 + 런타임 감지 수정, bib 인용부호 제목
 
-### 남은 관찰 (이번 컷에서 발견, 미착수)
+### 남은 관찰 (v2026.9.27 컷에서 발견, 미착수)
 
 - journal 날짜 앵커 불일치 212건(`#2026-02-28-sat` vs `{#2026-02-28-saturday}`, `#h-날짜`)
   — 과거 journal은 재export하지 않으므로 방치. 신규는 `h-날짜`로 일치(`c50bdcf`)
