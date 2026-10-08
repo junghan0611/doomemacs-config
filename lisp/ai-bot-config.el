@@ -341,9 +341,21 @@ telega가 실행 중이 아니면 먼저 시작한다."
   (add-hook 'slack-message-buffer-mode-hook #'my/chat-display-table-setup)
   (add-hook 'slack-thread-message-buffer-mode-hook #'my/chat-display-table-setup)
 
-  ;; 알림 → D-Bus → dunst, telega 와 같은 길
-  (when (featurep 'dbusbind)
-    (alert-add-rule :category 'slack :style 'notifications)))
+  ;; 새 메시지 알림 — 기기별.
+  ;; 데스크톱: alert → D-Bus → dunst, telega 와 같은 길.
+  ;; 그 밖(oracle·termux): alert 를 거치지 않고 echo area 한 줄.  alert 는
+  ;; notifier 오류를 잡지 않는데, oracle 은 session bus 는 있으나 Notifications
+  ;; 서비스가 없어(2026-10-08) D-Bus 로 보내면 DM 마다 오류가 난다.
+  (if (member my/current-device '("nuc" "laptop" "thinkpad"))
+      (alert-add-rule :category 'slack :style 'notifications)
+    (setq slack-message-custom-notifier #'my/slack-notify-echo)))
+
+(defun my/slack-notify-echo (message room team)
+  "Echo-area Slack notifier for devices without a desktop notifier."
+  (when (slack-message-notify-p message room team)
+    (message "Slack %s: %s"
+             (slack-room-name room team)
+             (slack-message-sender-name message team))))
 
 (defun my/slack-team ()
   "Return the personal Slack team, registering it on first use."
