@@ -346,8 +346,10 @@ telega가 실행 중이 아니면 먼저 시작한다."
   ;; 그 밖(oracle·termux): alert 를 거치지 않고 echo area 한 줄.  alert 는
   ;; notifier 오류를 잡지 않는데, oracle 은 session bus 는 있으나 Notifications
   ;; 서비스가 없어(2026-10-08) D-Bus 로 보내면 DM 마다 오류가 난다.
+  ;; alert 규칙의 :category 는 regexp 문자열이다 — 심볼 'slack 을 주면 모든
+  ;; alert 호출이 `wrong-type-argument stringp slack' 으로 죽는다 (2026-10-08).
   (if (member my/current-device '("nuc" "laptop" "thinkpad"))
-      (alert-add-rule :category 'slack :style 'notifications)
+      (alert-add-rule :category "\\`slack\\'" :style 'notifications)
     (setq slack-message-custom-notifier #'my/slack-notify-echo)))
 
 (defun my/slack-notify-echo (message room team)
