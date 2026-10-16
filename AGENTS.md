@@ -85,7 +85,7 @@ Only `(require ...)` and minimal glue. All logic lives in `lisp/`.
 | Export pipeline | `lisp/denote-export-config.el` + `bin/denote-export*.{el,py,sh}` |
 | Korean input / writing hygiene | `lisp/korean-input-config.el` |
 | Unicode (NBSP, ZWS) | `lisp/unicode-config.el` |
-| TTY (term-keys, kitty-graphics, clipboard) | `lisp/tty-config.el` |
+| TTY (term-keys, width, clipboard; graphics opt-in) | `lisp/tty-config.el` |
 | Evil | `lisp/evil-config.el` |
 | Editing | `lisp/editing-config.el` |
 | UI / theme | `lisp/ui-config.el` |
@@ -219,7 +219,7 @@ only after an observation period and only when **GLG explicitly calls for it**.
 | `"pi"` | TTY attach target (full Doom, shared by N terminals) | `run.sh pi start` |
 | `"server"` | Agent RPC daemon | `run.sh agent start` (separate `--init-directory`) |
 | `"doom-unstable"` | Second Doom profile on the same Emacs 31 | `run.sh unstable` |
-| `"neomacs"` | Neomacs vanilla profile | `bin/neomacs.sh --daemon` |
+| `"neomacs"` | GNU comparison daemon for the vanilla profile | `bin/neomacs.sh --gnu --daemon=neomacs` (Neomacs daemon operations fail closed; see launcher) |
 
 The **single-instance guard** in `init.el` only blocks duplicate daemons. Non-daemon
 instances (`emacs -nw`, `doom run`) run independently.

@@ -6,6 +6,29 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.10.16 — The shared editing house, Entwurf, and CDLaTeX
+
+### Added
+
+- **CDLaTeX was re-enabled for human equation entry** through `(latex +cdlatex)`. Doom's module hooks cover LaTeX and Org buffers. Applying the module change requires `doom sync` and an Emacs restart; this cut does not claim a live typing acceptance test.
+- **Telega chat localleader actions** added thread/topic navigation, message actions, chat filters, and search, with letters aligned to Slack. Duplicate voice-seek bindings on `,` and `.` were removed from the message keymap so localleader remains reachable over messages; `<` and `>` retain voice seeking.
+
+### Changed
+
+- **README now describes the shared human editing house and current Entwurf boundary**, replacing the retired pi-shell-acp integration. agent-config owns shared skills and working principles; Entwurf owns sibling lifecycle and delivery; andenken owns retrieval. pilish and pimacs are Pi clients, not harnesses, and their different Emacs socket targets are documented.
+- **The writing-to-garden loop distinguishes ox-hugo conversion from Quartz publication.** The README also records the separate Doom profile on the same Emacs 31, the GNU/Neomacs bare comparison boundary, optional shell aliases and fonts, and historical export timing versus the current four-worker default.
+- **The bilingual homepage introduction was prepared and handed off** to the homepage maintainer after Opus cross-review. The homepage owns those files and publication; this tag does not ship or publish them. Its maintainer reported an isolated site gate PASS, while browser visual acceptance remained unmeasured at handoff.
+- **Pimacs model choices moved to `xai/grok-4.7` and `openai-codex/gpt-6.1-sol`.**
+
+### Fixed
+
+- **Slack alerts no longer assume a desktop notification service.** Desktop environments use notifications; other environments use the echo-area notifier. The alert category is an anchored regexp string rather than a symbol, avoiding `wrong-type-argument stringp slack`.
+- **Documentation no longer promises working Neomacs daemon operations or universal remote clipboard delivery.** AGENTS points the comparison daemon to GNU Emacs, and the README preserves the unresolved remote OSC 52 boundary and tmux copy-mode workaround without claiming a new runtime fix. Stale gptel model/fallback text and a dead monitoring pointer were removed.
+
+### Verification
+
+- `./tests/run-tests.sh`: 110/110 ERT tests passed on 2026-10-16. Opus independently re-ran the four keybinding lint tests during cross-review. CDLaTeX live typing and homepage browser acceptance were not part of this gate.
+
 ## v2026.10.8 — Slack bot DM in Emacs, consult-ghostel
 
 ### Added

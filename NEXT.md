@@ -1,21 +1,27 @@
 # NEXT.md — doomemacs-config
 
+# RAIL — 현재 좌표
+
+- [x] **1. README 현대화·Opus 교차검토·홈페이지 원고 인계** — 결과는 CHANGELOG `v2026.10.16`
+- [ ] **2. CDLaTeX 적용 후 사람의 수식 입력 확인** ← CURRENT — 모듈 선언은 복원, 실제 입력은 미측정
+
+## NOW — 사람의 수식 입력과 운영 관찰 (2026-10-16)
+
+- 다음: GLG가 `./run.sh sync` 후 Emacs 재시작 → Org에서 기호 입력·기존 TAB 동작을 실제로 확인. 이번 문서/릴리스 작업은 sync나 데몬 재시작을 실행하지 않았다.
+- 홈페이지 소개는 담당 `20261016T103933-96efd0`에게 freeze 인계했다. `content/projects/doomemacs-config/index{,.ko}.md`의 이후 수정·검증·발행은 그쪽 소유다.
+- 홈페이지 gate #252 PASS는 담당자 보고 계승이며 실제 브라우저 시각 검수와 다르다. 홈페이지 커밋·푸시 보류를 이 리포 릴리스 승인으로 해제하지 않는다.
+- 아래 미해결 운영 관찰은 유지한다. 클립보드·Neomacs 과거 실측을 새 실측으로 바꾸지 않는다.
+
+---
+
 > 시작할 때 무엇을 할지 몰라서 발생하는 진행 정체를 막는다.
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-최근 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.10.8`.
+현재 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.10.16`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
-
-### 이번 컷에서 닫힌 것 (v2026.10.8, 2026-10-08)
-
-- emacs-slack 개인 워크스페이스 — glgdot(ChatGPT 앱 에이전트) DM, `SPC j s`/`S`,
-  localleader(`,`/`C-,`) 동작, 토큰·쿠키는 `~/.authinfo.gpg`. 브라우저 로그아웃 시 갱신
-- chat 버퍼 표시 치환 공유(`my/chat-display-table-setup`, telega + slack)
-- consult-ghostel, agent-shell ACP 어댑터 entwurf 고정, 줄번호 기기 한정
-- Neomacs 검수 `neomacs-config`로 이관 + 런타임 감지 수정, bib 인용부호 제목
 
 ### 남은 관찰 (v2026.9.27 컷에서 발견, 미착수)
 
@@ -26,19 +32,19 @@
 
 ---
 
-# RAIL — 현재 좌표
+# LEDGER — 이전 Emacs 31 운영 좌표
 
 - [x] **1. Emacs 31 pre-release를 별도 Doom 채널로 담금질**
 - [x] **2. Nixpkgs Emacs 31.1 `emacs31-gtk3` 채널 전환·실기동 확인**
 - [x] **3. 31.1 작업면 관찰과 Doom upstream 방향 판독**
 - [x] **4. NixOS 기본 Emacs 31 전환과 daemon 계약 검수** (2026-09-02) — 전 기기 31.1,
       `user`/`pi`/`server` 세 소켓 기동·어젠다·denote·attach 경로 실측 확인
-- [ ] **5. 31.1 상주 관찰** ← CURRENT: 되돌릴 판단 근거가 쌓이는지만 본다.
+- [ ] **5. 31.1 상주 관찰** — 되돌릴 판단 근거가 쌓이는지만 본다.
       되돌림은 `nixos-config` 레인이고 여기가 아니다
 
 현재 좌표: 4 완료(기본 승격) → 5 상주 관찰
 
-## NOW — 바로 손대는 자리 (2026-09-02)
+## 운영 관찰 대장 (2026-09-02 시작)
 
 - [ ] **(2026-09-14) 원격 클립보드 OSC 52 — 되돌렸다. 측정 없이 다시 건드리지 말 것**
       목표: Oracle tmux 안 터미널 Emacs에서 `y` 한 번이 ThinkPad 시스템 클립보드에

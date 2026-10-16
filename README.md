@@ -10,23 +10,25 @@
 > boundaries run, and the current judgment. `AGENTS.md` is the standing baseline inside
 > the repo; that note is the report going out.
 
+**Start here:** [Installation](#installation) · [Commands](#runsh--unified-management) · [Agent integration](#entwurf-and-the-emacs-meeting-point) · [Garden operations](#garden-verify--fix). This is a personal configuration, not a standalone agent harness or a turnkey distribution.
+
 ## How to Read This
 
 If you glance at `config.el` and think "just another messy dotfile" — look closer.
 
-**What you're seeing is a harness.** A 20K-line Emacs configuration where a human (GLG/힣) and AI agents operate on the same `~/org/` knowledge base of 3,500+ notes. They share a unified agenda. They stamp timestamps on the same datetree. The agents publish comments on the digital garden. The human refines, connects, and creates.
+**What you're seeing is a shared working house.** A modular Emacs configuration where a human (GLG/힣) writes, reads, enters equations, and manages a Denote knowledge base — while AI agents work on the same Org files through a separate RPC daemon. Both leave entries on one agenda timeline. The human's editor is not replaced by an agent harness: it is the place where their work meets.
 
-The solutions here are not fancy. A 33-minute full export. Shell scripts calling Emacs daemons. Org files instead of databases. If you're looking for cutting-edge infrastructure, this will disappoint. But look at the layer above: **Emacs is a meta-editor. Org-mode is a meta-document format.** The point is not the speed of any single operation — it's that the entire system composes. Org files become Hugo pages, become semantic memory, become agent context, become new org files. The 33-minute export runs unattended while GLG sleeps; incremental runs finish in seconds.
+**Emacs is a meta-editor. Org-mode is a meta-document format.** Shell scripts and Emacs daemons compose around plain-text records: Org notes become exported Markdown, public garden pages, retrieval sources, and material for the next piece of writing. Full exports can run unattended; incremental export processes changed files. The useful unit is the whole writing-and-returning loop, not an isolated agent chat.
 
-**This is one piece of a larger ecosystem.** The agent harness is [agent-config](https://github.com/junghan0611/agent-config) — that's where skills, delegation, semantic memory, and multi-agent orchestration live. Agents don't need Emacs. They use agent-config's toolset. But when they collaborate with GLG, they share this Emacs interface: the same org files, the same agenda, the same elisp APIs over sockets. Emacs is not a requirement — it's the meeting point. You don't have to use Emacs to work with this ecosystem. But this is where human and agent workflows converge.
+**This is one piece of a larger ecosystem.** [agent-config](https://github.com/junghan0611/agent-config) keeps shared skills and working principles; [Entwurf](https://github.com/junghan0611/entwurf) opens and addresses independent sibling sessions; [andenken](https://github.com/junghan0611/andenken) retrieves past conversations and public garden writing. Their harnesses own execution, authentication, and transcripts. This repo owns the human editing surface, the Emacs RPC APIs, and the Org-to-garden export pipeline. Agents do not need Emacs to run — it is the meeting point, not their runtime.
 
 And this timeline is not hidden inside Emacs. [geworfen](https://github.com/junghan0611/geworfen) throws it into the world — a WebTUI at [agenda.junghanacs.com](https://agenda.junghanacs.com) that renders the same `org-agenda` data live. Human journal entries, agent commit stamps, diary schedules — all on one public time axis. The same elisp function agents call, the same data the browser fetches.
 
-The "clunky terminal screens" you see? They are nodes in a living graph: Emacs → org-mode → Denote notes → Hugo [digital garden](https://github.com/junghan0611/garden) → semantic memory → agent skills → back to Emacs. Every ugly buffer is a connection point.
+The buffers connect a living graph: Emacs → Org-mode → Denote notes → ox-hugo Markdown export → the Quartz [digital garden](https://github.com/junghan0611/garden) → semantic retrieval → agent skills → back to Emacs. Hugo is the export format here; Quartz publishes the garden.
 
-**Why Emacs in a terminal matters**: This full Doom Emacs runs in TTY with clipboard integration, Korean input, and remote access over SSH — identical to GUI. An agent can spawn Emacs anywhere via `emacsclient`, eval elisp, read org files, stamp agenda entries. The terminal is not a limitation. It is the universal interface — the one that works on a laptop, a NUC, an Oracle ARM server, and a Galaxy Fold.
+**Why Emacs in a terminal matters**: This full Doom Emacs runs in TTY with Korean input and remote access over SSH. Clipboard and image support depend on the terminal and transport; GUI parity is not assumed. An agent can reach a running Emacs server via `emacsclient`, eval elisp, read Org files, and stamp agenda entries. The terminal is not a limitation. It is the universal interface — the one that works on a laptop, a NUC, an Oracle ARM server, and a Galaxy Fold.
 
-**Why org-mode**: Org is the meta-document format. Through [memex-kb](https://github.com/junghan0611/memex-kb), org files convert to any format without Pandoc. Notes accumulate in Denote, export to the [garden](https://notes.junghanacs.com), get hierarchized by [andenken](https://github.com/junghan0611/andenken), and feed into semantic memory shared with agents. It is the protocol, not just a markup language.
+**Why Org-mode**: one plain-text source can hold writing, tasks, citations, equations, and links. Denote gives notes stable identifiers; the export pipeline publishes selected writing to the [garden](https://notes.junghanacs.com); [andenken](https://github.com/junghan0611/andenken) makes public garden writing retrievable alongside admitted conversations. [memex-kb](https://github.com/junghan0611/memex-kb) provides a separate Org conversion surface. The source remains readable and editable outside any agent session.
 
 ## Overview
 
@@ -34,7 +36,7 @@ A [Doom Emacs](https://github.com/doomemacs/doomemacs) configuration for human-a
 
 | | |
 |---|---|
-| **Emacs** | 31.1 (system default, Nixpkgs `emacs31-gtk3`) + Neomacs (Rust core, review track) |
+| **Emacs** | 31.1 (system default, Nixpkgs `emacs31-gtk3`) + Neomacs (separate bare comparison profile) |
 | **Framework** | Doom Emacs (hlissner style) |
 | **Notes** | 3,500+ Denote org-mode files in `~/org/` |
 | **Garden** | [notes.junghanacs.com](https://notes.junghanacs.com) — 2,200+ published |
@@ -51,12 +53,12 @@ doomemacs-config/
 ├── packages.el          # Package declarations
 ├── per-machine.el       # Machine-specific (git-ignored)
 │
-├── lisp/                # Modular config (44 files, one concern each)
-│   ├── ai-*.el              # AI/Agent integration (7)
+├── lisp/                # Modular config (one concern per file)
+│   ├── ai-*.el              # AI/Agent integration
 │   ├── denote-*.el          # Denote ecosystem (5)
 │   ├── org-*.el             # Org-mode (2)
 │   ├── korean-input-config.el   # Korean input, fonts, NFD→NFC, writing hygiene
-│   ├── tty-config.el           # TTY: term-keys, kitty-graphics, clipboard
+│   ├── tty-config.el           # TTY: term-keys, width fixes, clipboard setup
 │   ├── term-config.el          # In-Emacs terminal — :term ghostel module + overrides
 │   ├── tmux-config.el          # tmux control surface — herd status board, attach
 │   ├── workflow-shared.el       # Human ↔ Agent shared contract
@@ -66,7 +68,7 @@ doomemacs-config/
 │   ├── agent-server.el          # Agent RPC server (socket "server")
 │   ├── denote-export.el         # Multi-daemon export engine
 │   ├── denote-export-parallel.py  # Python parallel orchestrator
-│   ├── emacs-unstable.sh        # Emacs 31 channel launcher
+│   ├── emacs-unstable.sh        # Separate Doom profile on system Emacs 31
 │   ├── neomacs.sh               # Neomacs vanilla profile launcher + probe runner
 │   ├── fix-org-links.el         # Stage 1 — ~/org link rewriter (file:~/repos/gh → GitHub URL)
 │   ├── fix-org-mdbold.el        # **bold** → *bold* on garden dirs only (not journal)
@@ -155,39 +157,41 @@ The same `org-agenda` view shows human tasks and agent activity side by side.
 
 ## Emacs Server Architecture
 
-Four isolated Doom server sockets coexist — plus a fifth, `"neomacs"`, when the
-review-track profile is running (see § Neomacs). Daily use is **one GUI + many TTY clients attached to the `pi` daemon**:
+The editor and agent RPC run in separate instances. Daily use is **one GUI + many TTY clients attached to the `pi` daemon**. A second Doom profile is available for comparison:
 
 | Socket | Instance | Purpose |
 |--------|----------|---------|
-| `"user"` | Emacs 31.1 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (`ecs` alias) |
-| `"pi"` | Emacs 31.1 headless (full Doom) | TTY attach target — every WezTerm tab attaches via `./run.sh pi tty` (`ep` alias). One full Doom shared by N terminals |
+| `"user"` | Emacs 31.1 GUI | GLG's primary editor — `doom run`, attach via `emacsclient -s user -t` (optional `ecs` alias below) |
+| `"pi"` | Emacs 31.1 headless (full Doom) | TTY attach target — terminal tabs attach via `./run.sh pi tty` (optional `ep` alias below). One full Doom shared by N terminals |
 | `"server"` | Emacs 31.1 headless | Agent RPC daemon — agents eval elisp via `emacsclient -s server` (loaded with `bin/agent-server.el`) |
-| `"doom-unstable"` | Emacs 31 channel | Emacs 31 frontend (`./run.sh unstable run`) |
+| `"doom-unstable"` | Emacs 31.1, separate Doom profile | Isolated comparison frontend (`./run.sh unstable run`) |
 
-Standalone `emacs -nw` (no daemon) still works (`et` alias) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
+Standalone `emacs -nw` (no daemon) still works (optional `et` alias below) but is no longer the primary path — the `pi` daemon shares Doom state across all TTY tabs and avoids per-tab init cost.
 
-## pi-shell-acp Integration
+## Entwurf and the Emacs meeting point
 
-This config is the editor surface that [pi-shell-acp](https://github.com/junghan0611/pi-shell-acp) targets. pi-shell-acp is my ACP bridge between [pi](https://github.com/dnouri/pilish) (the harness) and Claude/Codex/Gemini backends — it spawns coding agents that read org files, eval elisp, stamp agenda entries, and write to the shared Denote corpus, all through `emacsclient` against the `server` socket.
+[Entwurf](https://github.com/junghan0611/entwurf) has replaced the former `pi-shell-acp` project. It opens visible sibling sessions and delivers messages by garden id across independent harnesses. ACP is one plugin, not the identity or collaboration boundary. Emacs does not own sibling lifecycle, authentication, or transcripts.
 
-The bridge accepts `--emacs-agent-socket` and forwards it to ACP children as `PI_EMACS_AGENT_SOCKET`:
+This config offers several ways to meet those agents:
 
-```elisp
-;; pilish buffer config
-(setq pilish-extra-args
-      '("--entwurf-control" "--emacs-agent-socket" "server"))
-```
+- **Terminal sessions:** [ghostel](https://github.com/dakra/ghostel) holds tmux sessions; agents keep running independently of Emacs. The herd board reports terminal activity, not Entwurf delivery or citizen liveness.
+- **Native Emacs buffers:** [pilish](https://github.com/dnouri/pilish) is a two-buffer client for Pi's stdio RPC, configured in [`ai-pi-agent.el`](lisp/ai-pi-agent.el). [`ai-pimacs.el`](lisp/ai-pimacs.el) configures an alternative one-buffer client, pimacs. Neither client is the Pi harness itself.
+- **ACP buffers:** [`ai-agent-shell.el`](lisp/ai-agent-shell.el) configures agent-shell; outside Termux, its Claude adapter comes from the dependency pinned by Entwurf.
+- **Shared Org work:** the agent RPC daemon exposes the APIs in [`bin/agent-server.el`](bin/agent-server.el), independently of any one agent harness.
+
+The current pilish configuration passes `--entwurf-control` and `--emacs-agent-socket pi`; pimacs passes the same control flag but selects `server`. The socket flag exports `PI_EMACS_AGENT_SOCKET` for that Pi session's tools. pilish therefore targets the full Doom `pi` editor instance, not the headless RPC daemon. For ordinary headless Org operations, use `server` explicitly:
 
 ```bash
-# Skills inside the agent then call Emacs without hardcoding a socket
-emacsclient -s "${PI_EMACS_AGENT_SOCKET:-server}" --eval '(agent-denote-add-history ...)'
+./run.sh agent start
+emacsclient -s server --eval '(agent-denote-search "emacs")'
 ```
+
+These are separate choices: the selected Emacs socket says where elisp runs; an Entwurf garden id says which sibling receives a message. Neither substitutes for the other.
 
 The socket split is intentional:
 
-- **`server`** — agent RPC daemon (`bin/agent-server.el`). Headless, loaded by `./run.sh agent start`. Agents do CRUD here so they never block the editor.
-- **`pi`** — human TTY attach (`./run.sh pi tty`, `ep` alias). Full Doom. This is where GLG actually writes.
+- **`server`** — agent RPC daemon (`bin/agent-server.el`). Headless, loaded by `./run.sh agent start`. Agent elisp runs outside the editor process; concurrent writes to shared files still need coordination.
+- **`pi`** — human TTY attach (`./run.sh pi tty`). Full Doom. This is where GLG actually writes.
 - **`user`** — GUI Emacs for visual work (Magit graphs, ePub, image-heavy org).
 
 Because the primary editor surface is `emacs -nw` / `emacsclient -t`, every keybinding has to survive in TTY frames. Cases like `:lang org`'s `,` localleader being silently dropped under `emacs --daemon` (fixed in [org-config.el](lisp/org-config.el) by deferring `+org-init-keybinds-h` to `server-after-make-frame-hook`, the same pattern doom itself uses in [`doom-keybinds.el:80`](https://github.com/doomemacs/doomemacs/blob/master/lisp/doom-keybinds.el)) are taken seriously here — not as Emacs trivia, but because the terminal is the surface agents and humans both touch.
@@ -202,7 +206,7 @@ Parallel multi-daemon pipeline exporting 2,000+ org notes to Hugo markdown:
   denote-export-parallel.py    # Python ProcessPoolExecutor
         │
    ┌────┼────┐
-   d1   d2   dN               # N Emacs daemons (default 4-8)
+   d1   d2   dN               # N Emacs daemons (run.sh default: 4)
    └────┼────┘                 # ox-hugo + link conversion + security filters
         │
   ~/repos/gh/notes/content/
@@ -214,8 +218,7 @@ Parallel multi-daemon pipeline exporting 2,000+ org notes to Hugo markdown:
 ./run.sh dblock all           # Update dynamic blocks only
 ```
 
-Full export (~2,000 files, 8 daemons) takes ~33 min — runs unattended.
-Incremental export (daily use) finishes in seconds, processing only changed files.
+A historical full export (~2,000 files, 8 daemons) took ~33 min; this is not a current benchmark. `run.sh` defaults to 4 workers. Incremental export processes only changed files; duration depends on the batch.
 
 Incremental means **mtime against the last export stamp**
 (`filter_changed_files` in `denote-export-parallel.py`), and the dblock pass saves a
@@ -256,16 +259,13 @@ session, and an export daemon the parallel orchestrator reuses across runs.
 
 ## AI/Agent Modules
 
-The **main workflow** is `gptel-agent` (karthink) — a Markdown/Org agent definition
-system that loads sub-agent specs from disk, registers skills from `~/.claude/skills/`,
-and runs tools inside the Emacs buffer. Plain `gptel-send` chat is rarely used; almost
-everything flows through agent presets.
+The **in-buffer agent workflow** uses `gptel-agent` (karthink): Markdown/Org agent definitions, skills from `~/.claude/skills/`, and tools inside Emacs buffers. Our default prompt removes subagent delegation (see below). This is distinct from the independent coding sessions reached through Entwurf and tmux.
 
 | Module | File | Purpose |
 |--------|------|---------|
 | **gptel-agent** | `ai-gptel.el` (`use-package! gptel-agent`) | **Primary chat/agent surface** — agent presets, skills, in-buffer tool execution |
 | GPTel core | `ai-gptel.el` | OpenAI-sub (ChatGPT subscription OAuth), two models (`gpt-6-sol`/`gpt-6-luna`) + Codex stream advice |
-| Pi Agent | `ai-pi-agent.el` | Pi coding agent stdio RPC |
+| Pi clients | `ai-pi-agent.el`, `ai-pimacs.el` | pilish (two buffers) and pimacs (one buffer), over Pi stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
 | Whisper STT | `ai-stt-whisper.el` | Speech-to-text via Groq whisper-large-v3 |
@@ -307,8 +307,7 @@ Two advices remain pinned to this backend, each documented at its definition wit
 condition that would make it deletable: the Codex endpoint's mandatory `stream=true`
 (`gptel-request` still defaults to `:stream nil`), and a `max_output_tokens` clear
 that silences the per-request warning upstream now emits for `gptel-agent`'s
-unconditional 8192 cap. They are re-verified against upstream periodically;
-`NEXT.md` § gptel monitoring carries the current measurement and its date.
+unconditional 8192 cap. Their source-adjacent comments record the verification conditions and removal triggers; re-check them against upstream before changing either advice.
 
 Transient overload is absorbed rather than surfaced. The subscription rail answers a
 congested request with **HTTP 200 and a payload-level `server_is_overloaded`**, so
@@ -316,8 +315,8 @@ reporting `:status` alone yields a failure message naming nothing but HTTP 200, 
 makes a remote hiccup look like a local regression. `my/gptel-error-message` reads
 `:error` first; `my/gptel-request-retry` rides the failure out with exponential
 backoff. Its final attempt switches to the fallback model, which only changes anything
-when the caller's model differs from it — with fast and default both on terra today,
-the retries alone carry the load. This is what a Codex CLI does internally; without
+when the caller's model differs from it. The current fast/default pair is luna/sol;
+the measurements above remain explicitly about the older 5.6 tier. This is what a Codex CLI does internally; without
 it, a single first failure is all the user ever sees.
 
 ### Custom gptel-agent prompts (`prompts/`)
@@ -354,6 +353,7 @@ In ghostel's semi-char mode `SPC` is sent to the PTY, so `doom-leader` never fir
 | `C-c t n` / `C-c t p` | Next / previous window |
 | `C-c t c` / `C-c t k` | New window (keeps the session's path) / kill the current one |
 | `C-c t s` | Attach a session (one ghostel buffer per session) |
+| `C-c t l` | List sessions |
 
 The tmux prefix itself needs one more binding. GLG remaps `M-c` to `C-c` at the input layer — `C-c` is a pinky-hostile chord and `M-c` is the hand that reaches for it, which is also why tmux carries `M-c` as `prefix2`. Inside Emacs that means the `M-c` *event* never exists to be forwarded. So `C-c C-c` sends it explicitly: under the remap those keys are a doubled `M-c`, and physical `M-c M-c c` opens a window. That displaces `ghostel-send-C-c`, which moves to `C-c C-k` — interrupting the foreground program has to stay reachable. (tmux's primary `C-b` already reaches the PTY on its own through `evil-ghostel`; this is about the hand, not capability.)
 
@@ -388,14 +388,14 @@ Pane titles are shown but never used to classify. Agent CLIs do broadcast state 
 Full Korean support across GUI and terminal:
 
 - **Input**: korean-hangul with Evil auto-switching, abbrev expansion
-- **Fonts**: Sarasa Gothic / D2Coding Nerd with CJK scaling
+- **Fonts**: machine-specific families via git-ignored `per-machine.el`, with Korean font handling in the shared config
 - **NFD→NFC**: macOS/Termux filename normalization
-- **TTY**: term-keys, kitty-graphics protocol, OSC 52 clipboard
+- **TTY**: term-keys, width corrections, OSC 52 setup; kitty-graphics is manual opt-in
 - **Unicode**: NBSP handling, zero-width space for ox-hugo
 
-The terminal setup ensures `emacs -nw` over SSH has clipboard, Korean input, and full functionality — identical to GUI except for images.
+Korean input is configured for both GUI and TTY. Clipboard transport is not universally equivalent: the recorded remote OSC 52 path is unresolved, its end-to-end cause has not been established, and the current workaround is tmux copy-mode. See the clipboard FAQ and `NEXT.md` before changing that path.
 
-## Emacs 31 Channel
+## Separate Doom Profile on Emacs 31
 
 **The system default is Emacs 31.1 as of 2026-09-02** — every device moved via the
 `nixos-config` unstable overlay, so `"user"`, `"pi"` and `"server"` all run 31.1. This
@@ -406,14 +406,14 @@ A second Emacs install built from Nixpkgs `nixos-unstable`. The launcher/output 
 
 ```bash
 ./run.sh unstable run        # GUI
-./run.sh unstable tty        # Terminal (alias: etu)
+./run.sh unstable tty        # Terminal (optional alias: etu)
 ./run.sh unstable install    # First setup
 ./run.sh unstable debug      # --debug-init
 ```
 
 Built via `flake.nix` using Nixpkgs. Separate `EMACSDIR` (`~/doomemacs-unstable`) and server socket (`"doom-unstable"`) so it coexists with the system Emacs — same version now, separate profile and package tree.
 
-## Neomacs — Korean (K) review track
+## Neomacs — bare comparison profile
 
 [Neomacs](https://github.com/eval-exec/neomacs) rewrites the Emacs core (~300K lines
 of C) in Rust. `neomacs/` holds a **vanilla profile** for it, plus probes that turn
@@ -433,15 +433,12 @@ no-network rule holds.
 ./bin/neomacs.sh --gnu          # same profile on stock GNU Emacs — the baseline
 ```
 
-The profile must run identically on Neomacs and stock GNU Emacs, so `--gnu` decides
-whether a divergence belongs to Neomacs or to this config. Probes run one process per
+The profile must run identically on Neomacs and stock GNU Emacs, so comparison with GNU helps attribute a divergence to the runtime rather than to this config. Probes run one process per
 file, because a crash that kills the runtime is itself a finding.
 
-Note that `--gnu` currently execs Emacs immediately, so it cannot be combined with
-`--probe` to get a batch baseline in one command — that gap is tracked in `NEXT.md`.
+For the GNU batch baseline, use `NEOMACS_BIN=emacs ./bin/neomacs.sh --probe`; `--gnu` launches the interactive comparison profile and does not compose with `--probe`. Neomacs `--daemon` and `--kill` fail closed in the launcher; they are not working server operations.
 
-Upstream is followed but not petitioned — see `neomacs/README.md` for the current
-measurement table, known divergences, and the standing verdict.
+Current Neomacs validation and workarounds belong to [neomacs-config](https://github.com/junghan0611/neomacs-config) (ownership moved on 2026-09-27). This repo retains the builtin-only comparison profile and reproducible probes; [`neomacs/README.md`](neomacs/README.md) records historical measurements, not the current validation verdict.
 
 ## run.sh — Unified Management
 
@@ -453,7 +450,7 @@ measurement table, known divergences, and the standing verdict.
 ./run.sh pi tty                # Attach a new TTY client to the pi daemon
 ./run.sh export all            # Export all folders (incremental)
 ./run.sh export all --force    # Force re-export
-./run.sh unstable tty          # Emacs 31 channel — terminal mode
+./run.sh unstable tty          # Separate Doom profile — terminal mode
 ./run.sh verify                # Verify garden md ([1/4]~[4/4], read-only)
 ./run.sh fix                   # Fix garden md ([1/4]~[4/4], step-by-step y/N)
 ./run.sh fix-org               # Rewrite ~/org link patterns (dry-run + y/N + --apply)
@@ -564,18 +561,20 @@ ln -s ~/repos/gh/doomemacs-config ~/.doom.d
 ~/doomemacs/bin/doom sync
 ```
 
-### Shell Aliases
+### Suggested Shell Aliases
+
+These are optional examples, not a guarantee of aliases installed by this repo. Use the full commands above when following the instructions.
 
 ```bash
 # Daily use — daemon attach
 alias ecs='emacsclient -s user -t'             # Attach TTY client to GUI Emacs (user daemon)
 alias ep='~/.doom.d/run.sh pi tty'             # Attach TTY client to pi daemon (full Doom)
 alias es='~/.doom.d/run.sh agent restart'      # Restart agent RPC daemon (socket "server")
-alias eup='~/.doom.d/run.sh unstable run'      # Emacs 31 channel GUI
+alias eup='~/.doom.d/run.sh unstable run'      # Separate Doom profile GUI
 
 # Standalone (fallback)
 alias et='emacs -nw'                                # System stable Emacs terminal, no daemon
-alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs 31 channel terminal, no daemon
+alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Separate Doom profile terminal, no daemon
 ```
 
 **Typical session**: launch `doom run` once for the GUI, run `./run.sh pi start`, then open WezTerm tabs and type `ep` in each. All tabs share the same pi daemon — config edits, packages, native-comp eln cache, even open buffers are shared. Agent RPC runs in a separate `server` daemon so it never blocks the editor.
@@ -584,17 +583,18 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs 31 channel terminal,
 
 | Platform | Emacs | Terminal | Status |
 |----------|-------|----------|--------|
-| NixOS 25.11 | 31.1 (`emacs31-gtk3`, system default since 2026-09-02) | Ghostty / WezTerm | Primary |
+| NixOS 26.05 | 31.1 (`emacs31-gtk3`, system default since 2026-09-02) | Ghostty / WezTerm | Primary |
 | Termux (Android) | 30.x (nox) | Termux | Tested |
 
 ## Links
 
 - [Digital Garden](https://notes.junghanacs.com) — 2,200+ notes published from this setup
-- [Garden repo](https://github.com/junghan0611/garden) — Hugo source for the digital garden
+- [Garden repo](https://github.com/junghan0611/garden) — Quartz publication of the exported notes
 - [geworfen](https://github.com/junghan0611/geworfen) — org-agenda live at [agenda.junghanacs.com](https://agenda.junghanacs.com)
-- [agent-config](https://github.com/junghan0611/agent-config) — Pi agent harness (skills, delegation, memory)
+- [agent-config](https://github.com/junghan0611/agent-config) — Shared skills, identity, and working principles across harnesses
+- [Entwurf](https://github.com/junghan0611/entwurf) — Visible sibling lifecycle and garden-id delivery
 - [memex-kb](https://github.com/junghan0611/memex-kb) — Org-mode → any format conversion
-- [andenken](https://github.com/junghan0611/andenken) — Note hierarchy → semantic memory
+- [andenken](https://github.com/junghan0611/andenken) — Retrieval over conversations, public garden writing, and bot records
 - [nixos-config](https://github.com/junghan0611/nixos-config) — Reproducible system
 - [GLG-Mono](https://github.com/junghan0611/GLG-Mono) — Custom programming font
 
@@ -610,7 +610,7 @@ alias etu='~/.doom.d/bin/emacs-unstable.sh --nw'    # Emacs 31 channel terminal,
 - [Org Mode](https://orgmode.org/) — your life in plain text
 - [Doom Emacs](https://github.com/doomemacs/doomemacs) — Henrik Lissner's framework
 - [Protesilaos Stavrou](https://protesilaos.com/) — Denote, modus-themes, and a philosophy of computing
-- [Pi Coding Agent](https://shittycodingagent.ai/) — Daniel Nouri's coding agent harness
+- [Pi Coding Agent](https://pi.dev/) — the coding-agent runtime used by the Pi clients
 - [ghostel](https://github.com/dakra/ghostel) — dakra's terminal emulator inside Emacs (libghostty-based); the surface my pi / Claude Code TTY workflow runs on, and the project that finally made Korean IME inside terminal-Emacs feel solid. The Lisp-IME read-only compose fix landed upstream ([PR #510](https://github.com/dakra/ghostel/pull/510), shipped as the documented `ghostel-ime` extension), and this config now rides the official `:term ghostel` module — unpinned to track `main`, since ghostel iterates faster than Doom's package pin
 
 ## FAQ
@@ -634,7 +634,7 @@ Originally each tab launched its own standalone `emacs -nw`. The upside was a de
 
 Now a single full Doom daemon started by `./run.sh pi start` accepts attach from every terminal. A buffer opened in one tab is visible in another, and gptel sessions, the pi agent shell, and org-agenda are shared. Agent RPC runs in a separate `server` daemon so editing and agent traffic never block each other.
 
-Standalone `emacs -nw` is kept as a fallback (`et` alias) — useful when the daemon is down or an isolated environment is needed.
+Standalone `emacs -nw` is kept as a fallback (optional `et` alias above) — useful when the daemon is down or an isolated environment is needed.
 
 **Q: How does Korean input work in terminal Emacs over SSH?**
 
@@ -652,16 +652,11 @@ No OS IME inside Emacs. No NFD issues. Works identically over SSH + tmux. See `t
 
 **Q: How does clipboard work in terminal Emacs?**
 
-Emacs 29+ built-in `xterm.el` OSC 52 via `send-string-to-terminal` (not clipetty).
+[`tty-config.el`](lisp/tty-config.el) enables Emacs's built-in `xterm.el` OSC 52 selection path, not clipetty. Configuration is not proof of end-to-end clipboard delivery.
 
-| Scenario | Method |
-|----------|--------|
-| Local TTY Emacs → system clipboard | xterm.el OSC 52 (`gui-set-selection`) |
-| System clipboard → Emacs | xclip (Doom `tty` module) |
-| SSH+tmux → local clipboard (Emacs) | xterm.el OSC 52 + tmux `allow-passthrough on` |
-| SSH+tmux copy-mode (non-Emacs) | WezTerm copy mode (OSC 52 not supported over SSH — [known issue](https://github.com/wezterm/wezterm/issues/764)) |
+The recorded 2026-09-14 remote test found that an xclip selection override could clear the terminal's OSC 52 parameter even with `xclip-mode` disabled. Two attempted fixes were reverted. The current workaround for that SSH/tmux path is **tmux copy-mode**, which was observed to reach the local clipboard; the next unresolved probe is direct OSC 52 output from the Emacs pane's pty.
 
-WezTerm copy mode works everywhere. tmux's OSC 52 does not reach WezTerm over SSH — use WezTerm's built-in copy mode instead. Ghostty handles SSH OSC 52 natively.
+Local clipboard access depends on the active Doom TTY/xclip and terminal environment. Do not infer remote success from local success, or blame the terminal from an Emacs selection failure alone. `NEXT.md` records the measured boundary and the exact next probe; no clipboard behaviour was changed in this documentation update.
 
 **Q: Why block cursor in normal mode, bar in insert?**
 
@@ -669,7 +664,7 @@ DECSCUSR escape sequences in `tty-config.el` — 3 lines, no extra package. `evi
 
 **Q: 33 minutes for 2000 files? Really?**
 
-Full export runs 8 parallel Emacs daemons via Python ProcessPoolExecutor. Incremental (daily use) processes only changed files — typically seconds. The architecture trades single-run speed for composability: the same ox-hugo + Denote pipeline handles dblock updates, security filtering, and link conversion in one pass.
+That is a historical measurement with 8 parallel Emacs daemons via Python ProcessPoolExecutor, not a current performance guarantee. `run.sh` now defaults to 4 workers. Incremental export processes only changed files. The same ox-hugo + Denote pipeline handles dblock updates, security filtering, and link conversion in one pass.
 
 ## License
 
