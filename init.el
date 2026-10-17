@@ -150,7 +150,7 @@ nil if file missing.")
        (eval +overlay)     ; run code, run (also, repls)
        lookup
        llm                 ; when I said you needed friends, I didn't mean...
-       (lsp +eglot)        ; +peek
+       ;; (lsp +eglot)        ; +peek
 
        (magit +forge)      ; a git porcelain for Emacs
 
