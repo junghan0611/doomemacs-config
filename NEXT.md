@@ -3,11 +3,16 @@
 # RAIL — 현재 좌표
 
 - [x] **1. README 현대화·Opus 교차검토·홈페이지 원고 인계** — 결과는 CHANGELOG `v2026.10.16`
-- [ ] **2. CDLaTeX 적용 후 사람의 수식 입력 확인** ← CURRENT — 모듈 선언은 복원, 실제 입력은 미측정
+- [x] **2. 터미널 복사본 줄바꿈 복구 함수·집중 ERT 12개** (2026-10-26)
+- [ ] **3. `my/unwrap-region` 실사용 관찰** ← CURRENT — GLG가 샘플 동작 확인, 이후 실제 복사본에서 불편한 경우만 수집
 
-## NOW — 사람의 수식 입력과 운영 관찰 (2026-10-16)
+## NOW — 터미널 복사본 복구 (2026-10-26)
 
-- 다음: GLG가 `./run.sh sync` 후 Emacs 재시작 → Org에서 기호 입력·기존 TAB 동작을 실제로 확인. 이번 문서/릴리스 작업은 sync나 데몬 재시작을 실행하지 않았다.
+- 다음: GLG가 실제 복사본에서 계속 사용하며 확인한다. 필요하면 `lisp/functions.el`·`lisp/keybindings-config.el` 재로드 후 region 선택 → `M-\`` 또는 `M-x my/unwrap-region`. GLG의 Org/Markdown 바인딩은 보존하고 text-mode 부모 맵에도 normal/visual/insert 바인딩 추가(키바인딩 lint 4/4 PASS). URL 전체 공백 제거는 `C-u M-x my/unwrap-region`. 일반 모드는 줄 앞 들여쓰기·단일 줄바꿈만 제거하고 기존 공백·빈 줄·마지막 개행을 보존한다.
+- 근거/검증: `tests/test-unwrap-region.el` 집중 ERT 12/12 PASS, `./tests/run-tests.sh` 전체 122/122 PASS (2026-10-26 09:30 KST). region 밖 보존·한 번 undo·read-only·활성 region 필요·CRLF·한글·URL·단일 셸 명령 포함.
+- 경계: 문장 의미 추측/띄어쓰기 교정 아님. 이미 `fill`로 추가된 단어 사이 공백은 추측해서 지우지 않는다. 스크립트 전체가 아니라 끊어진 명령 하나씩 선택. 복구 함수는 명령 자동 실행이나 파일 저장을 하지 않는다.
+- 표시용 내장 wrap 실험: git-ignored `tmp/visual-wrap-demo.org` 생성. 좁은 창에서 `visual-line-mode`와 `visual-wrap-prefix-mode`를 수동 비교한다. GLG가 비교 후 상시 활성화하지 않기로 선택. 설정·패키지 변경 없음. 복구용 txt 샘플은 git-ignored `tmp/unwrap-region-demo.txt`.
+- 이전 CDLaTeX 후속: sync/재시작과 실제 입력 확인 여부는 별도이며 이번 작업에서 실행하지 않았다.
 - 홈페이지 소개는 담당 `20261016T103933-96efd0`에게 freeze 인계했다. `content/projects/doomemacs-config/index{,.ko}.md`의 이후 수정·검증·발행은 그쪽 소유다.
 - 홈페이지 gate #252 PASS는 담당자 보고 계승이며 실제 브라우저 시각 검수와 다르다. 홈페이지 커밋·푸시 보류를 이 리포 릴리스 승인으로 해제하지 않는다.
 - 아래 미해결 운영 관찰은 유지한다. 클립보드·Neomacs 과거 실측을 새 실측으로 바꾸지 않는다.

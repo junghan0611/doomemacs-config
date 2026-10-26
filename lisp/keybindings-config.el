@@ -365,6 +365,12 @@
 ;;         :inv "M-z" #'evil-collection-vterm-toggle-send-escape
 ;;         :inv "M-DEL" #'my/vterm-send-meta-backspace))
 
+;;;;; Text and derived modes
+
+(map! :after text-mode
+      :map text-mode-map
+      :nvi "M-`" #'my/unwrap-region)
+
 ;;;;; Markdown
 
 (after! evil-markdown
@@ -379,6 +385,7 @@
 (after! markdown-mode
   (map! :map markdown-mode-map
         :nvi "C-M-q" #'my/unfill-paragraph-or-region
+        :nvi "M-`" #'my/unwrap-region
         :localleader
         "y" #'my/yank-as-org
         "RET" #'toc-org-markdown-follow-thing-at-point
@@ -479,6 +486,7 @@
         "C-c I"   #'org-insert-link-dwim
         :nvi "C-c M-i" #'org-cliplink
         :nvi "C-M-q" #'my/unfill-paragraph-or-region
+        :nvi "M-`" #'my/unwrap-region
         )
 
   (map! :map org-mode-map

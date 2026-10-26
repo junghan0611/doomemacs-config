@@ -314,6 +314,60 @@ and if it is set to nil, then it would forcefully create the ID."
         (emacs-lisp-docstring-fill-column t))
     (fill-paragraph nil region)))
 
+;;;; Repair hard-wrapped terminal copies
+
+(defun my/unwrap-text (text &optional compact)
+  "Remove terminal-copy wrapping from TEXT without inferring word boundaries.
+By default, remove each line's leading spaces/tabs and join nonblank lines
+without inserting a separator.  Preserve explicit in-line/trailing spaces,
+blank lines and boundary newlines.  Normalize CRLF to LF.
+
+With COMPACT non-nil, remove all ASCII spaces, tabs, CRs and newlines;
+this is intended for a selected URL, not prose or shell commands.
+
+A missing word-boundary space cannot be recovered mechanically.  Likewise,
+this function cannot distinguish hard wraps from real script line breaks;
+select only one wrapped command, not a whole script.  Backslashes and other
+non-whitespace characters are never interpreted or removed."
+  (if compact
+      (replace-regexp-in-string "[ \t\r\n]+" "" text)
+    (with-temp-buffer
+      (insert (replace-regexp-in-string "\r\n" "\n" text t t))
+      (goto-char (point-min))
+      (while (re-search-forward "^[ \t]+" nil t)
+        (replace-match "" t t))
+      (goto-char (point-min))
+      (while (search-forward "\n" nil t)
+        ;; Keep paragraph separators and leading/trailing newlines intact.
+        (when (and (> (point) (1+ (point-min)))
+                   (not (eq (char-before (1- (point))) ?\n))
+                   (char-after)
+                   (not (eq (char-after) ?\n)))
+          (delete-char -1)))
+      (buffer-string))))
+
+(defun my/unwrap-region (beg end &optional compact)
+  "Repair hard-wrapped terminal text between BEG and END.
+Require an active region when called interactively.  Strip line indentation
+and join wrapped lines without adding spaces; preserve existing spaces and
+blank lines.  With a prefix argument COMPACT, remove ALL ASCII whitespace
+for a selected URL.  See `my/unwrap-text' for the information-loss limits.
+
+Select only pasted text (not its heading), or a single wrapped command.
+Do not run on a whole script: real newlines and indentation are significant.
+Undo restores the original region in one step."
+  (interactive
+   (progn
+     (unless (use-region-p)
+       (user-error "Select the pasted text to repair first"))
+     (list (region-beginning) (region-end) current-prefix-arg)))
+  (barf-if-buffer-read-only)
+  (let* ((original (buffer-substring-no-properties beg end))
+         (repaired (my/unwrap-text original compact)))
+    (unless (equal original repaired)
+      (atomic-change-group
+        (replace-region-contents beg end (lambda () repaired))))))
+
 ;;; Dired
 
 ;;;###autoload
