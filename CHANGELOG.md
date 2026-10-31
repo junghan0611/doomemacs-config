@@ -6,6 +6,32 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.10.31 — EKG question workbench and OpenClaw reading
+
+### Added
+
+- **Standalone EKG 0.9.2 with VUI 1.0.0**, pinned as a compatible pair, using a fresh `~/org/ekg/ekg-2026.sqlite`. The old database is untouched; no garden migration, embeddings, LLMs, or automatic Denote export were enabled. Inline tags use brackets: `#[과학] #[무엇]인가`. Tags remain separate clues combined with AND, not a merged sentence tag or an automatic synonym map.
+- **Three headless agent-server read doors:** `agent-ekg-notes` for exact AND/date-tag listings, `agent-ekg-read` for a typed ID's raw text, and `agent-ekg-tags` for visible/hidden text-note counts. Keyword-plist replies distinguish failures from empty searches, carry provenance and paging, and preserve upstream hidden-note rules. Each call closes its own handle without closing the caller's. No door edits notes/tags, evaluates inlines, or fetches resources.
+- **Terminal-copy repair with M-backtick** in text, Org and Markdown: normal mode joins hard wraps without inventing spaces; prefix mode removes ASCII whitespace for URLs. Paragraphs, region boundaries and one-step undo are preserved. Existing word-boundary unfill remains available separately.
+
+### Fixed
+
+- **EKG list/edit compatibility and cancellation:** VUI 1.4 removed keyword-property colons required by EKG 0.9.2. The compatible pin restored list actions; Evil maps target real commands, and closing an existing edit buffer confirms unsaved changes rather than calling a nonexistent abort command.
+- **Recovery copies and fresh-store indexes:** every-change backups keep 30 local numbered copies outside Syncthing, verify a newly created copy with read-only `quick_check`, and support backup-before-close handoff. A bounded connection acceptance check restores four indexes lost by the installed triples rebuild; no vendor source was patched. Backup errors can occur after a note was saved.
+- **Reader contract gaps found in cross-review:** listings and counts now use the same text-note set as explicit reads, and failure provenance cannot replace the original classified error.
+
+### Changed
+
+- **The LSP/Eglot Doom module was disabled** in `init.el`.
+- **OpenClaw routing was aligned with the actual container socket.** The companion Emacs skill shipped in [agent-config `61ea588`](https://github.com/junghan0611/agent-config/commit/61ea5889585fec843b8a007d10e537aaf904c35b) preserves `PI_EMACS_AGENT_SOCKET` (including `/run/emacs/server`), rejects named `pi`/`user`, and verifies server identity/API before reading. Native `emacs_eval` is conditional; existing exec/client capability is sufficient. This config tag does not package that separate skill repo. The earlier forced-`server` alias test criterion was retired after container evidence exposed its limit.
+
+### Verification and operating boundary
+
+- **144/144 vanilla ERT passed**, along with the new installed-package reader fixture and the existing EKG list/edit/backup/restore fixture. Tests covered AND/date tags, typed IDs, hidden notes, counts, paging, missing-store non-creation, handle isolation, error classification, and execution of the shipping server load form. Oracle's coordinator independently reported the same ERT/reader fixture success on Emacs 31.1.
+- **Companion-skill routing passed 84 shell cases and 480 generated-guard cases** in an isolated, network-denied fixture. Oracle's coordinator reported matching host/container skill bytes and success running the document's exact helper with the absolute socket. These checks are distinct from a bot tool trace.
+- **Oracle live acceptance:** its coordinator reported authorized host/container date/AND/raw-note/tag queries and closed connections after GLG closed the competing EKG instance. GLG then supplied the actual care bot's successful AND-query and text-based summary reply, reporting the absolute-socket correction without a restart. The bot reply was user-provided evidence; its native tool trace/argv was not independently inspected. See [#12](https://github.com/junghan0611/doomemacs-config/issues/12).
+- **Read API is not immutable SQLite or a daemon sandbox.** On the measured EKG 0.9.2/triples fixture, the first official connection in a fresh process increased SQLite's change counter by 5 with identical triples; later connects in that process changed it by 0. Re-measure on upgrade. Syncthing remains transport, not SQLite replication: preserve single-instance ownership, verified backup/close, and completed synchronization before handoff. Missing-store/header checks and equal rows do not prove concurrent-sync safety. Install the pinned packages with Doom sync and restart the relevant Emacs before use.
+
 ## v2026.10.16 — The shared editing house, Entwurf, and CDLaTeX
 
 ### Added

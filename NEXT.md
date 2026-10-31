@@ -2,34 +2,25 @@
 
 # RAIL — 현재 좌표
 
-- [x] **1. EKG 0.9.2/VUI 1.0.0·백업·편집 수선 검증** — `512a065`, GLG 실사용 시작
-- [x] **2. 태그 조합·공식 라이브러리·기존 RPC 방향 확정** — [#12](https://github.com/junghan0611/doomemacs-config/issues/12)
-- [x] **3. agent-server 조회 API·Emacs 스킬 로컬 검수** — ERT144/144·양쪽 Tier C·스킬 인자/소켓 검사 PASS
-- [ ] **4. Oracle/OpenClaw 호출 수락** ← CURRENT — 두 리포의 검수된 커밋을 인계하고 해당 호스트에서 별도 검증
+- [x] **1. EKG 복원·조회 API·교차검수** — CHANGELOG `v2026.10.31`
+- [x] **2. Oracle 반영·실제 돌봄 봇 수락** — [#12](https://github.com/junghan0611/doomemacs-config/issues/12), companion skill `61ea588`
+- [ ] **3. 실사용 관찰·후속 선택** ← CURRENT — 새 구현 없이 다음 GLG 요청 대기
 
-## NOW — #12 검수 완료 → 두 리포 푸시·Oracle 수락 (2026-10-31)
+## NOW — 실사용 관찰 (2026-10-31)
 
-- **분담(재개 후 GLG 직접 요청):** 기존 Opus `20261016T105425-9b43e7`에게 구현/테스트/README 실무를 인계했다(라이브 receiver 확인, 18:23 Opus 5.5 자기보고·착수 회신 수신). 이 세션은 계약·교차검토·Oracle 코디 `20261031T181350-fd0635`와 조율한다. 양쪽 remote-pair 설정과 실제 왕복 전달을 확인했다. route는 이 세션↔Oracle 코디뿐이므로 실무 체크포인트는 이 세션이 코디에게 중계한다. GLG가 18:48 두 리포의 검수 범위 커밋·푸시를 직접 승인했다. 개인 DB 개방·상주 서비스 재시작은 별도 수락 단계다.
+- **다음 한 수:** 새 구현 요청 전에는 실사용을 지켜본다. 문제가 생기면 발생 시각·실제 client/socket·최소 호출·분류 오류부터 회수하고, 데몬 종료/모델 문제로 먼저 단정하지 않는다. 기존 미완료 운영 관찰은 아래 대장에 보존했다.
+- **읽을 곳:** README EKG 절, `lisp/ekg-config.el`, `lisp/ekg-agent-read.el`, `bin/agent-server.el`의 공개 함수 docstring. 완료한 구현·검증·현장 수락은 CHANGELOG `v2026.10.31`과 #12로 승격했다.
+- **유지할 경계:** `과학` + `무엇`의 AND 조합, 공식 EKG/triples와 기존 RPC 사용. 한영 meta 관계는 자동 동의어 병합이 아니다. 봇 쓰기/새 DB/자동 태그 수정·번역/임베딩은 별도 결정 전 구현하지 않는다. 조회 연결도 관리 쓰기가 있으므로 Syncthing은 단일 소유·백업/close/sync 절차를 지킨다.
+- **연결:** Oracle 코디 `20261031T181350-fd0635`와 이 세션 `20261016T104939-5320fa`의 remote-pair는 양쪽 설정·왕복 확인 완료. 교차리포 skill 소유자는 agent-config 코디 `20261007T104525-12d0ca`; Oracle 문제는 기존 코디 경유로 조율한다. 다른 서비스/DB를 병렬 조작하지 않는다.
+- **보호:** `tmp/ekg-review/` 비공개 조사 사본과 실제 노트 본문/ID는 stage/공개하지 않는다.
 
-- **확정:** `과학` + `무엇` 같은 태그의 AND 조합. `과학이란무엇인가` 한 태그로 합치는 선택지는 미결이 아니라 채택하지 않은 방향이다. 한영 연결도 meta의 관계를 살리며 자동 동의어 병합으로 바꾸지 않는다.
-- **구현 자리:** `bin/agent-server.el`의 `agent-ekg-*`. 소비자는 Oracle/OpenClaw의 돌봄 봇. EKG/triples 공식 라이브러리를 활용하고 기존 Emacs 스킬에 호출법을 추가한다. `workflow-shared.el`, 별도 CLI, denotecli는 변경하지 않는다.
-- **스킬 포함 수락(18:35 GLG 직접 요청):** 로컬 코드·검증·Emacs 스킬을 함께 검수/수정한 뒤 Oracle 코디에게 보낸다. agent-config 코디 `20261007T104525-12d0ca`가 `skills/emacs`를 수정했고 독립 대조·격리 fixture 재실행도 PASS: 문서 명령의 소켓/argv 16건·실제 wrapper의 Lisp 인자 5건, API표 연속성(`/tmp/doom-review-emacs-skill.log`). 실제 RPC/EKG connect/개인DB open은 0. 스킬 SHA `995d6b7be5b85316cca6199a6748715c0613619a582732ef8c7770c6d105c7d4`. Oracle 서비스 restart는 파일/증거 인계와 구분한다. shipping server의 실제 reader load form + wrapper 3개를 깨끗한 batch에서 실행한 seam 검사는 PASS(`/tmp/ekg-agent-load-seam-review.log`); 전체 daemon boot 수락을 대신하지 않는다. 이후 GLG가 로컬 agent-server를 재시작했고 실제 `server`에서 reader feature와 공개 함수 3개의 fboundp=t를 직접 확인했다. EKG package feature는 nil이며 이 확인은 개인 DB를 열지 않았다. Oracle의 daemon/OpenClaw 수락과는 별개다.
-- **코드 독립 검수 완료(18:38):** Opus가 두 간극을 수선: 목록/count/hidden-count를 text-note 집합으로 통일, 실패 중 provenance 오류는 원래 분류를 보존. 코드 6파일 sha256 전후 불변(`/tmp/ekg-final-review-files.sha256`), 전체 ERT144/144(`/tmp/ekg-agent-final-review-ert.log`), 새 Tier C 실제 server load form 포함 PASS(`/tmp/ekg-agent-final-review-integration.log`, root `/tmp/ekg-agent-it-WOiRnq`), 기존 Tier C PASS(`/tmp/ekg-agent-final-review-prior.log`, root `/tmp/ekg-integration-BXAjcF`). stat오류 stub의 정확한 회귀도 직접 PASS. Oracle 코디에게 결정적 출력을 전달했다. 스킬까지 로컬 검수를 마쳤으며 실제 Oracle 수락은 남았다.
-- **다음:** 두 리포의 pushed SHA와 시험 명령·관측 한계를 Oracle 코디에게 인계한다. Oracle은 active checkout/변경 상태와 pin·SQLite·스킬 mount를 확인한 뒤 임시 DB 검사를 재현하고, 실제 daemon/OpenClaw 수락은 승인 범위를 맞춰 진행한다. 세부 범위는 [#12](https://github.com/junghan0611/doomemacs-config/issues/12).
-- **경계:** 지금은 노트/태그 편집 API를 제공하지 않는 조회 단계다. daemon 전체 쓰기 차단, 독자 저장형식 파서, 자동 오타 수정·번역·태그 추가, 새 봇 DB 생성은 하지 않는다. 연결의 정상 관리 부수효과까지 파일 불변이라고 약속하지 않는다. 없는 DB는 새로 만들지 말고 오류로 보고하고, 호출 후 연결을 닫는다.
-- **배포 수락:** Oracle의 EKG/VUI pin·SQLite 지원·동기화 DB 경로·기존 OpenClaw socket 호출을 현장에서 확인한다. API·스킬은 로컬 검수 완료이며, 새 API의 Oracle 배포·상주 daemon/OpenClaw 수락은 아직 하지 않았다. 기존 EKG 동기화/표시는 Oracle 코디가 18:23 전달한 GLG 직접 보고로 확인: Oracle doom sync -u 후 today 노트와 노트북 수정 내용이 보임(이 세션/코디의 직접 측정은 아님). 이는 새 API 배포/restart 승인이 아니다.
+## RECENT
 
-## RECENT — 재도출하지 않을 근거
+- `v2026.10.31`: EKG 복원 `512a065`, 조회 API `cd7ca7d`, 외부 companion skill `61ea588`까지 로컬 검수·Oracle 반영. 19:13 Oracle 코디가 GLG 제공 실제 봇의 절대 소켓·AND 조회·원문 기반 응답 성공을 전달했다. 이는 사용자 제공 봇 응답이며 native tool trace/argv 독립 열람은 아니다. 검증 범위와 폐기된 host-alias oracle는 CHANGELOG/#12에 기록했다.
 
-- EKG 기준 커밋 `512a065`: `lisp/ekg-config.el`, README EKG 절, `tests/test-ekg-config.el`, opt-in `tests/ekg-integration.el`. 2026-10-31 checkpoint에서 전체 ERT 135/135와 설치 패키지의 태그·목록/편집·취소·35회 저장·30사본·복원 일치 검사 PASS. 핵심 수선과 폐기 조건은 해당 코드/README에 둔다.
-- GLG 실사용 시작. 옛 DB 연동·가든 이행·임베딩/LLM/agent/agenda·Denote export는 활성화하지 않았다. 표시용 wrap은 상시 사용하지 않기로 했고 복사본 복구 샘플은 `tmp/`에만 있다.
-- 새 조회 API 실무는 Opus `20261016T105425-9b43e7`, 초기 EKG 복원·계약·독립 검수·통합 인계는 이 세션 `20261016T104939-5320fa`. 이슈는 GLG의 최종 결정을 담은 재개점이다. `tmp/ekg-review/`의 비공개 원문·조사 사본은 stage/공개하지 않는다.
+## 이전 작업 — 유지할 관찰·소유 경계
 
-## 이전 작업 — 터미널 복사본 복구 (2026-10-26)
-
-- 다음: GLG가 실제 복사본에서 계속 사용하며 확인한다. 필요하면 `lisp/functions.el`·`lisp/keybindings-config.el` 재로드 후 region 선택 → `M-\`` 또는 `M-x my/unwrap-region`. GLG의 Org/Markdown 바인딩은 보존하고 text-mode 부모 맵에도 normal/visual/insert 바인딩 추가(키바인딩 lint 4/4 PASS). URL 전체 공백 제거는 `C-u M-x my/unwrap-region`. 일반 모드는 줄 앞 들여쓰기·단일 줄바꿈만 제거하고 기존 공백·빈 줄·마지막 개행을 보존한다.
-- 근거/검증: `tests/test-unwrap-region.el` 집중 ERT 12/12 PASS, `./tests/run-tests.sh` 전체 122/122 PASS (2026-10-26 09:30 KST). region 밖 보존·한 번 undo·read-only·활성 region 필요·CRLF·한글·URL·단일 셸 명령 포함.
-- 경계: 문장 의미 추측/띄어쓰기 교정 아님. 이미 `fill`로 추가된 단어 사이 공백은 추측해서 지우지 않는다. 스크립트 전체가 아니라 끊어진 명령 하나씩 선택. 복구 함수는 명령 자동 실행이나 파일 저장을 하지 않는다.
+완료한 터미널 복사본 복구는 CHANGELOG `v2026.10.31`로 승격했다. 아래 별도 실험·소유 경계와 미완료 관찰은 보존한다.
 - 표시용 내장 wrap 실험: git-ignored `tmp/visual-wrap-demo.org` 생성. 좁은 창에서 `visual-line-mode`와 `visual-wrap-prefix-mode`를 수동 비교한다. GLG가 비교 후 상시 활성화하지 않기로 선택. 설정·패키지 변경 없음. 복구용 txt 샘플은 git-ignored `tmp/unwrap-region-demo.txt`.
 - 이전 CDLaTeX 후속: sync/재시작과 실제 입력 확인 여부는 별도이며 이번 작업에서 실행하지 않았다.
 - 홈페이지 소개는 담당 `20261016T103933-96efd0`에게 freeze 인계했다. `content/projects/doomemacs-config/index{,.ko}.md`의 이후 수정·검증·발행은 그쪽 소유다.
@@ -42,7 +33,7 @@
 > 일정은 의미 없다. 적은 만큼 할 수 있는 만큼만 — 진행은 진행된다.
 
 운영 baseline은 [AGENTS.md](AGENTS.md). 후속 작업 / 미완 검증은 여기에.
-현재 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.10.16`.
+현재 컷: [CHANGELOG.md](CHANGELOG.md) `v2026.10.31`.
 
 > 문서 언어: 배포 문서(`AGENTS.md` / `README.md` / `CHANGELOG.md` 새 항목)는 **영어**.
 > 공개 리포라서다 (GLG, 2026-08-11). 이 NEXT는 내부 핸드오프라 한국어 유지.
