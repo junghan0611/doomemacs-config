@@ -2,27 +2,24 @@
 
 # RAIL — 현재 좌표
 
-- [x] **1. README 현대화·Opus 교차검토·홈페이지 원고 인계** — 결과는 CHANGELOG `v2026.10.16`
-- [x] **2. 터미널 복사본 줄바꿈 복구 함수·집중 ERT 12개** (2026-10-26)
-- [x] **3. EKG 현행 코드·옛 설정·한영 meta 연결 조사** (2026-10-31)
-- [x] **4. EKG 0.9.2/VUI 1.0.0·백업·편집 수선 검증** — GLG 실사용 시작, 실제 양기기 전환은 미측정
-- [ ] **5. 에이전트용 EKG 읽기 전용 인터페이스 논의** ← CURRENT — Opus와 소유권·무쓰기 계약 비교, 구현은 별도
+- [x] **1. EKG 0.9.2/VUI 1.0.0·백업·편집 수선 검증** — `512a065`, GLG 실사용 시작
+- [x] **2. 태그 조합·공식 라이브러리·기존 RPC 방향 확정** — [#12](https://github.com/junghan0611/doomemacs-config/issues/12)
+- [ ] **3. agent-server의 EKG 조회 API** ← CURRENT — 돌아와서 임시 DB의 AND 조회부터
+- [ ] **4. Oracle/OpenClaw 호출 수락** — API 구현 후 해당 호스트에서 별도 검증
 
-## NOW — EKG와 읽기 전용 공유 접점 (2026-10-31)
+## NOW — 돌아와서 #12부터 (2026-10-31)
 
-- GLG 요청 순서: 지금 EKG 작업을 먼저 로컬 커밋(푸시 요청 없음) → Opus와 readonly 인터페이스 논의. 필요한 조회는 `date/2026-10-31` 같은 날짜 태그별 노트, 개별 노트, 태그 목록. 오타·누락 후보를 말할 수 있어야 하지만 태그 편집/추가는 지금 범위 밖이다.
-- 비교할 안: denotecli 확장 vs 별도 얇은 EKG CLI/스킬 vs 이미 열린 Emacs의 읽기 API. EKG/triples의 connect는 스키마 설정·업그레이드·백업 쓰기를 수행하므로 이름이 get/query여도 readonly 증거가 아니다. 안전한 원본/사본 선택과 일관성·최신성 계약부터 논의한다. 아직 읽기 인터페이스 구현·개인DB 외부 연결은 하지 않는다.
+- **확정:** `과학` + `무엇` 같은 태그의 AND 조합. `과학이란무엇인가` 한 태그로 합치는 선택지는 미결이 아니라 채택하지 않은 방향이다. 한영 연결도 meta의 관계를 살리며 자동 동의어 병합으로 바꾸지 않는다.
+- **구현 자리:** `bin/agent-server.el`의 `agent-ekg-*`. 소비자는 Oracle/OpenClaw의 돌봄 봇. EKG/triples 공식 라이브러리를 활용하고 기존 Emacs 스킬에 호출법을 추가한다. `workflow-shared.el`, 별도 CLI, denotecli는 변경하지 않는다.
+- **첫 측정:** 임시 DB에 `과학`만/`무엇`만/둘 다 가진 노트를 만들고 AND 조회 → 날짜 태그 조회 → typed ID 원문 → 태그별 빈도를 고정한다. 구현 범위·API 초안·수락 기준은 [#12](https://github.com/junghan0611/doomemacs-config/issues/12).
+- **경계:** 지금은 노트/태그 편집 API를 제공하지 않는 조회 단계다. daemon 전체 쓰기 차단, 독자 저장형식 파서, 자동 오타 수정·번역·태그 추가, 새 봇 DB 생성은 하지 않는다. 연결의 정상 관리 부수효과까지 파일 불변이라고 약속하지 않는다. 없는 DB는 새로 만들지 말고 오류로 보고하고, 호출 후 연결을 닫는다.
+- **배포 수락:** Oracle의 EKG/VUI pin·SQLite 지원·동기화 DB 경로·기존 OpenClaw socket 호출을 현장에서 확인한다. 아직 API/스킬은 미구현, Oracle 배포·실제 양기기 전환은 미검증이다.
 
-- GLG 목적: 같은 질문 아래 책별 관점과 자기 이해를 모으는 배움. 가든 이행·일괄 태그 변경·온톨로지 구축으로 확대하지 않는다. workspace-glgdot#3 본문·댓글과 댓글이 가리킨 대화의 사용자 원문을 읽음; 비공개 본문을 공개 문서로 전재하지 않는다.
-- 확인: upstream latest release `0.9.2`, main `84c9d9a9685f07b6988a618f11920ca063474fc8`. develop `fc62197ec994bb13225044c8066f9d2f1cc12e1e`의 0.10 기능을 발행 버전 기능으로 말하지 않는다. 읽은 소스는 git-ignored `tmp/ekg-review/`(비공개 원문도 포함, stage 금지).
-- GLG 승인: 옛 DB 사용 없이 0.9.2, `lisp/ekg-config.el`로 분리. 구현: `~/org/ekg/ekg-2026.sqlite`, 매변경30개 로컬백업(`${XDG_STATE_HOME:-~/.local/state}/ekg/backups/`), 새 사본 존재/quick_check 확인, `my/ekg-close-for-sync`. 실제 새 개인DB는 아직 안 열었고 옛 DB도 안 열었다. LLM·임베딩·agent·org-agenda·Denote export는 비활성.
-- 16:14 수정: `ekg-edit-abort`는 0.9.2에 없음. 기존노트 C-c C-k를 native `kill-current-buffer`로 교정하고 `ekg-confirm-on-buffer-kill=t` 설정, 현재 user Emacs에도 적용. installed probe에 모든 EKG 바인딩의 commandp 검증과 실제 edit→미저장수정→확인후취소→DBnote동일 검증 추가 PASS(`/tmp/doom-ekg-cancel-green.log`, `/tmp/ekg-integration-Q3H4sQ`). 저장한수정의rollback은아님.
-- 다음: GLG Emacs 재시작 후 기존 오늘 노트 목록에서 `RET`/`o` 또는 `M-x ekg-notes-open` 재확인. EKG 전용 Evil 맵 추가: 목록 j/k·RET/o·c·r·t, capture/edit의 C-c C-c/C-k와 C-c /를 n/v/i에 명시. 사용자 Emacs에 해당 블록만 평가해 auxiliary 맵 9항목 실측 일치, lint 4/4 PASS(16:10 KST). 같은 시각 runtime vui-text는 여전히 plain ekg-note-id를 만들어 구 VUI가 로드된 상태. 키만 적용해도 호환 문제는 남으므로 완전 재시작 필요. 첫 실제capture는저장됐으나 VUI1.4가 keyword콜론을제거해 :ekg-note-id가목록전체nil이고plain ekg-note-id만존재(live user버퍼읽기전용측정) → EKG0.9.2/VUI1.0.0(67c508c...) dependency쌍고정, sync#1070 종료0(11초)·EKG/VUI 재빌드 완료. 실제렌더→편집대상검사추가: 이전1.4RED(`/tmp/doom-ekg-ui-red.log`), 1.0GREEN(`/tmp/doom-ekg-ui-green.log`, root `/tmp/ekg-integration-f6mbaY`). 사용자UI재시작은에이전트가하지않음. GLG 첫 capture 사용 시작(10-31). 일반 `#과학`이 안 잡힌 것은 한글 제한이 아니라 0.9.2의 `#[과학]` 문법. bare 한/영 모두미검출, bracket한/영 모두검출을 개인DB안열고 재현. README/installed probe에 반영. `#[과학] #[무엇]인가`로 저장 후 태그뷰 확인. Doom sync #715 종료0(14초), 최종 전체 ERT135/135 PASS(`/tmp/doom-ekg-final-ert.log`, 2026-10-31 15:36 KST). 두 기기 모두 같은 설정·패키지를 적용하고, 모든 EKG 세션 닫기→양쪽 Syncthing 완료→반대편 열기. 실제 동기화/GUI는 미측정, 커밋·푸시 요청 없음.
-- 직접 검증: EKG ERT13/13 포함 전체135/135 PASS. installed EKG0.9.2+triplesabc1842 임시DB의 첫upgrade는4index를 잃음(이름충돌, Opus 독립진단). 사용자쓰기전에도schema duplicates가 있어1reopen 불충분→최대2reopen뒤4index수렴을 실측. connect advice는 읽기검사·유한reopen·불수렴close/error뿐이며 벤더패치0, 삭제조건docstring. 최종 `tests/ekg-integration.el`: 4index수락/35writes/일반백업30개/모든quick_check/forcedbackup후close/복사본restore시 전체note동일+4index PASS(`/tmp/doom-ekg-integration-final.log`, root `/tmp/ekg-integration-PJu26u`).
-- 공유: GLG의 직접 요청으로 기존 Opus `20261016T105425-9b43e7`에게 오늘 화두·원문 위치·제안과 구현 경계를 전송(06:27:35Z enqueue). owner peer-facts의 exact cwd 유일 active CC였고 신규 `20261031T152535-9b740e`는 receiver=none. Opus5.5·동일기존동료 자기보고/화두논의역할 수신(15:30KST), 원문·첨부모두읽음 및 실제책heading근거 전달받음. 나는 구현, Opus는 GLG와 논의할 동료. 그에게 파일 동시 편집은 요청하지 않음. 인덱스관문 최종read-only검토 수신(15:38KST), blocker없음. 권장반영: 폐기조건은 fresh뿐 아니라upgrade/automatic-recovery의rebuild양쪽4index보존 검증. live `ekg-force-upgrade` 금지·사본에서점검 경계README/docstring에 추가.
-- 근거: release `ekg-capture-file`은 `file-truename` 경로를 resource ID로 삼는 별도 메모이며 원문을 가져오지 않는다(파일 rename 추적은 별도 문제). `ekg--normalize-tag`는 소문자·쉼표 제거·trim뿐. 조사한 코어/매뉴얼에서 한영 별칭 시스템 확인 안 됨. `ekg-denote`는 export이며 기존 파일 rename/write 경로가 있으므로 자동 활성화하지 않는다. 옛 `my-ekg-denote.el`의 함수 덮어쓰기도 복사하지 않는다.
-- 어휘: denotecli keyword-map 과학 → science(meta `20250424T232904`), 무엇 → 육하원칙 묶음(meta `20240925T114242`). meta의 다대다 연결을 전부 동의어로 취급하지 않는다. dictcli expand 무엇은 현재 `[thatthing,whatever]`이므로 what/meaning/questions 자동 확정 근거가 아님. 한글 입력을 보존하고 meta를 읽어 후보 표시/검색 확장하는 얇은 접점을 우선 검토.
-- 기억 조회: garden axis 2회(`한글 영어 태그 메타노트 ekg`, `EKG 태그 우선 무제목 조각`)에서 `20240220T091923`·`20240213T144401` 회수, 원문 확인. 이는 과거 관심 근거이며 이번 EKG 재사용 결정으로 소급하지 않는다.
+## RECENT — 재도출하지 않을 근거
+
+- EKG 기준 커밋 `512a065`: `lisp/ekg-config.el`, README EKG 절, `tests/test-ekg-config.el`, opt-in `tests/ekg-integration.el`. 2026-10-31 checkpoint에서 전체 ERT 135/135와 설치 패키지의 태그·목록/편집·취소·35회 저장·30사본·복원 일치 검사 PASS. 핵심 수선과 폐기 조건은 해당 코드/README에 둔다.
+- GLG 실사용 시작. 옛 DB 연동·가든 이행·임베딩/LLM/agent/agenda·Denote export는 활성화하지 않았다. 표시용 wrap은 상시 사용하지 않기로 했고 복사본 복구 샘플은 `tmp/`에만 있다.
+- 논의·검토 동료는 Opus `20261016T105425-9b43e7`, 구현·인계는 이 세션 `20261016T104939-5320fa`. 이슈는 GLG의 최종 결정을 담은 재개점이다. `tmp/ekg-review/`의 비공개 원문·조사 사본은 stage/공개하지 않는다.
 
 ## 이전 작업 — 터미널 복사본 복구 (2026-10-26)
 
