@@ -1358,6 +1358,79 @@ DESCRIPTION is the link text.  Returns OK/ERROR string."
                     (kill-buffer buf))))
             (error (format "ERROR: %s — %s" id (error-message-string err)))))))))
 
+;;;; EKG Read API
+;; Issue #12: the Oracle care bots read GLG's EKG notes here.  Tags combine
+;; as clues — `(agent-ekg-notes '("과학" "무엇"))' returns notes carrying both.
+;; Logic lives in lisp/ekg-agent-read.el; these are the stable doors.  No
+;; door here saves, tags, or deletes a note.
+
+(let ((reader (expand-file-name "lisp/ekg-agent-read.el" doom-user-dir)))
+  (when (file-exists-p reader)
+    (load reader nil t)))
+
+(defun agent-ekg-notes (tags &optional limit offset)
+  "Return EKG notes carrying every tag in TAGS, newest first.
+TAGS is a tag string or a list of them, matched exactly and combined
+with AND: '(\"과학\" \"무엇\").  A day's notes are its date tag:
+\"date/2026-10-31\" — the tag EKG adds at capture, not the creation time.
+
+Only text notes are listed — exactly the ids `agent-ekg-read' accepts;
+a tagged subject that never had text is left out.  Notes tagged with
+any of `:hidden-tags' (EKG's trash and draft) are left out unless that
+hidden tag is itself requested — EKG's own rule.
+LIMIT is 1..100 (default 20), OFFSET is >= 0 (default 0); anything else
+is an `invalid-argument' failure, never silently clamped.  Order is
+creation time descending, ties by printed id.  `:total' counts every
+match, not just this page.  Each entry has :id :tags :created :modified,
+a raw-text :preview, and the full :length; use `agent-ekg-read' for the
+whole text.
+
+Returns (:ok t :tags :match :total :limit :offset :notes :source).
+An empty result is (:ok t :total 0 :notes nil).  A failure is
+\(:ok nil :error KIND :message M :source S) where KIND is one of
+store-missing, store-invalid, package-unavailable, invalid-argument,
+read-failed.  `:source' names the DB, host, file mtime/size, read time,
+EKG version and the hidden tags — freshness of this host's copy, not
+proof that Syncthing has finished.
+
+Usage:
+  emacsclient -s server --eval '(agent-ekg-notes \"date/2026-10-31\")'
+  emacsclient -s server --eval '(agent-ekg-notes (list \"과학\" \"무엇\") 10 0)'"
+  (my/ekg-agent-notes tags limit offset))
+
+(defun agent-ekg-read (id)
+  "Return the EKG note with ID exactly as stored.
+ID keeps its type: an integer note id and a string id (EKG uses URLs
+and file paths as ids) are different, and \"4242\" never means 4242.
+The :text is the raw saved text; inline commands are not run and no
+resource is fetched.  A note hidden from listings (trash, draft) is
+still returned for an explicit id, with :hidden t.
+
+Returns (:ok t :note (:id :text :mode :tags :created :modified :hidden
+:inline-count) :source).  Failures as in `agent-ekg-notes', plus
+not-found (no such subject) and not-a-note (the id names something
+else, such as a tag).
+
+Usage:
+  emacsclient -s server --eval '(agent-ekg-read 4242)'"
+  (my/ekg-agent-read id))
+
+(defun agent-ekg-tags (&optional limit offset)
+  "Return EKG content tags with their note counts, most used first.
+The hidden tags themselves (trash, draft) are not listed.  :count is
+the number of text notes `agent-ekg-notes' returns for that one tag;
+:hidden-count is how many more carry it but are hidden.  Ties sort by
+tag.  LIMIT is 1..500 (default 100), OFFSET >= 0; `:total' counts all
+tags.  This is material for spotting typos or gaps with GLG, not a
+corrector: Korean, coined, and question-form tags are all valid.
+
+Returns (:ok t :total :limit :offset :count-rule :tags ((:tag :count
+:hidden-count) ...) :source).  Failures as in `agent-ekg-notes'.
+
+Usage:
+  emacsclient -s server --eval '(agent-ekg-tags)'"
+  (my/ekg-agent-tags limit offset))
+
 ;;;; Memory Management
 
 (setq gc-cons-threshold (* 128 1024 1024)) ; 128MB — lighter than export server

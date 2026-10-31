@@ -283,6 +283,24 @@ The final probe passed Korean/English inline-tag recognition, four-index accepta
 
 `tests/test-ekg-config.el` covers failure signalling, local routing, SQLite readback, and handoff ordering without touching personal data. The opt-in `tests/ekg-integration.el` exercises the installed EKG/triples packages against temporary databases; supply their installed directories on `load-path` and run it separately from the vanilla ERT suite.
 
+### Agent read API — `agent-ekg-*`
+
+The care bots read GLG's EKG notes through the agent RPC daemon ([#12](https://github.com/junghan0611/doomemacs-config/issues/12)). Tags are clues that combine: `(agent-ekg-notes '("과학" "무엇"))` returns the notes carrying both. A day is its date tag, `"date/2026-10-31"`, as EKG adds it at capture.
+
+| Door | Returns |
+|---|---|
+| `(agent-ekg-notes TAGS &optional LIMIT OFFSET)` | Text notes with every tag (AND), newest first, ties by id — only ids `agent-ekg-read` accepts. LIMIT 1..100 (default 20); `:total` counts all matches. Each entry carries a 200-character raw `:preview` and `:length`. |
+| `(agent-ekg-read ID)` | One note's raw stored text, tags and times. ID keeps its type: `4242` and `"4242"` differ. Inline commands are not run, resources not fetched. Hidden notes are returned with `:hidden t`. |
+| `(agent-ekg-tags &optional LIMIT OFFSET)` | Content tags with `:count` (what `agent-ekg-notes` returns for that one tag) and `:hidden-count`. Material for spotting typos with GLG, not a corrector. |
+
+All three return a plist: `(:ok t … :source …)`, or `(:ok nil :error KIND :message …)` with KIND `store-missing`, `store-invalid`, `package-unavailable`, `invalid-argument`, `not-found`, `not-a-note`, or `read-failed`. An empty search is `(:ok t :total 0 :notes nil)`, never an error. Hidden notes (EKG's `trash`/`draft`) follow EKG's own rule: left out of listings unless that tag is requested. `:source` gives the DB path, host, file mtime/size and read time — freshness of this host's copy, not proof that Syncthing has finished.
+
+The logic is [`lisp/ekg-agent-read.el`](lisp/ekg-agent-read.el), using EKG's own API rather than a private SQLite parser. The daemon does not load `ekg-config.el`; the store path is `my/ekg-agent-db-file`, kept equal to `my/ekg-db-file` by a test. Each call checks that the store exists and is SQLite **before** connecting, so a missing or half-synced file is reported rather than created empty. It binds its own `ekg-db` and closes it, leaving any connection the caller holds untouched.
+
+**No door saves, tags, trashes, or deletes a note, but the file is not byte-identical.** Measured 2026-10-31 on a fixture (EKG 0.9.2, triples `abc1842`): the first `ekg-connect` in each Emacs process runs `ekg-upgrade-db`, whose tail re-registers five core note types — SQLite's file change counter rose by 5 with identical rows, and later calls in the same process wrote nothing. The daemon therefore changes the synced file's bytes once, on its first EKG call after a start. This is EKG's normal bookkeeping, left as is (#12 does not promise an immutable file); a newer EKG may differ, so re-measure on upgrade. This is a read surface for the documented doors, not a sandbox: `emacs_eval` can still run any EKG function.
+
+`tests/test-ekg-agent-read.el` (vanilla) covers argument rejection, the store checks, failure kinds, path drift, and that `bin/agent-server.el` defines the doors. The opt-in `tests/ekg-agent-read-integration.el` seeds a temporary store through `ekg-config.el` in a child Emacs, then runs the reader load form and the doors from the shipping `agent-server.el` source against it (the whole daemon is not booted): AND, date tags, hidden notes, typed reads, counts equal to listings, paging, connection isolation, the first-call counter, and no sidecar file after close. The run command is in its header.
+
 ## AI/Agent Modules
 
 The **in-buffer agent workflow** uses `gptel-agent` (karthink): Markdown/Org agent definitions, skills from `~/.claude/skills/`, and tools inside Emacs buffers. Our default prompt removes subagent delegation (see below). This is distinct from the independent coding sessions reached through Entwurf and tmux.

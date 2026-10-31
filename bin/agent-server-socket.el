@@ -27,7 +27,8 @@
   (message "[agent-server]      agent-org-agenda-day, agent-org-agenda-week,")
   (message "[agent-server]      agent-org-agenda-tags, agent-org-agenda-todos,")
   (message "[agent-server]      agent-denote-keywords, agent-denote-add-history,")
-  (message "[agent-server]      agent-denote-add-heading, agent-denote-add-link")
+  (message "[agent-server]      agent-denote-add-heading, agent-denote-add-link,")
+  (message "[agent-server]      agent-ekg-notes, agent-ekg-read, agent-ekg-tags")
   (message "[agent-server] REPL: emacs_eval for runtime extension")
   (message "[agent-server] ========================================")
   (when (and agent-server-enable-socket
