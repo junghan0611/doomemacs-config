@@ -257,6 +257,32 @@ wrong `denote-directory` would otherwise do. The cache re-fingerprints `meta/` o
 own instead of waiting to be invalidated, because both holders outlive an edit — a GUI
 session, and an export daemon the parallel orchestrator reuses across runs.
 
+## EKG — a separate question workbench
+
+[`lisp/ekg-config.el`](lisp/ekg-config.el) configures **EKG 0.9.2 with VUI 1.0.0**, pinned to their release commits. VUI 1.4 removes the colon from keyword text properties, while EKG 0.9.2 uses `:ekg-note-id` to resolve list actions. That pair rendered notes but could not open them for editing; the compatible VUI pin is removable only after the list/open probe passes with a newer pair. It starts a new database at `~/org/ekg/ekg-2026.sqlite`; the older `ekg.db` is not imported or opened. This is an additional capture surface, not a garden migration. No Denote export, embedding, LLM, agent, or agenda module is enabled.
+
+After `./run.sh sync` and an Emacs restart, use `M-x ekg-capture`, `ekg-capture-file`, `ekg-show-notes-with-tag`, or `ekg-show-notes-with-all-tags`. Notes use Org formatting; display truncation counts characters for Korean text. Finish a capture with `C-c C-c`.
+
+Inline tags require brackets: write `#[과학] #[무엇]인가`, not bare `#과학 #무엇`. EKG converts these to tag links and collects the tags on save; Korean and English both work. Completion after `#` uses existing tags (`M-x completion-at-point`); it is not automatic translation or tag suggestion. A fresh database initially has few candidates. EKG-specific Evil bindings live in `lisp/keybindings-config.el`: in the notes list, `j`/`k` (or `n`/`p`) select notes, `RET`/`o` edit, `c` captures, `r` refreshes, `t` selects a tag, `b` opens a resource, `x` hides a note, and `q` closes the list. In capture/edit buffers, `C-c C-c` finishes in normal, visual, and insert states. `C-c C-k` aborts a new capture; for an existing note it calls `kill-current-buffer` (EKG 0.9.2 has no `ekg-edit-abort`). `ekg-confirm-on-buffer-kill` is enabled so unsaved changes require confirmation; already saved edits are not rolled back. In all three states, `C-c /` retains EKG's metadata menu (`a` adds a tag, `r` removes one). Single-letter actions do not override Org body editing.
+
+### Recovery copies and Syncthing handoff
+
+Normal EKG changes use the native triples **every-change** backup strategy with **30 numbered recovery copies**. Copies go to `${XDG_STATE_HOME:-~/.local/state}/ekg/backups/`, outside the synchronized Org tree. Forced backups (including upgrades and handoff) can temporarily retain additional copies. SQLite's `.backup` creates each snapshot; our wrapper checks that the expected file exists and passes read-only `PRAGMA quick_check`, because triples itself does not check the backup subprocess exit status. Missing sqlite3, missing/empty copies, and failed checks signal errors. A backup error may happen **after the note was saved to the live database**; preserve that database and investigate rather than repeatedly recapturing the note.
+
+**Syncthing is not SQLite replication, even without simultaneous editing.** Use only one EKG-owning Emacs instance at a time. Before changing machines:
+
+1. Finish or abort all pending EKG captures/edits.
+2. Run `M-x my/ekg-close-for-sync` on every Emacs instance that opened EKG. It verifies a forced backup before closing; it does not run Syncthing.
+3. Wait until Syncthing has finished on both machines, with no conflicts, before opening EKG on the destination. That machine must also have this configuration and the pinned package installed.
+
+Do not enable WAL or copy a running database's main file as a backup. On a sync conflict, stop EKG on both sides and preserve all conflicting databases and local snapshots; do not merge SQLite files or choose a winner by mtime alone. Local numbered copies are recovery points, not an off-machine archive or a proof that a snapshot contains the desired note. To restore, close all EKG instances, preserve the failed DB, inspect a snapshot, then restore a **copy** of it to the configured path with Syncthing paused on both sides. Resume synchronization only after verifying the recovered notes and deliberately reconciling the other host.
+
+The 2026-10-31 installed-package probe (EKG 0.9.2, triples `abc1842`) found that the fresh-store 0.3 upgrade rebuild lost **all four indexes** through an index-name collision during table rename. This config therefore checks the index set on connection and permits at most **two close/reopen cycles** through upstream setup before any user write; incomplete acceptance closes the connection and errors. Initial schema writes already contained duplicates in the probe, so one reopen was not sufficient. No triples source is patched; retire this workaround only when installed-package probes demonstrate that **both upgrade and automatic-recovery rebuilds** preserve all four indexes. Do not run `ekg-force-upgrade` on a live working database: take a verified backup and rehearse maintenance on an isolated copy first, since forced upgrades can re-enter connection setup during rebuilding.
+
+The final probe passed Korean/English inline-tag recognition, four-index acceptance, 35 saved revisions, actual list rendering and edit-target resolution, 30 normal recovery copies, snapshot checks, and recovery of the identical EKG note and complete index set from a copied handoff snapshot. The list/open check reproduced the VUI 1.4 failure and passed with VUI 1.0.0. These are package-level checks, not proof of real Syncthing transfer or human GUI acceptance.
+
+`tests/test-ekg-config.el` covers failure signalling, local routing, SQLite readback, and handoff ordering without touching personal data. The opt-in `tests/ekg-integration.el` exercises the installed EKG/triples packages against temporary databases; supply their installed directories on `load-path` and run it separately from the vanilla ERT suite.
+
 ## AI/Agent Modules
 
 The **in-buffer agent workflow** uses `gptel-agent` (karthink): Markdown/Org agent definitions, skills from `~/.claude/skills/`, and tools inside Emacs buffers. Our default prompt removes subagent delegation (see below). This is distinct from the independent coding sessions reached through Entwurf and tmux.

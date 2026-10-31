@@ -175,6 +175,7 @@
 (require 'org-config)
 (require 'denote-config)
 (require 'denote-silo-config)
+(require 'ekg-config)
 (require 'denote-export-config)
 (require 'org-functions)
 (require 'denote-functions)

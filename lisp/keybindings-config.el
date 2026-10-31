@@ -371,6 +371,39 @@
       :map text-mode-map
       :nvi "M-`" #'my/unwrap-region)
 
+;;;;; EKG
+
+(after! ekg
+  ;; Explicit Evil state maps take precedence over global editing commands.
+  ;; Single-letter actions belong only to the read-only notes list.
+  (map! :map ekg-notes-mode-map
+        :n "j" #'ekg-notes-next
+        :n "k" #'ekg-notes-previous
+        :n "n" #'ekg-notes-next
+        :n "p" #'ekg-notes-previous
+        :n "RET" #'ekg-notes-open
+        :n "o" #'ekg-notes-open
+        :n "c" #'ekg-notes-create
+        :n "d" #'ekg-notes-delete
+        :n "t" #'ekg-notes-tag
+        :n "a" #'ekg-notes-any-note-tags
+        :n "A" #'ekg-notes-any-tags
+        :n "b" #'ekg-notes-browse
+        :n "B" #'ekg-notes-select-and-browse-url
+        :n "r" #'ekg-notes-refresh
+        :n "x" #'ekg-notes-kill
+        :n "q" #'kill-current-buffer)
+  (map! :map (ekg-capture-mode-map ekg-edit-mode-map)
+        :nvi "C-c /" ekg-edit-commands-map)
+  (map! :map ekg-capture-mode-map
+        :nvi "C-c C-c" #'ekg-capture-finalize
+        :nvi "C-c C-k" #'ekg-capture-abort)
+  (map! :map ekg-edit-mode-map
+        :nvi "C-c C-c" #'ekg-edit-finalize
+        ;; EKG 0.9.2 has no ekg-edit-abort.  Its buffer-kill query
+        ;; confirms discarding unsaved edits without deleting the note.
+        :nvi "C-c C-k" #'kill-current-buffer))
+
 ;;;;; Markdown
 
 (after! evil-markdown

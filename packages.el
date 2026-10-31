@@ -129,6 +129,18 @@
 
 (package! denote-explore :recipe (:host github :repo "pprevos/denote-explore"))
 
+;;;; ekg-config.el — fresh standalone DB, no export/LLM modules
+
+(package! ekg
+  :recipe (:host github :repo "ahyatt/ekg" :branch "main")
+  :pin "84c9d9a9685f07b6988a618f11920ca063474fc8") ; 0.9.2
+;; EKG 0.9.2 reads keyword text properties (:ekg-note-id).  VUI 1.4
+;; strips their colon, so lists render but edit/navigation cannot find notes.
+;; Measured 2026-10-31; retire this pin only after the list/open probe passes.
+(package! vui
+  :recipe (:host github :repo "d12frosted/vui.el")
+  :pin "67c508c0f2dd6773a590df47c355edb3911f0bcb") ; 1.0.0
+
 ;;;; ui-config.el
 
 (unpin! doom-themes)
