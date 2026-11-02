@@ -33,33 +33,24 @@
 
 ;;;; org
 
-;; (require 'ob-tangle)
-
 (after! org
   (message "after org - config")
 
-  ;; (load-file (concat doom-user-dir "lisp/org-funcs.el"))
-  ;; (load-file (concat doom-user-dir "lisp/org-config.el"))
-  ;; (+org-init-keybinds-h) -> 2024-06-01 여기 키바인딩 관련 부분 뒤에서 다시 잡아줌
-  ;; (setq org-attach-use-inheritance nil) ; selective
-
-  (progn
-    (setq org-capture-bookmark nil)
-    (setq org-edit-src-content-indentation 0) ; default 2
-
-    )
+  (setq org-capture-bookmark nil)
+  (setq org-edit-src-content-indentation 0) ;; default 2
 
   (setq org-id-locations-file
-        (file-name-concat org-directory (concat "." system-name "-orgids"))) ; ".org-id-locations"))
+        (file-name-concat org-directory (concat "." system-name "-orgids")))
 
   ;; overide here! important
   (setq org-insert-heading-respect-content nil) ; doom t
-  ;; org-indent-mode 사용하면 org-hide-leading-stars 자동 nil
-  (setq org-startup-indented nil) ; doom t
-  (setq org-hide-leading-stars t) ; doom t
-  )
 
-(after! org
+  ;; org-indent-mode 사용하면 org-hide-leading-stars 자동 nil
+  ;; (setq org-startup-indented nil) ; doom t
+  (unless (member my/current-device '("nuc" "laptop" "thinkpad"))
+    (setq org-startup-indented nil))
+
+  (setq org-hide-leading-stars t) ; doom t
 
 ;;;; org-todo-keywords : whhone
 
