@@ -4,11 +4,21 @@
 
 - [x] **1. EKG 복원·조회 API·교차검수** — CHANGELOG `v2026.10.31`
 - [x] **2. Oracle 반영·실제 돌봄 봇 수락** — [#12](https://github.com/junghan0611/doomemacs-config/issues/12), companion skill `61ea588`
-- [ ] **3. 실사용 관찰·후속 선택** ← CURRENT — 새 구현 없이 다음 GLG 요청 대기
+- [x] **3. 담당 보고·한영 대문 공동 집필** — Opus 집필·공개 경계 수선·독립 사실/보존 대조 PASS
+- [x] **4. homepage 통합 교열·GLG 검수·운영 발행** — `8fe86e2`, 운영 SHA/경로 수락 완료
+- [ ] **5. 후속 선택 대기** ← CURRENT — garden export는 GLG 별도 요청/실행 전까지 하지 않음
 
-## NOW — 실사용 관찰 (2026-10-31)
+## NOW — 공동 교열·홈페이지 출하 완료 (2026-11-03)
 
-- **다음 한 수:** 새 구현 요청 전에는 실사용을 지켜본다. 문제가 생기면 발생 시각·실제 client/socket·최소 호출·분류 오류부터 회수하고, 데몬 종료/모델 문제로 먼저 단정하지 않는다. 기존 미완료 운영 관찰은 아래 대장에 보존했다.
+- **현재/다음:** 집필·교열은 종료. homepage 총괄의 최종 영수증(10:08): GLG 검수·승인 후 `8fe86e2f64c6a5afe2db7fbe925429392feb8bb1` 정상 push/도장, production 기본21경로와 프로젝트 목록2+수정leaf8 모두200·footer exact SHA 확인. `/tmp/homepage-20261103-production.json`은 총괄 측 직접 관측 receipt이며 이 세션은 전달받은 사실이다. 5개 Org 정본 갱신은 완료했으나 garden export/git/발행은0. GLG의 별도 export 요청 또는 직접 실행을 기다리고 자동으로 이어가지 않는다. 미발행 blog2개 보존, 운영 설정 변경0.
+
+- **집필 기준:** GLG의 11/03 공통 교열 요청에 따라, 최근 EKG 재도입을 집의 정체성 전부로 삼지 않고 하루 종일 쓰는 커맨드센터와 함께 읽고 복기할 접점을 산문으로 담았다. 지식의 층위가 해결됐다고 주장하지 않았고, 비공개 저널 원문을 직접 인용하지 않았다.
+- **분담:** 현재 Opus 5.5 자기보고 확인한 기존 `20261016T105425-9b43e7`이 집필·교열. 정확한 수정 범위는 기존 botlog `20260227T120800`(히스토리+날짜 보고, Emacs API, 기존 보고 보존)과 homepage `content/projects/doomemacs-config/index{,.ko}.md` 두 leaf. 독립 case `20260227T141200`은 링크 유지. 이 세션은 사실 검수·근거·자체 출하 책임이며 산문을 대신 쓰지 않는다.
+- **인계선:** homepage 총괄 `20261016T103933-96efd0`가 파일 소유를 배정했다. 우리 사실 검수 뒤 Org 변경 헤딩/시각·실제 경로·leaf SHA2개·검증/미측정 경계를 동결 인계한다. 그쪽 Opus `20261028T084808-2731f4`가 전체 글결을 교열하며 사실 변경은 우리 경유. homepage git/공통면/최종 검수 준비 DM은 총괄 소유. garden export는 notes/AGENTS 기준 인간 소유이며 GLG의 별도 명시 요청 또는 직접 실행이 먼저다(09:51 총괄 직독 후 정정). 이번 취합은 5개 Org 정본 작성·homepage 검수 준비까지이며, 원고/정본 갱신과 공개 발행을 구분한다. 각집 별도 export/garden git은 하지 않고 Org 정본과 leaf2 동결·보존 근거만 넘긴다.
+- **보호/검수:** 원문과 현재 코드·README·#12를 먼저 읽는다. 문단 한 개=소스 한 줄, 한영 대응·링크/shortcode 보존. 홈페이지 공통 index/layout/CSS·다른 leaf·미발행 blog `20260804T094556` 두 파일 불변. 새 EKG 실험·DB 개방·서비스 재시작·검수 전 임의 commit/push 없음.
+- **집필 동결 인계(09:35, 통합 교열 전):** Org120800 sha `d74aa539b1aef20a84241c5d7b7f90cc391cbf46441151aaa43e12b59cfe6450`, lastmod09:33, history09:33/09:30/09:26, 새보고57행·소절61/71/81/91. EN leaf sha `2835d6ca1b8dcc77f694955c1022130f59e2433b13cc9d79bfad0c6559e343fc`, KO `4219cd34d87c60e1a8f973618af612f6ee4c056c5d350e3797b1cd049ebfcc80`. 각 +8줄. 모든원고를읽고독립대조:old9/27보고부터끝byte동일·oldhistory보존·ID/title/tags/abstract불변·frontmatter/shortcode/div보존·한영section좌표대응·diffcheckPASS. 불필요출근도입/비자동화과잉일반화/개인journal직접quote를모두걷어뜻을산문으로풀었다. 공개가든의인용은출처와구분유지. 최초신규제목1줄raw수정보고는총괄에게명시했고이후수선은Emacs조작. exactpath/heading/hash/근거/미정/운영0을총괄96efd0에게넘겨이후우리편집중지. export/git/build/실화면/GLG검수완료라주장하지않는다.
+- **통합 교열 재확인(09:49):** homepage 최종 EN `849d4b12a4b8b78d0638f773f4cc92f67b3a190a3c98cc60485f57ce303c7b0a`, KO `04ce7979e66995f7ae3cb59d1aab01033060dbb236b49f179167b23e34af7ea2`를 직접 읽고 hash 일치·제품 사실 추가0·한영 reported 증거수준 대응을 확인해 총괄에게 PASS 회신. 우리 leaf 편집은0. 총괄 제안에 따라 Opus에게 Org120800의 관련 연결자리에 공개 한국어 프로젝트 대문 URL 한 줄(backlink)을 중복 없이 Emacs 조작으로 추가하도록 배정했다. 09:50 후속 Org 최종 SHA `b65888b1f695c39a12842eaaea47c6871351700da9d4fe22e059d1c4a5497075`, lastmod09:50/history16행, URL38행/새보고59행으로 동결했다. 독립 재독으로 backlink 정확1건·새11/03보고 불변·과거9/27부터 끝 byte동일·ID/title/tags/abstract 불변을 확인해 총괄에게 인계. leaf2 통합 교열 hash도 그대로다. export/git/서비스/leaf 후속변경0, 총괄의 전체 gate#1268에서 leaf 동결 불변 PASS를 수신했다. 총괄이 GLG에게 검수 준비 DM을 보내며, garden export는 별도 인간 승인/실행 뒤로 남긴다.
+- **오래된 탐구 근거:** garden semantic 2단계 조회 후 denotecli로 `20240213T144401`의 Org/EKG 연결 실험과 `20240116T114739`의 AI/매체 독립 지식 구조 요구 원문을 확인했다. `20250415T185955`는 ahyatt 인물 bib. 과거 DONT 기록도 있어 늘 연속 실사용했다고 꾸미지 않는다. 기존 미완료 운영 관찰은 아래 대장에 보존했다.
 - **읽을 곳:** README EKG 절, `lisp/ekg-config.el`, `lisp/ekg-agent-read.el`, `bin/agent-server.el`의 공개 함수 docstring. 완료한 구현·검증·현장 수락은 CHANGELOG `v2026.10.31`과 #12로 승격했다.
 - **유지할 경계:** `과학` + `무엇`의 AND 조합, 공식 EKG/triples와 기존 RPC 사용. 한영 meta 관계는 자동 동의어 병합이 아니다. 봇 쓰기/새 DB/자동 태그 수정·번역/임베딩은 별도 결정 전 구현하지 않는다. 조회 연결도 관리 쓰기가 있으므로 Syncthing은 단일 소유·백업/close/sync 절차를 지킨다.
 - **연결:** Oracle 코디 `20261031T181350-fd0635`와 이 세션 `20261016T104939-5320fa`의 remote-pair는 양쪽 설정·왕복 확인 완료. 교차리포 skill 소유자는 agent-config 코디 `20261007T104525-12d0ca`; Oracle 문제는 기존 코디 경유로 조율한다. 다른 서비스/DB를 병렬 조작하지 않는다.
