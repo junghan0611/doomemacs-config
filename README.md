@@ -308,7 +308,7 @@ The **in-buffer agent workflow** uses `gptel-agent` (karthink): Markdown/Org age
 | Module | File | Purpose |
 |--------|------|---------|
 | **gptel-agent** | `ai-gptel.el` (`use-package! gptel-agent`) | **Primary chat/agent surface** — agent presets, skills, in-buffer tool execution |
-| GPTel core | `ai-gptel.el` | OpenAI-sub (ChatGPT subscription OAuth), two models (`gpt-6-sol`/`gpt-6-luna`) + Codex stream advice |
+| GPTel core | `ai-gptel.el` | OpenAI-sub (ChatGPT subscription OAuth), two models (`gpt-6.1-terra`/`gpt-6.1-sol`) + Codex stream advice |
 | Pi clients | `ai-pi-agent.el`, `ai-pimacs.el` | pilish (two buffers) and pimacs (one buffer), over Pi stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
 | Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
@@ -330,12 +330,13 @@ The dated Copilot trial ended; GLG removed that backend on 2026-09-25.
 
 | Role | Model | Where it is used |
 |------|-------|------------------|
-| Default | `gpt-6-sol` | Chat, buffer summarize/translate |
-| Fast | `gpt-6-luna` | `gptel-quick`, magit commit messages, inline translate, elfeed |
+| Default | `gpt-6.1-terra` | Chat, buffer summarize/translate |
+| Fast | `gpt-6.1-terra` | `gptel-quick`, magit commit messages, inline translate, elfeed |
+| Manual only | `gpt-6.1-sol` | Explicit selection via `my/gptel-switch-model` or `my/gptel-buffer-model-toggle` |
 
-The 2026-08-11 congestion measurement concerned the 5.6 tier, not these
-6-series models. The fast slot is now luna by GLG's 2026-09-25 decision;
-`my/gptel-request-retry` can fall back from luna to sol on transient failures.
+GLG selected terra for both automatic slots on 2026-11-10. Retries also stay
+on terra by default; there is no automatic escalation to sol. The 2026-08-11
+congestion measurement concerned the 5.6 tier, not these models.
 
 `my/gptel-models` in [`ai-gptel.el`](lisp/ai-gptel.el) is the SSOT — adding a model is
 one line there. Passing `:models` explicitly also matters for a subtler reason:
@@ -359,7 +360,7 @@ reporting `:status` alone yields a failure message naming nothing but HTTP 200, 
 makes a remote hiccup look like a local regression. `my/gptel-error-message` reads
 `:error` first; `my/gptel-request-retry` rides the failure out with exponential
 backoff. Its final attempt switches to the fallback model, which only changes anything
-when the caller's model differs from it. The current fast/default pair is luna/sol;
+when the caller's model differs from it. Both automatic slots currently use terra;
 the measurements above remain explicitly about the older 5.6 tier. This is what a Codex CLI does internally; without
 it, a single first failure is all the user ever sees.
 

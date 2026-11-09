@@ -10,8 +10,8 @@
 ;; gptel 중심 AI 설정 — 백엔드/모델, 빠른 조회(quick), 버퍼 요약/번역, embark 통합
 ;;
 ;; 백엔드는 OpenAI-sub (ChatGPT 구독 OAuth) 하나. 모델은 둘뿐이다:
-;;   gpt-6-sol   기본 — 채팅, 요약/번역 버퍼
-;;   gpt-6-luna  빠른 자리 — quick, magit 커밋, elfeed/인라인 번역
+;;   gpt-6.1-terra — all automatic slots: chat, summaries, quick and translation
+;;   gpt-6.1-sol   — explicit manual selection only
 ;; 모델이 계속 새로 나오는 자리라 백엔드/모델 목록을 넓히지 않는다.
 ;; 넣고 싶으면 이 파일 한 곳(`my/gptel-models')만 고친다.
 ;;
@@ -134,9 +134,9 @@ called with the final INFO plist, handles giving up; it defaults to a
 message.  Neither is called more than once.
 
 Retries use exponential backoff starting at DELAY seconds.  The final
-attempt switches to FALLBACK-MODEL so a congested tier is not simply
-retried into the same wall.  This matters when the caller uses the fast
-slot (luna) and the default fallback is sol."
+attempt uses FALLBACK-MODEL, defaulting to `my/gptel-model-default'.
+Both automatic slots currently use terra, so retries stay on terra unless
+an explicit model or fallback is supplied; they do not escalate to sol."
   (let ((backend (or backend (bound-and-true-p gptel-openai-sub-backend)
                      gptel-backend))
         (model (or model my/gptel-model-fast))
@@ -212,18 +212,18 @@ slot (luna) and the default fallback is sol."
 
   ;; :models 를 명시하지 않으면 upstream 기본 목록까지 메뉴에 흘린다.
   ;; 쓰는 둘만 남긴다 — 새 모델은 여기 한 줄로 들어온다.
-  (defconst my/gptel-models '(gpt-6-sol gpt-6-luna)
+  (defconst my/gptel-models '(gpt-6.1-terra gpt-6.1-sol)
     "OpenAI-sub 백엔드에 등록할 모델. 첫 항목이 `gptel-menu' 기본 노출 순서 선두.")
 
-  (defconst my/gptel-model-default 'gpt-6-sol
+  (defconst my/gptel-model-default 'gpt-6.1-terra
     "기본 모델. 채팅과 요약/번역 버퍼가 쓴다.")
 
-  (defconst my/gptel-model-fast 'gpt-6-luna
+  (defconst my/gptel-model-fast 'gpt-6.1-terra
     "The fast slot — gptel-quick, magit commit messages, elfeed/inline translate.
 
-GLG chose luna on 2026-09-25 for the 6-series.  The 2026-08-11 overload
-measurement above concerns 5.6, not these models; re-measure if congestion
-returns.")
+GLG chose terra for both automatic slots on 2026-11-10; sol is manual only.
+The 2026-08-11 overload measurement concerns 5.6, not these models;
+re-measure if congestion returns.")
 
   ;; gptel-openai.el processes its own model table on load, attaching specs
   ;; directly to the symbols.  The OAuth module loads it via openai-responses;
@@ -312,7 +312,7 @@ has its own streaming wiring via fsm — leave it alone)."
   (setq gptel-magit-backend gptel-openai-sub-backend)
   (setq gptel-magit-model my/gptel-model-fast)
 
-  ;; 기본: OpenAI-sub + sol.
+  ;; Default: OpenAI-sub + terra; sol requires explicit selection.
   ;; OAuth 토큰 캐시되면 부팅 후 즉시 사용.
   (setq gptel-backend gptel-openai-sub-backend)
   (setq gptel-model my/gptel-model-default)
@@ -614,11 +614,11 @@ has its own streaming wiring via fsm — leave it alone)."
     "요약/번역 전용 모델. 긴 컨텍스트 지원 필요.")
 
   (defun my/gptel-buffer-model-toggle ()
-    "Toggle `+gptel-buffer-model' between the default and fast model."
+    "Explicitly toggle `+gptel-buffer-model' between the two allowed models."
     (interactive)
     (setq +gptel-buffer-model
           (if (eq +gptel-buffer-model my/gptel-model-default)
-              my/gptel-model-fast
+              (cadr my/gptel-models)
             my/gptel-model-default))
     (message "gptel-buffer 모델: %s" +gptel-buffer-model))
 

@@ -424,8 +424,8 @@ Recurring traps only. Details live in the code comment at each site.
   moment is just the CLI swallowing it with backoff retries. Diagnosis goes through
   `my/gptel-error-message`, absorption through `my/gptel-request-retry`.
   The 2026-08-11 measurement in `lisp/ai-gptel.el` applies to 5.6 only;
-  GLG selected `gpt-6-luna` for the fast slot on 2026-09-25. Re-measure if
-  the new tier shows congestion.
+  Read `my/gptel-model-fast` for the current fast slot; re-measure if its
+  tier shows congestion.
 - **If `evil-collection` takes a gptel key, suspect a dead option.** When upstream
   deletes an option and moves the behavior to a shared REPL abstraction, something you
   had turned off silently comes back — a dead `setq` gives no signal. It is now
