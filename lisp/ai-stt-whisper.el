@@ -45,8 +45,8 @@
        :desc "파일 변환" "f" #'whisper-file
        :desc "언어 선택" "l" #'whisper-select-language))
 
-(global-unset-key (kbd "M-a"))  ; unset forward-sentence
-(global-set-key (kbd "M-a") #'whisper-run)
+;; (global-unset-key (kbd "M-a"))  ; unset forward-sentence
+;; (global-set-key (kbd "M-a") #'whisper-run)
 
 (provide 'ai-stt-whisper)
 ;;; ai-stt-whisper.el ends here
