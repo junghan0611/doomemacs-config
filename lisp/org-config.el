@@ -47,7 +47,7 @@
 
   ;; org-indent-mode 사용하면 org-hide-leading-stars 자동 nil
   ;; (setq org-startup-indented nil) ; doom t
-  (unless (member my/current-device '("nuc" "laptop" "thinkpad"))
+  (unless (member my/current-device '("nuc" "laptop" "thinkpad" "cyborg"))
     (setq org-startup-indented nil))
 
   (setq org-hide-leading-stars t) ; doom t

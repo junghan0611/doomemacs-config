@@ -52,7 +52,7 @@ Detected from the environment to avoid a `uname' subprocess during init.")
     (when (file-exists-p f)
       (string-trim
        (with-temp-buffer (insert-file-contents f) (buffer-string)))))
-  "Device id from ~/.current-device (nuc|laptop|thinkpad|termux|oracle).
+  "Device id from ~/.current-device (nuc|laptop|thinkpad|cyborg|termux|oracle).
 nil if file missing.")
 
 (when my/termux-p

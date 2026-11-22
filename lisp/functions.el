@@ -223,8 +223,8 @@ and if it is set to nil, then it would forcefully create the ID."
   (+workspace/new-named "feed")
   (elfeed)
 
-  ;; telega 는 thinkpad 에만 활성. 다른 디바이스에선 tdlib 미설치.
-  (when (equal my/current-device "thinkpad")
+  ;; Desktop devices have tdlib installed; headless and Termux do not.
+  (when (member my/current-device '("nuc" "laptop" "thinkpad" "cyborg"))
     (+workspace/new-named "bot")
     (telega))
 

@@ -31,7 +31,7 @@
 ;;;; auto-revert
 
 ;; 인간 ↔ 에이전트 공동 편집 — 외부 write 감지해 버퍼 갱신.
-;; inotify 기반(nuc/laptop/thinkpad)은 즉시, termux 는 polling fallback.
+;; inotify 기반(nuc/laptop/thinkpad/cyborg)은 즉시, termux 는 polling fallback.
 
 (global-auto-revert-mode 1)
 (setq auto-revert-verbose nil)
@@ -47,7 +47,7 @@
  ((equal my/current-device "termux")
   (setq auto-revert-use-notify nil
         auto-revert-avoid-polling nil))
- ((member my/current-device '("nuc" "laptop" "thinkpad"))
+ ((member my/current-device '("nuc" "laptop" "thinkpad" "cyborg"))
   ;; OS 파일 알림 사용 (polling 보다 빠르고 효율적)
   (setq auto-revert-use-notify t
         auto-revert-avoid-polling t)))

@@ -84,7 +84,7 @@ show_menu() {
   echo "    1) doom sync"
   echo "    2) doom sync -u -j 2 (업데이트)"
   echo "    3) doom doctor"
-  echo "    G) doom git pull (~/doomemacs + ~/doomemacs-unstable)"
+  echo "    G) doom git pull (~/doomemacs; unstable은 별도)"
   echo ""
   echo "  ${YELLOW}Denote Dblock${NC}"
   echo "    4) dblock meta (기본)"
@@ -206,7 +206,7 @@ cmd_doom_pull_repo() {
 }
 
 cmd_doom_pull() {
-  local target="${1:-all}"
+  local target="${1:-stable}"
 
   case "$target" in
     stable)
@@ -696,7 +696,7 @@ cli_mode() {
     sync)          cmd_sync ;;
     sync-update)   cmd_sync_update ;;
     doctor)        cmd_doctor ;;
-    doom-pull)     cmd_doom_pull "${1:-all}" ;;
+    G|doom-pull)   cmd_doom_pull "${1:-stable}" ;;
     dblock)
       local target="${1:-meta}"; shift || true
       local jobs="${1:-$DEFAULT_JOBS}"
@@ -764,7 +764,7 @@ cli_mode() {
     fix-bold|fix-mdbold) cmd_fix_bold "$@" ;;
     help|--help|-h)
       echo "CLI: ./run.sh <sync|sync-update|doctor|doom-pull|dblock|export|agent|pi|unstable|verify|fix|fix-org|fix-bold> [args]"
-      echo "     doom-pull [stable|unstable|all]   # default: all"
+      echo "     doom-pull [stable|unstable|all]   # default: stable (G alias)"
       echo "TUI: ./run.sh (인자 없이)"
       ;;
     *)           err "알 수 없는 명령: $cmd" ;;
@@ -791,7 +791,7 @@ main() {
       1) cmd_sync ;;
       2) cmd_sync_update ;;
       3) cmd_doctor ;;
-      G) cmd_doom_pull all ;;
+      G) cmd_doom_pull stable ;;
       4)
         local jobs; jobs=$(ask_jobs)
         cmd_dblock "$(resolve_org_dir meta)" "$jobs"

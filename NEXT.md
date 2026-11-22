@@ -8,6 +8,10 @@
 - [x] **4. homepage 통합 교열·GLG 검수·운영 발행** — `8fe86e2`, 운영 SHA/경로 수락 완료
 - [ ] **5. gptel 6.1 수락·실사용 관찰** ← CURRENT — 설정·ERT148 PASS, GLG 실사용 성공 확인 후 후속 요청 대기
 
+## 작은 변경 — Doom pull과 cyborg
+
+- `G`/기본 `doom-pull`은 stable만 갱신하고 unstable은 명시 선택한다. `cyborg`는 thinkpad와 같은 장치 분기를 쓴다. 다음은 GLG의 실제 기기에서 설정 재시작 후 확인이다.
+
 ## NOW — gptel Terra 실사용 관찰 (2026-11-10)
 
 - **현재:** `my/gptel-models`는 `gpt-6.1-terra`/`gpt-6.1-sol` 둘뿐이며 기본·빠른 슬롯은 모두 Terra. Sol은 명시 선택 전용이다. 요약 버퍼의 수동 토글도 두 슬롯이 같아져 무효가 되지 않도록 허용 목록의 두 번째 모델을 선택하게 했다. OpenAI-sub 단일 백엔드와 upstream 모델 메타데이터를 유지한다.

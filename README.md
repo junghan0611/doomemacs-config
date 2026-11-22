@@ -449,6 +449,8 @@ profile for testing a config change without touching the daily one.
 
 A second Emacs install built from Nixpkgs `nixos-unstable`. The launcher/output name remains `emacs-unstable` for compatibility; it selects the released `emacs31-gtk3` package explicitly, matching this i3/X11 environment and its GTK input-method integration.
 
+`./run.sh G` (or menu `G`, or `./run.sh doom-pull`) updates only the main Doom checkout. Update the optional profile explicitly with `./run.sh doom-pull unstable`; use `./run.sh doom-pull all` to update both.
+
 ```bash
 ./run.sh unstable run        # GUI
 ./run.sh unstable tty        # Terminal (optional alias: etu)

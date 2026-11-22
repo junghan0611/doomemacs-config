@@ -392,7 +392,7 @@ telega가 실행 중이 아니면 먼저 시작한다."
   ;; 서비스가 없어(2026-10-08) D-Bus 로 보내면 DM 마다 오류가 난다.
   ;; alert 규칙의 :category 는 regexp 문자열이다 — 심볼 'slack 을 주면 모든
   ;; alert 호출이 `wrong-type-argument stringp slack' 으로 죽는다 (2026-10-08).
-  (if (member my/current-device '("nuc" "laptop" "thinkpad"))
+  (if (member my/current-device '("nuc" "laptop" "thinkpad" "cyborg"))
       (alert-add-rule :category "\\`slack\\'" :style 'notifications)
     (setq slack-message-custom-notifier #'my/slack-notify-echo)))
 
