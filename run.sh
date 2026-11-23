@@ -10,8 +10,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOOM_BIN="$HOME/.config/emacs/bin/doom"
 DOOM_STABLE_DIR="$HOME/doomemacs"
+if [[ ! -d "$DOOM_STABLE_DIR" && -d "$HOME/.config/emacs" ]]; then
+  DOOM_STABLE_DIR="$HOME/.config/emacs"
+fi
+DOOM_BIN="${EMACSDIR:-$DOOM_STABLE_DIR}/bin/doom"
 DOOM_UNSTABLE_DIR="$HOME/doomemacs-unstable"
 BIN_DIR="$SCRIPT_DIR/bin"
 PYTHON_EXPORT="$BIN_DIR/denote-export-parallel.py"

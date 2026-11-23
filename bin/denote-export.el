@@ -81,8 +81,9 @@
 ;; Find Doom Emacs installation
 (defvar doom-emacs-dir
   (or (getenv "EMACSDIR")
-      (expand-file-name "~/doomemacs-starter")
-      (expand-file-name "~/.config/emacs")))
+      (if (file-directory-p (expand-file-name "~/doomemacs"))
+          (expand-file-name "~/doomemacs")
+        (expand-file-name "~/.config/emacs"))))
 
 ;; NOTE: doom.el, doom-start.el 로드하면 Doom 전체 초기화 실행 →
 ;; 기존 Doom GUI 서버와 충돌. load-path만 필요하므로 직접 구성.

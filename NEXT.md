@@ -14,6 +14,11 @@
 - **다음 실험:** `teams4e` 백엔드 계약과 `teams-access`의 채팅 목록·메시지 형식을 합성 fixture로 대조하고 읽기 전용 어댑터를 만든다 → GLG가 지정한 대화 한 개로 이름·순서·한글·갱신을 확인한다 → emacs-slack 수준으로 확장·유지할 가치가 있는지 GLG와 결정한다. 답장·읽음·첨부·Evil 키는 별도 단계다.
 - 회사 정책과 로컬 캐시·로그 경계를 먼저 확인하고 토큰·회사 내용을 repo/공개 로그에 남기지 않는다. `~/repos/3rd/teams-access`는 NixOS Chrome 경로에 미커밋 수정이 있다. Outlook·SharePoint Emacs 연동은 범위 밖이다.
 
+## Garden export — 개인 노트북 전환
+
+- 메뉴 4는 새 Doom 경로로 실행 확인. 메뉴 7은 4 workers로 실행 중인 것을 관측했으나 완료 결과는 미확인. 종료 결과 확인 후 `./run.sh fix` 앵커 점검 → verify; 기존 `notes` 리포 변경은 보존한다.
+- `~/doomemacs` 우선, 없으면 `~/.config/emacs`, 명시적 `EMACSDIR` 우선. `doomemacs-starter`에 의존하지 않는다.
+
 ## 작은 변경 — Doom pull과 cyborg
 
 - `G`/기본 `doom-pull`은 stable만 갱신하고 unstable은 명시 선택한다. `cyborg`는 thinkpad와 같은 장치 분기를 쓴다. 다음은 GLG의 실제 기기에서 설정 재시작 후 확인이다.
