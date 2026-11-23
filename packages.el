@@ -292,6 +292,10 @@
 (package! telega)
 (package! ement)
 (package! slack) ;; MELPA recipe → emacs-slack/emacs-slack (maintained fork)
+(package! teams4e
+  :recipe (:host github :repo "guibor/teams4e" :branch "main"
+           :files ("*.el" ("bin" "bin/*")))
+  :pin "1f07284087d3882e8fa9b0a8f28f84ab658849a9")
 
 ;;;; ai-stt-whisper.el
 

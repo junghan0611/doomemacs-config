@@ -8,6 +8,12 @@
 - [x] **4. homepage 통합 교열·GLG 검수·운영 발행** — `8fe86e2`, 운영 SHA/경로 수락 완료
 - [ ] **5. gptel 6.1 수락·실사용 관찰** ← CURRENT — 설정·ERT148 PASS, GLG 실사용 성공 확인 후 후속 요청 대기
 
+## Teams — mock-first 검토
+
+- `teams4e` Git 고정·mock UI와 답장 작성은 GLG가 확인했다. Graph 세션의 채팅 목록은 403; 별도 `teams-access` 웹 세션 CLI의 목록 조회는 성공했다. 아직 `teams4e` 실계정 연결은 없다.
+- **다음 실험:** `teams4e` 백엔드 계약과 `teams-access`의 채팅 목록·메시지 형식을 합성 fixture로 대조하고 읽기 전용 어댑터를 만든다 → GLG가 지정한 대화 한 개로 이름·순서·한글·갱신을 확인한다 → emacs-slack 수준으로 확장·유지할 가치가 있는지 GLG와 결정한다. 답장·읽음·첨부·Evil 키는 별도 단계다.
+- 회사 정책과 로컬 캐시·로그 경계를 먼저 확인하고 토큰·회사 내용을 repo/공개 로그에 남기지 않는다. `~/repos/3rd/teams-access`는 NixOS Chrome 경로에 미커밋 수정이 있다. Outlook·SharePoint Emacs 연동은 범위 밖이다.
+
 ## 작은 변경 — Doom pull과 cyborg
 
 - `G`/기본 `doom-pull`은 stable만 갱신하고 unstable은 명시 선택한다. `cyborg`는 thinkpad와 같은 장치 분기를 쓴다. 다음은 GLG의 실제 기기에서 설정 재시작 후 확인이다.

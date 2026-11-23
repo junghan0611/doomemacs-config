@@ -350,6 +350,14 @@ telega가 실행 중이 아니면 먼저 시작한다."
       "," nil
       "." nil)
 
+;;;; Teams — offline until an approved authentication path is configured
+
+(use-package! teams4e
+  :commands (teams4e teams4e-inbox teams4e-status
+             teams4e-mock-enable teams4e-mock-disable)
+  :init
+  (setq teams4e-mock-mode t))
+
 ;;;; Slack — emacs-slack (개인 워크스페이스)
 ;;
 ;; ChatGPT 앱이 만든 Slack 에이전트(junghanacs-glgdot)와 대화하는 두 번째 봇 매체.

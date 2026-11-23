@@ -311,10 +311,16 @@ The **in-buffer agent workflow** uses `gptel-agent` (karthink): Markdown/Org age
 | GPTel core | `ai-gptel.el` | OpenAI-sub (ChatGPT subscription OAuth), two models (`gpt-6.1-terra`/`gpt-6.1-sol`) + Codex stream advice |
 | Pi clients | `ai-pi-agent.el`, `ai-pimacs.el` | pilish (two buffers) and pimacs (one buffer), over Pi stdio RPC |
 | Agent Shell | `ai-agent-shell.el` | ACP protocol, shell manager |
-| Bot Config | `ai-bot-config.el` | Telegram bot chat (telega.el) — talk to AI bots from Emacs |
+| Bot Config | `ai-bot-config.el` | Telegram, Slack and Teams chat integrations |
 | Whisper STT | `ai-stt-whisper.el` | Speech-to-text via Groq whisper-large-v3 |
 | Edge TTS | `ai-tts-edge.el` | Text-to-speech |
 | tmux | `tmux-config.el` | The agent herd — session status board + attach, see § tmux inside Emacs |
+
+### Teams: offline mock first
+
+`teams4e` is pinned from Git in `packages.el`, including its Python backend. Run `./run.sh sync` after changing the declaration and restart Emacs. `M-x teams4e` starts with synthetic data (`teams4e-mock-mode`); `M-x teams4e-mock-disable` switches out of mock mode for the current session. Mock mode is enabled again at startup until the configuration is deliberately changed.
+
+The `teams-for-linux` login does not itself give `teams4e` a Graph token. Live use requires an approved external authentication provider and appropriate tenant permissions; do not reuse credentials or capture company messages into Org or AI tools without checking company policy. See the upstream [authentication guide](https://github.com/guibor/teams4e/blob/main/AUTHENTICATION.md). Agent Shell actions are separate and can invoke a real agent even in mock mode.
 
 ### One backend, two models
 
