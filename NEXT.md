@@ -6,29 +6,18 @@
 - [x] **2. Oracle 반영·실제 돌봄 봇 수락** — [#12](https://github.com/junghan0611/doomemacs-config/issues/12), companion skill `61ea588`
 - [x] **3. 담당 보고·한영 대문 공동 집필** — Opus 집필·공개 경계 수선·독립 사실/보존 대조 PASS
 - [x] **4. homepage 통합 교열·GLG 검수·운영 발행** — `8fe86e2`, 운영 SHA/경로 수락 완료
-- [ ] **5. gptel 6.1 수락·실사용 관찰** ← CURRENT — 설정·ERT148 PASS, GLG 실사용 성공 확인 후 후속 요청 대기
+- [x] **5. GPTel 6.1 수락·cyborg 설치 및 전체 가든 내보내기 검수** — `v2026.11.25`
+- [ ] **6. Teams 읽기 전용 어댑터 검토** ← CURRENT — 다음 구현 요청 시 합성 fixture로 계약부터 대조
 
-## Teams — mock-first 검토
+# NOW — Teams mock-first 검토
 
 - `teams4e` Git 고정·mock UI와 답장 작성은 GLG가 확인했다. Graph 세션의 채팅 목록은 403; 별도 `teams-access` 웹 세션 CLI의 목록 조회는 성공했다. 아직 `teams4e` 실계정 연결은 없다.
 - **다음 실험:** `teams4e` 백엔드 계약과 `teams-access`의 채팅 목록·메시지 형식을 합성 fixture로 대조하고 읽기 전용 어댑터를 만든다 → GLG가 지정한 대화 한 개로 이름·순서·한글·갱신을 확인한다 → emacs-slack 수준으로 확장·유지할 가치가 있는지 GLG와 결정한다. 답장·읽음·첨부·Evil 키는 별도 단계다.
 - 회사 정책과 로컬 캐시·로그 경계를 먼저 확인하고 토큰·회사 내용을 repo/공개 로그에 남기지 않는다. `~/repos/3rd/teams-access`는 NixOS Chrome 경로에 미커밋 수정이 있다. Outlook·SharePoint Emacs 연동은 범위 밖이다.
 
-## Garden export — 개인 노트북 전환
+## 운영 관찰 — GPTel
 
-- 메뉴 4는 새 Doom 경로로 실행 확인. 메뉴 7은 4 workers로 실행 중인 것을 관측했으나 완료 결과는 미확인. 종료 결과 확인 후 `./run.sh fix` 앵커 점검 → verify; 기존 `notes` 리포 변경은 보존한다.
-- `~/doomemacs` 우선, 없으면 `~/.config/emacs`, 명시적 `EMACSDIR` 우선. `doomemacs-starter`에 의존하지 않는다.
-
-## 작은 변경 — Doom pull과 cyborg
-
-- `G`/기본 `doom-pull`은 stable만 갱신하고 unstable은 명시 선택한다. `cyborg`는 thinkpad와 같은 장치 분기를 쓴다. 다음은 GLG의 실제 기기에서 설정 재시작 후 확인이다.
-
-## NOW — gptel Terra 실사용 관찰 (2026-11-10)
-
-- **현재:** `my/gptel-models`는 `gpt-6.1-terra`/`gpt-6.1-sol` 둘뿐이며 기본·빠른 슬롯은 모두 Terra. Sol은 명시 선택 전용이다. 요약 버퍼의 수동 토글도 두 슬롯이 같아져 무효가 되지 않도록 허용 목록의 두 번째 모델을 선택하게 했다. OpenAI-sub 단일 백엔드와 upstream 모델 메타데이터를 유지한다.
-- **검증:** 설치된 upstream `gptel-openai.el:511,519`에서 두 모델 등록을 직접 확인. 변경 전 수동 토글 특성 테스트1건 PASS, 변경 후 신규 정책4건 포함 `tests/run-tests.sh` ERT148/148 PASS(`/tmp/doom-gptel-61-tests.log`). 에이전트의 실제 API 호출·실행 중 Emacs 재설정은 하지 않았다. 이후 GLG가 “잘된다”라고 실사용 성공을 알려주고 커밋·푸시를 승인했다. 이는 사용자 수락이며 별도 native 요청 추적 검수는 아니다.
-- **다음:** 새 구현 요청 전에는 실사용을 관찰한다. 혼잡이 재현되면 모델·발생 시각·payload 오류부터 확인하고 Sol 자동 승격으로 우회하지 않는다. 가든 export와 다른 서비스/DB는 건드리지 않는다.
-- **읽을 곳:** `lisp/ai-gptel.el` 모델 상수/수동 토글, README GPTel 절, `tests/test-gptel-model-policy.el`.
+- 혼잡이 다시 나타나면 모델·발생 시각·payload 오류부터 확인한다. Sol 자동 승격으로 우회하지 않는다. 읽을 곳: `lisp/ai-gptel.el`, README GPTel 절, `tests/test-gptel-model-policy.el`.
 
 ## 이전 공동 교열 인계 — 완료 (2026-11-03)
 

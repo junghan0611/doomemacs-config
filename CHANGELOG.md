@@ -6,6 +6,27 @@ All notable changes to this project will be documented here. Format follows
 
 ## Unreleased
 
+## v2026.11.25 — Cyborg setup and garden export
+
+### Fixed
+
+- **Doom and Denote export now resolve the current installation.** Sync and the exporter honor `EMACSDIR`, prefer `~/doomemacs` when it exists, and fall back to `~/.config/emacs`. The exporter no longer looks for `doomemacs-starter`.
+- **Whisper no longer overrides `M-a`.** The normal sentence-motion binding is preserved; Whisper remains available through its command and existing menu.
+
+### Changed
+
+- **`G` updates stable Doom only.** Use `./run.sh doom-pull unstable` or `./run.sh doom-pull all` to include the separate comparison profile. The usual stable update remains `G → 2`.
+- **The new `cyborg` machine joined the desktop configuration.** Its device handling follows ThinkPad for Org startup indentation, file notifications, and desktop integrations. Default line-number hooks are kept only on `nuc`, and the Unicode insertion menu now includes `π`.
+- **GPTel defaults to `gpt-6.1-terra` for both regular and fast requests** on the existing OpenAI subscription backend. `gpt-6.1-sol` remains a manual choice; the quick toggle still switches between the two. No backend was added.
+- **Teams ships in offline mock mode.** `M-x teams4e` opens synthetic conversations by default. Live account integration and the read-only adapter experiment are not part of this release.
+- **The bilingual project introduction completed editorial review and was published by the homepage maintainers.** The homepage is a separate repository; this tag does not deploy it.
+
+### Verification
+
+- On `cyborg`, a fresh `G → 2` synchronized 358 packages and generated the Emacs 31.1 profile. Both the X11 `user` instance and the `pi` terminal daemon loaded this configuration without startup errors. The separate headless `server` answered status and UTF-8 RPC calls and found a known public Denote note. The EKG database was not opened.
+- The operator confirmed that the **full garden export passed acceptance** on `cyborg` and previously confirmed GPTel worked in daily use. This release does not publish the garden itself.
+- **148/148 vanilla ERT tests passed** on Emacs 31.1. The batch run emitted an Org version-mismatch warning but had no test failures.
+
 ## v2026.10.31 — EKG question workbench and OpenClaw reading
 
 ### Added
