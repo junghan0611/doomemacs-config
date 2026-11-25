@@ -64,7 +64,7 @@
 
 ;; Emacs URL entry points must always use Firefox, independent of the desktop
 ;; default browser (e.g. xdg-open).  EWW remains available when invoked directly.
-(setq browse-url-browser-function #'browse-url-firefox
+(setq browse-url-browser-function #'browse-url-default-browser ;; browse-url-firefox
       browse-url-firefox-program "firefox")
 
 ;;;; xref search program
