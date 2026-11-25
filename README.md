@@ -136,6 +136,8 @@ Group labels live in one place, the which-key SSOT block in [`keybindings-config
 
 [`tests/test-keybinding-lint.el`](tests/test-keybinding-lint.el) fails the build on either named-prefix form, at `file:line`.
 
+**`F7` opens the pass menu**, including in Ghostel's usual semi-char mode. `C-c C-p` retains its mode-specific behavior (for example, previous heading in Org). Ghostel's explicit raw char mode still sends `F7` to the terminal application.
+
 ## Human-Agent Unified Agenda
 
 The core design: **one timeline for both human and AI**.

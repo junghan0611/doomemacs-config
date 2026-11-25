@@ -35,6 +35,10 @@
   ;; Declarative, mirroring how `app/irc' registers `circe-mode'.
   (add-to-list 'doom-real-buffer-modes 'ghostel-mode)
   (setq ghostel-module-auto-install 'ask)
+  ;; Keep the pass menu on the Emacs side in semi-char mode.  Raw char mode
+  ;; deliberately forwards function keys to the terminal application.
+  (setopt ghostel-keymap-exceptions
+          (cons "<f7>" (remove "<f7>" ghostel-keymap-exceptions)))
   (setq ghostel-shell (or explicit-shell-file-name
                           shell-file-name
                           (getenv "SHELL")

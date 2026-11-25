@@ -37,6 +37,8 @@
 
 ## RECENT
 
+- 2026-11-25: pass 메뉴를 `F7`로 옮겼다. `user`·`pi`에서 Org/Agenda/Markdown/Comint 및 Ghostel semi-char 바인딩을 대조했고 ERT 148/148 통과. Ghostel raw char는 `F7`을 터미널에 전달한다(README § Keybindings).
+- `cyborg` pass 추가 복구: `Unusable public key`는 기존 수신자 키의 GPG ownertrust 누락이었다. 정상 장치와 지문 대조 후 해당 키의 신뢰만 복원했다. 임시 저장소에서 CLI·`pi` 추가와 복호화 2/2 성공, GLG 실사용 확인. 실제 저장소 변경 및 비밀 키 전송 없음.
 - `v2026.10.31`: EKG 복원 `512a065`, 조회 API `cd7ca7d`, 외부 companion skill `61ea588`까지 로컬 검수·Oracle 반영. 19:13 Oracle 코디가 GLG 제공 실제 봇의 절대 소켓·AND 조회·원문 기반 응답 성공을 전달했다. 이는 사용자 제공 봇 응답이며 native tool trace/argv 독립 열람은 아니다. 검증 범위와 폐기된 host-alias oracle는 CHANGELOG/#12에 기록했다.
 
 ## 이전 작업 — 유지할 관찰·소유 경계

@@ -148,7 +148,8 @@
 
 (use-package! password-store-menu
   :after password-store
-  :custom (password-store-menu-key "C-c C-p")
+  ;; Reserve F7 for pass; Org, Markdown and Comint own C-c C-p locally.
+  :custom (password-store-menu-key "<f7>")
   :config
   (password-store-menu-enable))
 
